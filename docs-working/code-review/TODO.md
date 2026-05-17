@@ -3,6 +3,13 @@
 Living queue. Each iteration consumes one entry from **In progress /
 Queue**, produces a finding (or several), and the queue updates.
 
+> **Status 2026-05-17: all F001–F047 findings are status=done.** The
+> "Unblocked — ready for fix" table below is empty. Remaining queue
+> entries below are review-tasks (find new smells), not bugs with a
+> known fix. The companion manual-test queue at
+> `docs-working/archive/analysis/findings-2026-05-15/` is also closed —
+> see that folder's README for the rollup.
+
 ## Unblocked — ready for fix
 
 Findings that have a complete fix description and don't depend on
@@ -10,9 +17,7 @@ something else landing first.
 
 | ID | Title | Severity | Effort | Owner | Status |
 |---|---|---|---|---|---|
-| F005 | Cross-package sudo helper — BecomeRunner landed; all 6 service inline sites migrated 2026-05-17, zero `exec.Command("sudo", ...)` literals remain in actions/effects | smell | M | — | done |
-| F011 | Cross-cutting: Execute/DryRun migration complete — all 21 handlers now Run-only | smell | XL | — | done |
-| F041 | artifact_capture.readFileContent unbounded read | smell | S | — | done |
+| (empty) | All F-NNN findings are done as of 2026-05-17 | — | — | — | — |
 
 ## Findings index
 

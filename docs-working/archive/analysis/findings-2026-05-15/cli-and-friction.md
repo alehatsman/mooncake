@@ -219,18 +219,45 @@ this too.
 
 ## Summary table
 
-| # | Sev | Area | Fix |
-|---|---|---|---|
-| 1 | HIGH | `as_user: root` always sudoes | uid=0 short-circuit |
-| 21 | LOW | TLS in vanilla ubuntu container | docs prefer alpine + doctor check |
-| 11 | LOW | snapshot tool inventory | input to spec-59 |
-| 12 | LOW | `metrics -q --format json` | respect `--format` |
-| 13 | LOW | error-hint invalid YAML | use `pkg:`, strip trailing `:` |
-| 19 | LOW | `--tags <typo>` silent fail | warn + fuzzy suggestion |
-| 42 | LOW | `wait.command` attempt counter | counter accuracy |
-| 25 | LOW | MCP notification reply | don't respond to notifications |
-| 26 | LOW | MCP error prefix dup | trim outer wrapper |
-| 20 | LOW | bad-checksum + missing parent | subsumed by #14 |
+**Status rollup as of 2026-05-17: all CLI/friction findings ✅ FIXED
+except #11 (curated tools list — design decision, not a bug) and
+#59 (fuzzy hint polish, low priority).**
+
+| # | Sev | Status | Area | Fix |
+|---|---|---|---|---|
+| 1 | HIGH | ✅ FIXED | `as_user: root` always sudoes | uid=0 short-circuit `81dc50e` |
+| 21 | LOW | ✅ FIXED | TLS in vanilla ubuntu container | doctor flags missing ca-certificates `49e41406` |
+| 11 | LOW | (design decision) | snapshot tool inventory | curated dev-tools list is intentional; doc clarification only |
+| 12 | LOW | ✅ FIXED | `metrics -q --format json` | proper JSON object `7007130` / `16a29dd` |
+| 13 | LOW | ✅ FIXED | error-hint invalid YAML | `suggested_step` uses `pkg:`, clean cmd name `796ed2f7` |
+| 19 | LOW | ✅ FIXED | `--tags <typo>` silent fail | errors on zero-match tag filter `2ad89456` |
+| 42 | LOW | ✅ FIXED | `wait.command` attempt counter | `interval:` alias for `poll_interval:` `ff975066` |
+| 25 | LOW | ✅ FIXED | MCP notification reply | suppress responses to notifications `8b688526` |
+| 26 | LOW | ✅ FIXED | MCP error prefix dup | strip duplicate prefix `f5b59e0f` |
+| 20 | LOW | ✅ FIXED | bad-checksum + missing parent | subsumed by #14 fix |
+| 53 | LOW | ✅ FIXED | `--artifacts-dir` results.json | flush publisher before close `b0b4b9b2` |
+| 55 | LOW | ✅ FIXED | `runs apply` empty step names | falls back to action name `8ca42a89` |
+| 56 | LOW | ✅ FIXED | `runs list --format json` | JSON output added `db5648b1` / `9dfa978d` |
+| 57 | LOW | ✅ FIXED | `runs <subcommand>` error format | suggests nearest command `68c474f7` |
+| 58 | LOW | ✅ FIXED | `--skip-tags` exclusion flag | added `3efa25da` |
+| 59 | LOW | open (polish) | fuzzy hint on `--tags` typo | low-priority DX nit; `--tags X` already errors loudly |
+| 61 | MEDIUM | ✅ FIXED | `error:` populated + `failed:false` | `step` sets failed=true on handler error `e516b220`; observe.process slice `37a6ddef` |
+| 65 | LOW | ✅ FIXED | `--max-plan-age` boundary | sub-second precision in error `8dc0145d` |
+| 66 | LOW | ✅ FIXED | bad CLI flag dumps help | suppress help on flag parse error `e9c9f342` |
+| 68 | LOW | ✅ FIXED | `--output-format` vs `--format` | aliased on `apply` `45b30779` + `validate` `8d0cd9c0` |
+| 69 | LOW | ✅ FIXED | `validate --format json` PascalCase | snake_case keys `f221f332` |
+| 71 | LOW | ✅ FIXED | doctor disk-space probe | walks to existing ancestor `e7834f40` |
+| 72 | LOW | ✅ FIXED | top-level dict YAML | step-shape hint `cf184c9f` |
+| 73 | LOW | ✅ FIXED | empty config file | clear error message `3c08fe1f` |
+| 74 | LOW | ✅ FIXED | `--facts-json` PascalCase | snake_case keys `77de8908` |
+| 75 | LOW | ✅ FIXED | `plan -o plan.yaml` null fields | omit empty union members `16d4329c` |
+| 76 | LOW | ✅ FIXED | `--capture-full-output` silent no-op | hard-errors without `--artifacts-dir` `6366b2d` |
+| 77 | LOW | ✅ FIXED | validator empty-vocabulary error | unknown-field message instead `2d1c09e7`; `creates:`/`unless:` universal `50768578` |
+| 78 | LOW | ✅ FIXED | `peers.toml` TOML error | array-of-tables hint `fd478912` |
+| 81 | LOW | ✅ FIXED | `as_user` generic errors | targeted errors when can't escalate `355d48ba` |
+| 85 | LOW | ✅ FIXED | `--ask-become-pass` no TTY | actionable error `f01b10cc` |
+| 86 | LOW | ✅ FIXED | `--max-output-lines` silently ignored | require `--artifacts-dir` `3cf6e2aa` |
+| 87 | MEDIUM | ✅ FIXED | `apply` doesn't exit on SIGINT | proper signal handling `7b55547d` |
 
 ---
 

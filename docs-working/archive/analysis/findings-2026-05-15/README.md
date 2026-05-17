@@ -1,5 +1,18 @@
 # Manual Test Findings — 2026-05-15
 
+> **Status as of 2026-05-17: the MT-N queue is closed.** Every CRITICAL,
+> HIGH, and MEDIUM finding from the original 43-item audit (and the later
+> rounds that extended into the 50s/60s/70s/80s) has been fixed and
+> verified in source. The only items still showing as open in the
+> per-file tables are: #11 (curated snapshot tool inventory — a design
+> decision, not a bug) and #59 (fuzzy-hint polish on `--tags` typo —
+> low-priority DX nit). Per-finding commit refs live in each file's
+> summary table; original repros are kept under `### Original report`
+> sections so historical context is preserved.
+>
+> Folder lives under `docs-working/archive/` because the pass is complete;
+> future manual-test passes should open a new `findings-<DATE>/` directory.
+
 Filed by an LLM acting as a manual tester. Built a static binary,
 ran 25 scenarios across `ubuntu:24.04`, `alpine:3.21`, and `debian:bookworm-slim`
 containers. **43 numbered findings** across 6 testing rounds.
@@ -26,19 +39,20 @@ self-contained; severity-sorted within.
 | [`positive-keepers.md`](./positive-keepers.md) | 7 | Features to feature; "do not regress" list |
 | [`verification-2026-05-15.md`](./verification-2026-05-15.md) | (status) | Fix-status after 9 MT-N fix commits landed |
 
-## Severity rollup (post-MT-fix verification — see `verification-2026-05-15.md`)
+## Severity rollup
 
-| Severity | Original | After MT fixes |
-|---|---:|---:|
-| **CRITICAL** | 2 | **0** (#8 ✅, #14 ✅) |
-| **HIGH** | 7 | 5 (#1 ✅, #2 partial) |
-| **MEDIUM** | 9 | 8 (#4 partial, #12 ✅, plus new #44) |
-| **LOW** | 19 | 14 (#5 ✅, #6 ✅, #13 ✅) |
-| **(positive — keep)** | ≥12 | ≥14 (the MT-fixes themselves now belong here) |
+| Severity | Original | After MT fixes (2026-05-15 same-session) | Final (2026-05-17) |
+|---|---:|---:|---:|
+| **CRITICAL** | 2 | **0** | **0** |
+| **HIGH** | 7 | 5 | **0** |
+| **MEDIUM** | 9 | 8 | **0** |
+| **LOW** | 19 | 14 | **1** (#59 fuzzy-hint polish — DX nit) |
+| **(design decision, not a bug)** | — | — | **1** (#11 curated tools list) |
+| **(positive — keep)** | ≥12 | ≥14 | ≥30 (MT fixes themselves now belong here) |
 
-Both **CRITICAL** bugs were fixed within the same session — see
-[`verification-2026-05-15.md`](./verification-2026-05-15.md) for the
-full breakdown.
+Both **CRITICAL** bugs were fixed within the same session. All HIGH and
+MEDIUM bugs are now fixed; see each file's summary table for per-finding
+commit refs.
 
 ## Top three fixes (highest ROI per LoC)
 

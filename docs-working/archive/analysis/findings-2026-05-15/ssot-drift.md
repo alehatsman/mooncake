@@ -218,13 +218,15 @@ quality bar that the file-level validator (#4) doesn't yet meet.
 
 ## Summary table
 
-| # | Sev | Where | Fix |
-|---|---|---|---|
-| 27 | HIGH | validator's hardcoded vocabulary | wire to `schema generate` (closes #6, #27, helps #4) |
-| 35 | positive | `mooncake schema generate` | use as SSOT |
-| 43 | positive | `mooncake docs generate` | wire into CI |
-| 4 | MEDIUM | file-level validator error format | port template from #30 |
-| 30 | positive | step-level validator error format | keep, expand usage |
-| 6 | LOW | `LLM_GUIDE.md` action list | regenerate from #43 |
-| 7 | LOW | `examples/variables-and-facts/config.yml` | one-line fix |
-| 29 | LOW | `examples/actions/assert.yml` | `cmd:` → `command:` |
+**Status rollup as of 2026-05-17: all ssot-drift findings ✅ FIXED.**
+
+| # | Sev | Status | Where | Fix |
+|---|---|---|---|---|
+| 27 | HIGH | ✅ FIXED | validator's hardcoded vocabulary | wired to schema (round 19); 62-action vocab + unknown-field hint |
+| 35 | positive | (keep) | `mooncake schema generate` | SSOT in use |
+| 43 | positive | (keep) | `mooncake docs generate` | wired into CI |
+| 4 | MEDIUM | ✅ FIXED (partial → closed by MT-77) | file-level validator error format | line anchors to failing step `362d288`; redundant oneOf suppressed `fc2e0ed7`; unknown-field hint `2d1c09e7` |
+| 30 | positive | (keep) | step-level validator error format | keep, expand usage |
+| 6 | LOW | ✅ FIXED | `LLM_GUIDE.md` action list | refreshed `1be1d1f` / `61985d7` |
+| 7 | LOW | ✅ FIXED | `examples/variables-and-facts/config.yml` | one-line YAML fix landed |
+| 29 | LOW | ✅ FIXED | `examples/actions/assert.yml` | canonical sub-keys `9bb2a2ff` |

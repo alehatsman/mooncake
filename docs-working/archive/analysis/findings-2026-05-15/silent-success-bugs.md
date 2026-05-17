@@ -7,14 +7,9 @@ something unverified. **The largest cluster of findings.**
 > Start fixes from this file. These bugs evade CI because CI sees
 > green. They surface in production.
 
-**Post-MT-fix status** (see [`verification-2026-05-15.md`](./verification-2026-05-15.md)):
-- ✅ **CLOSED**: #8 (for_each), #14 (file.download sha256 verify before rename),
-  #22 (`mooncake step` full result map, `c6e327e`),
-  #83 (`mooncake step` strict-decode, `4e6997e`)
-- 🟡 **PARTIAL**: #2 (nested form fixed; step-level still broken)
-- **NEW**: #44 (file.download silently accepts unknown fields),
-  #45 (transaction recap miscounts reverts),
-  #46 (file.unarchive not idempotent)
+**Post-2026-05-17 status: all entries in this file are ✅ FIXED.** See the
+[summary table](#summary-table) at the bottom for per-finding commit refs.
+Original reports kept below each ✅ banner for context.
 
 ---
 
@@ -271,7 +266,15 @@ output.
 
 ---
 
-## #24 — `artifact.capture` reports 0 file changes across all action types — HIGH
+## #24 — ✅ FIXED (commit `ee125177`, verified 2026-05-17)
+
+`artifact.capture` now records file changes from `file.write`, `text.replace`,
+and friends; tracker-after-flush contract pinned in `8c2c69f2`. `initial_vars`
+noise (CPU flags etc.) trimmed.
+
+### Original report (now resolved)
+
+## #24 (original) — `artifact.capture` reports 0 file changes across all action types — HIGH
 
 **Repro 1** — file.write inside artifact.capture:
 
@@ -313,7 +316,15 @@ either omit `initial_vars` entirely or have an opt-in
 
 ---
 
-## #28 — `failed_when: false` does not suppress assertion failure — MEDIUM (semantics)
+## #28 — ✅ FIXED (commit `bcaf9392`, verified 2026-05-17)
+
+`assert` results now route through the executor wrapper that respects
+`failed_when:`. `failed_when: false` correctly suppresses a failing
+assertion; recap counts as `ok`, not `failed`.
+
+### Original report (now resolved)
+
+## #28 (original) — `failed_when: false` does not suppress assertion failure — MEDIUM (semantics)
 
 **Repro**:
 ```yaml
@@ -340,7 +351,15 @@ write its result through the standard executor wrapper that respects
 
 ---
 
-## #40 — `tool: backend: github-release` always tries to extract asset as archive — HIGH
+## #40 — ✅ FIXED (commit `cb6b21bb`, verified 2026-05-17)
+
+`tool: backend: github-release` (and `archive-url`) now infer bare-binary vs
+archive from the asset filename; bare binaries are renamed + chmod +x and
+installed without extraction. Closes the jq / hadolint / kind class of cases.
+
+### Original report (now resolved)
+
+## #40 (original) — `tool: backend: github-release` always tries to extract asset as archive — HIGH
 
 **Repro** (after supplying `tag: "jq-1.7.1"` to work around #39):
 
@@ -423,22 +442,32 @@ honor it. Same fix closes #44 and refines #4.
 
 ## Summary table
 
-| # | Sev | Status | Action / Surface | Fix size |
+**Status rollup as of 2026-05-17: all silent-success findings ✅ FIXED.**
+
+| # | Sev | Status | Action / Surface | Fix |
 |---|---|---|---|---|
 | 8 | CRITICAL | ✅ FIXED | `for_each` | landed `e8d1fc6` |
 | 14 | CRITICAL | ✅ FIXED | `file.download checksum:` | landed `a09e12e` |
-| 15 | HIGH | open | `creates:`/`unless:` on `file.write` | small — extend exec wrapper |
-| 2 | HIGH | 🟡 partial | shell guard recap mark | nested form fixed; step-level still |
+| 15 | HIGH | ✅ FIXED | `creates:`/`unless:` on `file.write` | step-level now universal field; validator rejects misplaced (commit `50768578` + `2d1c09e7` for MT-77) |
+| 2 | HIGH | ✅ FIXED | shell guard recap mark | nested form `fa189ae5`; step-level closed by MT-15/MT-77 (regression test `f3bb10f2`) |
 | 22 | HIGH | ✅ FIXED | `mooncake step` JSON shape | landed `c6e327e` (full result map) |
-| 24 | HIGH | open | `artifact.capture` | medium — file-change tracking |
-| 28 | MEDIUM | open | `failed_when:` on assert | small — route through wrapper |
-| 40 | HIGH | open | `tool github-release` bare-binary | small — filename heuristic |
+| 24 | HIGH | ✅ FIXED | `artifact.capture` file-change tracking | landed `ee125177`; tracker-after-flush pinned `8c2c69f2` |
+| 28 | MEDIUM | ✅ FIXED | `failed_when:` on assert | landed `bcaf9392` |
+| 40 | HIGH | ✅ FIXED | `tool github-release` bare-binary | landed `cb6b21bb` |
 | 44 | MEDIUM | ✅ FIXED | `file.download` unknown-field acceptance | closed by #27 validator fix; verified round 24 |
 | 45 | MEDIUM | ✅ FIXED | `transaction:` recap shows `reverted=N`, `↺ Reverse:` markers visible | landed before round 18 |
 | 46 | MEDIUM | ✅ FIXED | `file.unarchive` not idempotent | landed `1d374c9` |
-| 67 | MEDIUM | open | nested `try:` not recognized | register compound actions in inner path |
-| 54 | HIGH | open | MCP `run_plan` returns all-zero counters despite executing | agent-loop broken |
-| 83 | MEDIUM | ✅ FIXED | `mooncake step` skips `additionalProperties:false` | landed `4e6997e` (KnownFields decode) |
+| 47 | MEDIUM | ✅ FIXED | `text.*` no-match is idempotent success | landed `439c3265` |
+| 48 | MEDIUM | ✅ FIXED | `retry:` honors `failed_when:false` | landed `efc7efd0` |
+| 49 | LOW | ✅ FIXED (doc) | `attempts:N` → N+1 total executions | doc clarification `55961982` |
+| 54 | HIGH | ✅ FIXED | MCP `run_plan` returns real counters | verified round 32 |
+| 62 | MEDIUM | ✅ FIXED | `retry: backoff:` honored | landed `80c3468d` |
+| 67 | MEDIUM | ✅ FIXED | nested `try:` blocks rejected with hint | landed `cc7ef39` (round 42) |
+| 70 | MEDIUM | ✅ FIXED | bare `{{ map }}` JSON-marshals | landed `295ba2a` (round 44) |
+| 80 | MEDIUM | ✅ FIXED | `text.patch` failed-hunk diagnostics | landed `e1322d1f` |
+| 83 | MEDIUM | ✅ FIXED | `mooncake step` strict-decode | landed `4e6997e` (KnownFields decode) |
+| 84 | MEDIUM | ✅ FIXED | `text.insert` content-aware idempotency | landed `fc7b9df3` |
+| 87 | MEDIUM | ✅ FIXED | `mooncake apply` exits on SIGINT/SIGTERM | landed `7b55547d` |
 
 ---
 
@@ -601,7 +630,15 @@ mode + size as a cheap proxy). Skip if all entries already match.
 
 ---
 
-## #47 — `text.*` actions fail-loud on no-match instead of treating as idempotent — MEDIUM
+## #47 — ✅ FIXED (commit `439c3265`, verified 2026-05-17)
+
+`text.replace`, `text.delete_range`, `text.insert` now treat no-match as
+idempotent success (`changed: false`), not a hard failure. Keeps the
+idempotency promise across re-runs.
+
+### Original report (now resolved)
+
+## #47 (original) — `text.*` actions fail-loud on no-match instead of treating as idempotent — MEDIUM
 
 **Repro**:
 
@@ -631,7 +668,15 @@ retry (#48) and with `assert`-class actions (#28).
 
 ---
 
-## #48 — `retry:` doesn't trigger when `failed_when: false` is set — MEDIUM
+## #48 — ✅ FIXED (commit `efc7efd0`, verified 2026-05-17)
+
+`retry:` runs all attempts before `failed_when:` is evaluated. `retry: 3,
+failed_when: false` now means "try up to 3 times to succeed; if all fail,
+mask the result", matching the intuitive read.
+
+### Original report (now resolved)
+
+## #48 (original) — `retry:` doesn't trigger when `failed_when: false` is set — MEDIUM
 
 **Repro**:
 
@@ -805,7 +850,16 @@ dispatching to the handler.
 
 ---
 
-## #84 — `text.insert` is not idempotent — duplicates content on re-run — MEDIUM
+## #84 — ✅ FIXED (commit `fc7b9df3`, verified 2026-05-17)
+
+`text.insert` now checks whether the exact content already appears in the
+expected position before inserting. Run 2 of the same step → `changed: false,
+operation: noop`. Same convention as `text.line`. Regression test at
+`internal/actions/file_insert/handler_test.go:214` (MT-84).
+
+### Original report (now resolved)
+
+## #84 (original) — `text.insert` is not idempotent — duplicates content on re-run — MEDIUM
 
 **Repro**:
 ```yaml
@@ -851,7 +905,15 @@ and apply consistently.)
 
 ---
 
-## #80 — `text.patch` silently no-ops on broken hunks (no error, no signal) — MEDIUM
+## #80 — ✅ FIXED (commit `e1322d1f`, verified 2026-05-17)
+
+`text.patch` now surfaces hunk counters (`applied_hunks`, `failed_hunks`,
+`total_hunks`) on every result. When no hunks apply, the action returns
+a clear error naming the drift; agents have the per-hunk signal they need.
+
+### Original report (now resolved)
+
+## #80 (original) — `text.patch` silently no-ops on broken hunks (no error, no signal) — MEDIUM
 
 **Repro**:
 ```

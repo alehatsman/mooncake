@@ -248,13 +248,17 @@ Same DX shape as #18 (`default('x')` vs `default:'x'`).
 
 ## Summary table
 
-| # | Sev | Area | Fix |
-|---|---|---|---|
-| 16 | MEDIUM | autoescape on log: msg: | disable / scope |
-| 17 | MEDIUM | metrics in templates | wire OR doc honestly |
-| 18 | LOW | `default('x')` syntax | accept + alias OR better error |
-| 5/36 | LOW | shell stdout in text output | renderer change only |
-| 32 | LOW | `text.patch.json` schema | accept JSON Patch OR better error |
+**Status rollup as of 2026-05-17: all template-engine findings ✅ FIXED.**
+
+| # | Sev | Status | Area | Fix |
+|---|---|---|---|---|
+| 16 | MEDIUM | ✅ FIXED (or mis-reported) | autoescape on log: msg: | round-26 verification: literal angle brackets render fine; JSON `<` is standard Go escape |
+| 17 | MEDIUM | ✅ FIXED | metrics in templates | wired into apply-time scope `70e6089f` (MT-17) |
+| 18 | LOW | ✅ FIXED | `default('x')` syntax | hint added when Jinja2 form hits Pongo2 `b740771b` |
+| 5/36 | LOW | ✅ FIXED | shell stdout in text output | shell stdout surfaces at `-l debug` `4bf28b4` / `17e5649` |
+| 32 | LOW | ✅ FIXED | `text.patch.json` schema | error message points users at correct schema `35ad94d0` |
+| 79 | LOW | ✅ FIXED | `read.json` floats integers | preserve integer types `99c5f68` (round 42) |
+| 82 | LOW | ✅ FIXED | env vars in templates | `env.*` exposed `c9b6b9ec` |
 
 What works (don't regress):
 - `{{ var }}`, `{{ name | upper }}`, `{{ items | length }}`
