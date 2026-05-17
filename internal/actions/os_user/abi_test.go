@@ -23,11 +23,36 @@ func TestPermissions_AlwaysSudo(t *testing.T) {
 	switch runtime.GOOS {
 	case "darwin":
 		wantBins = []string{"dscl"}
+	case "windows":
+		wantBins = []string{"powershell"}
 	default: // linux
 		wantBins = []string{"useradd", "usermod", "userdel"}
 	}
 	if len(ps.RequiredBinaries) != len(wantBins) {
 		t.Errorf("RequiredBinaries = %v, want %v", ps.RequiredBinaries, wantBins)
+	}
+	// Windows' SAM database isn't a path-shaped file; doctor would
+	// emit a false-positive finding if FilesystemWrite carried a
+	// fake one. macOS's directory store has the same shape.
+	if runtime.GOOS != "linux" && len(ps.FilesystemWrite) != 0 {
+		t.Errorf("%s: FilesystemWrite should be empty (no path-shaped store); got %v", runtime.GOOS, ps.FilesystemWrite)
+	}
+}
+
+// TestMetadata_AdvertisesAllThreePlatforms guards the
+// SupportedPlatforms slice against accidental regression. If a
+// future change drops windows (or adds another platform), this
+// test fails and forces a doc + finder UX update in lockstep.
+func TestMetadata_AdvertisesAllThreePlatforms(t *testing.T) {
+	m := (&Handler{}).Metadata()
+	got := map[string]bool{}
+	for _, p := range m.SupportedPlatforms {
+		got[p] = true
+	}
+	for _, want := range []string{"linux", "darwin", "windows"} {
+		if !got[want] {
+			t.Errorf("SupportedPlatforms missing %s: %v", want, m.SupportedPlatforms)
+		}
 	}
 }
 

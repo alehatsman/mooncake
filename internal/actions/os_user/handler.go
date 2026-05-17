@@ -3,6 +3,11 @@
 // and applies drift via platform-specific backends:
 //   - Linux: useradd / usermod / userdel + getent
 //   - macOS: dscl (Directory Services command line)
+//   - Windows: PowerShell Local Accounts cmdlets (Get/New/Set/Remove
+//     -LocalUser + Add/Remove-LocalGroupMember). Several fields have
+//     no Windows analog (uid, gid, shell, system) and are ignored
+//     with a debug log so cross-platform plans stay portable. See
+//     platform_windows.go for the full mapping table.
 //
 //nolint:revive // Package name matches action name convention (os_user)
 package os_user
@@ -43,25 +48,36 @@ func (h *Handler) Metadata() actions.ActionMetadata {
 		SupportsDryRun:     true,
 		SupportsBecome:     true,
 		Version:            "1.0.0",
-		SupportedPlatforms: []string{"linux", "darwin"},
+		SupportedPlatforms: []string{"linux", "darwin", "windows"},
 		RequiresSudo:       true,
 		ImplementsCheck:    true,
 	}
 }
 
 // Permissions implements actions.Permitter (spec-22 phase 3).
+//
+// Required binaries vary per host so spec-44 doctor reports actionable
+// findings on each platform. FilesystemWrite is set only on linux —
+// macOS's directory store + Windows's SAM database aren't file-shaped,
+// so claiming a path there would mislead doctor.
 func (Handler) Permissions(_ *config.Step) actions.PermissionSet {
-	if runtime.GOOS == "darwin" {
+	switch runtime.GOOS {
+	case "darwin":
 		return actions.PermissionSet{
 			Sudo:             true,
 			RequiredBinaries: []string{"dscl"},
 		}
-	}
-	// linux
-	return actions.PermissionSet{
-		Sudo:             true,
-		RequiredBinaries: []string{"useradd", "usermod", "userdel"},
-		FilesystemWrite:  []string{"/etc/passwd", "/etc/shadow", "/etc/group"},
+	case "windows":
+		return actions.PermissionSet{
+			Sudo:             true,
+			RequiredBinaries: []string{"powershell"},
+		}
+	default: // linux
+		return actions.PermissionSet{
+			Sudo:             true,
+			RequiredBinaries: []string{"useradd", "usermod", "userdel"},
+			FilesystemWrite:  []string{"/etc/passwd", "/etc/shadow", "/etc/group"},
+		}
 	}
 }
 

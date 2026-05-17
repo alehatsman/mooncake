@@ -734,7 +734,7 @@ export interface OsSystemdAction {
 /**
  * Declaratively manage a system user account
  * 
- * @platforms linux, darwin
+ * @platforms linux, darwin, windows
  * @requiresSudo true
  * @category system
  */

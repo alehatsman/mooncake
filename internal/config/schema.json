@@ -2013,7 +2013,8 @@
       "additionalProperties": false,
       "x-platforms": [
         "linux",
-        "darwin"
+        "darwin",
+        "windows"
       ],
       "x-requires-sudo": true,
       "x-implements-check": true,
