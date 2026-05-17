@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/alehatsman/mooncake/internal/queryio"
 	"github.com/urfave/cli/v2"
 )
 
@@ -28,7 +29,7 @@ func TestPickFormat(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.path+"|"+c.override, func(t *testing.T) {
-			got, err := pickFormat(c.path, c.override)
+			got, err := queryio.PickFormat(c.path, c.override, "--as")
 			if c.wantErr != "" {
 				if err == nil || !strings.Contains(err.Error(), c.wantErr) {
 					t.Fatalf("want err containing %q, got %v", c.wantErr, err)
@@ -47,7 +48,7 @@ func TestPickFormat(t *testing.T) {
 
 // TestParseDoc round-trips both formats and rejects multi-document YAML.
 func TestParseDoc(t *testing.T) {
-	v, err := parseDoc([]byte(`{"a":1}`), "json")
+	v, err := queryio.ParseDoc([]byte(`{"a":1}`), "json")
 	if err != nil {
 		t.Fatalf("json: %v", err)
 	}
@@ -56,7 +57,7 @@ func TestParseDoc(t *testing.T) {
 		t.Errorf("json round-trip: got %v", v)
 	}
 
-	v, err = parseDoc([]byte("a: 1\n"), "yaml")
+	v, err = queryio.ParseDoc([]byte("a: 1\n"), "yaml")
 	if err != nil {
 		t.Fatalf("yaml: %v", err)
 	}
@@ -65,7 +66,7 @@ func TestParseDoc(t *testing.T) {
 		t.Errorf("yaml round-trip: got %v", v)
 	}
 
-	_, err = parseDoc([]byte("a: 1\n---\nb: 2\n"), "yaml")
+	_, err = queryio.ParseDoc([]byte("a: 1\n---\nb: 2\n"), "yaml")
 	if err == nil || !strings.Contains(err.Error(), "multi-document YAML not supported") {
 		t.Errorf("expected multi-doc rejection, got %v", err)
 	}
@@ -79,7 +80,7 @@ func TestReadBoundedFile(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	data, err := readBoundedFile(good, 1024)
+	data, err := queryio.ReadBounded(good, 1024)
 	if err != nil {
 		t.Fatalf("read good: %v", err)
 	}
@@ -87,7 +88,7 @@ func TestReadBoundedFile(t *testing.T) {
 		t.Errorf("data missing: %q", data)
 	}
 
-	_, err = readBoundedFile(filepath.Join(dir, "missing.json"), 1024)
+	_, err = queryio.ReadBounded(filepath.Join(dir, "missing.json"), 1024)
 	if err == nil || !strings.Contains(err.Error(), "file not found") {
 		t.Errorf("expected not-found, got %v", err)
 	}
@@ -96,7 +97,7 @@ func TestReadBoundedFile(t *testing.T) {
 	if err := os.WriteFile(big, bytes.Repeat([]byte("x"), 200), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	_, err = readBoundedFile(big, 50)
+	_, err = queryio.ReadBounded(big, 50)
 	if err == nil || !strings.Contains(err.Error(), "exceeds") {
 		t.Errorf("expected oversize, got %v", err)
 	}

@@ -1,19 +1,12 @@
 package mcp
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
-	"io"
-	"os"
-	"path/filepath"
-	"strings"
-
-	"gopkg.in/yaml.v3"
 
 	"github.com/alehatsman/mooncake/internal/pathquery"
+	"github.com/alehatsman/mooncake/internal/queryio"
 )
 
 // queryFileDefaultMaxBytes mirrors read_common.DefaultMaxBytes and the
@@ -53,7 +46,7 @@ func HandleQueryFile(_ context.Context, args json.RawMessage) (string, error) {
 		params.MaxBytes = queryFileDefaultMaxBytes
 	}
 
-	format, err := pickQueryFormat(params.Path, params.Format)
+	format, err := queryio.PickFormat(params.Path, params.Format, "format")
 	if err != nil {
 		return mcpError(params.Path, err.Error())
 	}
@@ -62,12 +55,12 @@ func HandleQueryFile(_ context.Context, args json.RawMessage) (string, error) {
 		return mcpError(params.Path, "invalid query: "+err.Error())
 	}
 
-	data, err := readQueryFileBounded(params.Path, params.MaxBytes)
+	data, err := queryio.ReadBounded(params.Path, params.MaxBytes)
 	if err != nil {
 		return mcpError(params.Path, err.Error())
 	}
 
-	parsed, err := parseQueryDoc(data, format)
+	parsed, err := queryio.ParseDoc(data, format)
 	if err != nil {
 		return mcpError(params.Path, fmt.Sprintf("parse %s: %v", format, err))
 	}
@@ -100,73 +93,4 @@ func mcpError(path, msg string) (string, error) {
 		return "", fmt.Errorf("query_file: %s", msg)
 	}
 	return string(b), nil
-}
-
-// pickQueryFormat is the MCP-side twin of cmd/query_cmd.go:pickFormat.
-// Duplication is intentional — MCP doesn't depend on the cmd package
-// and the function is tiny enough that a shared helper isn't worth a
-// dedicated package.
-func pickQueryFormat(path, override string) (string, error) {
-	switch override {
-	case "":
-	case "json", "yaml":
-		return override, nil
-	default:
-		return "", fmt.Errorf("format must be json or yaml (got %q)", override)
-	}
-	switch strings.ToLower(filepath.Ext(path)) {
-	case ".json":
-		return "json", nil
-	case ".yml", ".yaml":
-		return "yaml", nil
-	default:
-		return "", fmt.Errorf("cannot infer format from extension; pass format=json|yaml")
-	}
-}
-
-func readQueryFileBounded(path string, limit int64) ([]byte, error) {
-	f, err := os.Open(path) // #nosec G304 — path is a tool argument by design
-	if err != nil {
-		if errors.Is(err, os.ErrNotExist) {
-			return nil, fmt.Errorf("file not found: %s", path)
-		}
-		return nil, fmt.Errorf("open %s: %w", path, err)
-	}
-	defer func() { _ = f.Close() }()
-
-	data, err := io.ReadAll(io.LimitReader(f, limit+1))
-	if err != nil {
-		return nil, fmt.Errorf("read %s: %w", path, err)
-	}
-	if int64(len(data)) > limit {
-		return nil, fmt.Errorf("%s exceeds max_bytes=%d", path, limit)
-	}
-	return data, nil
-}
-
-func parseQueryDoc(data []byte, format string) (any, error) {
-	var v any
-	switch format {
-	case "json":
-		if err := json.Unmarshal(data, &v); err != nil {
-			return nil, err
-		}
-		return v, nil
-	case "yaml":
-		dec := yaml.NewDecoder(bytes.NewReader(data))
-		if err := dec.Decode(&v); err != nil {
-			return nil, err
-		}
-		var second any
-		switch err := dec.Decode(&second); {
-		case errors.Is(err, io.EOF):
-			return v, nil
-		case err == nil:
-			return nil, fmt.Errorf("multi-document YAML not supported")
-		default:
-			return nil, fmt.Errorf("trailing-document parse: %w", err)
-		}
-	default:
-		return nil, fmt.Errorf("unknown format %q", format)
-	}
 }

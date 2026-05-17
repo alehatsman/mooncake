@@ -15,19 +15,13 @@
 package main
 
 import (
-	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
-	"io"
-	"os"
-	"path/filepath"
-	"strings"
 
 	"github.com/urfave/cli/v2"
-	"gopkg.in/yaml.v3"
 
 	"github.com/alehatsman/mooncake/internal/pathquery"
+	"github.com/alehatsman/mooncake/internal/queryio"
 )
 
 // defaultQueryMaxBytes mirrors read_common.DefaultMaxBytes (4 MiB) so
@@ -77,7 +71,7 @@ func runQuery(c *cli.Context) error {
 	path := c.Args().Get(0)
 	queryPath := c.Args().Get(1) // empty path is allowed → returns whole document
 
-	format, err := pickFormat(path, c.String("as"))
+	format, err := queryio.PickFormat(path, c.String("as"), "--as")
 	if err != nil {
 		return cli.Exit("query: "+err.Error(), 2)
 	}
@@ -86,12 +80,12 @@ func runQuery(c *cli.Context) error {
 		return cli.Exit("query: invalid path: "+err.Error(), 2)
 	}
 
-	data, err := readBoundedFile(path, c.Int64("max-bytes"))
+	data, err := queryio.ReadBounded(path, c.Int64("max-bytes"))
 	if err != nil {
 		return cli.Exit("query: "+err.Error(), 2)
 	}
 
-	parsed, err := parseDoc(data, format)
+	parsed, err := queryio.ParseDoc(data, format)
 	if err != nil {
 		return cli.Exit(fmt.Sprintf("query: parse %s: %v", path, err), 2)
 	}
@@ -105,81 +99,6 @@ func runQuery(c *cli.Context) error {
 	}
 
 	return printQueryValue(value, c.Bool("pretty"))
-}
-
-// pickFormat resolves the file format, preferring an explicit override
-// when set. Returns "json" or "yaml" or an error if neither override
-// nor extension is decisive.
-func pickFormat(path, override string) (string, error) {
-	switch override {
-	case "":
-		// fall through to extension sniffing
-	case "json", "yaml":
-		return override, nil
-	default:
-		return "", fmt.Errorf("--as must be json or yaml (got %q)", override)
-	}
-
-	ext := strings.ToLower(filepath.Ext(path))
-	switch ext {
-	case ".json":
-		return "json", nil
-	case ".yml", ".yaml":
-		return "yaml", nil
-	default:
-		return "", fmt.Errorf("cannot infer format from extension %q; pass --as json|yaml", ext)
-	}
-}
-
-// readBoundedFile mirrors read_common.readBounded: caps the read at
-// limit+1 bytes so oversize files are detected without slurping them.
-func readBoundedFile(path string, limit int64) ([]byte, error) {
-	f, err := os.Open(path) // #nosec G304 — path is a CLI argument by design
-	if err != nil {
-		if errors.Is(err, os.ErrNotExist) {
-			return nil, fmt.Errorf("file not found: %s", path)
-		}
-		return nil, fmt.Errorf("open %s: %w", path, err)
-	}
-	defer func() { _ = f.Close() }()
-
-	data, err := io.ReadAll(io.LimitReader(f, limit+1))
-	if err != nil {
-		return nil, fmt.Errorf("read %s: %w", path, err)
-	}
-	if int64(len(data)) > limit {
-		return nil, fmt.Errorf("%s exceeds --max-bytes=%d", path, limit)
-	}
-	return data, nil
-}
-
-// parseDoc decodes data per format. YAML rejects multi-document files
-// to match read.yaml's behavior (spec-38 Open Q3).
-func parseDoc(data []byte, format string) (any, error) {
-	var v any
-	switch format {
-	case "json":
-		if err := json.Unmarshal(data, &v); err != nil {
-			return nil, err
-		}
-		return v, nil
-	case "yaml":
-		dec := yaml.NewDecoder(bytes.NewReader(data))
-		if err := dec.Decode(&v); err != nil {
-			return nil, err
-		}
-		var second any
-		switch err := dec.Decode(&second); {
-		case errors.Is(err, io.EOF):
-			return v, nil
-		case err == nil:
-			return nil, fmt.Errorf("multi-document YAML not supported")
-		default:
-			return nil, fmt.Errorf("trailing-document parse: %w", err)
-		}
-	default:
-		return nil, fmt.Errorf("unknown format %q", format)
-	}
 }
 
 // printQueryValue writes the extracted value to stdout per the CLI
