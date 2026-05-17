@@ -1,8 +1,13 @@
 # Spec 69: Step Execution Pipeline — Centralize Cross-Cutting Concerns
 
-**Status:** 🟡 Phase 1 in flight (`ctx.Privileged()` primitive + pkg.upgrade
-migration). Phases 2-3 (retry + override centralization, broad handler
-migration) drafted but not started.
+**Status:** 🟢 Phases 1, 2-3, 4, 5a, 5b shipped. The sudo-escalation bug
+class is closed (every Sudo:true-declaring handler now actually
+escalates). Retry + override centralization is in place via the
+`RawRunner` opt-in interface; shell + command migrated as the
+reference implementations. Migrating `http_request` (needs the
+`Retryable` hook for selective 5xx/429 retry policy) and `download`
+(custom inline retry shape) is mechanical follow-up — same shape as
+shell/command but with handler-specific retry-decision logic.
 **Epic:** E10 Handler ABI maturation — continuation of spec-22's
 ABI work.
 **Effort:** M (1–2 weeks across phases 1-3)

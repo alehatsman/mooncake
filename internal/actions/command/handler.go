@@ -315,6 +315,27 @@ func (h *Handler) evaluateBoolExpression(ctx actions.Context, expression string,
 // the command via executeWithRetry.
 //
 // F011: legacy Execute / DryRun pair folded into Run.
+// RunRaw is the spec-69 phase 2-3 entry point. Mirror of shell.RunRaw:
+// single attempt, no retry, no failed_when/changed_when overrides.
+// The executor's dispatchRunner wraps RunRaw in the retry loop and
+// applies overrides post-loop.
+func (h *Handler) RunRaw(ctx actions.Context, step *config.Step) (actions.Result, error) {
+	cmdAction := step.Cmd
+	if ctx.Mode() == actions.ModePlan {
+		return h.Run(ctx, step)
+	}
+	renderedArgv := make([]string, len(cmdAction.Argv))
+	for i, arg := range cmdAction.Argv {
+		rendered, err := ctx.GetTemplate().Render(arg, ctx.GetVariables())
+		if err != nil {
+			return nil, fmt.Errorf("failed to render argv[%d]: %w", i, err)
+		}
+		renderedArgv[i] = rendered
+	}
+	ctx.GetLogger().Debugf("  Executing: %s", strings.Join(renderedArgv, " "))
+	return h.executeCommandRaw(ctx, step, renderedArgv)
+}
+
 func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, error) {
 	cmdAction := step.Cmd
 

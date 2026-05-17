@@ -1315,7 +1315,50 @@ func dispatchRunner(step config.Step, ec *ExecutionContext, runner actions.Runne
 		}
 	}
 
-	result, err := runner.Run(ec, &step)
+	// Spec-69 phase 2-3: if the handler opts into RawRunner, the
+	// executor owns the retry loop AND post-loop override application.
+	// Legacy Runner.Run handlers stay on the path below; their own
+	// in-handler retry+override logic still runs.
+	var (
+		result actions.Result
+		err    error
+	)
+	if rr, ok := runner.(actions.RawRunner); ok && ec.Mode() != actions.ModePlan {
+		isRetryable := func(error) bool { return true }
+		if rd, ok := runner.(actions.Retryable); ok {
+			isRetryable = func(e error) bool { return rd.IsRetryable(e, &step) }
+		}
+		result, err = runWithRetry(&step, ec.GetLogger(), func(_ int) (actions.Result, error) {
+			return rr.RunRaw(ec, &step)
+		}, isRetryable)
+		// Override application: applies once post-retry. MT-48 holds
+		// because the retry loop above branched on raw err, not the
+		// post-override verdict. failed_when:false may mask the final
+		// failure entirely; changed_when overrides Changed.
+		if r, rok := result.(*Result); rok {
+			if oErr := applyResultOverrides(ec, &step, r); oErr != nil {
+				err = oErr
+			} else if r.Failed {
+				// Either failed_when set it, or it was set by the
+				// raw outcome; surface a real error so callers see
+				// the same Failed=true + err combination they got
+				// pre-spec-69. When err is already non-nil (the
+				// retry loop returned the "after N attempts" wrap),
+				// keep it — it has the attempt count.
+				if err == nil {
+					err = fmt.Errorf("step failed (failed_when=true)")
+				}
+			} else if err != nil {
+				// failed_when masked the failure: clear err so the
+				// step reports success. This is the documented
+				// "retry N times, then don't fail the run no matter
+				// what" pattern (MT-48).
+				err = nil
+			}
+		}
+	} else {
+		result, err = runner.Run(ec, &step)
+	}
 
 	// Capture the result on the context whether or not Run errored,
 	// matching the existing Execute behavior so callers can read

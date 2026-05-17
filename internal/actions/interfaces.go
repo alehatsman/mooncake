@@ -249,3 +249,39 @@ type Result interface {
 type Runner interface {
 	Run(ctx Context, step *config.Step) (Result, error)
 }
+
+// RawRunner is the spec-69 phase 2-3 opt-in alternative to Runner.
+// Handlers that implement RawRunner delegate retry-loop and result-
+// override (changed_when / failed_when) responsibility to the
+// executor. RunRaw must:
+//
+//   - Execute exactly one attempt of the action's work.
+//   - Return (Result, error) reflecting the raw outcome; never apply
+//     failed_when or changed_when overrides itself.
+//   - Be safe to call multiple times in a row when retries are
+//     configured.
+//
+// The executor wraps RunRaw in its retry loop (honoring step.Retry
+// fields uniformly across all RawRunner implementations) and then
+// applies overrides once, post-loop. This preserves MT-48 (the retry
+// decision is on the raw exit code, never on the post-failed_when
+// verdict) and MT-62 (backoff strategies honored uniformly).
+//
+// Handlers that implement both Runner.Run and RawRunner.RunRaw are
+// dispatched via RunRaw — the executor prefers the RawRunner path.
+// Handlers without RawRunner go through the legacy Runner.Run path
+// unchanged; their own internal retry+override logic still applies.
+type RawRunner interface {
+	RunRaw(ctx Context, step *config.Step) (Result, error)
+}
+
+// Retryable is an optional companion to RawRunner. Handlers that
+// implement it can decide per-error whether a retry should be
+// attempted — useful for actions like http.request where 5xx/429/
+// timeout errors are retryable but 4xx errors aren't.
+//
+// When absent, the executor's retry loop treats every non-nil error
+// as retryable up to step.RetryAttempts().
+type Retryable interface {
+	IsRetryable(err error, step *config.Step) bool
+}

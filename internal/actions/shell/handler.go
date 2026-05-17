@@ -550,6 +550,32 @@ func (h *Handler) evaluateBoolExpression(ctx actions.Context, expression, fieldN
 // what would run. WouldChange is set to true because we assume shell
 // steps mutate state (matching the legacy Execute which always sets
 // Changed=true).
+// RunRaw is the spec-69 phase 2-3 entry point. The executor calls
+// this once per attempt and owns the retry loop + override
+// application (failed_when / changed_when). Run() below stays for
+// direct-test callers and goes through the in-handler retry path.
+//
+// MT-48 invariant: RunRaw MUST NOT apply failed_when overrides. The
+// retry decision is made on the raw exit code in the executor's
+// runWithRetry; applying failed_when here would mask the first
+// failure and short-circuit retries.
+func (h *Handler) RunRaw(ctx actions.Context, step *config.Step) (actions.Result, error) {
+	shellAction := step.Shell
+	cmd := strings.Trim(shellAction.Cmd, " \n")
+	if ctx.Mode() == actions.ModePlan {
+		// Plan mode goes through Run, not RunRaw — but the executor
+		// already bypasses RunRaw in plan mode (see dispatchRunner).
+		// This guard is belt-and-suspenders for direct callers.
+		return h.Run(ctx, step)
+	}
+	rendered, err := ctx.GetTemplate().Render(cmd, ctx.GetVariables())
+	if err != nil {
+		return nil, fmt.Errorf("failed to render command: %w", err)
+	}
+	ctx.GetLogger().Debugf("  Executing: %s", rendered)
+	return h.executeShellCommandRaw(ctx, step, rendered)
+}
+
 func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, error) {
 	shellAction := step.Shell
 	cmd := strings.Trim(shellAction.Cmd, " \n")
