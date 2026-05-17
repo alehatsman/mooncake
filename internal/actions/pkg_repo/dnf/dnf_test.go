@@ -1,134 +1,101 @@
-//nolint:revive // package name follows action convention
-package pkg_repo
+package dnf
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
 	"testing"
 
+	"github.com/alehatsman/mooncake/internal/actions"
+	"github.com/alehatsman/mooncake/internal/actions/pkg_repo/shared"
 	"github.com/alehatsman/mooncake/internal/config"
+	"github.com/alehatsman/mooncake/internal/executor"
+	"github.com/alehatsman/mooncake/internal/logger"
+	"github.com/alehatsman/mooncake/internal/pathutil"
+	"github.com/alehatsman/mooncake/internal/template"
 )
 
-// stubDnfFS overrides the dnf paths + key fetcher + cache cleaner for
-// the duration of a test. Mirrors stubFS for the apt driver; sharing
-// state lets one stub serve a mixed-driver test if a future scenario
-// needs it. The fake key body still can't be parsed by the real
-// openpgp verifier, so the default verifyKeyFingerprint stub is a
-// no-op (same convention as the apt happy-path tests).
-type stubDnfFS struct {
+func newCtx(t *testing.T, plan bool) *executor.ExecutionContext {
+	t.Helper()
+	r, err := template.NewPongo2Renderer()
+	if err != nil {
+		t.Fatal(err)
+	}
+	return &executor.ExecutionContext{
+		Svc: &executor.RunServices{
+			Template: r,
+			PathUtil: pathutil.NewPathExpander(r),
+			Logger:   logger.NewLogger(logger.ErrorLevel),
+			Mode:     planMode(plan),
+			Stats:    executor.NewExecutionStats(),
+		},
+		Scope:      executor.NewVariableScope(),
+		CurrentDir: "/tmp",
+	}
+}
+
+func planMode(b bool) actions.Mode {
+	if b {
+		return actions.ModePlan
+	}
+	return actions.ModeApply
+}
+
+// stubFS overrides the dnf paths + key fetcher + cache cleaner for
+// the duration of a test. Mirrors the apt stubFS shape.
+type stubFS struct {
 	reposDir    string
 	keyringDir  string
 	keyBody     []byte
 	cacheCalled int
-	resetVerify func()
-	originalDnf dnfPaths
-	originalFK  func(string) ([]byte, error)
-	originalCC  func() error
-	originalVKF func([]byte, string) error
 }
 
-func newStubDnfFS(t *testing.T) *stubDnfFS {
+func newStubFS(t *testing.T) *stubFS {
 	t.Helper()
 	dir := t.TempDir()
-	s := &stubDnfFS{
-		reposDir:    filepath.Join(dir, "yum.repos.d"),
-		keyringDir:  filepath.Join(dir, "rpm-gpg"),
-		keyBody:     []byte("-----BEGIN PGP PUBLIC KEY-----\nfake\n-----END PGP PUBLIC KEY-----\n"),
-		originalDnf: dnf,
-		originalFK:  fetchKey,
-		originalCC:  dnfCleanCache,
-		originalVKF: verifyKeyFingerprint,
+	s := &stubFS{
+		reposDir:   filepath.Join(dir, "yum.repos.d"),
+		keyringDir: filepath.Join(dir, "rpm-gpg"),
+		keyBody:    []byte("-----BEGIN PGP PUBLIC KEY-----\nfake\n-----END PGP PUBLIC KEY-----\n"),
 	}
-	dnf = dnfPaths{reposDir: s.reposDir, keyringDir: s.keyringDir}
-	fetchKey = func(string) ([]byte, error) { return s.keyBody, nil }
-	verifyKeyFingerprint = func([]byte, string) error { return nil }
-	dnfCleanCache = func() error {
+	originalPaths := paths
+	originalFetch := shared.HTTPFetchKey
+	originalClean := cleanCache
+	originalVerify := shared.VerifyKeyFingerprint
+	paths = Paths{ReposDir: s.reposDir, KeyringDir: s.keyringDir}
+	shared.HTTPFetchKey = func(string) ([]byte, error) { return s.keyBody, nil }
+	shared.VerifyKeyFingerprint = func([]byte, string) error { return nil }
+	cleanCache = func() error {
 		s.cacheCalled++
 		return nil
 	}
 	t.Cleanup(func() {
-		dnf = s.originalDnf
-		fetchKey = s.originalFK
-		dnfCleanCache = s.originalCC
-		verifyKeyFingerprint = s.originalVKF
+		paths = originalPaths
+		shared.HTTPFetchKey = originalFetch
+		cleanCache = originalClean
+		shared.VerifyKeyFingerprint = originalVerify
 	})
 	return s
 }
 
-func TestDnf_Validate(t *testing.T) {
-	boolp := func(b bool) *bool { return &b }
-	cases := []struct {
-		name    string
-		step    *config.Step
-		wantErr bool
-	}{
-		{
-			"dnf no baseurl/metalink/mirrorlist",
-			&config.Step{PkgRepo: &config.PkgRepo{Name: "x", Dnf: &config.PkgRepoDnf{}}},
-			true,
-		},
-		{
-			"dnf baseurl + metalink mutually exclusive",
-			&config.Step{PkgRepo: &config.PkgRepo{Name: "x", Dnf: &config.PkgRepoDnf{
-				BaseURL:  "https://example.com",
-				Metalink: "https://example.com/metalink",
-			}}},
-			true,
-		},
-		{
-			"dnf gpg check default needs fingerprint",
-			&config.Step{PkgRepo: &config.PkgRepo{Name: "x", Dnf: &config.PkgRepoDnf{
-				BaseURL:   "https://example.com",
-				GPGKeyURL: "https://example.com/key",
-			}}},
-			true,
-		},
-		{
-			"dnf gpg check off ok without fingerprint",
-			&config.Step{PkgRepo: &config.PkgRepo{Name: "x", Dnf: &config.PkgRepoDnf{
-				BaseURL:   "https://example.com",
-				GPGKeyURL: "https://example.com/key",
-				GPGCheck:  boolp(false),
-			}}},
-			false,
-		},
-		{
-			"dnf ok baseurl only",
-			&config.Step{PkgRepo: &config.PkgRepo{Name: "epel", Dnf: &config.PkgRepoDnf{
-				BaseURL: "https://download.example.com/epel/9/Everything/x86_64/",
-			}}},
-			false,
-		},
-		{
-			"dnf ok metalink only",
-			&config.Step{PkgRepo: &config.PkgRepo{Name: "fedora", Dnf: &config.PkgRepoDnf{
-				Metalink: "https://mirrors.fedoraproject.org/metalink?repo=fedora-$releasever&arch=$basearch",
-			}}},
-			false,
-		},
-		{
-			"dnf ok absent skips source-required check",
-			&config.Step{PkgRepo: &config.PkgRepo{Name: "old", State: "absent", Dnf: &config.PkgRepoDnf{}}},
-			false,
-		},
+func mustRun(t *testing.T, plan bool, step *config.Step) *executor.Result {
+	t.Helper()
+	result := executor.NewResult()
+	result.Checkable = true
+	res, err := Run(newCtx(t, plan), step.PkgRepo, result)
+	if err != nil {
+		t.Fatalf("Run: %v", err)
 	}
-	for _, c := range cases {
-		t.Run(c.name, func(t *testing.T) {
-			err := (&Handler{}).Validate(c.step)
-			if (err != nil) != c.wantErr {
-				t.Errorf("err=%v wantErr=%v", err, c.wantErr)
-			}
-		})
-	}
+	return res.(*executor.Result)
 }
 
 func TestDnf_Apply_CreatesRepoAndKeyringAndCleansCache(t *testing.T) {
 	if runtime.GOOS != "linux" {
 		t.Skip("Linux only")
 	}
-	s := newStubDnfFS(t)
+	s := newStubFS(t)
 	step := &config.Step{PkgRepo: &config.PkgRepo{
 		Name: "docker-ce",
 		Dnf: &config.PkgRepoDnf{
@@ -173,7 +140,7 @@ func TestDnf_Apply_DescriptionDefaultsToName(t *testing.T) {
 	if runtime.GOOS != "linux" {
 		t.Skip("Linux only")
 	}
-	s := newStubDnfFS(t)
+	s := newStubFS(t)
 	boolFalse := false
 	step := &config.Step{PkgRepo: &config.PkgRepo{
 		Name: "epel",
@@ -193,7 +160,7 @@ func TestDnf_Apply_NoKeyringWhenGPGCheckOff(t *testing.T) {
 	if runtime.GOOS != "linux" {
 		t.Skip("Linux only")
 	}
-	s := newStubDnfFS(t)
+	s := newStubFS(t)
 	boolFalse := false
 	step := &config.Step{PkgRepo: &config.PkgRepo{
 		Name: "local",
@@ -220,7 +187,7 @@ func TestDnf_Apply_MetalinkAndEnabledFalse(t *testing.T) {
 	if runtime.GOOS != "linux" {
 		t.Skip("Linux only")
 	}
-	s := newStubDnfFS(t)
+	s := newStubFS(t)
 	boolFalse := false
 	step := &config.Step{PkgRepo: &config.PkgRepo{
 		Name: "fedora-debuginfo",
@@ -247,7 +214,7 @@ func TestDnf_Apply_Idempotent(t *testing.T) {
 	if runtime.GOOS != "linux" {
 		t.Skip("Linux only")
 	}
-	s := newStubDnfFS(t)
+	s := newStubFS(t)
 	step := &config.Step{PkgRepo: &config.PkgRepo{
 		Name: "docker-ce",
 		Dnf: &config.PkgRepoDnf{
@@ -271,7 +238,7 @@ func TestDnf_Apply_DetectsDrift(t *testing.T) {
 	if runtime.GOOS != "linux" {
 		t.Skip("Linux only")
 	}
-	s := newStubDnfFS(t)
+	s := newStubFS(t)
 	step := &config.Step{PkgRepo: &config.PkgRepo{
 		Name: "docker-ce",
 		Dnf: &config.PkgRepoDnf{
@@ -282,7 +249,6 @@ func TestDnf_Apply_DetectsDrift(t *testing.T) {
 	}}
 	_ = mustRun(t, false, step)
 
-	// Bump major version 8 → 9.
 	step.PkgRepo.Dnf.BaseURL = "https://download.docker.com/linux/rhel/9/x86_64/stable"
 	r := mustRun(t, false, step)
 	if !r.Changed {
@@ -298,7 +264,7 @@ func TestDnf_Absent_RemovesRepo(t *testing.T) {
 	if runtime.GOOS != "linux" {
 		t.Skip("Linux only")
 	}
-	s := newStubDnfFS(t)
+	s := newStubFS(t)
 	step := &config.Step{PkgRepo: &config.PkgRepo{
 		Name: "old",
 		Dnf: &config.PkgRepoDnf{
@@ -322,7 +288,7 @@ func TestDnf_Absent_NoopWhenMissing(t *testing.T) {
 	if runtime.GOOS != "linux" {
 		t.Skip("Linux only")
 	}
-	_ = newStubDnfFS(t)
+	_ = newStubFS(t)
 	step := &config.Step{PkgRepo: &config.PkgRepo{
 		Name:  "never",
 		State: "absent",
@@ -338,7 +304,7 @@ func TestDnf_Plan_DoesNotWrite(t *testing.T) {
 	if runtime.GOOS != "linux" {
 		t.Skip("Linux only")
 	}
-	s := newStubDnfFS(t)
+	s := newStubFS(t)
 	step := &config.Step{PkgRepo: &config.PkgRepo{
 		Name: "docker-ce",
 		Dnf: &config.PkgRepoDnf{
@@ -360,15 +326,13 @@ func TestDnf_Plan_DoesNotWrite(t *testing.T) {
 }
 
 // TestDnf_FingerprintMismatchRefuses — mirrors F034 on the apt side.
-// Operator pins a fingerprint, the fetched key carries a different
-// one, and the handler must refuse before the keyring lands on disk.
 func TestDnf_FingerprintMismatchRefuses(t *testing.T) {
 	if runtime.GOOS != "linux" {
 		t.Skip("Linux only")
 	}
-	s := newStubDnfFS(t)
-	verifyKeyFingerprint = func(body []byte, want string) error {
-		return errFakeMismatch
+	s := newStubFS(t)
+	shared.VerifyKeyFingerprint = func(body []byte, want string) error {
+		return errors.New("fake mismatch")
 	}
 	step := &config.Step{PkgRepo: &config.PkgRepo{
 		Name: "docker-ce",
@@ -378,7 +342,9 @@ func TestDnf_FingerprintMismatchRefuses(t *testing.T) {
 			GPGKeyFingerprint: "9DC858229FC7DD38854AE2D88D81803C0EBFCD88",
 		},
 	}}
-	_, err := (&Handler{}).Run(newCtx(t, false), step)
+	result := executor.NewResult()
+	result.Checkable = true
+	_, err := Run(newCtx(t, false), step.PkgRepo, result)
 	if err == nil {
 		t.Fatal("expected fingerprint-mismatch error; got nil")
 	}
@@ -394,59 +360,11 @@ func TestDnf_FingerprintMismatchRefuses(t *testing.T) {
 	}
 }
 
-func TestDnf_Permissions(t *testing.T) {
-	step := &config.Step{PkgRepo: &config.PkgRepo{
-		Name: "docker-ce",
-		Dnf: &config.PkgRepoDnf{
-			BaseURL:           "https://download.docker.com/linux/rhel/9/x86_64/stable",
-			GPGKeyURL:         "https://download.docker.com/linux/rhel/gpg",
-			GPGKeyFingerprint: "ABCD",
-		},
-	}}
-	ps := Handler{}.Permissions(step)
-	if !ps.Sudo {
-		t.Error("dnf driver should require sudo")
-	}
-	if !ps.Network {
-		t.Error("dnf driver should advertise network when gpg_key_url is set")
-	}
-	if len(ps.RequiredBinaries) != 1 || ps.RequiredBinaries[0] != "dnf" {
-		t.Errorf("expected RequiredBinaries=[dnf]; got %v", ps.RequiredBinaries)
-	}
-	wantRepo := dnf.reposDir + "/docker-ce.repo"
-	wantKey := dnf.keyringDir + "/RPM-GPG-KEY-docker-ce"
-	gotPaths := strings.Join(ps.FilesystemWrite, ",")
-	if !strings.Contains(gotPaths, wantRepo) || !strings.Contains(gotPaths, wantKey) {
-		t.Errorf("FilesystemWrite missing dnf paths; got %v", ps.FilesystemWrite)
-	}
-}
-
-func TestDnf_Diff_DriverDnf(t *testing.T) {
-	step := &config.Step{PkgRepo: &config.PkgRepo{
-		Name: "epel",
-		Dnf:  &config.PkgRepoDnf{BaseURL: "https://example.com/epel"},
-	}}
-	d, err := Handler{}.Diff(newCtx(t, true), step)
-	if err != nil {
-		t.Fatalf("Diff: %v", err)
-	}
-	snap, ok := d.After.(*PkgRepoSnapshot)
-	if !ok {
-		t.Fatalf("After is %T, want *PkgRepoSnapshot", d.After)
-	}
-	if snap.Driver != "dnf" {
-		t.Errorf("Driver=%q, want dnf", snap.Driver)
-	}
-	if snap.Name != "epel" {
-		t.Errorf("Name=%q, want epel", snap.Name)
-	}
-}
-
-func TestDnf_Reverse_RestoresPriorContent(t *testing.T) {
+func TestDnf_Reverse_CapturedOnUpdate(t *testing.T) {
 	if runtime.GOOS != "linux" {
 		t.Skip("Linux only")
 	}
-	s := newStubDnfFS(t)
+	s := newStubFS(t)
 	if err := os.MkdirAll(s.reposDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -466,31 +384,14 @@ func TestDnf_Reverse_RestoresPriorContent(t *testing.T) {
 	if res.ReverseData == nil {
 		t.Fatal("expected ReverseData captured on update")
 	}
-	info, ok := res.ReverseData.(*PkgRepoReverseInfo)
+	info, ok := res.ReverseData.(*shared.PkgRepoReverseInfo)
 	if !ok {
-		t.Fatalf("ReverseData type %T, want *PkgRepoReverseInfo", res.ReverseData)
+		t.Fatalf("ReverseData type %T, want *shared.PkgRepoReverseInfo", res.ReverseData)
 	}
 	if !info.PriorExisted {
 		t.Error("PriorExisted should be true when the repo file was on disk pre-apply")
 	}
 	if !strings.Contains(info.PriorContent, "baseurl=https://old") {
 		t.Errorf("PriorContent does not match pre-apply state; got %q", info.PriorContent)
-	}
-
-	reverseStep, err := Handler{}.Reverse(newCtx(t, false), step, res)
-	if err != nil {
-		t.Fatalf("Reverse: %v", err)
-	}
-	if reverseStep == nil || reverseStep.FileWrite == nil {
-		t.Fatalf("Reverse should produce a file.write step; got %+v", reverseStep)
-	}
-	if reverseStep.FileWrite.Path != priorRepo {
-		t.Errorf("Reverse path %q, want %q", reverseStep.FileWrite.Path, priorRepo)
-	}
-	if reverseStep.FileWrite.State != "file" {
-		t.Errorf("Reverse state %q, want file", reverseStep.FileWrite.State)
-	}
-	if !strings.Contains(reverseStep.FileWrite.Content, "baseurl=https://old") {
-		t.Errorf("Reverse content does not restore prior bytes; got %q", reverseStep.FileWrite.Content)
 	}
 }

@@ -1,5 +1,6 @@
-//nolint:revive // package name follows action convention
-package pkg_repo
+// Package shared fingerprint helpers — exported for the per-driver
+// sub-packages.
+package shared
 
 // F034: pkg.repo's gpg_key_fingerprint is required at validate-time
 // but pre-fix was never compared against the fetched key. This file
@@ -22,14 +23,14 @@ import (
 	"golang.org/x/crypto/openpgp/armor" //nolint:staticcheck
 )
 
-// verifyKeyFingerprint is the production fingerprint check. Tests
+// VerifyKeyFingerprint is the production fingerprint check. Tests
 // replace it with a no-op (or a deterministic stub) when they use the
 // fake key body in newStubFS — the real verifier rejects that body
 // at openpgp.ReadKeyRing, which would otherwise break tests unrelated
 // to fingerprint pinning.
-var verifyKeyFingerprint = realVerifyKeyFingerprint
+var VerifyKeyFingerprint = RealVerifyKeyFingerprint
 
-// realVerifyKeyFingerprint parses body as an OpenPGP public key
+// RealVerifyKeyFingerprint parses body as an OpenPGP public key
 // (binary or ASCII-armored), extracts the V4 fingerprint of the
 // primary key, and compares against want. Comparison is
 // case-insensitive and ignores whitespace so an operator can paste
@@ -37,18 +38,18 @@ var verifyKeyFingerprint = realVerifyKeyFingerprint
 //
 // Returns a clear error on parse failure or mismatch; no error if
 // the parsed fingerprint matches the pinned one.
-func realVerifyKeyFingerprint(body []byte, want string) error {
+func RealVerifyKeyFingerprint(body []byte, want string) error {
 	if strings.TrimSpace(want) == "" {
 		// No pinned fingerprint configured — nothing to compare. Caller
 		// should not reach this branch (we early-return at the call site
 		// when want is empty), but be defensive.
 		return nil
 	}
-	got, err := primaryKeyFingerprint(body)
+	got, err := primaryKeyFingerprintLocal(body)
 	if err != nil {
 		return fmt.Errorf("parse fetched gpg key: %w", err)
 	}
-	if normalizeFingerprint(got) != normalizeFingerprint(want) {
+	if NormalizeFingerprint(got) != NormalizeFingerprint(want) {
 		return fmt.Errorf(
 			"fetched gpg key fingerprint %s does not match pinned fingerprint %s",
 			got, want,
@@ -57,10 +58,10 @@ func realVerifyKeyFingerprint(body []byte, want string) error {
 	return nil
 }
 
-// primaryKeyFingerprint reads an OpenPGP keyring (binary or
+// primaryKeyFingerprintLocal reads an OpenPGP keyring (binary or
 // ASCII-armored) and returns the primary key fingerprint of the first
 // entity as uppercase hex.
-func primaryKeyFingerprint(body []byte) (string, error) {
+func primaryKeyFingerprintLocal(body []byte) (string, error) {
 	r, err := readerForKey(body)
 	if err != nil {
 		return "", err
@@ -92,7 +93,7 @@ func readerForKey(body []byte) (io.Reader, error) {
 	return bytes.NewReader(body), nil
 }
 
-// normalizeFingerprint upper-cases the hex and strips the
+// NormalizeFingerprint upper-cases the hex and strips the
 // inconsequential separators so two transcriptions of the same
 // fingerprint compare equal:
 //
@@ -103,7 +104,7 @@ func readerForKey(body []byte) (io.Reader, error) {
 // Does NOT validate hex-ness — a non-hex character survives and forces
 // a mismatch at compare time, which is exactly the safety property we
 // want.
-func normalizeFingerprint(s string) string {
+func NormalizeFingerprint(s string) string {
 	out := strings.ToUpper(strings.TrimSpace(s))
 	out = strings.TrimPrefix(out, "0X")
 	out = strings.ReplaceAll(out, " ", "")

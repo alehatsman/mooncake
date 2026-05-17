@@ -1,5 +1,14 @@
-//nolint:revive // Package name matches action name convention (pkg_repo)
-package pkg_repo
+// Package dnf implements the dnf/yum driver for pkg.repo. Called
+// from the parent package's Run dispatcher when step.PkgRepo.Dnf is
+// set.
+//
+// Writes an INI .repo file to /etc/yum.repos.d/<name>.repo and,
+// when gpg_key_url is set, a binary keyring to
+// /etc/pki/rpm-gpg/RPM-GPG-KEY-<name>. Atomic write + idempotent
+// compare so re-applies skip a no-op write. Falls back to `yum`
+// when dnf isn't on PATH so the driver works on RHEL 7 hosts as
+// well as Fedora / RHEL 8+.
+package dnf
 
 import (
 	"bytes"
@@ -13,42 +22,56 @@ import (
 	"strings"
 
 	"github.com/alehatsman/mooncake/internal/actions"
+	"github.com/alehatsman/mooncake/internal/actions/pkg_repo/shared"
 	"github.com/alehatsman/mooncake/internal/config"
 	"github.com/alehatsman/mooncake/internal/events"
 	"github.com/alehatsman/mooncake/internal/executor"
 )
 
-// dnfPaths controls where the dnf driver writes files. Tests
-// override these to avoid touching /etc.
-type dnfPaths struct {
-	reposDir   string
-	keyringDir string
+// Paths controls where the dnf driver writes files. Tests override
+// via the package-level `paths` var to avoid touching /etc.
+type Paths struct {
+	ReposDir   string
+	KeyringDir string
 }
 
-// Package-level hooks. Defaults are wired to real production paths /
-// binaries; tests substitute their own for hermetic runs.
+// Package-level hooks. Defaults are wired to real production paths
+// / binaries; tests substitute their own for hermetic runs.
 var (
-	dnf = dnfPaths{
-		reposDir:   "/etc/yum.repos.d",
-		keyringDir: "/etc/pki/rpm-gpg",
+	paths = Paths{
+		ReposDir:   "/etc/yum.repos.d",
+		KeyringDir: "/etc/pki/rpm-gpg",
 	}
-	dnfCleanCache = realDnfCleanCache
+	cleanCache = realCleanCache
 )
 
-// runDnf drives state=present / state=absent for a dnf/yum repository.
+// RepoPath returns the absolute path to the .repo INI file for
+// `name`. Exported so the parent's Permissions() can advertise
+// FilesystemWrite without reading driver internals.
+func RepoPath(name string) string {
+	return filepath.Join(paths.ReposDir, name+".repo")
+}
+
+// KeyringPath returns the absolute path to the rpm-gpg keyring for
+// `name`. Exported for the same reason as RepoPath.
+func KeyringPath(name string) string {
+	return filepath.Join(paths.KeyringDir, "RPM-GPG-KEY-"+name)
+}
+
+// Run drives state=present / state=absent for a dnf/yum repository.
 // Mirrors the apt path: render → plan → (plan-mode? exit) → capture
 // pre-state → write atomically → run "dnf clean expire-cache".
-func runDnf(ctx actions.Context, r *config.PkgRepo, result *executor.Result) (actions.Result, error) {
+func Run(ctx actions.Context, r *config.PkgRepo, result *executor.Result) (actions.Result, error) {
 	if runtime.GOOS != "linux" {
 		return result, fmt.Errorf("pkg.repo.dnf: only Linux is supported; got %s", runtime.GOOS)
 	}
 
-	rendered, err := renderDnf(ctx, r)
+	rendered, err := render(ctx, r)
 	if err != nil {
 		return result, err
 	}
 
-	plan, err := computeDnfPlan(r.Name, normalizeState(r.State), rendered)
+	plan, err := computePlan(r.Name, shared.NormalizeState(r.State), rendered)
 	if err != nil {
 		return result, err
 	}
@@ -72,11 +95,8 @@ func runDnf(ctx actions.Context, r *config.PkgRepo, result *executor.Result) (ac
 		return result, nil
 	}
 
-	// Capture pre-apply .repo file state for Reverse(). Same shape as
-	// the apt driver: read once so both create / update / delete
-	// branches reach Reverse with a consistent snapshot.
-	priorContent, priorExisted, _ := readFile(plan.repoPath)
-	result.ReverseData = &PkgRepoReverseInfo{
+	priorContent, priorExisted, _ := shared.ReadFile(plan.repoPath)
+	result.ReverseData = &shared.PkgRepoReverseInfo{
 		Name:         r.Name,
 		SourcesPath:  plan.repoPath,
 		KeyringPath:  plan.keyringPath,
@@ -84,12 +104,12 @@ func runDnf(ctx actions.Context, r *config.PkgRepo, result *executor.Result) (ac
 		PriorContent: priorContent,
 	}
 
-	if err := applyDnf(plan, rendered); err != nil {
+	if err := apply(plan, rendered); err != nil {
 		return result, err
 	}
 
 	if rendered.updateCache && plan.touchesRepo {
-		if err := dnfCleanCache(); err != nil {
+		if err := cleanCache(); err != nil {
 			return result, fmt.Errorf("pkg.repo.dnf: dnf clean expire-cache: %w", err)
 		}
 	}
@@ -107,9 +127,9 @@ func runDnf(ctx actions.Context, r *config.PkgRepo, result *executor.Result) (ac
 	return result, nil
 }
 
-// renderedDnf holds the post-template, defaults-applied view of the
+// rendered_ holds the post-template, defaults-applied view of the
 // dnf block plus enclosing state/name.
-type renderedDnf struct {
+type rendered_ struct { //nolint:revive
 	name              string
 	state             string
 	description       string
@@ -123,20 +143,20 @@ type renderedDnf struct {
 	updateCache       bool
 }
 
-func renderDnf(ctx actions.Context, r *config.PkgRepo) (renderedDnf, error) {
+func render(ctx actions.Context, r *config.PkgRepo) (rendered_, error) {
 	tmpl := ctx.GetTemplate()
 	vars := ctx.GetVariables()
-	render := func(s string) (string, error) {
+	renderOne := func(s string) (string, error) {
 		if s == "" {
 			return "", nil
 		}
 		return tmpl.Render(s, vars)
 	}
 
-	out := renderedDnf{
+	out := rendered_{
 		name:        r.Name,
-		state:       normalizeState(r.State),
-		gpgCheck:    dnfGPGCheckEnabled(r.Dnf),
+		state:       shared.NormalizeState(r.State),
+		gpgCheck:    GPGCheckEnabled(r.Dnf),
 		enabled:     true,
 		updateCache: true,
 	}
@@ -148,103 +168,105 @@ func renderDnf(ctx actions.Context, r *config.PkgRepo) (renderedDnf, error) {
 	}
 
 	var err error
-	if out.description, err = render(r.Dnf.Description); err != nil {
+	if out.description, err = renderOne(r.Dnf.Description); err != nil {
 		return out, fmt.Errorf("pkg.repo: render description: %w", err)
 	}
 	if out.description == "" {
 		out.description = r.Name
 	}
-	if out.baseURL, err = render(r.Dnf.BaseURL); err != nil {
+	if out.baseURL, err = renderOne(r.Dnf.BaseURL); err != nil {
 		return out, fmt.Errorf("pkg.repo: render baseurl: %w", err)
 	}
-	if out.metalink, err = render(r.Dnf.Metalink); err != nil {
+	if out.metalink, err = renderOne(r.Dnf.Metalink); err != nil {
 		return out, fmt.Errorf("pkg.repo: render metalink: %w", err)
 	}
-	if out.mirrorlist, err = render(r.Dnf.Mirrorlist); err != nil {
+	if out.mirrorlist, err = renderOne(r.Dnf.Mirrorlist); err != nil {
 		return out, fmt.Errorf("pkg.repo: render mirrorlist: %w", err)
 	}
-	if out.gpgKeyURL, err = render(r.Dnf.GPGKeyURL); err != nil {
+	if out.gpgKeyURL, err = renderOne(r.Dnf.GPGKeyURL); err != nil {
 		return out, fmt.Errorf("pkg.repo: render gpg_key_url: %w", err)
 	}
-	if out.gpgKeyFingerprint, err = render(r.Dnf.GPGKeyFingerprint); err != nil {
+	if out.gpgKeyFingerprint, err = renderOne(r.Dnf.GPGKeyFingerprint); err != nil {
 		return out, fmt.Errorf("pkg.repo: render gpg_key_fingerprint: %w", err)
 	}
 	return out, nil
 }
 
-func dnfGPGCheckEnabled(d *config.PkgRepoDnf) bool {
+// GPGCheckEnabled reports whether the dnf block has gpg_check on
+// (the default when unset). Exported because the parent's Validate
+// needs to enforce the fingerprint-required rule.
+func GPGCheckEnabled(d *config.PkgRepoDnf) bool {
 	if d.GPGCheck != nil {
 		return *d.GPGCheck
 	}
 	return true
 }
 
-// dnfPlan describes what writes/deletes are needed to reconcile the
-// dnf files with the desired state. Same shape as aptPlan.
-type dnfPlan struct {
+// plan_ describes what writes/deletes are needed to reconcile the
+// dnf files with the desired state.
+type plan_ struct { //nolint:revive
 	changed     bool
-	operation   string // "create" | "update" | "delete" | "noop"
+	operation   string
 	reason      string
 	repoPath    string
-	keyringPath string // empty if no keyring is involved
-	wantContent string // desired .repo file content; empty when removing
+	keyringPath string
+	wantContent string
 	touchesRepo bool
 }
 
-func computeDnfPlan(name, state string, r renderedDnf) (dnfPlan, error) {
-	repoPath := filepath.Join(dnf.reposDir, name+".repo")
-	plan := dnfPlan{repoPath: repoPath}
+func computePlan(name, state string, r rendered_) (plan_, error) {
+	repoPath := RepoPath(name)
+	p := plan_{repoPath: repoPath}
 
 	if r.gpgKeyURL != "" {
-		plan.keyringPath = filepath.Join(dnf.keyringDir, "RPM-GPG-KEY-"+name)
+		p.keyringPath = KeyringPath(name)
 	}
 
-	if state == stateAbsent {
-		existed, err := pathExists(repoPath)
+	if state == shared.StateAbsent {
+		existed, err := shared.PathExists(repoPath)
 		if err != nil {
-			return plan, err
+			return p, err
 		}
 		if !existed {
-			plan.operation = "noop"
-			plan.reason = "repo file already absent"
-			return plan, nil
+			p.operation = "noop"
+			p.reason = "repo file already absent"
+			return p, nil
 		}
-		plan.changed = true
-		plan.operation = "delete"
-		plan.reason = "would remove " + repoPath
-		plan.touchesRepo = true
-		return plan, nil
+		p.changed = true
+		p.operation = "delete"
+		p.reason = "would remove " + repoPath
+		p.touchesRepo = true
+		return p, nil
 	}
 
-	want := renderRepoFile(r, plan.keyringPath)
-	plan.wantContent = want
+	want := renderRepoFile(r, p.keyringPath)
+	p.wantContent = want
 
-	current, exists, err := readFile(repoPath)
+	current, exists, err := shared.ReadFile(repoPath)
 	if err != nil {
-		return plan, err
+		return p, err
 	}
 	switch {
 	case !exists:
-		plan.changed = true
-		plan.operation = "create"
-		plan.reason = "would create " + repoPath
-		plan.touchesRepo = true
+		p.changed = true
+		p.operation = "create"
+		p.reason = "would create " + repoPath
+		p.touchesRepo = true
 	case current != want:
-		plan.changed = true
-		plan.operation = "update"
-		plan.reason = "would update " + repoPath + " (content drift)"
-		plan.touchesRepo = true
+		p.changed = true
+		p.operation = "update"
+		p.reason = "would update " + repoPath + " (content drift)"
+		p.touchesRepo = true
 	default:
-		plan.operation = "noop"
-		plan.reason = "repo file already at desired state"
+		p.operation = "noop"
+		p.reason = "repo file already at desired state"
 	}
-	return plan, nil
+	return p, nil
 }
 
 // renderRepoFile emits the byte-identical .repo INI content for the
-// desired repository. Stable field order so idempotency checks are
-// straightforward (computeDnfPlan compares byte-for-byte).
-func renderRepoFile(r renderedDnf, keyringPath string) string {
+// desired repository.
+func renderRepoFile(r rendered_, keyringPath string) string {
 	var sb strings.Builder
 	sb.WriteString("# Managed by mooncake pkg.repo. Do not edit by hand.\n")
 	sb.WriteString("[")
@@ -289,58 +311,47 @@ func boolOneZero(b bool) string {
 	return "0"
 }
 
-func applyDnf(plan dnfPlan, r renderedDnf) error {
-	if plan.operation == "delete" {
-		if err := os.Remove(plan.repoPath); err != nil && !errors.Is(err, fs.ErrNotExist) {
+func apply(p plan_, r rendered_) error {
+	if p.operation == "delete" {
+		if err := os.Remove(p.repoPath); err != nil && !errors.Is(err, fs.ErrNotExist) {
 			return fmt.Errorf("pkg.repo.dnf: remove repo file: %w", err)
 		}
-		// Keyring isn't auto-removed (same convention as apt): it may
-		// be shared with another repo and rpm-gpg keys are routinely
-		// kept indefinitely. An operator who needs full cleanup can
-		// chain a file.write absent step against KeyringPath.
 		return nil
 	}
 
-	if err := os.MkdirAll(dnf.reposDir, 0o755); err != nil {
+	if err := os.MkdirAll(paths.ReposDir, 0o755); err != nil {
 		return fmt.Errorf("pkg.repo.dnf: mkdir repos: %w", err)
 	}
 
-	if plan.keyringPath != "" {
-		if err := os.MkdirAll(dnf.keyringDir, 0o755); err != nil {
+	if p.keyringPath != "" {
+		if err := os.MkdirAll(paths.KeyringDir, 0o755); err != nil {
 			return fmt.Errorf("pkg.repo.dnf: mkdir keyring: %w", err)
 		}
-		body, err := fetchKey(r.gpgKeyURL)
+		body, err := shared.HTTPFetchKey(r.gpgKeyURL)
 		if err != nil {
 			return fmt.Errorf("pkg.repo.dnf: fetch gpg key: %w", err)
 		}
-		// Mirror the apt driver's F034 fix: verify fingerprint BEFORE
-		// writing the key to the trusted rpm-gpg dir. Without this,
-		// the operator's pinned fingerprint is decorative and dnf
-		// silently trusts whatever bytes the URL served.
 		if r.gpgKeyFingerprint != "" {
-			if vErr := verifyKeyFingerprint(body, r.gpgKeyFingerprint); vErr != nil {
+			if vErr := shared.VerifyKeyFingerprint(body, r.gpgKeyFingerprint); vErr != nil {
 				return fmt.Errorf("pkg.repo.dnf: %w (key url: %s)", vErr, r.gpgKeyURL)
 			}
 		}
-		if err := writeAtomic(plan.keyringPath, body, 0o644); err != nil {
+		if err := shared.WriteAtomic(p.keyringPath, body, 0o644); err != nil {
 			return fmt.Errorf("pkg.repo.dnf: write keyring: %w", err)
 		}
 	}
 
-	if err := writeAtomic(plan.repoPath, []byte(plan.wantContent), 0o644); err != nil {
+	if err := shared.WriteAtomic(p.repoPath, []byte(p.wantContent), 0o644); err != nil {
 		return fmt.Errorf("pkg.repo.dnf: write repo file: %w", err)
 	}
 	return nil
 }
 
-// realDnfCleanCache runs `dnf clean expire-cache`. This is the
-// dnf-idiomatic post-change refresh — it invalidates the per-repo
-// metadata cache so the next `dnf install` sees the freshly-added
-// repo without forcing a full network refresh up front.
-//
-// Falls back to `yum clean expire-cache` when dnf isn't on PATH so
-// the driver works on older RHEL 7 hosts as well as Fedora / RHEL 8+.
-func realDnfCleanCache() error {
+// realCleanCache runs `dnf clean expire-cache` (with `yum` fallback
+// on RHEL 7). Invalidates the per-repo metadata cache so the next
+// `dnf install` sees the freshly-added repo without forcing a full
+// network refresh up front.
+func realCleanCache() error {
 	bin := "dnf"
 	if _, err := exec.LookPath("dnf"); err != nil {
 		if _, fallbackErr := exec.LookPath("yum"); fallbackErr == nil {
