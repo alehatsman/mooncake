@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/alehatsman/mooncake/internal/actions"
+	"github.com/alehatsman/mooncake/internal/dscl"
 	"github.com/alehatsman/mooncake/internal/security"
 )
 
@@ -295,27 +296,10 @@ func runDarwinCmd(runner actions.PrivilegedRunner, bin string, args ...string) e
 	return nil
 }
 
-// nextAvailableUID finds the lowest unused UID >= minBound.
-// If maxBound is 0, the search is unbounded.
+// nextAvailableUID finds the lowest unused UID >= minBound via the
+// shared dscl helper. If maxBound is 0, the search is unbounded.
 func nextAvailableUID(minBound, maxBound int) (int, error) {
-	out, err := capture(exec.Command("dscl", ".", "-list", "/Users", "UniqueID"))
-	if err != nil {
-		return 0, fmt.Errorf("dscl list uids: %w", err)
-	}
-	used := map[int]bool{}
-	for _, line := range strings.Split(strings.TrimSpace(out), "\n") {
-		if fields := strings.Fields(line); len(fields) >= 2 {
-			if uid, err := strconv.Atoi(fields[1]); err == nil {
-				used[uid] = true
-			}
-		}
-	}
-	for uid := minBound; maxBound == 0 || uid <= maxBound; uid++ {
-		if !used[uid] {
-			return uid, nil
-		}
-	}
-	return 0, fmt.Errorf("no available UID in range [%d, %d]", minBound, maxBound)
+	return dscl.NextAvailableID("/Users", "UniqueID", "UID", minBound, maxBound)
 }
 
 // groupGID resolves a group name to its numeric GID via dscl.
