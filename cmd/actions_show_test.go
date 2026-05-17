@@ -157,6 +157,79 @@ func TestExampleValue(t *testing.T) {
 }
 
 // TestNearestActionName — typo-tolerance for `actions show`. The
+// TestLoadActionShowDefinition_PopulatesDescriptions is the F047
+// regression. The bug: actionsShowCommand built schemagen options
+// without `StrictValidation: true`, and the generator gates
+// description/enum/pattern enrichment behind that same flag — so
+// every parameter rendered as a bare type with no description and
+// no enum list, while `mooncake schema generate` (which defaults
+// to StrictValidation: true) produced fully-decorated output from
+// the same code path.
+//
+// This test drives the real lookup + generator path (registry →
+// schemagen) and asserts that a known action's known parameter has
+// a description. If a future caller removes StrictValidation from
+// loadActionShowDefinition's GeneratorOptions, this fails.
+//
+// Existing tests in this file construct schemagen.Definition
+// literals with descriptions pre-populated, so they prove the
+// renderer works given a populated Definition but never reach the
+// generator-option site where the bug actually lives.
+func TestLoadActionShowDefinition_PopulatesDescriptions(t *testing.T) {
+	// Use file.write — a stable action with known
+	// description-enriched fields. Choosing two field names that
+	// have non-empty descriptions in cmd/schema-known.go avoids
+	// brittle coupling to one specific field.
+	meta, def, err := loadActionShowDefinition("file.write")
+	if err != nil {
+		t.Fatalf("loadActionShowDefinition(file.write): %v", err)
+	}
+	if meta == nil {
+		t.Fatalf("meta is nil")
+	}
+	if def == nil || len(def.Properties) == 0 {
+		t.Fatalf("definition empty: %+v", def)
+	}
+	// Spot-check: at least one well-known optional field must have
+	// a non-empty description. group and owner are documented in
+	// schemagen's enriched form ("File group (groupname or GID)" /
+	// "File owner (username or UID)").
+	candidates := []string{"group", "owner", "mode"}
+	enriched := 0
+	for _, k := range candidates {
+		prop, ok := def.Properties[k]
+		if !ok {
+			continue
+		}
+		if strings.TrimSpace(prop.Description) != "" {
+			enriched++
+		}
+	}
+	if enriched == 0 {
+		t.Errorf(
+			"F047 regression: file.write has %d enriched descriptions across %v; "+
+				"loadActionShowDefinition's GeneratorOptions probably dropped StrictValidation: true. "+
+				"Properties dump:\n  %+v",
+			enriched, candidates, def.Properties,
+		)
+	}
+}
+
+// TestLoadActionShowDefinition_UnknownActionErrors locks in the
+// behaviour the user-facing command relies on: an unknown action
+// returns a clear error rather than producing an empty Definition.
+// This is a sibling of the F047 happy-path test — they share the
+// helper, so we exercise both branches together.
+func TestLoadActionShowDefinition_UnknownActionErrors(t *testing.T) {
+	_, _, err := loadActionShowDefinition("definitely-not-a-real-action")
+	if err == nil {
+		t.Fatalf("want error for unknown action, got nil")
+	}
+	if !strings.Contains(err.Error(), "unknown action") {
+		t.Errorf("error message lacks 'unknown action': %v", err)
+	}
+}
+
 // suggestion mirrors the closestTag/levenshtein behaviour in
 // internal/plan/filter so the UX is consistent across the CLI.
 func TestNearestActionName(t *testing.T) {

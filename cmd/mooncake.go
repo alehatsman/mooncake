@@ -820,6 +820,63 @@ func yesNo(b bool) string {
 	return "no"
 }
 
+// loadActionShowDefinition resolves <name> against the live registry
+// and returns the matching ActionMetadata + a schemagen Definition
+// generated with the same options actionsShowCommand renders from.
+// Extracted from actionsShowCommand so the F047 regression test can
+// drive the real lookup + generator path without forking a process
+// or refactoring stdout away from the command entry point.
+//
+// StrictValidation is load-bearing for documentation here, not just
+// validation: the generator gates description/enum/pattern enrichment
+// behind this same flag (see internal/schemagen/generator.go
+// applyKnownValidation + applyEnhancedDescription). Without it
+// `actions show` rendered every parameter as a bare type with no
+// description and no enum list (F047).
+func loadActionShowDefinition(name string) (*actions.ActionMetadata, *schemagen.Definition, error) {
+	// Pull the metadata via the same Registry.List() pipeline
+	// `actions list` uses — the four spec-22 ABI capability bools
+	// (proposal-05) are populated there from live interface
+	// satisfaction, so the card stays in lockstep with the table
+	// without per-call probing.
+	var meta *actions.ActionMetadata
+	all := actions.List()
+	for i := range all {
+		if all[i].Name == name {
+			meta = &all[i]
+			break
+		}
+	}
+	if meta == nil {
+		known := make([]string, 0, len(all))
+		for _, m := range all {
+			known = append(known, m.Name)
+		}
+		if suggestion := nearestActionName(name, known); suggestion != "" {
+			return nil, nil, fmt.Errorf("unknown action %q (did you mean %q? try `mooncake actions list`)", name, suggestion)
+		}
+		return nil, nil, fmt.Errorf("unknown action %q (try `mooncake actions list`)", name)
+	}
+
+	gen := schemagen.NewGenerator(schemagen.GeneratorOptions{
+		IncludeExtensions: true,
+		StrictValidation:  true,
+		OutputFormat:      "json",
+	})
+	schema, err := gen.Generate()
+	if err != nil {
+		return nil, nil, fmt.Errorf("generate schema: %w", err)
+	}
+	def, ok := schema.Definitions[name]
+	if !ok {
+		// Registry knew the name but schemagen didn't — shouldn't
+		// happen for v1, but surface a clear message rather than
+		// printing a card with no fields.
+		return nil, nil, fmt.Errorf("action %q has no schema definition (registry/schemagen drift)", name)
+	}
+	return meta, def, nil
+}
+
 // actionsShowCommand prints a per-action card (dx proposal-04). The
 // per-action surface is "what parameters does this action take, what's
 // required, what's the minimum example" — the question a user hits the
@@ -844,46 +901,9 @@ func actionsShowCommand(c *cli.Context) error {
 		return fmt.Errorf("invalid format: %s (use 'text', 'json', or 'yaml')", format)
 	}
 
-	// Pull the metadata via the same Registry.List() pipeline `actions
-	// list` uses — the four spec-22 ABI capability bools (proposal-05)
-	// are populated there from live interface satisfaction, so the
-	// card stays in lockstep with the table without per-call probing.
-	var meta *actions.ActionMetadata
-	all := actions.List()
-	for i := range all {
-		if all[i].Name == name {
-			meta = &all[i]
-			break
-		}
-	}
-	if meta == nil {
-		known := make([]string, 0, len(all))
-		for _, m := range all {
-			known = append(known, m.Name)
-		}
-		if suggestion := nearestActionName(name, known); suggestion != "" {
-			return fmt.Errorf("unknown action %q (did you mean %q? try `mooncake actions list`)", name, suggestion)
-		}
-		return fmt.Errorf("unknown action %q (try `mooncake actions list`)", name)
-	}
-
-	// Generate the full schema and pluck this action's Definition.
-	// Extensions are on by default so x-implements-* keys ride through
-	// the json/yaml form for downstream consumers.
-	gen := schemagen.NewGenerator(schemagen.GeneratorOptions{
-		IncludeExtensions: true,
-		OutputFormat:      "json",
-	})
-	schema, err := gen.Generate()
+	meta, def, err := loadActionShowDefinition(name)
 	if err != nil {
-		return fmt.Errorf("generate schema: %w", err)
-	}
-	def, ok := schema.Definitions[name]
-	if !ok {
-		// Registry knew the name but schemagen didn't — shouldn't
-		// happen for v1, but surface a clear message rather than
-		// printing a card with no fields.
-		return fmt.Errorf("action %q has no schema definition (registry/schemagen drift)", name)
+		return err
 	}
 
 	switch format {

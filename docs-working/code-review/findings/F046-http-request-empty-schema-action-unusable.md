@@ -5,7 +5,9 @@ severity: bug
 package: internal/schemagen
 file: internal/schemagen/generator.go
 lines: 580-620
-status: open
+status: done
+fixed: 2026-05-17 — commit `c617fd8c fix(schemagen): F046 — wire http.request into action→struct map + audit guard`. Two-part fix: (a) the one-line addition the finding called for — `"http.request": &config.HTTPRequest{}` in the same "Newly-wired up; previously missing" block of `internal/schemagen/generator.go` that batch-fixed six other actions; (b) the coverage-gap closer — a new audit-guard test `TestGenerateActionDefinitions_EveryRegisteredActionHasPopulatedSchema` in `internal/schemagen/generator_test.go` that walks every action in `actions.List()` and asserts each has a usable schema definition (properties, oneOf, primitive type, or appears in a documented exception list for plan-level constructs and the parameter-less `observe.{cpu,memory}` actions). Catches the F046 shape — registered + empty-properties + struct-has-fields — so future proposal-N waves that forget the schemagen entry fail the suite instead of shipping broken. Regenerated artifacts: `internal/config/schema.json` (`http.request` definition now lists url required + 18 optional fields), `internal/config/schema.d`, `mooncake.d.ts`, `docs-next/generated/properties.md`.
+verified: 2026-05-17 — confirmed fixed on master @ 9f37718f. `grep -c '"http.request"' internal/config/schema.json` returns 69 (was 0 pre-fix). `grep -n http.request internal/schemagen/generator.go` shows `"http.request": &config.HTTPRequest{}` at line 621 in the actionStructByName map. The audit-guard regression test passes (`go test ./internal/schemagen -run TestGenerateActionDefinitions_EveryRegisteredActionHasPopulatedSchema`). Wave 2 (`9f37718f`) further exercised the schema pipeline end-to-end with the new `Probe`/`Reverse` sub-blocks — `task ci`'s schema-fresh stage stayed clean across both pushes. Adjacent items called out in the original finding (artifact.capture / artifact.validate empty schema nodes, root-cause: YAML→Go-struct unmarshaler rejects unknown fields first) explicitly deferred per the "Adjacent" section.
 ---
 
 ## What
