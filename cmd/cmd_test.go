@@ -455,22 +455,24 @@ func TestExecutePresetInstallPasswordValidation(t *testing.T) {
 
 // TestUninstallPresetActionNoArgs tests uninstallPresetAction with no args
 func TestUninstallPresetActionNoArgs(t *testing.T) {
-	// When no args are provided and fzf is available, the function tries to use interactive selection
-	// When fzf is not available, it shows help text
-	// We test that the function handles the no-args case gracefully
+	// Force the no-fzf branch: hasFzf() does exec.LookPath("fzf"), so an
+	// empty PATH guarantees we go through the help-text path instead of
+	// launching an interactive fzf prompt that blocks the test suite on
+	// dev machines that have fzf installed.
+	t.Setenv("PATH", "")
 
 	app := &cli.App{
 		Name: "test",
 		Action: func(c *cli.Context) error {
-			// Call with no args - should either show interactive selector or help
 			return uninstallPresetAction(c)
 		},
 	}
 
 	err := app.Run([]string{"test"})
 
-	// Function should complete without panic
-	// Error is OK (no presets found, fzf interaction, etc.)
+	// Function should complete without panic. Error is OK (no presets
+	// found, help text printed, etc.) — we're verifying it returns
+	// rather than blocking on stdin.
 	t.Logf("uninstallPresetAction with no args completed with error: %v", err)
 }
 
