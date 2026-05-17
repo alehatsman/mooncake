@@ -165,14 +165,152 @@ func TestPlan_DoesNotInvoke(t *testing.T) {
 	}
 }
 
-func TestRun_OnlyAptSupported(t *testing.T) {
-	if runtime.GOOS != "linux" {
-		t.Skip("Linux only")
-	}
+func TestRun_UnsupportedManagerErrors(t *testing.T) {
 	_ = newStub(t)
 	step := &config.Step{PkgUpgrade: &config.PkgUpgrade{Names: []string{"x"}, Manager: "dnf"}}
 	_, err := (&Handler{}).Run(newCtx(t, false), step)
 	if err == nil {
-		t.Fatal("expected error for non-apt manager")
+		t.Fatal("expected error for unsupported manager")
+	}
+}
+
+// brewStub captures the calls made through the brew hooks. Parallel
+// to stub for the apt path.
+type brewStub struct {
+	upgradeCalls    [][]string
+	autoremoveCalls int
+}
+
+func newBrewStub(t *testing.T) *brewStub {
+	t.Helper()
+	s := &brewStub{}
+	origUp := brewUpgrade
+	origAr := brewAutoremove
+	origLookPath := lookPath
+	brewUpgrade = func(names []string) error {
+		cp := append([]string(nil), names...)
+		s.upgradeCalls = append(s.upgradeCalls, cp)
+		return nil
+	}
+	brewAutoremove = func() error {
+		s.autoremoveCalls++
+		return nil
+	}
+	// Brew-only on PATH: apt-get missing forces auto-detect to pick
+	// brew when manager: is unset.
+	lookPath = func(name string) (string, error) {
+		if name == "brew" {
+			return "/opt/homebrew/bin/brew", nil
+		}
+		return "", errNotFound{}
+	}
+	t.Cleanup(func() {
+		brewUpgrade = origUp
+		brewAutoremove = origAr
+		lookPath = origLookPath
+	})
+	return s
+}
+
+type errNotFound struct{}
+
+func (errNotFound) Error() string { return "not found" }
+
+func TestApply_Brew_NamedUpgrade(t *testing.T) {
+	s := newBrewStub(t)
+	step := &config.Step{PkgUpgrade: &config.PkgUpgrade{Names: []string{"git", "jq"}}}
+	r := mustRun(t, false, step)
+	if !r.Changed {
+		t.Fatalf("expected Changed=true; reason=%q", r.Reason)
+	}
+	if len(s.upgradeCalls) != 1 {
+		t.Fatalf("expected one brew upgrade call; got %v", s.upgradeCalls)
+	}
+	got := s.upgradeCalls[0]
+	if len(got) != 2 || got[0] != "git" || got[1] != "jq" {
+		t.Errorf("expected [git jq]; got %v", got)
+	}
+	if s.autoremoveCalls != 0 {
+		t.Errorf("expected no autoremove; got %d", s.autoremoveCalls)
+	}
+	if r.Data["manager"] != "brew" {
+		t.Errorf("manager fact = %v, want brew", r.Data["manager"])
+	}
+}
+
+func TestApply_Brew_FullUpgrade_NoNames(t *testing.T) {
+	s := newBrewStub(t)
+	step := &config.Step{PkgUpgrade: &config.PkgUpgrade{}}
+	r := mustRun(t, false, step)
+	if !r.Changed {
+		t.Fatalf("expected Changed=true; reason=%q", r.Reason)
+	}
+	if len(s.upgradeCalls) != 1 {
+		t.Fatalf("expected one upgrade call; got %v", s.upgradeCalls)
+	}
+	if len(s.upgradeCalls[0]) != 0 {
+		t.Errorf("expected empty names slice (full upgrade); got %v", s.upgradeCalls[0])
+	}
+}
+
+func TestApply_Brew_Autoremove(t *testing.T) {
+	s := newBrewStub(t)
+	step := &config.Step{PkgUpgrade: &config.PkgUpgrade{Autoremove: true}}
+	r := mustRun(t, false, step)
+	if !r.Changed {
+		t.Fatalf("expected Changed=true; reason=%q", r.Reason)
+	}
+	if s.autoremoveCalls != 1 {
+		t.Errorf("expected one autoremove call; got %d", s.autoremoveCalls)
+	}
+}
+
+// TestAutoDetect_PrefersAptOverBrew — multi-manager hosts: apt wins.
+func TestAutoDetect_PrefersAptOverBrew(t *testing.T) {
+	s := newStub(t)
+	// Sentinel: brew should not be invoked.
+	origBrew := brewUpgrade
+	brewUpgrade = func(names []string) error {
+		t.Errorf("brew should not be invoked when apt-get is on PATH; got %v", names)
+		return nil
+	}
+	t.Cleanup(func() { brewUpgrade = origBrew })
+
+	step := &config.Step{PkgUpgrade: &config.PkgUpgrade{Names: []string{"git"}}}
+	r := mustRun(t, false, step)
+	if r.Data["manager"] != "apt" {
+		t.Errorf("manager = %v, want apt", r.Data["manager"])
+	}
+	if len(s.upgradeCalls) != 1 {
+		t.Errorf("expected apt upgrade call; got %v", s.upgradeCalls)
+	}
+}
+
+// TestPermissions_BinaryByGOOS pins the host-shaped RequiredBinaries.
+func TestPermissions_BinaryByGOOS(t *testing.T) {
+	ps := (Handler{}).Permissions(nil)
+	wantBin := "apt-get"
+	if runtime.GOOS == "darwin" {
+		wantBin = "brew"
+	}
+	if len(ps.RequiredBinaries) != 1 || ps.RequiredBinaries[0] != wantBin {
+		t.Errorf("RequiredBinaries = %v, want [%s]", ps.RequiredBinaries, wantBin)
+	}
+	if !ps.Sudo || !ps.Network {
+		t.Errorf("Sudo + Network must remain true; got %+v", ps)
+	}
+}
+
+// TestMetadata_AdvertisesLinuxAndDarwin guards SupportedPlatforms.
+func TestMetadata_AdvertisesLinuxAndDarwin(t *testing.T) {
+	m := (&Handler{}).Metadata()
+	got := map[string]bool{}
+	for _, p := range m.SupportedPlatforms {
+		got[p] = true
+	}
+	for _, want := range []string{"linux", "darwin"} {
+		if !got[want] {
+			t.Errorf("SupportedPlatforms missing %s: %v", want, m.SupportedPlatforms)
+		}
 	}
 }

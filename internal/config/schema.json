@@ -2242,7 +2242,7 @@
     },
     "pkg.upgrade": {
       "type": "object",
-      "description": "Upgrade named packages or all installed packages (apt only in v1)",
+      "description": "Upgrade named packages or all installed packages (apt on linux, brew on darwin)",
       "properties": {
         "autoremove": {
           "type": "boolean"
@@ -2259,7 +2259,8 @@
       },
       "additionalProperties": false,
       "x-platforms": [
-        "linux"
+        "linux",
+        "darwin"
       ],
       "x-requires-sudo": true,
       "x-implements-check": true,
@@ -2798,7 +2799,7 @@
           "$ref": "#/definitions/pkg.repo"
         },
         "pkg.upgrade": {
-          "description": "Upgrade named packages or all installed packages (apt only in v1)",
+          "description": "Upgrade named packages or all installed packages (apt on linux, brew on darwin)",
           "$ref": "#/definitions/pkg.upgrade"
         },
         "read.json": {
