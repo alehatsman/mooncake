@@ -56,11 +56,14 @@ Recent shipped specs (see commit history for the full receipts):
 - **Per-spec docs in `docs-next/`.** Every shipped spec above carries a
   "docs phase pending" tail. The work belongs in the canonical docs
   tree, not this folder.
-- **Reverse-capture rollout to refusing handlers.** spec-26 reverse-
-  capture v1 shipped for `git.checkout` / `git.config`; the pattern is
-  reusable for ~13 other handlers (os.* family, pkg.repo, pkg.hold,
-  os.service) that still return refusal stubs. Not blocking; ship as
-  per-handler PRs when motivated.
+- **Reverse-capture rollout — COMPLETE (2026-05-18 audit).** spec-26
+  reverse-capture v1 has now landed for the full os.* family,
+  pkg.repo, pkg.hold, pkg.upgrade, os.service, os.systemd, os.mount,
+  os.cron, os.sysctl, os.firewall, os.ssh_key, os.user, os.group, and
+  the text.* family (delegating to
+  `filehandler.ReverseInPlaceFileMutation`). The observe.* family
+  correctly returns `nil, nil` from `Reverse()` because the actions
+  are read-only and have nothing to undo. No refusal stubs remain.
 
 ## Proposals
 
