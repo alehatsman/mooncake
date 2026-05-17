@@ -14,7 +14,6 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"regexp"
 	"runtime"
@@ -25,7 +24,15 @@ import (
 	"github.com/alehatsman/mooncake/internal/config"
 	"github.com/alehatsman/mooncake/internal/events"
 	"github.com/alehatsman/mooncake/internal/executor"
+	"github.com/alehatsman/mooncake/internal/security"
 )
+
+// becomeRunner is the sudo runner used by writeAtomic + runSystemctl
+// helpers. Run() sets it from ec.Svc.SudoPass before applyPlan; tests
+// that stub the systemctl* hooks bypass this entirely. Package-level
+// state because the existing systemctl* hook plumbing already lives at
+// package scope and mooncake executes actions serially.
+var becomeRunner security.BecomeRunner
 
 const (
 	actionName       = "os.systemd"
@@ -166,6 +173,16 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 
 	if runtime.GOOS != "linux" {
 		return result, fmt.Errorf("os.systemd: only Linux is supported; got %s", runtime.GOOS)
+	}
+
+	// Pick up the operator-supplied sudo password so writeAtomic +
+	// runSystemctl can escalate when mooncake is invoked as a regular
+	// user. Empty SudoPass surfaces as a clean ErrBecomeNoSudoPass at
+	// the first sudo'd call rather than a "permission denied" on
+	// /etc/systemd/system. Tests that stub the systemctl* hooks never
+	// reach this code path.
+	if ec, ok := ctx.(*executor.ExecutionContext); ok {
+		becomeRunner = security.BecomeRunner{SudoPass: ec.Svc.SudoPass}
 	}
 
 	rendered, err := renderSystemd(ctx, s)
@@ -648,13 +665,53 @@ func readFile(path string) (string, bool, error) {
 }
 
 func writeAtomic(path string, content []byte, mode os.FileMode) error {
+	// Fast path: direct write — works when mooncake itself runs as root,
+	// or the unit path happens to be user-writable (custom Path: in
+	// step config). The sudo fallback below kicks in only on
+	// EACCES/EPERM against the default /etc/systemd/system.
 	tmp := path + atomicTempSuffix
-	if err := os.WriteFile(tmp, content, mode); err != nil {
+	if err := os.WriteFile(tmp, content, mode); err == nil {
+		if err := os.Rename(tmp, path); err != nil {
+			_ = os.Remove(tmp)
+			return err
+		}
+		return nil
+	} else if !os.IsPermission(err) {
 		return err
 	}
-	if err := os.Rename(tmp, path); err != nil {
-		_ = os.Remove(tmp)
-		return err
+
+	// Sudo fallback: stage in /tmp under the user, then `sudo cp`
+	// (atomic enough — same FS, but Rename doesn't help when the user
+	// can't write to the destination dir) and `sudo chmod`. Mirrors
+	// the pattern in internal/actions/service/handler.go:594.
+	tmpFile, err := os.CreateTemp("", "os-systemd-unit-*")
+	if err != nil {
+		return fmt.Errorf("create temp: %w", err)
+	}
+	tmpPath := tmpFile.Name()
+	defer func() { _ = os.Remove(tmpPath) }()
+	if _, err := tmpFile.Write(content); err != nil {
+		_ = tmpFile.Close()
+		return fmt.Errorf("write temp %s: %w", tmpPath, err)
+	}
+	if err := tmpFile.Close(); err != nil {
+		return fmt.Errorf("close temp %s: %w", tmpPath, err)
+	}
+
+	cmd, err := becomeRunner.Command(true, "cp", tmpPath, path)
+	if err != nil {
+		return fmt.Errorf("sudo cp setup: %w", err)
+	}
+	if out, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("sudo cp %s -> %s: %w (%s)", tmpPath, path, err, strings.TrimSpace(string(out)))
+	}
+
+	cmd, err = becomeRunner.Command(true, "chmod", fmt.Sprintf("%o", mode), path)
+	if err != nil {
+		return fmt.Errorf("sudo chmod setup: %w", err)
+	}
+	if out, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("sudo chmod %o %s: %w (%s)", mode, path, err, strings.TrimSpace(string(out)))
 	}
 	return nil
 }
@@ -722,8 +779,20 @@ func activeFromToken(tok string) bool {
 func realStart(name string) error { return runSystemctl("start", name) }
 func realStop(name string) error  { return runSystemctl("stop", name) }
 
+// systemctlBecome decides whether systemctl calls run under sudo. True
+// when mooncake is invoked as a non-root user (the common case for the
+// system-scope unit path /etc/systemd/system). Skipping sudo when
+// already root keeps the call path simple and avoids requiring a
+// SudoPass that's never used. The is-enabled/is-active read paths
+// don't strictly need root on most distros, but a sudo wrap is
+// harmless and keeps every systemctl call going through one helper.
+func systemctlBecome() bool { return os.Geteuid() != 0 }
+
 func runSystemctl(args ...string) error {
-	cmd := exec.Command("systemctl", args...)
+	cmd, err := becomeRunner.Command(systemctlBecome(), "systemctl", args...)
+	if err != nil {
+		return fmt.Errorf("systemctl %s: %w", strings.Join(args, " "), err)
+	}
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
 	if err := cmd.Run(); err != nil {
@@ -737,10 +806,13 @@ func runSystemctl(args ...string) error {
 }
 
 func runSystemctlOut(args ...string) (string, error) {
-	cmd := exec.Command("systemctl", args...)
+	cmd, err := becomeRunner.Command(systemctlBecome(), "systemctl", args...)
+	if err != nil {
+		return "", fmt.Errorf("systemctl %s: %w", strings.Join(args, " "), err)
+	}
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
-	err := cmd.Run()
+	err = cmd.Run()
 	return stdout.String(), err
 }
