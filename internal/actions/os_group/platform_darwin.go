@@ -175,18 +175,14 @@ func nextAvailableGID(minBound, maxBound int) (int, error) {
 	return 0, fmt.Errorf("no available GID in range [%d, %d]", minBound, maxBound)
 }
 
-// dsclGroupRun is the write-side analogue of dsclGroupField. Captures
-// stderr so failed dscl calls surface a useful error rather than just
-// the exit code.
+// dsclGroupRun is the write-side analogue of dsclGroupField. Goes
+// through ctx.Privileged() — dscl mutations on /Groups/* require
+// root on macOS.
 func dsclGroupRun(args ...string) error {
 	fullArgs := append([]string{"."}, args...)
-	// #nosec G204 -- args are dscl operation tokens + the validated
-	// record path; no user-controlled shell metacharacters reach here.
-	cmd := exec.Command("dscl", fullArgs...)
-	var stderr strings.Builder
-	cmd.Stderr = &stderr
-	if err := cmd.Run(); err != nil {
-		msg := strings.TrimSpace(stderr.String())
+	out, err := privRunner.Run(nil, "dscl", fullArgs...)
+	if err != nil {
+		msg := strings.TrimSpace(string(out))
 		if msg != "" {
 			return fmt.Errorf("dscl %s: %w: %s", strings.Join(args, " "), err, msg)
 		}

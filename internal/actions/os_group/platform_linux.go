@@ -3,7 +3,6 @@
 package os_group //nolint:revive // package name follows action convention
 
 import (
-	"bytes"
 	"fmt"
 	"os/exec"
 	"strconv"
@@ -59,12 +58,9 @@ func applyPlanLinux(plan computedPlan) error {
 }
 
 func runLinuxCmd(bin string, args ...string) error {
-	// #nosec G204 -- bin is one of groupadd/groupmod/groupdel; args are validated above.
-	cmd := exec.Command(bin, args...)
-	var stderr bytes.Buffer
-	cmd.Stderr = &stderr
-	if err := cmd.Run(); err != nil {
-		msg := strings.TrimSpace(stderr.String())
+	out, err := privRunner.Run(nil, bin, args...)
+	if err != nil {
+		msg := strings.TrimSpace(string(out))
 		if msg != "" {
 			return fmt.Errorf("%s %s: %w: %s", bin, strings.Join(args, " "), err, msg)
 		}

@@ -662,13 +662,11 @@ func (p *defaultPerformer) Chmod(path string, mode os.FileMode, opts actions.Per
 		return e
 	}
 
-	if opts.Become {
-		cmd := fmt.Sprintf("chmod %s %s", formatMode(mode), shellQuote(path))
-		if err := p.runSudo(cmd); err != nil {
-			e.Err = err
-			return e
-		}
-	} else if err := os.Chmod(path, mode); err != nil {
+	// Try direct first; fall back to sudo on EACCES when Become is set.
+	directErr := os.Chmod(path, mode)
+	if err := p.becomeFallback(opts, directErr,
+		fmt.Sprintf("chmod %s %s", formatMode(mode), shellQuote(path)),
+	); err != nil {
 		e.Err = fmt.Errorf("chmod %s: %w", path, err)
 		return e
 	}
@@ -725,22 +723,20 @@ func (p *defaultPerformer) Chown(path, owner, group string, opts actions.Perform
 		return e
 	}
 
-	if opts.Become {
-		spec := ""
-		switch {
-		case owner != "" && group != "":
-			spec = owner + ":" + group
-		case owner != "":
-			spec = owner
-		case group != "":
-			spec = ":" + group
-		}
-		cmd := fmt.Sprintf("chown %s %s", spec, shellQuote(path))
-		if err := p.runSudo(cmd); err != nil {
-			e.Err = err
-			return e
-		}
-	} else if err := os.Chown(path, uid, gid); err != nil {
+	// Try direct first; fall back to sudo on EACCES when Become is set.
+	spec := ""
+	switch {
+	case owner != "" && group != "":
+		spec = owner + ":" + group
+	case owner != "":
+		spec = owner
+	case group != "":
+		spec = ":" + group
+	}
+	directErr := os.Chown(path, uid, gid)
+	if err := p.becomeFallback(opts, directErr,
+		fmt.Sprintf("chown %s %s", spec, shellQuote(path)),
+	); err != nil {
 		e.Err = fmt.Errorf("chown %s: %w", path, err)
 		return e
 	}

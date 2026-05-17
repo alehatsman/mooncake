@@ -8,12 +8,10 @@
 package os_mount
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"io/fs"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -23,7 +21,17 @@ import (
 	"github.com/alehatsman/mooncake/internal/config"
 	"github.com/alehatsman/mooncake/internal/events"
 	"github.com/alehatsman/mooncake/internal/executor"
+	"github.com/alehatsman/mooncake/internal/security"
 )
+
+// privRunner is the spec-69 sudo-aware runner used by realMount /
+// realUmount. Both need root: mount(8) requires CAP_SYS_ADMIN even
+// with an existing fstab entry unless the user= option is set.
+var privRunner actions.PrivilegedRunner = security.PrivilegedRunner{}
+
+// eff is the spec-69 sudo-aware Performer used by writeFstab and
+// snapshotFstab for /etc/fstab mutations.
+var eff actions.Performer
 
 const (
 	actionName       = "os.mount"
@@ -124,6 +132,10 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 	if runtime.GOOS != "linux" {
 		return result, fmt.Errorf("os.mount: only Linux is supported; got %s", runtime.GOOS)
 	}
+
+	// Wire spec-69 primitives for /etc/fstab writes + mount/umount.
+	privRunner = ctx.Privileged()
+	eff = ctx.Effects()
 
 	rendered, err := renderMount(ctx, m)
 	if err != nil {
@@ -525,11 +537,12 @@ func writeFstab(content string, backup bool) error {
 			return err
 		}
 	}
-	if err := os.MkdirAll(filepath.Dir(mountPaths.fstab), 0o755); err != nil {
-		return fmt.Errorf("os.mount: mkdir %s: %w", filepath.Dir(mountPaths.fstab), err)
+	pOpts := actions.PerformerOpts{Become: true}
+	if e := eff.Mkdir(filepath.Dir(mountPaths.fstab), 0o755, pOpts); e.Err != nil {
+		return fmt.Errorf("os.mount: mkdir %s: %w", filepath.Dir(mountPaths.fstab), e.Err)
 	}
-	if err := writeAtomic(mountPaths.fstab, []byte(content), 0o644); err != nil {
-		return fmt.Errorf("os.mount: write %s: %w", mountPaths.fstab, err)
+	if e := eff.WriteFile(mountPaths.fstab, []byte(content), 0o644, actions.PerformerOpts{Become: true, ExplicitMode: true}); e.Err != nil {
+		return fmt.Errorf("os.mount: write %s: %w", mountPaths.fstab, e.Err)
 	}
 	return nil
 }
@@ -547,32 +560,17 @@ func snapshotFstab() error {
 	}
 	ts := clockNow().UTC().Format("20060102T150405Z")
 	dest := mountPaths.fstab + ".bak." + ts
-	if err := os.WriteFile(dest, data, 0o644); err != nil {
-		return fmt.Errorf("os.mount: snapshot write %s: %w", dest, err)
+	if e := eff.WriteFile(dest, data, 0o644, actions.PerformerOpts{Become: true, ExplicitMode: true}); e.Err != nil {
+		return fmt.Errorf("os.mount: snapshot write %s: %w", dest, e.Err)
 	}
 	return nil
 }
 
-func writeAtomic(path string, content []byte, mode os.FileMode) error {
-	tmp := path + atomicTempSuffix
-	if err := os.WriteFile(tmp, content, mode); err != nil {
-		return err
-	}
-	if err := os.Rename(tmp, path); err != nil {
-		_ = os.Remove(tmp)
-		return err
-	}
-	return nil
-}
-
-// realMount shells out to `mount <dest>`; relies on the fstab entry
-// for the rest of the spec.
+// realMount shells out to `mount <dest>` via ctx.Privileged().
 func realMount(dest string) error {
-	cmd := exec.Command("mount", dest)
-	var stderr bytes.Buffer
-	cmd.Stderr = &stderr
-	if err := cmd.Run(); err != nil {
-		msg := strings.TrimSpace(stderr.String())
+	out, err := privRunner.Run(nil, "mount", dest)
+	if err != nil {
+		msg := strings.TrimSpace(string(out))
 		if msg != "" {
 			return fmt.Errorf("%w: %s", err, msg)
 		}
@@ -581,13 +579,11 @@ func realMount(dest string) error {
 	return nil
 }
 
-// realUmount shells out to `umount <dest>`.
+// realUmount shells out to `umount <dest>` via ctx.Privileged().
 func realUmount(dest string) error {
-	cmd := exec.Command("umount", dest)
-	var stderr bytes.Buffer
-	cmd.Stderr = &stderr
-	if err := cmd.Run(); err != nil {
-		msg := strings.TrimSpace(stderr.String())
+	out, err := privRunner.Run(nil, "umount", dest)
+	if err != nil {
+		msg := strings.TrimSpace(string(out))
 		if msg != "" {
 			return fmt.Errorf("%w: %s", err, msg)
 		}
