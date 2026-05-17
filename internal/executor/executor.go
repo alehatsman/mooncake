@@ -1275,7 +1275,8 @@ func truncate(s string, maxLen int) string {
 // up-casting.
 func dispatchRunner(step config.Step, ec *ExecutionContext, runner actions.Runner) error {
 	if p, ok := runner.(actions.Permitter); ok {
-		if err := preflightPermissions(p.Permissions(&step), &step); err != nil {
+		sudoPassConfigured := ec.Svc != nil && ec.Svc.SudoPass != ""
+		if err := preflightPermissions(p.Permissions(&step), &step, sudoPassConfigured); err != nil {
 			return err
 		}
 	}

@@ -20,16 +20,31 @@ import (
 //   - RequiredBinaries missing on PATH → error
 //   - Network is informational only (no enforcement)
 //
+// Spec-69 phase 4 extension:
+//   - Sudo + non-root + AsUser set + no sudo password configured
+//     → error at plan/dispatch time. Without this, the step plans
+//     fine, then EACCES'd later at apply when the handler tried to
+//     escalate. Now the operator hears about the missing password
+//     before any side effects start.
+//
 // This function is called from dispatchRunner for every handler that
 // implements actions.Permitter. Handlers without a Permitter
 // implementation never trigger preflight — they get the legacy
 // "runtime error" path until they opt in.
-func preflightPermissions(perms actions.PermissionSet, step *config.Step) error {
-	if step != nil && perms.Sudo && !runningElevated() && step.AsUser == "" {
-		return fmt.Errorf(
-			"step %q requires elevated privileges (Sudo: true) but mooncake is not running as root and the step has no as_user; add as_user: root or run mooncake with sudo",
-			stepLabel(step),
-		)
+func preflightPermissions(perms actions.PermissionSet, step *config.Step, sudoPassConfigured bool) error {
+	if step != nil && perms.Sudo && !runningElevated() {
+		if step.AsUser == "" {
+			return fmt.Errorf(
+				"step %q requires elevated privileges (Sudo: true) but mooncake is not running as root and the step has no as_user; add as_user: root or run mooncake with sudo",
+				stepLabel(step),
+			)
+		}
+		if !sudoPassConfigured {
+			return fmt.Errorf(
+				"step %q requires elevated privileges (as_user: %s, Sudo: true) but no sudo password is configured; pass --sudo-pass / --sudo-pass-file / --ask-become-pass, or run mooncake as root",
+				stepLabel(step), step.AsUser,
+			)
+		}
 	}
 	for _, bin := range perms.RequiredBinaries {
 		if _, err := exec.LookPath(bin); err != nil {

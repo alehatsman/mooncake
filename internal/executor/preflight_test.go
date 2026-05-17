@@ -14,7 +14,7 @@ import (
 // must let those through without complaint.
 func TestPreflight_NoPermsRequired_PassesCleanly(t *testing.T) {
 	step := &config.Step{Name: "noop"}
-	if err := preflightPermissions(actions.PermissionSet{}, step); err != nil {
+	if err := preflightPermissions(actions.PermissionSet{}, step, true); err != nil {
 		t.Errorf("empty PermissionSet should pass preflight, got: %v", err)
 	}
 }
@@ -32,7 +32,7 @@ func TestPreflight_SudoNeeded_NonRoot_NoAsUser_Fails(t *testing.T) {
 		t.Skip("test requires non-root euid")
 	}
 	step := &config.Step{Name: "writes-etc"}
-	err := preflightPermissions(actions.PermissionSet{Sudo: true}, step)
+	err := preflightPermissions(actions.PermissionSet{Sudo: true}, step, true)
 	if err == nil {
 		t.Fatal("want preflight error for Sudo+non-root+no-AsUser, got nil")
 	}
@@ -53,8 +53,34 @@ func TestPreflight_SudoNeeded_NonRoot_NoAsUser_Fails(t *testing.T) {
 // runs the step). No preflight error.
 func TestPreflight_SudoNeeded_AsUserSet_Passes(t *testing.T) {
 	step := &config.Step{Name: "writes-etc", AsUser: "root"}
-	if err := preflightPermissions(actions.PermissionSet{Sudo: true}, step); err != nil {
-		t.Errorf("AsUser=root should satisfy Sudo preflight, got: %v", err)
+	if err := preflightPermissions(actions.PermissionSet{Sudo: true}, step, true); err != nil {
+		t.Errorf("AsUser=root + sudo password configured should satisfy preflight, got: %v", err)
+	}
+}
+
+// TestPreflight_SudoNeeded_AsUserSet_NoSudoPass_Fails locks in the
+// spec-69 phase 4 extension: a step that declares Sudo + has as_user
+// set but runs against a mooncake invocation with no sudo password
+// configured fails at preflight, not at apply-time EACCES.
+//
+// Without this check the step planned cleanly and only blew up when
+// the handler actually tried to escalate — exactly what bit the
+// dotfiles pkg.upgrade migration on 2026-05-17 ("permission denied"
+// on /var/lib/dpkg/lock-frontend halfway through an apply).
+func TestPreflight_SudoNeeded_AsUserSet_NoSudoPass_Fails(t *testing.T) {
+	if os.Geteuid() == 0 {
+		t.Skip("test requires non-root euid")
+	}
+	step := &config.Step{Name: "writes-etc", AsUser: "root"}
+	err := preflightPermissions(actions.PermissionSet{Sudo: true}, step, false)
+	if err == nil {
+		t.Fatal("want preflight error for Sudo+AsUser+no-sudo-pass, got nil")
+	}
+	if !strings.Contains(err.Error(), "no sudo password is configured") {
+		t.Errorf("error message = %q, want substring 'no sudo password is configured'", err)
+	}
+	if !strings.Contains(err.Error(), "--sudo-pass") {
+		t.Errorf("error message = %q, want flag hint '--sudo-pass'", err)
 	}
 }
 
@@ -67,7 +93,7 @@ func TestPreflight_MissingBinary_Fails(t *testing.T) {
 	perms := actions.PermissionSet{
 		RequiredBinaries: []string{"this-binary-definitely-does-not-exist-xyz-12345"},
 	}
-	err := preflightPermissions(perms, step)
+	err := preflightPermissions(perms, step, true)
 	if err == nil {
 		t.Fatal("want preflight error for missing binary, got nil")
 	}
@@ -85,7 +111,7 @@ func TestPreflight_MissingBinary_Fails(t *testing.T) {
 func TestPreflight_PresentBinary_Passes(t *testing.T) {
 	step := &config.Step{Name: "needs-sh"}
 	perms := actions.PermissionSet{RequiredBinaries: []string{"sh"}}
-	if err := preflightPermissions(perms, step); err != nil {
+	if err := preflightPermissions(perms, step, true); err != nil {
 		t.Errorf("preflight on present binary 'sh' failed: %v", err)
 	}
 }
@@ -98,7 +124,7 @@ func TestPreflight_PresentBinary_Passes(t *testing.T) {
 func TestPreflight_NetworkIsInformational(t *testing.T) {
 	step := &config.Step{Name: "talks-to-internet"}
 	perms := actions.PermissionSet{Network: true}
-	if err := preflightPermissions(perms, step); err != nil {
+	if err := preflightPermissions(perms, step, true); err != nil {
 		t.Errorf("Network: true should be informational; preflight failed: %v", err)
 	}
 }

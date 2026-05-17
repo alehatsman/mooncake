@@ -30,6 +30,7 @@ import (
 	"github.com/alehatsman/mooncake/internal/plan"
 	_ "github.com/alehatsman/mooncake/internal/register" // Register action handlers
 	"github.com/alehatsman/mooncake/internal/schemagen"
+	"github.com/alehatsman/mooncake/internal/security"
 	"github.com/urfave/cli/v2"
 	"gopkg.in/yaml.v3"
 )
@@ -1210,8 +1211,22 @@ func planCommand(c *cli.Context) error {
 	// handlers that don't implement Spec-16 Runner report as
 	// "not checkable" until they migrate (Phase 5).
 	if !noInspect {
+		// Spec-69 phase 4: the dispatcher's preflight needs to see
+		// the sudo password configuration during plan-mode inspect
+		// too, otherwise plan errors on steps that would have
+		// applied fine. Resolve via the same security helper apply
+		// uses.
+		sudoPass, perr := security.ResolvePassword(security.PasswordConfig{
+			CLIPassword:    c.String("sudo-pass"),
+			AskInteractive: c.Bool("ask-become-pass"),
+			PasswordFile:   c.String("sudo-pass-file"),
+			InsecureCLI:    c.Bool("insecure-sudo-pass"),
+		})
+		if perr != nil {
+			return fmt.Errorf("sudo password setup failed: %w", perr)
+		}
 		internalLog := logger.NewLogger(logger.ErrorLevel)
-		inspections, err := executor.InspectPlan(planData, "", internalLog)
+		inspections, err := executor.InspectPlan(planData, sudoPass, internalLog)
 		if err != nil {
 			return fmt.Errorf("failed to inspect plan: %w", err)
 		}
@@ -1657,6 +1672,19 @@ func createApp() *cli.App {
 						Aliases: []string{"o"},
 						Usage:   "Save plan to file (format determined by extension: .json, .yaml, .yml)",
 					},
+					// Sudo-credential flags: plan goes through the same
+					// dispatchRunner preflight as apply (spec-69 phase 4
+					// catches Sudo:true + AsUser + no-password at plan
+					// time). Without these flags, a plan against a step
+					// with as_user: root errors out before any prediction
+					// gets rendered — which is the right behavior for
+					// "fail at plan, not at apply" but inconvenient for
+					// preview workflows. These flags let operators feed
+					// the password to plan too.
+					&cli.StringFlag{Name: "sudo-pass-file", Usage: "Read sudo password from file (must have 0600 permissions)"},
+					&cli.StringFlag{Name: "sudo-pass", Aliases: []string{"s"}, Usage: "Sudo password (requires --insecure-sudo-pass)"},
+					&cli.BoolFlag{Name: "ask-become-pass", Aliases: []string{"K"}, Usage: "Prompt for sudo password interactively"},
+					&cli.BoolFlag{Name: "insecure-sudo-pass", Usage: "Allow --sudo-pass flag (WARNING: visible in shell history)"},
 				},
 				Action: planCommand,
 			},
