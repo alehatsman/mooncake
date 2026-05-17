@@ -68,6 +68,13 @@ type PerformerOpts struct {
 	Become     bool
 	BecomeUser string
 	Force      bool
+	// ExplicitMode signals that the caller's `mode` was supplied
+	// directly (e.g. `file.copy: mode: '0755'`) rather than derived
+	// from the source file. WriteFile/CopyFile use this to decide
+	// whether to enforce the requested mode on an existing dest or
+	// preserve the dest's current mode (the WriteFile-compatible
+	// round-trip default).
+	ExplicitMode bool
 }
 
 // Performer executes filesystem and command primitives in either

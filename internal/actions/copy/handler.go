@@ -227,7 +227,10 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		}
 	}
 
-	eff := ctx.Effects().CopyFile(src, dest, mode, actions.PerformerOpts{Become: step.ShouldBecome()})
+	eff := ctx.Effects().CopyFile(src, dest, mode, actions.PerformerOpts{
+		Become:       step.ShouldBecome(),
+		ExplicitMode: cp.Mode != "",
+	})
 	if eff.Err != nil {
 		result.Failed = true
 		return result, eff.Err

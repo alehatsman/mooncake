@@ -277,15 +277,16 @@ func (p *defaultPerformer) CopyFile(src, dest string, mode os.FileMode, opts act
 
 	// Mode-preservation quirk: WriteFile's apply path
 	// (os.WriteFile in non-become mode) does NOT chmod an existing
-	// file — when path exists, os.WriteFile truncates without changing
-	// mode. CopyFile matches that semantic by chmod-ing to the EXISTING
-	// dest mode (if any) before rename. New dests get the caller-asked
-	// mode. This keeps copy → reverse → restore cycles bit-identical to
-	// the WriteFile-based pre-F026 behavior (file.copy's reverse
-	// constructs a file.write step that relies on this exact quirk to
-	// keep the captured mode through the round trip).
+	// file. CopyFile mirrors that for the default-mode case so
+	// copy → reverse → restore round-trips keep the pre-apply mode
+	// when the caller didn't explicitly request one. When the caller
+	// did pass opts.ExplicitMode (e.g. file.copy: mode: '0755'),
+	// honor it — silently preserving the dest's drifted mode would
+	// contradict both the idempotency check above (which already
+	// treats a mode mismatch as a reason to re-copy) and the
+	// declarative intent of an explicit mode field.
 	finalMode := mode
-	if destInfo != nil && !destInfo.IsDir() {
+	if !opts.ExplicitMode && destInfo != nil && !destInfo.IsDir() {
 		finalMode = destInfo.Mode().Perm()
 	}
 
