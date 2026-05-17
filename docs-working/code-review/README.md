@@ -55,7 +55,12 @@ suggested fix, and verification steps.
   always concrete.
 - **No fixes in this pass** — review only. Fixers run separately.
 
-## Cross-cutting themes (running list)
+## Cross-cutting themes — resolved in this pass
+
+All nine themes below were observed during the pass *and resolved
+by the fixer agents*. Kept here as a pattern library — future
+reviewers can scan for the same shapes in unreviewed packages
+(see [TODO.md](./TODO.md) "Still to review").
 
 Patterns observed across packages, ordered by leverage.
 
@@ -111,57 +116,38 @@ Patterns observed across packages, ordered by leverage.
    Functions that were over the cap and got extracted no longer
    need the suppression; the directive stays.
 
-## Summary of findings (24 total)
+## Pass status (2026-05-17)
 
-| Severity | Count | IDs |
-|---|---:|---|
-| bug | 7 | F015 ✅, F017 ✅, F018, F019 ✅, F023, F024, (F010 dead test treated as smell) |
-| risk | 6 | F001 ✅, F007, F012, F014, F016, F020 |
-| smell | 8 | F003, F004, F005, F006, F009, F010, F011, F022 |
-| readability | 1 | F008 |
-| doc | 3 | F002 ✅, F013, F021 |
+**All 46 filed findings are fixed.** ✅ Nothing in this folder
+needs addressing. Folder remains as (a) finding archive for
+pattern reuse, (b) review-queue for packages not yet covered —
+see [TODO.md](./TODO.md) "Still to review".
 
-✅ = already fixed by fixer agents during this pass (F001, F002,
-F015, F017, F019 — 5 of 24).
+### Severity breakdown — all done
 
-The top-priority remaining fixers should look at:
+| Severity | Filed | Done | Open |
+|---|---:|---:|---:|
+| bug | 16 | 16 | 0 |
+| risk | 11 | 11 | 0 |
+| smell | 15 | 15 | 0 |
+| readability | 1 | 1 | 0 |
+| doc | 3 | 3 | 0 |
+| **Total** | **46** | **46** | **0** |
 
-- **F024** (real bug, security/correctness): planner's
-  walkAndRender doesn't render templates inside
-  `map[string]interface{}` fields — os.systemd unit sections,
-  text.patch.{json,yaml} Set/Merge, use.With. Same closed-kind-set
-  shape F019 just fixed in the resolver; pattern transferable.
-- **F018** (real bug): shell.streamOutput's bufio.Scanner
-  silently truncates lines > 64 KB.
-- **F023** (real bug): package handler silently swallows
-  template-render errors on names → confusing apt errors.
-- **F020** (risk): `apply.Runner` calls `os.Exit`, hostile
-  to agentd / MCP — graceful daemon shutdown impossible.
-- **F016** (risk): agentd worker uses `context.Background()`
-  — applies can't be cancelled, daemon shutdown hangs on a
-  stuck run.
+(F036 was skipped during numbering; F037–F047 continue.)
 
-Quick-win XS fixes still open: F013 (config.Step doc-drift),
-F021 (Config.ExtraSubscribers doc), F010 (dead test), F022
-(NewTestLogger in production).
+### Pass receipts
 
-## Status at iteration cutoff (this turn)
+- 46 findings filed across 2026-05-16 → 2026-05-17 (~24 hours).
+- ~170 commits to master in the same window resolved them
+  (`git log --oneline --since=2026-05-16 -- docs-working/code-review/`
+  for the paper trail).
+- Stamping convention: each finding's frontmatter carries
+  `status: done` + a `resolved_by:` pointer (commit SHA).
+- Most recent stamp: F047 (`033114b9`, 2026-05-17).
 
-- **24 findings produced**, of which **5 fixed** by parallel
-  fixer agents during the pass (F001 lint, F002 CLAUDE.md, F015
-  worker hub cleanup, F017 continue_on_error, F019 secret
-  resolver).
-- **~17 commits** to `worktree-code-review`, all merged to master.
-- **Packages covered**: actions/{service, tool, shell,
-  observe_disk, package}, explain, secrets/resolver, agentd/
-  {worker, files_handler, runs_handler}, executor, apply, fleet/
-  {apply, controller, orchestrator, bootstrap (partial)}, mcp,
-  plan, plan/filter, config, control, snapshot, presets/registry
-  (partial), cmd (presets spot-check).
-- **Still untouched** (queued in [TODO.md](./TODO.md)):
-  fleet/{multiplex, peers, machine, bootstrap_windows_target},
-  agentd/{self_upgrade, store, persistence},
-  per-action handlers (git_*, os_* except service/systemd,
-  text_*, wait_*, windows_*),
-  cmd/* (rest of CLI wiring),
-  test-coverage gaps in churned packages.
+### What's *not* covered (review queue, no known bugs)
+
+These packages haven't been read in this pass. Absence of
+findings ≠ clean — just unreviewed. See
+[TODO.md](./TODO.md) "Still to review" for the live list.
