@@ -1,6 +1,6 @@
 # Proposal 01: Step name defaults — render action+content when `name:` is omitted
 
-**Status:** Draft proposal
+**Status:** Shipped 2026-05-17 (commit `4d54e986`)
 **Effort:** XS (~half a day, single PR)
 **Value:** Medium — the most visible papercut in the CLI; every
 unnamed step prints as `▶ ` with nothing after the glyph, costing

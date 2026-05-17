@@ -1,6 +1,6 @@
 # Proposal 11: `assert` action + on-fail `heal:` handler — self-healing as a primitive
 
-**Status:** Draft proposal (brainstorm-stage)
+**Status:** Partially shipped — the `assert` action exists at `internal/actions/assert/` (multiple sub-fields: command, file_exists, file_sha256, git-clean / git-diff). **Open:** the on-fail `heal:` handler — the kernel-level primitive that turns assert-failure into a self-correcting step. Stays in `proposals/` (not `done/`) until the heal handler ships.
 **Effort:** M (~1 week — action + executor change)
 **Value:** High — turns mooncake from "apply state once" into
 "maintain state", which is the kernel-level primitive underneath

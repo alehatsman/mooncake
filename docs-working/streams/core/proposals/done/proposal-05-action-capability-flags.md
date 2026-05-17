@@ -1,6 +1,6 @@
 # Proposal 05: Surface action capability flags — make `Permissions/Diff/Cost/Reverse` visible
 
-**Status:** Draft proposal
+**Status:** Shipped (commit `75df17e5`)
 **Effort:** XS (~1 day; mostly registry plumbing)
 **Value:** Medium — the four-method handler ABI (spec-22) is core's
 big bet, but its outputs aren't easily inspectable. Exposing them

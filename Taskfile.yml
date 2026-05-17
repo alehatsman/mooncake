@@ -185,25 +185,26 @@ tasks:
   # pre-push time.
   # ---------------------------------------------------------------------------
   ci:fast:
-    desc: 'Fast pre-commit gate: vet + gofmt (staged) + ai-lint (staged) + budget'
+    desc: 'Fast pre-commit gate: vet + gofmt (staged) + ai-lint (staged) + budget + docs-regen (gated)'
     cmds:
       - task: ci-fast:vet
       - task: ci-fast:fmt
       - task: ci-fast:ai-lint
       - task: ci-fast:budget
+      - task: ci-fast:docs-regen
       - echo ""
       - echo "✓ Fast checks green — full 'task ci' gate runs on push."
 
   ci-fast:vet:
     internal: true
     cmds:
-      - 'echo "[1/4] go vet"'
+      - 'echo "[1/5] go vet"'
       - go vet {{.PKG}}
 
   ci-fast:fmt:
     internal: true
     cmds:
-      - 'echo "[2/4] gofmt (staged Go files)"'
+      - 'echo "[2/5] gofmt (staged Go files)"'
       - |
         staged=$(git diff --cached --name-only --diff-filter=ACMR -- '*.go' || true)
         if [ -z "$staged" ]; then echo "  (no staged Go files)"; exit 0; fi
@@ -219,14 +220,59 @@ tasks:
   ci-fast:ai-lint:
     internal: true
     cmds:
-      - 'echo "[3/4] ai-lint (staged Go files)"'
+      - 'echo "[3/5] ai-lint (staged Go files)"'
       - bash ./scripts/ai-lint.sh
 
   ci-fast:budget:
     internal: true
     cmds:
-      - 'echo "[4/4] CLAUDE.md soft-cap budget"'
+      - 'echo "[4/5] CLAUDE.md soft-cap budget"'
       - bash ./scripts/budget-status.sh | sed 's/^/  /'
+
+  # docs-regen runs when staged Go files could change generator output
+  # (action handlers, Step schema, the docgen package itself, the docs
+  # command). On drift it auto-stages docs-next/generated/* so the
+  # commit ships the regenerated docs alongside the source change —
+  # matching the cmd/docs.go header-strip equality check (only real
+  # content deltas land, timestamp-only writes are already skipped).
+  ci-fast:docs-regen:
+    internal: true
+    cmds:
+      - 'echo "[5/5] docs regen (gated on action/config/docgen changes)"'
+      - |
+        staged=$(git diff --cached --name-only --diff-filter=ACMR \
+          -- 'internal/actions/**/*.go' \
+             'internal/config/*.go' \
+             'internal/docgen/**/*.go' \
+             'internal/schemagen/**/*.go' \
+             'cmd/docs.go' 'cmd/schema.go' 2>/dev/null || true)
+        if [ -z "$staged" ]; then
+          echo "  (no action/config/docgen Go files staged — skipping)"
+          exit 0
+        fi
+        if ! make docs-generate >/dev/null 2>&1; then
+          echo "  ✗ make docs-generate failed — fix the generator before committing." >&2
+          exit 1
+        fi
+        if ! make schema-generate >/dev/null 2>&1; then
+          echo "  ✗ make schema-generate failed — fix the generator before committing." >&2
+          exit 1
+        fi
+        changed=$(git diff --name-only -- \
+          docs-next/generated/ \
+          internal/config/schema.json \
+          internal/config/schema.d \
+          mooncake.d.ts)
+        if [ -z "$changed" ]; then
+          echo "  ✓ generated docs + schema already in sync"
+          exit 0
+        fi
+        echo "$changed" | sed 's/^/  ↑ auto-staging: /'
+        git add -- \
+          docs-next/generated/ \
+          internal/config/schema.json \
+          internal/config/schema.d \
+          mooncake.d.ts
 
   # ---------------------------------------------------------------------------
   # CI — the full gate. Runs at pre-push time (and in CI). Steps run in

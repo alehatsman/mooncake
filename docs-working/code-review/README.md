@@ -13,8 +13,8 @@ suggested fix, and verification steps.
 
 ## Read this first
 
-- [00-baseline.md](./00-baseline.md) — build / test / lint /
-  arch-snapshot status at start of pass.
+- [00-baseline.md](../archive/code-review/00-baseline.md) — build / test / lint /
+  arch-snapshot status at start of pass. Archived (pass complete).
 - [TODO.md](./TODO.md) — what's reviewed, what's queued, what's
   unblocked for fix work.
 - [findings/](./findings/) — per-issue write-ups.

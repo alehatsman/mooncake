@@ -1,6 +1,6 @@
 # Request — Template engine: a working `now`/time facility
 
-**Status**: User request, not yet specced
+**Status**: Shipped 2026-05-16 (commit `07eee974`, merged `24201c00`) — `apply_started_at` per-run variable + pongo2 `strftime` filter registered. Use `{{ apply_started_at | strftime:"%Y%m%d_%H%M%S" }}` to interpolate a timestamp.
 **Filed**: 2026-05-16 by aleh (discovered while migrating dotfiles backup steps from `shell` to `file.copy`)
 
 ---

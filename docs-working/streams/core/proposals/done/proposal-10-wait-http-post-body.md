@@ -1,6 +1,6 @@
 # Request — `wait_http`: POST + JSON body support
 
-**Status**: User request, not yet specced
+**Status**: Shipped 2026-05-17 (commit `bb25104a`, merged `89362060`)
 **Filed**: 2026-05-16 by aleh
 
 ---

@@ -1,6 +1,6 @@
 # Request — `pkg.install`: AUR / yay support on Arch
 
-**Status**: User request, not yet specced
+**Status**: Shipped 2026-05-17 (commit `7eba594e`, merged `f58cc89c`)
 **Filed**: 2026-05-16 by aleh (from x1, while migrating dotfiles shell→actions)
 **Related**: [`spec-24-pkg-surface`](../../../../docs-working/specs/done/spec-24-pkg-surface.md) — slots into G1 (`pkg.install` manager set) and G2 (`pkg.repo`, sort of — AUR is closer to a parallel package manager than a repo).
 

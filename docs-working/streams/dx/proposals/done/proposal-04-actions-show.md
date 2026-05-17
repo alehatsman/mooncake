@@ -1,6 +1,6 @@
 # Proposal 04: `mooncake actions show <name>` — per-action documentation from the registry
 
-**Status:** Draft proposal
+**Status:** Shipped 2026-05-17 (commit `1e999f18`; F047 stamp + StrictValidation fix in `533c15e8`)
 **Effort:** XS (~1 day, mostly formatting)
 **Value:** High — closes the discoverability gap that drives users
 to `grep schema.json` or LLM_GUIDE.md. Trivial to build because
