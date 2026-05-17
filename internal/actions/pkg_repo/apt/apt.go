@@ -11,7 +11,6 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
-	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -29,6 +28,14 @@ import (
 // calling apply / updateCache; tests that stub updateCache bypass this
 // entirely. See pkg_upgrade for the same pattern.
 var privRunner actions.PrivilegedRunner = security.PrivilegedRunner{}
+
+// eff is the spec-69 sudo-escalating Performer used by apply() for
+// file writes under /etc/. Set by Run() from ctx.Effects() before
+// dispatch. The Performer's try-direct-then-fallback semantic (phase
+// 5b) means PerformerOpts{Become: true} succeeds against both
+// /etc/apt/sources.list.d (production, requires sudo) and a
+// t.TempDir() the test owns (no sudo needed).
+var eff actions.Performer
 
 // Paths controls where the apt driver writes files. Tests override
 // these via the package-level `paths` var to avoid touching /etc.
@@ -100,10 +107,12 @@ func Run(ctx actions.Context, r *config.PkgRepo, result *executor.Result) (actio
 		return result, nil
 	}
 
-	// Wire the spec-69 sudo-aware runner so apt-get update escalates
-	// to root when mooncake runs as a non-root user. File-op
-	// migration is deferred — see the apply() comment.
+	// Wire the spec-69 primitives so apply / updateCache escalate to
+	// root via sudo when mooncake runs as a non-root user. Tests
+	// that override paths.SourcesDir to a t.TempDir continue to
+	// work because the Performer tries direct first.
 	privRunner = ctx.Privileged()
+	eff = ctx.Effects()
 
 	// Capture pre-apply sources file state for Reverse(). The plan
 	// path already calls ReadFile on the sources path when
@@ -316,33 +325,29 @@ func renderDEB822(r rendered_, keyringPath string) string {
 }
 
 func apply(p plan_, r rendered_) error {
-	// Note (spec-69 phase 5b): the file ops below still call os.* /
-	// shared.WriteAtomic directly. Migrating them to ctx.Effects()
-	// with PerformerOpts{Become: true} regresses tests that point
-	// paths.SourcesDir at a user-owned tempdir (Performer always
-	// sudos when Become is set, even when the target is writable by
-	// the current user). Two-step fix lives in spec-69: (1) teach
-	// the Performer to fall back to direct ops when the user has
-	// write access (matches service/handler.go:writeFileWithPrivileges),
-	// (2) migrate this apply path. For now, the privRunner-driven
-	// apt-get update below is the only spec-69 site here — the file
-	// writes inherit pre-spec-69 behavior, which is the same
-	// "running as root works, non-root fails with EACCES" semantic
-	// the rest of pkg.repo had before today.
+	// All file ops go through ctx.Effects() with Become: true. The
+	// Performer (spec-69 phase 5b) tries the direct os.* first and
+	// only sudos on EACCES, so this works equally well under sudo
+	// against /etc and against a user-owned tempdir in tests.
+	pOpts := actions.PerformerOpts{Become: true}
+	pOptsWithMode := actions.PerformerOpts{Become: true, ExplicitMode: true}
+
 	if p.operation == "delete" {
-		if err := os.Remove(p.sourcesPath); err != nil && !errors.Is(err, fs.ErrNotExist) {
-			return fmt.Errorf("pkg.repo.apt: remove sources: %w", err)
+		if e := eff.Remove(p.sourcesPath, false, pOpts); e.Err != nil && !errors.Is(e.Err, fs.ErrNotExist) {
+			return fmt.Errorf("pkg.repo.apt: remove sources: %w", e.Err)
 		}
+		// Keyring isn't auto-removed: it may be shared with another
+		// repo. Future spec-22 reverse hook can do reference counting.
 		return nil
 	}
 
-	if err := os.MkdirAll(paths.SourcesDir, 0o755); err != nil {
-		return fmt.Errorf("pkg.repo.apt: mkdir sources: %w", err)
+	if e := eff.Mkdir(paths.SourcesDir, 0o755, pOpts); e.Err != nil {
+		return fmt.Errorf("pkg.repo.apt: mkdir sources: %w", e.Err)
 	}
 
 	if p.keyringPath != "" {
-		if err := os.MkdirAll(paths.KeyringsDir, 0o755); err != nil {
-			return fmt.Errorf("pkg.repo.apt: mkdir keyrings: %w", err)
+		if e := eff.Mkdir(paths.KeyringsDir, 0o755, pOpts); e.Err != nil {
+			return fmt.Errorf("pkg.repo.apt: mkdir keyrings: %w", e.Err)
 		}
 		body, err := shared.HTTPFetchKey(r.gpgKeyURL)
 		if err != nil {
@@ -355,13 +360,13 @@ func apply(p plan_, r rendered_) error {
 				return fmt.Errorf("pkg.repo.apt: %w (key url: %s)", vErr, r.gpgKeyURL)
 			}
 		}
-		if err := shared.WriteAtomic(p.keyringPath, body, 0o644); err != nil {
-			return fmt.Errorf("pkg.repo.apt: write keyring: %w", err)
+		if e := eff.WriteFile(p.keyringPath, body, 0o644, pOptsWithMode); e.Err != nil {
+			return fmt.Errorf("pkg.repo.apt: write keyring: %w", e.Err)
 		}
 	}
 
-	if err := shared.WriteAtomic(p.sourcesPath, []byte(p.wantContent), 0o644); err != nil {
-		return fmt.Errorf("pkg.repo.apt: write sources: %w", err)
+	if e := eff.WriteFile(p.sourcesPath, []byte(p.wantContent), 0o644, pOptsWithMode); e.Err != nil {
+		return fmt.Errorf("pkg.repo.apt: write sources: %w", e.Err)
 	}
 	return nil
 }

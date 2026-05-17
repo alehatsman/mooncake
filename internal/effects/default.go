@@ -47,6 +47,37 @@ func NewPerformer(modeFn ModeFunc, sudoPass string) actions.Performer {
 
 func (p *defaultPerformer) Mode() actions.Mode { return p.modeFn() }
 
+// becomeFallback (spec-69 phase 5b) is the "try direct first, sudo on
+// EACCES" pattern that lets handlers declare PerformerOpts{Become:
+// true} without paying a useless sudo wrap when the operation
+// actually succeeded under the current user's privileges. The
+// existing always-sudo path penalized two real cases:
+//
+//   - tests pointing /etc-shaped paths at a t.TempDir() and asking
+//     for a sudo password they don't have configured;
+//   - already-root invocations (sudo mooncake apply, or mooncake
+//     running under a unit with User=root) paying the cost of a
+//     sudo -S wrap for every primitive.
+//
+// Pattern mirrors service/handler.go:writeFileWithPrivileges, which
+// has shipped this shape across the service-action code path for a
+// year. directErr is the result of the bare os.* / direct call;
+// sudoCmd is the shell-quoted command to retry under sudo when
+// fallback is appropriate.
+func (p *defaultPerformer) becomeFallback(opts actions.PerformerOpts, directErr error, sudoCmd string) error {
+	if directErr == nil {
+		return nil
+	}
+	if !opts.Become || !os.IsPermission(directErr) {
+		return directErr
+	}
+	// Already root: direct failed for a reason sudo can't help with.
+	if os.Geteuid() == 0 {
+		return directErr
+	}
+	return p.runSudo(sudoCmd)
+}
+
 // ----------------------------------------------------------------------
 // Mkdir
 // ----------------------------------------------------------------------
@@ -78,19 +109,26 @@ func (p *defaultPerformer) Mkdir(path string, mode os.FileMode, opts actions.Per
 		return e
 	}
 
-	if opts.Become {
-		cmd := fmt.Sprintf("mkdir -p -m %s %s && chmod %s %s",
-			formatMode(mode), shellQuote(path), formatMode(mode), shellQuote(path))
-		if err := p.runSudo(cmd); err != nil {
-			e.Err = err
-			return e
-		}
-	} else {
-		if err := os.MkdirAll(path, mode); err != nil {
-			e.Err = fmt.Errorf("mkdir %s: %w", path, err)
-			return e
-		}
-		if err := os.Chmod(path, mode); err != nil {
+	// Try direct first; fall back to sudo on EACCES when Become is
+	// set. The fallback combines mkdir + chmod in one shell so the
+	// inverse intent (idempotent dir at the requested mode) is
+	// atomic from sudo's perspective.
+	mkdirErr := os.MkdirAll(path, mode)
+	if err := p.becomeFallback(opts, mkdirErr,
+		fmt.Sprintf("mkdir -p -m %s %s && chmod %s %s",
+			formatMode(mode), shellQuote(path), formatMode(mode), shellQuote(path)),
+	); err != nil {
+		e.Err = fmt.Errorf("mkdir %s: %w", path, err)
+		return e
+	}
+	// If mkdir went via sudo, the chmod was bundled in. Otherwise do
+	// the chmod directly (with the same fallback so the chmod-only
+	// EACCES case retries under sudo too).
+	if mkdirErr == nil {
+		chmodErr := os.Chmod(path, mode)
+		if err := p.becomeFallback(opts, chmodErr,
+			fmt.Sprintf("chmod %s %s", formatMode(mode), shellQuote(path)),
+		); err != nil {
 			e.Err = fmt.Errorf("chmod %s: %w", path, err)
 			return e
 		}
@@ -144,31 +182,40 @@ func (p *defaultPerformer) WriteFile(path string, content []byte, mode os.FileMo
 		}
 	}
 
-	if opts.Become {
-		tmp, err := os.CreateTemp("", "mooncake-effect-*")
-		if err != nil {
-			e.Err = fmt.Errorf("create temp file: %w", err)
-			return e
-		}
-		tmpPath := tmp.Name()
-		_ = tmp.Close()
-		defer func() { _ = os.Remove(tmpPath) }()
-		if err := os.WriteFile(tmpPath, content, 0o600); err != nil {
-			e.Err = fmt.Errorf("write temp file: %w", err)
-			return e
-		}
-		cmd := fmt.Sprintf("mv %s %s && chmod %s %s",
-			shellQuote(tmpPath), shellQuote(path), formatMode(mode), shellQuote(path))
-		if err := p.runSudo(cmd); err != nil {
-			e.Err = err
-			return e
-		}
-	} else {
-		// #nosec G306 — mode is caller-controlled; this is a provisioning tool
-		if err := os.WriteFile(path, content, mode); err != nil {
-			e.Err = fmt.Errorf("write %s: %w", path, err)
-			return e
-		}
+	// Try direct first; fall back to sudo on EACCES when Become is set.
+	// The sudo path stages content in a user-writable tempfile and
+	// then mv+chmod under sudo (the user's process can't write
+	// directly into /etc/foo, but it CAN write into /tmp and ask sudo
+	// to move it). This matches the historical Become path; only the
+	// gating changes.
+	// #nosec G306 — mode is caller-controlled; this is a provisioning tool.
+	directErr := os.WriteFile(path, content, mode)
+	if directErr == nil {
+		e.Performed = true
+		return e
+	}
+	if !opts.Become || !os.IsPermission(directErr) || os.Geteuid() == 0 {
+		e.Err = fmt.Errorf("write %s: %w", path, directErr)
+		return e
+	}
+	// Sudo fallback.
+	tmp, terr := os.CreateTemp("", "mooncake-effect-*")
+	if terr != nil {
+		e.Err = fmt.Errorf("create temp file: %w", terr)
+		return e
+	}
+	tmpPath := tmp.Name()
+	_ = tmp.Close()
+	defer func() { _ = os.Remove(tmpPath) }()
+	if err := os.WriteFile(tmpPath, content, 0o600); err != nil {
+		e.Err = fmt.Errorf("write temp file: %w", err)
+		return e
+	}
+	cmd := fmt.Sprintf("mv %s %s && chmod %s %s",
+		shellQuote(tmpPath), shellQuote(path), formatMode(mode), shellQuote(path))
+	if err := p.runSudo(cmd); err != nil {
+		e.Err = err
+		return e
 	}
 	e.Performed = true
 	return e
@@ -563,31 +610,25 @@ func (p *defaultPerformer) Remove(path string, recursive bool, opts actions.Perf
 		return e
 	}
 
-	if opts.Become {
-		var cmd string
-		switch {
-		case info.IsDir() && recursive:
-			cmd = "rm -rf " + shellQuote(path)
-		case info.IsDir():
-			cmd = "rmdir " + shellQuote(path)
-		default:
-			cmd = "rm -f " + shellQuote(path)
-		}
-		if err := p.runSudo(cmd); err != nil {
-			e.Err = err
-			return e
-		}
+	// Try direct first; fall back to sudo on EACCES when Become is set.
+	var rmErr error
+	if recursive {
+		rmErr = os.RemoveAll(path)
 	} else {
-		var rmErr error
-		if recursive {
-			rmErr = os.RemoveAll(path)
-		} else {
-			rmErr = os.Remove(path)
-		}
-		if rmErr != nil {
-			e.Err = fmt.Errorf("remove %s: %w", path, rmErr)
-			return e
-		}
+		rmErr = os.Remove(path)
+	}
+	var sudoCmd string
+	switch {
+	case info.IsDir() && recursive:
+		sudoCmd = "rm -rf " + shellQuote(path)
+	case info.IsDir():
+		sudoCmd = "rmdir " + shellQuote(path)
+	default:
+		sudoCmd = "rm -f " + shellQuote(path)
+	}
+	if err := p.becomeFallback(opts, rmErr, sudoCmd); err != nil {
+		e.Err = fmt.Errorf("remove %s: %w", path, err)
+		return e
 	}
 	e.Performed = true
 	return e

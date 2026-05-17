@@ -14,7 +14,6 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
-	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
@@ -33,6 +32,11 @@ import (
 // the apply / cleanCache hooks; tests that stub cleanCache bypass
 // this entirely.
 var privRunner actions.PrivilegedRunner = security.PrivilegedRunner{}
+
+// eff is the spec-69 sudo-aware Performer used by apply() for file
+// writes under /etc/. Set by Run() from ctx.Effects() before
+// dispatch.
+var eff actions.Performer
 
 // Paths controls where the dnf driver writes files. Tests override
 // via the package-level `paths` var to avoid touching /etc.
@@ -101,10 +105,11 @@ func Run(ctx actions.Context, r *config.PkgRepo, result *executor.Result) (actio
 		return result, nil
 	}
 
-	// Wire the spec-69 sudo-aware runner for cleanCache. apply()'s
-	// file writes still use bare os.* (see comment in apply); full
-	// file-op migration deferred to spec-69 phase 5b.
+	// Wire spec-69 primitives. Performer's try-direct-then-fallback
+	// (phase 5b) means apply()'s file writes work under sudo against
+	// /etc and under the test user against t.TempDir.
 	privRunner = ctx.Privileged()
+	eff = ctx.Effects()
 
 	priorContent, priorExisted, _ := shared.ReadFile(plan.repoPath)
 	result.ReverseData = &shared.PkgRepoReverseInfo{
@@ -323,20 +328,26 @@ func boolOneZero(b bool) string {
 }
 
 func apply(p plan_, r rendered_) error {
+	// All file ops go through ctx.Effects() — Performer's spec-69
+	// phase 5b try-direct-then-fallback makes Become: true work
+	// equally for /etc/yum.repos.d and tempdir-overridden test paths.
+	pOpts := actions.PerformerOpts{Become: true}
+	pOptsWithMode := actions.PerformerOpts{Become: true, ExplicitMode: true}
+
 	if p.operation == "delete" {
-		if err := os.Remove(p.repoPath); err != nil && !errors.Is(err, fs.ErrNotExist) {
-			return fmt.Errorf("pkg.repo.dnf: remove repo file: %w", err)
+		if e := eff.Remove(p.repoPath, false, pOpts); e.Err != nil && !errors.Is(e.Err, fs.ErrNotExist) {
+			return fmt.Errorf("pkg.repo.dnf: remove repo file: %w", e.Err)
 		}
 		return nil
 	}
 
-	if err := os.MkdirAll(paths.ReposDir, 0o755); err != nil {
-		return fmt.Errorf("pkg.repo.dnf: mkdir repos: %w", err)
+	if e := eff.Mkdir(paths.ReposDir, 0o755, pOpts); e.Err != nil {
+		return fmt.Errorf("pkg.repo.dnf: mkdir repos: %w", e.Err)
 	}
 
 	if p.keyringPath != "" {
-		if err := os.MkdirAll(paths.KeyringDir, 0o755); err != nil {
-			return fmt.Errorf("pkg.repo.dnf: mkdir keyring: %w", err)
+		if e := eff.Mkdir(paths.KeyringDir, 0o755, pOpts); e.Err != nil {
+			return fmt.Errorf("pkg.repo.dnf: mkdir keyring: %w", e.Err)
 		}
 		body, err := shared.HTTPFetchKey(r.gpgKeyURL)
 		if err != nil {
@@ -347,13 +358,13 @@ func apply(p plan_, r rendered_) error {
 				return fmt.Errorf("pkg.repo.dnf: %w (key url: %s)", vErr, r.gpgKeyURL)
 			}
 		}
-		if err := shared.WriteAtomic(p.keyringPath, body, 0o644); err != nil {
-			return fmt.Errorf("pkg.repo.dnf: write keyring: %w", err)
+		if e := eff.WriteFile(p.keyringPath, body, 0o644, pOptsWithMode); e.Err != nil {
+			return fmt.Errorf("pkg.repo.dnf: write keyring: %w", e.Err)
 		}
 	}
 
-	if err := shared.WriteAtomic(p.repoPath, []byte(p.wantContent), 0o644); err != nil {
-		return fmt.Errorf("pkg.repo.dnf: write repo file: %w", err)
+	if e := eff.WriteFile(p.repoPath, []byte(p.wantContent), 0o644, pOptsWithMode); e.Err != nil {
+		return fmt.Errorf("pkg.repo.dnf: write repo file: %w", e.Err)
 	}
 	return nil
 }
