@@ -1,8 +1,11 @@
 package registry
 
 import (
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -102,6 +105,58 @@ func TestFetchFromPath_Directory(t *testing.T) {
 
 	if _, err := os.Stat(targetFile2); os.IsNotExist(err) {
 		t.Errorf("Target file2 does not exist: %s", targetFile2)
+	}
+}
+
+// TestFetchFromURL_BoundedBody — F050. A hostile server streams 8
+// MiB; the helper must abort at the 4 MiB cap rather than write the
+// whole thing. The partial file must be removed so a retry on the
+// same target dir starts clean.
+func TestFetchFromURL_BoundedBody(t *testing.T) {
+	const oversize = 8 << 20 // twice the cap
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write(make([]byte, oversize))
+	}))
+	defer srv.Close()
+
+	target := t.TempDir()
+	_, err := fetchFromURL(srv.URL+"/preset.yml", target)
+	if err == nil {
+		t.Fatalf("expected oversize error, got nil")
+	}
+	if !strings.Contains(err.Error(), "exceeds max_bytes") {
+		t.Errorf("error %q missing 'exceeds max_bytes'", err.Error())
+	}
+	// Partial file must not be left behind.
+	if _, err := os.Stat(filepath.Join(target, "preset.yml")); !os.IsNotExist(err) {
+		t.Errorf("partial preset.yml should have been removed, stat err = %v", err)
+	}
+}
+
+// TestFetchFromURL_HappyPath confirms a small body under the cap
+// still works.
+func TestFetchFromURL_HappyPath(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("name: test\nsteps: []\n"))
+	}))
+	defer srv.Close()
+
+	target := t.TempDir()
+	got, err := fetchFromURL(srv.URL+"/small.yml", target)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got != target {
+		t.Errorf("returned dir %q, want %q", got, target)
+	}
+	data, err := os.ReadFile(filepath.Join(target, "small.yml"))
+	if err != nil {
+		t.Fatalf("read fetched file: %v", err)
+	}
+	if !strings.Contains(string(data), "name: test") {
+		t.Errorf("fetched content unexpected: %q", string(data))
 	}
 }
 

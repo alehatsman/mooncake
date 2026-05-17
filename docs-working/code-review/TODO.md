@@ -7,16 +7,17 @@ Queue**, produces a finding (or several), and the queue updates.
 
 | | Count |
 |---|---:|
-| ✅ Findings filed and resolved (F001–F049, F036 skipped) | **48** |
+| ✅ Findings filed and resolved (F001–F050, F036 skipped) | **49** |
 | 🟡 Findings open / in progress | **0** |
 | 📋 Packages still queued for review | see below |
 
 **Queue clean**: F048 (fleet.yml strict YAML) shipped at `a6cb7741`;
-F049 (pkg.Permissions manager-aware) shipped 2026-05-18. The
-remaining work is *review*: read more packages, file new findings
-if you spot smells. The companion manual-test queue at
-`docs-working/archive/analysis/findings-2026-05-15/` is also closed
-— see that folder's README.
+F049 (pkg.Permissions manager-aware) shipped 2026-05-18; F050
+(preset fetch unbounded body) filed and fixed in the same commit
+2026-05-18. The remaining work is *review*: read more packages,
+file new findings if you spot smells. The companion manual-test
+queue at `docs-working/archive/analysis/findings-2026-05-15/` is
+also closed — see that folder's README.
 
 ## Findings index
 
@@ -66,6 +67,7 @@ if you spot smells. The companion manual-test queue at
 | F043 | fleet init bearer-token prompt echoes to terminal | bug | **done** | [findings/F043](./findings/F043-fleet-init-token-prompt-echoes-to-terminal.md) |
 | F048 | fleet machine manifest YAML non-strict | bug | **done** | [findings/F048](./findings/F048-fleet-machine-manifest-non-strict-yaml.md) |
 | F049 | pkg.Permissions not manager-aware | bug | **done** | [findings/F049](./findings/F049-pkg-handler-permissions-not-manager-aware.md) |
+| F050 | preset fetch unbounded body | risk | **done** | [findings/F050](./findings/F050-preset-fetch-unbounded-body.md) |
 
 ## Still to review
 

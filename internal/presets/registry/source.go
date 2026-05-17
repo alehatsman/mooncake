@@ -13,6 +13,13 @@ import (
 	"github.com/alehatsman/mooncake/internal/httputil"
 )
 
+// maxPresetBytes caps the size of a single fetched preset file. A
+// preset is a YAML document; the cap matches read_common's
+// DefaultMaxBytes so users see one consistent "file too large" cliff.
+// F050: prevents a hostile URL from streaming gigabytes into the
+// caller's filesystem during `mooncake presets add`.
+const maxPresetBytes int64 = 4 << 20
+
 // SourceType represents the type of preset source.
 type SourceType string
 
@@ -107,9 +114,18 @@ func fetchFromURL(url string, targetDir string) (string, error) {
 		_ = outFile.Close()
 	}()
 
-	// Copy content
-	if _, err := io.Copy(outFile, resp.Body); err != nil {
+	// Copy content with an explicit cap. F050: a hostile or
+	// misconfigured server could otherwise stream forever and exhaust
+	// the caller's disk. Read one byte past the cap so we can
+	// distinguish "exactly at cap" from "over cap".
+	n, err := io.Copy(outFile, io.LimitReader(resp.Body, maxPresetBytes+1))
+	if err != nil {
+		_ = os.Remove(targetPath)
 		return "", fmt.Errorf("failed to write file: %w", err)
+	}
+	if n > maxPresetBytes {
+		_ = os.Remove(targetPath)
+		return "", fmt.Errorf("preset at %s exceeds max_bytes=%d", url, maxPresetBytes)
 	}
 
 	return targetDir, nil
