@@ -56,6 +56,13 @@ type Peer struct {
 	// diagnostic channel. Keeping the field optional means existing
 	// peers.toml files load unchanged.
 	SSH string `toml:"ssh,omitempty"`
+
+	// MAC is the peer's hardware (MAC) address, used by `fleet up` to
+	// build a Wake-on-LAN magic packet when the peer is powered off.
+	// Optional; auto-collected by `fleet shutdown` (right before power
+	// off) and `fleet mac-refresh`. Stored in canonical lowercase
+	// colon form (aa:bb:cc:dd:ee:ff) so reruns diff cleanly.
+	MAC string `toml:"mac,omitempty"`
 }
 
 // Config is the top-level shape of peers.toml.
@@ -110,7 +117,29 @@ func (p *Peer) Validate() error {
 	default:
 		return fmt.Errorf("peer %q: unknown transport %q", p.Name, p.Transport)
 	}
+	if p.MAC != "" {
+		norm, err := NormalizeMAC(p.MAC)
+		if err != nil {
+			return fmt.Errorf("peer %q: mac %q invalid: %w", p.Name, p.MAC, err)
+		}
+		p.MAC = norm
+	}
 	return nil
+}
+
+// NormalizeMAC parses a MAC address (accepting colon, dash, and Cisco
+// dotted forms via net.ParseMAC) and returns its canonical lowercase
+// colon form (aa:bb:cc:dd:ee:ff). 64-bit EUI-64 addresses are rejected
+// — WoL magic packets are defined only for 48-bit Ethernet MACs.
+func NormalizeMAC(s string) (string, error) {
+	hw, err := net.ParseMAC(strings.TrimSpace(s))
+	if err != nil {
+		return "", err
+	}
+	if len(hw) != 6 {
+		return "", fmt.Errorf("not a 48-bit MAC (%d bytes)", len(hw))
+	}
+	return strings.ToLower(hw.String()), nil
 }
 
 // Validate returns the first error across all peers, or nil. Duplicate names
@@ -246,6 +275,9 @@ func peerDiff(old, newer Peer) []string {
 	}
 	if old.SSH != newer.SSH {
 		out = append(out, fmt.Sprintf("ssh: %s → %s", old.SSH, newer.SSH))
+	}
+	if old.MAC != newer.MAC {
+		out = append(out, fmt.Sprintf("mac: %s → %s", old.MAC, newer.MAC))
 	}
 	return out
 }

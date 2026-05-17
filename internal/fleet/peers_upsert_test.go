@@ -130,6 +130,38 @@ func TestUpsert_DiffSurfacesRolesAndSSH(t *testing.T) {
 	}
 }
 
+// TestUpsert_DiffSurfacesMAC pairs with the RolesAndSSH guard: the
+// MAC field is added alongside SSH and must appear in the diff when
+// changed, so cmd-side output (fleet mac-refresh / fleet shutdown
+// auto-collect) can report the old → new value to the operator.
+func TestUpsert_DiffSurfacesMAC(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "peers.toml")
+	first := Peer{
+		Name:      "host1",
+		Addr:      "h:7878",
+		Transport: TransportAgentd,
+		Token:     "tok",
+		MAC:       "aa:bb:cc:11:22:33",
+	}
+	if _, _, err := Upsert(path, first); err != nil {
+		t.Fatalf("first Upsert: %v", err)
+	}
+
+	second := first
+	second.MAC = "aa:bb:cc:dd:ee:ff"
+	_, diff, err := Upsert(path, second)
+	if err != nil {
+		t.Fatalf("second Upsert: %v", err)
+	}
+	if len(diff) == 0 {
+		t.Fatal("diff is empty; expected mac change to surface")
+	}
+	joined := strings.Join(diff, "\n")
+	if !strings.Contains(joined, "mac:") {
+		t.Errorf("diff missing %q. Got:\n%s", "mac:", joined)
+	}
+}
+
 func TestUpsert_AppendsAlongsideExisting(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "peers.toml")
 	p1 := Peer{Name: "a", Addr: "a.lan:7878", Transport: TransportAgentd, Token: "ta"}
