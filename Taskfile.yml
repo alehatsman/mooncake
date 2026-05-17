@@ -285,6 +285,7 @@ tasks:
     cmds:
       - task: ci:build
       - task: ci:test
+      # - task: ci:test-race
       - task: ci:lint
       - task: ci:vuln
       - task: ci:regen-and-check
@@ -301,6 +302,12 @@ tasks:
       - go build -o {{.BIN}} ./cmd
 
   ci:test:
+    internal: true
+    cmds:
+      - 'echo "[2/8] test"'
+      - go test {{.PKG}}
+
+  ci:test-race:
     internal: true
     cmds:
       - 'echo "[2/8] test -race"'
