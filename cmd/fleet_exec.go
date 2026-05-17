@@ -45,7 +45,7 @@ func fleetExecCommand() *cli.Command {
 			&cli.StringFlag{Name: "cwd", Usage: "Working directory on the peer"},
 			&cli.StringFlag{Name: "timeout", Usage: "Per-peer wall clock (e.g. 30s, 2m); enforced by the kernel"},
 			&cli.BoolFlag{
-				Name:  "become",
+				Name: "become",
 				Usage: "Run with sudo on Unix peers (maps to as_user: root). " +
 					"--ask-become-pass is deferred to spec-47.",
 			},
@@ -136,10 +136,19 @@ type execPeerEntry struct {
 	Client *transport.Client
 }
 
-// resolveExecPeers loads peers.toml, applies --peer, and rejects
-// non-agentd transports with a banner. Same selector pipeline as
-// fleet apply.
+// resolveExecPeers is the fleet-exec-flavored wrapper around the
+// shared resolveAgentdPeers helper; resolveObservePeers in
+// fleet_observe.go does the same on the observe side.
 func resolveExecPeers(c *cli.Context) ([]execPeerEntry, error) {
+	return resolveAgentdPeers(c, "fleet exec")
+}
+
+// resolveAgentdPeers loads peers.toml, applies --peer, and filters
+// out non-agentd transports with a banner. Shared by fleet exec and
+// fleet observe — both surfaces want the same selector pipeline as
+// `fleet apply`. opLabel is interpolated into user-facing error and
+// banner strings ("fleet exec: …", "fleet observe: …").
+func resolveAgentdPeers(c *cli.Context, opLabel string) ([]execPeerEntry, error) {
 	peersPath := c.String("peers-file")
 	if peersPath == "" {
 		p, err := fleet.DefaultPeersPath()
@@ -153,7 +162,7 @@ func resolveExecPeers(c *cli.Context) ([]execPeerEntry, error) {
 		return nil, err
 	}
 	if len(cfgPeers.Peers) == 0 {
-		return nil, cli.Exit("fleet exec: no peers configured. Run `mooncake fleet bootstrap` or edit "+peersPath, 1)
+		return nil, cli.Exit(opLabel+": no peers configured. Run `mooncake fleet bootstrap` or edit "+peersPath, 1)
 	}
 
 	// Fleet DX proposal-01: single unified --peer flag.
@@ -164,11 +173,11 @@ func resolveExecPeers(c *cli.Context) ([]execPeerEntry, error) {
 	}
 	sel, err := resolvePeers(cfgPeers.Peers, peerFlag, osFor)
 	if err != nil {
-		return nil, cli.Exit("fleet exec: "+err.Error(), 2)
+		return nil, cli.Exit(opLabel+": "+err.Error(), 2)
 	}
 	selected, unknown := sel.Matched, sel.UnknownNames
 	if len(selected) == 0 {
-		msg := "fleet exec: --peer selected 0 of " + strconv.Itoa(len(cfgPeers.Peers)) + " peer(s)"
+		msg := opLabel + ": --peer selected 0 of " + strconv.Itoa(len(cfgPeers.Peers)) + " peer(s)"
 		if len(unknown) > 0 {
 			msg += " (unknown: " + strings.Join(unknown, ", ") + ")"
 		}
@@ -187,11 +196,11 @@ func resolveExecPeers(c *cli.Context) ([]execPeerEntry, error) {
 		entries = append(entries, execPeerEntry{Peer: p, Client: transport.New(p.Name, p.Addr, p.Token)})
 	}
 	if len(skipped) > 0 {
-		fmt.Fprintf(c.App.Writer, "fleet exec: skipped non-agentd peers (transport unsupported): %s\n",
-			strings.Join(skipped, ", "))
+		fmt.Fprintf(c.App.Writer, "%s: skipped non-agentd peers (transport unsupported): %s\n",
+			opLabel, strings.Join(skipped, ", "))
 	}
 	if len(entries) == 0 {
-		return nil, cli.Exit("fleet exec: no agentd peers remain after filters", 1)
+		return nil, cli.Exit(opLabel+": no agentd peers remain after filters", 1)
 	}
 	return entries, nil
 }
@@ -335,4 +344,3 @@ func installSigintCancel(parent context.Context, w io.Writer) (context.Context, 
 	}()
 	return ctx, cancel
 }
-

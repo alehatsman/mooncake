@@ -7,14 +7,12 @@ import (
 	"io"
 	"sort"
 	"strconv"
-	"strings"
 	"text/tabwriter"
 
 	"github.com/urfave/cli/v2"
 
 	"github.com/alehatsman/mooncake/internal/fleet"
 	"github.com/alehatsman/mooncake/internal/fleet/observe"
-	"github.com/alehatsman/mooncake/internal/fleet/transport"
 )
 
 // fleetObserveCommand registers `mooncake fleet observe <kind> [args]`
@@ -265,57 +263,7 @@ func runFleetObserve(c *cli.Context, synth observe.SynthOptions) error {
 }
 
 func resolveObservePeers(c *cli.Context) ([]execPeerEntry, error) {
-	peersPath := c.String("peers-file")
-	if peersPath == "" {
-		p, err := fleet.DefaultPeersPath()
-		if err != nil {
-			return nil, err
-		}
-		peersPath = p
-	}
-	cfgPeers, err := fleet.LoadPeers(peersPath)
-	if err != nil {
-		return nil, err
-	}
-	if len(cfgPeers.Peers) == 0 {
-		return nil, cli.Exit("fleet observe: no peers configured. Run `mooncake fleet bootstrap` or edit "+peersPath, 1)
-	}
-
-	// Fleet DX proposal-01: single unified --peer flag.
-	peerFlag := c.StringSlice("peer")
-	var osFor peerOSResolver
-	if peerFlagsReferenceOSKey(peerFlag) {
-		osFor = newPeerOSCache(c.Context, cfgPeers.Peers, c.App.Writer)
-	}
-	sel, err := resolvePeers(cfgPeers.Peers, peerFlag, osFor)
-	if err != nil {
-		return nil, cli.Exit("fleet observe: "+err.Error(), 2)
-	}
-	selected, unknown := sel.Matched, sel.UnknownNames
-	if len(selected) == 0 {
-		msg := "fleet observe: --peer selected 0 of " + strconv.Itoa(len(cfgPeers.Peers)) + " peer(s)"
-		if len(unknown) > 0 {
-			msg += " (unknown: " + strings.Join(unknown, ", ") + ")"
-		}
-		return nil, cli.Exit(msg, 1)
-	}
-
-	var entries []execPeerEntry
-	var skipped []string
-	for _, p := range selected {
-		if p.Transport != fleet.TransportAgentd {
-			skipped = append(skipped, p.Name)
-			continue
-		}
-		entries = append(entries, execPeerEntry{Peer: p, Client: transport.New(p.Name, p.Addr, p.Token)})
-	}
-	if len(skipped) > 0 {
-		fmt.Fprintf(c.App.Writer, "fleet observe: skipped non-agentd peers: %s\n", strings.Join(skipped, ", "))
-	}
-	if len(entries) == 0 {
-		return nil, cli.Exit("fleet observe: no agentd peers remain after filters", 1)
-	}
-	return entries, nil
+	return resolveAgentdPeers(c, "fleet observe")
 }
 
 func toObservePeers(in []execPeerEntry) []observe.Peer {
