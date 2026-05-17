@@ -1,6 +1,6 @@
 # Request — `pkg.install`: brew taps + tolerant exit codes for "already-tapped"
 
-**Status**: User request, not yet specced
+**Status**: Shipped 2026-05-17 (commit `7409ac3c`, merged `cd0aebcc`)
 **Filed**: 2026-05-16 by aleh
 **Related**: [`spec-24-pkg-surface`](../../../../docs-working/specs/done/spec-24-pkg-surface.md) — fits G2 (`pkg.repo`); taps are macOS's analogue of an APT sources.list entry.
 

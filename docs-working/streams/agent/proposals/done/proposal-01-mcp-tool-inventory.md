@@ -1,6 +1,6 @@
 # Proposal 01: MCP discovery tools — `list_actions`, `describe_action`, `list_presets`
 
-**Status:** Draft proposal
+**Status:** Shipped 2026-05-17 (commit `d5eef65c`)
 **Effort:** XS (~1 day)
 **Value:** High — agents today can't introspect mooncake's
 capabilities without out-of-band knowledge. They have to be told

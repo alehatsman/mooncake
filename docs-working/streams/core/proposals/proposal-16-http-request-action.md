@@ -1,6 +1,6 @@
 # Proposal — `http.request`: kernel-honest HTTP action
 
-**Status**: User request, spec drafted, Wave 1 implementation in flight
+**Status**: Partially shipped 2026-05-17 — Wave 1 (`cdec9bb3`), Wave 2 probe + reverse (`9f37718f`), Wave 3 `save_to` (`f897c37c`) and `expect_json_keys` (`71c90dae`). **Open**: `expect_json_schema` (full draft-07 file-path schema validation) — deferred pending a focused design conversation on the validator library + schema-loading rules. The narrow `expect_json_keys` (above) covers the most common assertion needs.
 **Filed**: 2026-05-17 by aleh
 
 ---
