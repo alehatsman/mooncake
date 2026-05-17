@@ -149,8 +149,12 @@ func captureLaunchdPriorState(serviceName string, step config.Step, ec *executor
 //     over-promise (see captureLaunchdPriorState comment). The
 //     load/unload axis maps via Enabled, which is enough for the
 //     common "apply loaded a daemon; rollback unloads it" case.
-//   - windows: refuse. Apply-side is a stub (handler.go ~1021),
-//     so the ReverseData will be nil and Reverse returns (nil, nil).
+//   - windows (SCM): only Enabled honored. Same rationale as
+//     darwin — Running/Stopped are transient (the service may
+//     auto-start between apply and reverse-apply if StartType =
+//     Automatic), so State inversion would over-promise. The
+//     StartType axis (Automatic ↔ Disabled) maps cleanly via
+//     Enabled.
 //
 // Edge cases:
 //   - ReverseData nil → apply was a noop, return (nil, nil).
