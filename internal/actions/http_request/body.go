@@ -1,6 +1,7 @@
 package http_request
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"net/url"
@@ -43,8 +44,13 @@ func buildBody(r *config.HTTPRequest, renderedBody string, renderedForm map[stri
 	}
 }
 
-// decodeJSON wraps json.Unmarshal for response-body parsing. Lives
-// here so the import stays local to body.go.
+// decodeJSON parses a JSON body into v using json.Number for numerics.
+// json.Number preserves the literal source (so an integer ID like 42
+// templates as "42", not "42.000000" — Go's default float64 round-trip
+// would surprise every user the first time they reference
+// `response.json.id` in a URL).
 func decodeJSON(data []byte, v interface{}) error {
-	return json.Unmarshal(data, v)
+	dec := json.NewDecoder(bytes.NewReader(data))
+	dec.UseNumber()
+	return dec.Decode(v)
 }

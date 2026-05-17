@@ -1,6 +1,7 @@
 package http_request
 
 import (
+	"encoding/json"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -65,7 +66,10 @@ func TestRun_Apply_GET_HappyPath(t *testing.T) {
 	if !ok {
 		t.Fatalf("json fact not parsed; data=%v", r.Data)
 	}
-	if js["ok"] != true || js["id"].(float64) != 42 {
+	// Wave 2 switched the JSON decoder to UseNumber() so integer IDs
+	// template as "42" (not "42.000000"). Compare as json.Number's
+	// string form for stability across response shapes.
+	if js["ok"] != true || js["id"].(json.Number).String() != "42" {
 		t.Errorf("json parsed wrong: %v", js)
 	}
 }

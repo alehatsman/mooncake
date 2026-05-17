@@ -216,6 +216,119 @@ func TestValidate_TableDriven(t *testing.T) {
 			wantErr:   true,
 			errSubstr: "unsupported method",
 		},
+
+		// Wave 2 — probe / reverse.
+		{
+			name: "probe GET is fine",
+			step: &config.Step{HTTPRequest: &config.HTTPRequest{
+				URL:         "http://x",
+				CreatesWhen: "probe.status_code == 404",
+				Probe:       &config.HTTPRequest{URL: "http://x", Method: "GET"},
+			}},
+		},
+		{
+			name: "probe POST is REJECTED",
+			step: &config.Step{HTTPRequest: &config.HTTPRequest{
+				URL:   "http://x",
+				Probe: &config.HTTPRequest{URL: "http://x", Method: "POST"},
+			}},
+			wantErr:   true,
+			errSubstr: "probe method must be GET/HEAD/OPTIONS",
+		},
+		{
+			name: "probe.url required",
+			step: &config.Step{HTTPRequest: &config.HTTPRequest{
+				URL:   "http://x",
+				Probe: &config.HTTPRequest{Method: "GET"},
+			}},
+			wantErr:   true,
+			errSubstr: "probe.url",
+		},
+		{
+			name: "probe must NOT nest probe",
+			step: &config.Step{HTTPRequest: &config.HTTPRequest{
+				URL: "http://x",
+				Probe: &config.HTTPRequest{
+					URL:   "http://x",
+					Probe: &config.HTTPRequest{URL: "http://x"},
+				},
+			}},
+			wantErr:   true,
+			errSubstr: "probe must not nest",
+		},
+		{
+			name: "probe must NOT declare reverse",
+			step: &config.Step{HTTPRequest: &config.HTTPRequest{
+				URL: "http://x",
+				Probe: &config.HTTPRequest{
+					URL:     "http://x",
+					Reverse: &config.HTTPRequest{URL: "http://x", Method: "DELETE"},
+				},
+			}},
+			wantErr:   true,
+			errSubstr: "probe must not declare reverse",
+		},
+		{
+			name: "reverse with DELETE is fine",
+			step: &config.Step{HTTPRequest: &config.HTTPRequest{
+				URL:            "http://x",
+				Method:         "POST",
+				IdempotencyKey: "k",
+				Reverse:        &config.HTTPRequest{URL: "http://x/1", Method: "DELETE"},
+			}},
+		},
+		{
+			name: "reverse must NOT nest reverse",
+			step: &config.Step{HTTPRequest: &config.HTTPRequest{
+				URL:            "http://x",
+				Method:         "POST",
+				IdempotencyKey: "k",
+				Reverse: &config.HTTPRequest{
+					URL:     "http://x",
+					Method:  "DELETE",
+					Reverse: &config.HTTPRequest{URL: "http://x", Method: "DELETE"},
+				},
+			}},
+			wantErr:   true,
+			errSubstr: "reverse must not nest",
+		},
+		{
+			name: "reverse must NOT declare probe",
+			step: &config.Step{HTTPRequest: &config.HTTPRequest{
+				URL:            "http://x",
+				Method:         "POST",
+				IdempotencyKey: "k",
+				Reverse: &config.HTTPRequest{
+					URL:    "http://x",
+					Method: "DELETE",
+					Probe:  &config.HTTPRequest{URL: "http://x", Method: "GET"},
+				},
+			}},
+			wantErr:   true,
+			errSubstr: "reverse must not declare probe",
+		},
+		{
+			name: "reverse: bad method",
+			step: &config.Step{HTTPRequest: &config.HTTPRequest{
+				URL:            "http://x",
+				Method:         "POST",
+				IdempotencyKey: "k",
+				Reverse:        &config.HTTPRequest{URL: "http://x", Method: "FROBNICATE"},
+			}},
+			wantErr:   true,
+			errSubstr: "unsupported method",
+		},
+		{
+			name: "reverse: missing url",
+			step: &config.Step{HTTPRequest: &config.HTTPRequest{
+				URL:            "http://x",
+				Method:         "POST",
+				IdempotencyKey: "k",
+				Reverse:        &config.HTTPRequest{Method: "DELETE"},
+			}},
+			wantErr:   true,
+			errSubstr: "reverse.url",
+		},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {

@@ -103,56 +103,13 @@ func (Handler) Permissions(step *config.Step) actions.PermissionSet {
 
 // Validate enforces the structural contract: URL required, one-of body,
 // one-of auth, supported method, idempotency contract for POST/PATCH,
-// valid retry_on tokens, parseable durations, valid risk.
+// valid retry_on tokens, parseable durations, valid risk. Wave 2:
+// probe / reverse sub-blocks are validated recursively.
 func (Handler) Validate(step *config.Step) error {
 	if step == nil || step.HTTPRequest == nil {
 		return fmt.Errorf("%s requires configuration", actionName)
 	}
 	r := step.HTTPRequest
-
-	if strings.TrimSpace(r.URL) == "" {
-		return fmt.Errorf("%s: url is required", actionName)
-	}
-
-	method, err := normalizeMethod(r.Method)
-	if err != nil {
-		return err
-	}
-
-	if err := validateBodyOneOf(r); err != nil {
-		return err
-	}
-	if err := validateAuthOneOf(r); err != nil {
-		return err
-	}
-
-	if err := validateIdempotency(method, r); err != nil {
-		return err
-	}
-
-	if err := validateRetryOn(r.RetryOn); err != nil {
-		return err
-	}
-	if err := validateDuration("timeout", r.Timeout); err != nil {
-		return err
-	}
-	if err := validateDuration("retry_delay", r.RetryDelay); err != nil {
-		return err
-	}
-	if r.Retries < 0 {
-		return fmt.Errorf("%s: retries must be >= 0", actionName)
-	}
-	for _, code := range r.ExpectStatus {
-		if code < 100 || code > 599 {
-			return fmt.Errorf("%s: invalid expect_status %d", actionName, code)
-		}
-	}
-	if r.Risk != "" && r.Risk != "low" && r.Risk != "medium" && r.Risk != "high" {
-		return fmt.Errorf("%s: risk must be one of low|medium|high (got %q)", actionName, r.Risk)
-	}
-	if r.MaxResponseBytes < 0 {
-		return fmt.Errorf("%s: max_response_bytes must be >= 0", actionName)
-	}
 
 	// HTTP-with-sudo is nonsense; surface as a clear error rather than
 	// silently honoring it.
@@ -160,6 +117,101 @@ func (Handler) Validate(step *config.Step) error {
 		return fmt.Errorf("%s: as_user is not supported (HTTP calls never run as another user)", actionName)
 	}
 
+	if err := validateStructural(r, ""); err != nil {
+		return err
+	}
+
+	method, _ := normalizeMethod(r.Method)
+	if err := validateIdempotency(method, r); err != nil {
+		return err
+	}
+
+	// Wave 2: probe must be a read-method sub-request, and must not
+	// nest probe/reverse. Idempotency contract does NOT apply to
+	// probe (read-only).
+	if r.Probe != nil {
+		if r.Probe.Probe != nil {
+			return fmt.Errorf("%s: probe must not nest another probe", actionName)
+		}
+		if r.Probe.Reverse != nil {
+			return fmt.Errorf("%s: probe must not declare reverse", actionName)
+		}
+		probeMethod, err := normalizeMethod(r.Probe.Method)
+		if err != nil {
+			return fmt.Errorf("%s.probe: %w", actionName, err)
+		}
+		if !readMethods[probeMethod] {
+			return fmt.Errorf("%s: probe method must be GET/HEAD/OPTIONS (got %s)", actionName, probeMethod)
+		}
+		if err := validateStructural(r.Probe, "probe."); err != nil {
+			return err
+		}
+	}
+
+	// Wave 2: reverse is user-owned compensation; structural validity
+	// is enforced, but the idempotency contract is NOT — the operator
+	// signed up for the verb. No nested probe/reverse.
+	if r.Reverse != nil {
+		if r.Reverse.Probe != nil {
+			return fmt.Errorf("%s: reverse must not declare probe", actionName)
+		}
+		if r.Reverse.Reverse != nil {
+			return fmt.Errorf("%s: reverse must not nest another reverse", actionName)
+		}
+		if _, err := normalizeMethod(r.Reverse.Method); err != nil {
+			return fmt.Errorf("%s.reverse: %w", actionName, err)
+		}
+		if err := validateStructural(r.Reverse, "reverse."); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// validateStructural runs the field-level checks that apply identically
+// to the top-level request and to nested probe/reverse blocks: URL
+// non-empty, body/auth one-of, retry_on tokens, parseable durations,
+// non-negative retries / max-response-bytes, valid expect_status, valid
+// risk. The fieldPrefix ("", "probe.", "reverse.") is prepended to
+// error messages so the operator sees which level rejected.
+func validateStructural(r *config.HTTPRequest, fieldPrefix string) error {
+	at := func(field string) string { return fieldPrefix + field }
+	if strings.TrimSpace(r.URL) == "" {
+		return fmt.Errorf("%s: %s is required", actionName, at("url"))
+	}
+	if _, err := normalizeMethod(r.Method); err != nil {
+		return err
+	}
+	if err := validateBodyOneOf(r); err != nil {
+		return err
+	}
+	if err := validateAuthOneOf(r); err != nil {
+		return err
+	}
+	if err := validateRetryOn(r.RetryOn); err != nil {
+		return err
+	}
+	if err := validateDuration(at("timeout"), r.Timeout); err != nil {
+		return err
+	}
+	if err := validateDuration(at("retry_delay"), r.RetryDelay); err != nil {
+		return err
+	}
+	if r.Retries < 0 {
+		return fmt.Errorf("%s: %s must be >= 0", actionName, at("retries"))
+	}
+	for _, code := range r.ExpectStatus {
+		if code < 100 || code > 599 {
+			return fmt.Errorf("%s: invalid %s %d", actionName, at("expect_status"), code)
+		}
+	}
+	if r.Risk != "" && r.Risk != "low" && r.Risk != "medium" && r.Risk != "high" {
+		return fmt.Errorf("%s: %s must be one of low|medium|high (got %q)", actionName, at("risk"), r.Risk)
+	}
+	if r.MaxResponseBytes < 0 {
+		return fmt.Errorf("%s: %s must be >= 0", actionName, at("max_response_bytes"))
+	}
 	return nil
 }
 
@@ -299,35 +351,65 @@ type renderedRequest struct {
 	sensitiveHeaders map[string]bool
 }
 
-// Run is the unified Spec-16 entry point. Plan mode skips the network
-// (Wave 1); apply mode renders, sends with retries, and captures the
-// response as a registered fact.
+// Run is the unified Spec-16 entry point. Plan mode optionally
+// executes a `probe:` read-request to evaluate `creates_when:` against
+// current state (Wave 2); apply mode renders, sends with retries, and
+// captures the response as a registered fact.
 func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, error) {
-	rr, err := h.render(ctx, step)
+	rr, err := h.render(ctx, step.HTTPRequest, ctx.GetVariables(), "")
 	if err != nil {
 		return nil, err
 	}
 
 	if ctx.Mode() == actions.ModePlan {
-		return h.runPlan(ctx, rr)
+		return h.runPlan(ctx, step, rr)
 	}
-	return h.runApply(ctx, rr)
+	return h.runApply(ctx, step, rr)
 }
 
-// runPlan reports what would happen without touching the network.
-// Wave 2 will optionally execute a `probe:` GET in plan mode to
-// evaluate CreatesWhen against current state.
-func (h *Handler) runPlan(ctx actions.Context, rr *renderedRequest) (actions.Result, error) {
+// runPlan reports what would happen without touching the network for
+// the main call. Wave 2 honors a `probe:` block (executed as a read
+// request) plus `creates_when:` (boolean predicate) so the operator
+// sees "would create" vs. "already exists" at plan time.
+func (h *Handler) runPlan(ctx actions.Context, step *config.Step, rr *renderedRequest) (actions.Result, error) {
 	res := executor.NewResult()
 	res.Checkable = true
-	bodyHint := ""
-	if len(rr.bodyBytes) > 0 {
-		if rr.redactBody {
-			bodyHint = ", body=<redacted>"
-		} else {
-			bodyHint = fmt.Sprintf(", body=%d bytes", len(rr.bodyBytes))
+	r := step.HTTPRequest
+
+	bodyHint := bodyHintFor(rr)
+
+	// Wave 2: probe + creates_when path.
+	if r.Probe != nil || r.CreatesWhen != "" {
+		probeFact, probeErr := h.executeProbe(ctx, r.Probe)
+		if probeErr != nil {
+			// Probe failure is informational, not fatal: a transient
+			// network blip during plan shouldn't gate the entire run.
+			// Fall through with probeFact=nil so creates_when (if any)
+			// evaluates against the existing scope only.
+			ctx.GetLogger().Debugf("  probe failed: %v", probeErr)
+			res.Reason = fmt.Sprintf("probe failed: %v; would call %s %s%s", probeErr, rr.method, rr.url, bodyHint)
+			res.WouldChange = !readMethods[rr.method]
+			return res, nil
 		}
+		if r.CreatesWhen != "" {
+			would, err := evalCreatesWhen(ctx, r.CreatesWhen, probeFact)
+			if err != nil {
+				return nil, err
+			}
+			res.WouldChange = would
+			if would {
+				res.Reason = fmt.Sprintf("would call %s %s (creates_when: true%s)", rr.method, rr.url, bodyHint)
+			} else {
+				res.Reason = fmt.Sprintf("skip %s %s (creates_when: false — state already matches)", rr.method, rr.url)
+			}
+			ctx.GetLogger().Infof("  [plan] %s", res.Reason)
+			return res, nil
+		}
+		// Probe ran but no creates_when to evaluate; surface the probe
+		// result and fall back to the Wave-1 default for WouldChange.
+		res.Data = map[string]interface{}{"probe": probeFact}
 	}
+
 	if readMethods[rr.method] {
 		res.WouldChange = false
 		res.Reason = fmt.Sprintf("would call %s %s (read-only%s)", rr.method, rr.url, bodyHint)
@@ -339,9 +421,103 @@ func (h *Handler) runPlan(ctx actions.Context, rr *renderedRequest) (actions.Res
 	return res, nil
 }
 
+// bodyHintFor describes the body in plan-mode reason strings without
+// leaking content. Redacted bodies report "<redacted>" instead of size.
+func bodyHintFor(rr *renderedRequest) string {
+	if len(rr.bodyBytes) == 0 {
+		return ""
+	}
+	if rr.redactBody {
+		return ", body=<redacted>"
+	}
+	return fmt.Sprintf(", body=%d bytes", len(rr.bodyBytes))
+}
+
+// executeProbe runs the probe sub-request in plan mode. Single attempt,
+// short timeout. Returns the response fact map (status_code, headers,
+// body, json, …) or an error if the probe is nil OR the network call
+// itself fails. nil probe + nil error means "no probe to run."
+func (h *Handler) executeProbe(ctx actions.Context, probe *config.HTTPRequest) (map[string]interface{}, error) {
+	if probe == nil {
+		return nil, nil
+	}
+	pr, err := h.render(ctx, probe, ctx.GetVariables(), "probe.")
+	if err != nil {
+		return nil, err
+	}
+	// Probe has its own retry budget; we don't override it here. The
+	// user's probe config wins. Most probes will be retries=0 single
+	// shots, which is fine.
+	client := buildClient(pr)
+	got, err := h.sendOnce(client, pr)
+	if err != nil {
+		return nil, fmt.Errorf("probe request: %w", err)
+	}
+	return buildFact(got, pr), nil
+}
+
+// buildFact converts an httpAttempt into the map[string]interface{}
+// shape used everywhere we surface response state (runApply result.Data,
+// probe results). Single source of truth for the fact schema.
+// Callers always pass a non-nil rr; got may be nil if the transport
+// never produced a response (network error).
+func buildFact(got *httpAttempt, rr *renderedRequest) map[string]interface{} {
+	if got == nil {
+		return map[string]interface{}{"status_code": 0, "success": false}
+	}
+	body := got.body
+	truncated := false
+	if rr.maxRespBytes > 0 && int64(len(body)) > rr.maxRespBytes {
+		body = body[:rr.maxRespBytes]
+		truncated = true
+	}
+	out := map[string]interface{}{
+		"status_code": got.statusCode,
+		"headers":     flattenResponseHeaders(got.header, rr.sensitiveHeaders),
+		"truncated":   truncated,
+		"final_url":   got.finalURL,
+	}
+	if rr.redactBody {
+		out["body"] = "<redacted>"
+	} else {
+		out["body"] = string(body)
+		if parsed, ok := tryParseJSON(got.contentType, body); ok {
+			out["json"] = parsed
+		}
+	}
+	return out
+}
+
+// evalCreatesWhen renders + evaluates the creates_when predicate with
+// `probe` merged into scope when set. Returns the predicate's bool.
+func evalCreatesWhen(ctx actions.Context, expr string, probeFact map[string]interface{}) (bool, error) {
+	base := ctx.GetVariables()
+	merged := make(map[string]interface{}, len(base)+1)
+	for k, v := range base {
+		merged[k] = v
+	}
+	if probeFact != nil {
+		merged["probe"] = probeFact
+	}
+	rendered, err := ctx.GetTemplate().Render(expr, merged)
+	if err != nil {
+		return false, fmt.Errorf("%s.creates_when render: %w", actionName, err)
+	}
+	out, err := ctx.GetEvaluator().Evaluate(rendered, merged)
+	if err != nil {
+		return false, fmt.Errorf("%s.creates_when evaluate: %w", actionName, err)
+	}
+	b, ok := out.(bool)
+	if !ok {
+		return false, fmt.Errorf("%s.creates_when must evaluate to bool, got %T", actionName, out)
+	}
+	return b, nil
+}
+
 // runApply sends the request with retry classification, captures the
-// response into the result.Data, and emits the audit event.
-func (h *Handler) runApply(ctx actions.Context, rr *renderedRequest) (actions.Result, error) {
+// response into the result.Data, populates ReverseData if reverse: is
+// declared, and emits the audit event.
+func (h *Handler) runApply(ctx actions.Context, step *config.Step, rr *renderedRequest) (actions.Result, error) {
 	res := executor.NewResult()
 	res.StartTime = time.Now()
 	defer func() {
@@ -378,34 +554,14 @@ func (h *Handler) runApply(ctx actions.Context, rr *renderedRequest) (actions.Re
 	}
 
 	// Build the fact regardless of success/failure so the user can
-	// inspect what happened on partial failures.
-	data := map[string]interface{}{
-		"method":      rr.method,
-		"url":         rr.url,
-		"status_code": statusCode,
-		"attempts":    attempt,
-		"duration_ms": time.Since(res.StartTime).Milliseconds(),
-		"success":     false,
-	}
-	if got != nil {
-		data["headers"] = flattenResponseHeaders(got.header, rr.sensitiveHeaders)
-		body := got.body
-		truncated := false
-		if rr.maxRespBytes > 0 && int64(len(body)) > rr.maxRespBytes {
-			body = body[:rr.maxRespBytes]
-			truncated = true
-		}
-		if rr.redactBody {
-			data["body"] = "<redacted>"
-		} else {
-			data["body"] = string(body)
-			if parsed, ok := tryParseJSON(got.contentType, body); ok {
-				data["json"] = parsed
-			}
-		}
-		data["truncated"] = truncated
-		data["final_url"] = got.finalURL
-	}
+	// inspect what happened on partial failures. buildFact does the
+	// body/redaction/json-parse legwork shared with the probe path.
+	data := buildFact(got, rr)
+	data["method"] = rr.method
+	data["url"] = rr.url
+	data["attempts"] = attempt
+	data["duration_ms"] = time.Since(res.StartTime).Milliseconds()
+	data["success"] = false
 
 	// Publish event (host + path only; no query, no body).
 	if pub := ctx.GetEventPublisher(); pub != nil {
@@ -441,9 +597,45 @@ func (h *Handler) runApply(ctx actions.Context, rr *renderedRequest) (actions.Re
 	// remote-side change, even if we don't know exactly what); read
 	// methods don't count as changes.
 	res.Changed = !readMethods[rr.method]
+
+	// Wave 2: snapshot the reverse block with response fact merged in,
+	// so the eventual Reverse() call returns a Step with already-
+	// resolved URLs/headers/auth that reference the actual resource
+	// the apply created (e.g. `hook.json.id`).
+	if step.HTTPRequest.Reverse != nil {
+		snap, err := h.snapshotReverse(ctx, step, data)
+		if err != nil {
+			// Render-error on reverse block is informational: the
+			// apply itself succeeded; we just can't snapshot a clean
+			// reverse. Surface it so Reverse() fails loudly later.
+			ctx.GetLogger().Errorf("  reverse-block snapshot failed: %v", err)
+		} else {
+			res.ReverseData = snap
+		}
+	}
+
 	ctx.GetLogger().Infof("  HTTP %s %s -> %d (%dms, %d attempt(s))",
 		rr.method, rr.url, statusCode, data["duration_ms"], attempt)
 	return res, nil
+}
+
+// snapshotReverse renders the reverse block's templates against vars
+// that include the just-completed response under both `response` (a
+// stable name) and step.As (the user's chosen register name, if any).
+// Returns a *config.HTTPRequest with no remaining templates — Reverse()
+// wraps it in a Step that the transaction layer can re-run as a normal
+// http.request invocation.
+func (h *Handler) snapshotReverse(ctx actions.Context, step *config.Step, responseFact map[string]interface{}) (*config.HTTPRequest, error) {
+	base := ctx.GetVariables()
+	merged := make(map[string]interface{}, len(base)+2)
+	for k, v := range base {
+		merged[k] = v
+	}
+	merged["response"] = responseFact
+	if step.As != "" {
+		merged[step.As] = responseFact
+	}
+	return renderConfig(ctx, step.HTTPRequest.Reverse, merged, "reverse.")
 }
 
 // httpAttempt captures one round-trip's result. We surface this rather

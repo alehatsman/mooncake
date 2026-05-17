@@ -1338,6 +1338,33 @@ type HTTPRequest struct {
 	// in the registered fact. Default 1 MiB. Larger responses are
 	// truncated; the body field is suffixed with "...(truncated)".
 	MaxResponseBytes int64 `yaml:"max_response_bytes,omitempty" json:"max_response_bytes,omitempty"`
+
+	// Probe is the proposal-16 Wave 2 plan-mode inspection sub-request.
+	// In plan mode the handler executes the probe (single attempt, no
+	// retry), exposes the response under the variable name `probe`, and
+	// evaluates CreatesWhen against the merged vars to predict whether
+	// this action would change state. probe.method must be GET / HEAD /
+	// OPTIONS; nested probe / reverse are rejected by Validate().
+	//
+	// Idempotency: a probe-evaluated CreatesWhen=false in plan mode tells
+	// the operator "this POST is a no-op against current state" — the
+	// closest you can get to read-style idempotency for non-idempotent
+	// methods without actually issuing the write.
+	Probe *HTTPRequest `yaml:"probe,omitempty" json:"probe,omitempty"`
+
+	// Reverse is the proposal-16 Wave 2 compensating sub-request. After
+	// a successful apply, its templates are rendered against the
+	// response fact (exposed as `response` plus, when step.As is set,
+	// as `<as>.json`/`.body`/`.status_code`) and the rendered request
+	// is stashed on Result.ReverseData. When a transaction layer calls
+	// Reverse(), the handler returns a Step wrapping that rendered
+	// request — so rollback re-issues the compensating call with the
+	// exact resource ID returned by the original POST.
+	//
+	// Without Reverse:, Reverse() returns an explicit "not reversible"
+	// error so transaction failures fail loudly rather than skip
+	// rollback silently. Nested probe / reverse are rejected.
+	Reverse *HTTPRequest `yaml:"reverse,omitempty" json:"reverse,omitempty"`
 }
 
 // HTTPAuth is the one-of credential block for HTTPRequest. Set at

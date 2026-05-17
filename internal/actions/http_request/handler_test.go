@@ -7,6 +7,7 @@ import (
 	"github.com/alehatsman/mooncake/internal/actions"
 	"github.com/alehatsman/mooncake/internal/config"
 	"github.com/alehatsman/mooncake/internal/executor"
+	"github.com/alehatsman/mooncake/internal/expression"
 	"github.com/alehatsman/mooncake/internal/logger"
 	"github.com/alehatsman/mooncake/internal/pathutil"
 	"github.com/alehatsman/mooncake/internal/template"
@@ -24,11 +25,12 @@ func newCtx(t *testing.T, plan bool) *executor.ExecutionContext {
 	}
 	return &executor.ExecutionContext{
 		Svc: &executor.RunServices{
-			Template: r,
-			PathUtil: pathutil.NewPathExpander(r),
-			Logger:   logger.NewLogger(logger.ErrorLevel),
-			Mode:     mode,
-			Stats:    executor.NewExecutionStats(),
+			Template:  r,
+			PathUtil:  pathutil.NewPathExpander(r),
+			Logger:    logger.NewLogger(logger.ErrorLevel),
+			Evaluator: expression.NewExprEvaluator(),
+			Mode:      mode,
+			Stats:     executor.NewExecutionStats(),
 		},
 		Scope:      executor.NewVariableScope(),
 		CurrentDir: "/tmp",

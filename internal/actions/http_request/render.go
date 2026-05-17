@@ -10,119 +10,188 @@ import (
 	"github.com/alehatsman/mooncake/internal/executor"
 )
 
-// render walks an HTTPRequest, resolves every template-bearing string
-// against ctx variables, builds the body bytes, merges auth into
-// headers, and packages everything into a renderedRequest ready for
-// runPlan / runApply to consume. Field rendering errors are returned
-// as executor.RenderError so cmd-side messages carry the field name.
-func (h *Handler) render(ctx actions.Context, step *config.Step) (*renderedRequest, error) {
-	r := step.HTTPRequest
-	tpl := ctx.GetTemplate()
-	vars := ctx.GetVariables()
+// render resolves an HTTPRequest's templates against vars and packages
+// the execution-ready bytes, headers, and auth into a renderedRequest.
+// Used by both top-level Run and Wave 2 sub-requests (probe / reverse).
+//
+// fieldPrefix ("", "probe.", "reverse.") is prepended to render-error
+// field names so the operator sees which level rejected.
+func (h *Handler) render(ctx actions.Context, r *config.HTTPRequest, vars map[string]interface{}, fieldPrefix string) (*renderedRequest, error) {
+	resolved, err := renderConfig(ctx, r, vars, fieldPrefix)
+	if err != nil {
+		return nil, err
+	}
+	return buildExec(resolved, fieldPrefix)
+}
 
+// renderConfig walks an HTTPRequest and returns a NEW HTTPRequest with
+// every template-bearing string resolved against vars. Non-template
+// fields (Retries, FollowRedirects, RedactBody, …) are copied by
+// value. Probe/Reverse sub-blocks are NOT recursively rendered here —
+// they're handled by the caller (plan-mode probe path / apply-time
+// reverse path) so each can use its own vars merge.
+//
+// Output has all templates resolved; safe to pass to buildExec, to
+// stash on Result.ReverseData, or to feed back through the executor
+// as a Step (the executor's template pass on Run is idempotent on
+// already-resolved strings since no `{{` / `{%` remain).
+func renderConfig(ctx actions.Context, r *config.HTTPRequest, vars map[string]interface{}, fieldPrefix string) (*config.HTTPRequest, error) {
+	tpl := ctx.GetTemplate()
+	at := func(field string) string { return actionName + "." + fieldPrefix + field }
+
+	out := *r // shallow copy; we'll overwrite the template-bearing fields below
+
+	url, err := tpl.Render(r.URL, vars)
+	if err != nil {
+		return nil, &executor.RenderError{Field: at("url"), Cause: err}
+	}
+	out.URL = url
+
+	if len(r.Headers) > 0 {
+		hdrs := make(map[string]string, len(r.Headers))
+		for k, v := range r.Headers {
+			rv, err := tpl.Render(v, vars)
+			if err != nil {
+				return nil, &executor.RenderError{Field: at("headers." + k), Cause: err}
+			}
+			hdrs[k] = rv
+		}
+		out.Headers = hdrs
+	}
+
+	body, err := tpl.Render(r.Body, vars)
+	if err != nil {
+		return nil, &executor.RenderError{Field: at("body"), Cause: err}
+	}
+	out.Body = body
+
+	if len(r.Form) > 0 {
+		form := make(map[string]string, len(r.Form))
+		for k, v := range r.Form {
+			rv, err := tpl.Render(v, vars)
+			if err != nil {
+				return nil, &executor.RenderError{Field: at("form." + k), Cause: err}
+			}
+			form[k] = rv
+		}
+		out.Form = form
+	}
+
+	if r.File != "" {
+		rendered, err := tpl.Render(r.File, vars)
+		if err != nil {
+			return nil, &executor.RenderError{Field: at("file"), Cause: err}
+		}
+		out.File = rendered
+	}
+
+	if r.Auth != nil {
+		authCopy, err := renderAuth(tpl, r.Auth, vars, at)
+		if err != nil {
+			return nil, err
+		}
+		out.Auth = authCopy
+	}
+
+	if r.IdempotencyKey != "" {
+		rv, err := tpl.Render(r.IdempotencyKey, vars)
+		if err != nil {
+			return nil, &executor.RenderError{Field: at("idempotency_key"), Cause: err}
+		}
+		out.IdempotencyKey = rv
+	}
+
+	// Probe / Reverse are kept as-is; the caller handles them. JSON
+	// is also passed through unchanged — Wave 1 documented that
+	// templates inside structured `json:` are not rendered.
+	return &out, nil
+}
+
+// renderAuth resolves the templated fields of an HTTPAuth and returns
+// a new struct.
+func renderAuth(tpl interface {
+	Render(s string, vars map[string]interface{}) (string, error)
+}, in *config.HTTPAuth, vars map[string]interface{}, at func(string) string) (*config.HTTPAuth, error) {
+	out := *in
+	if in.Bearer != "" {
+		rv, err := tpl.Render(in.Bearer, vars)
+		if err != nil {
+			return nil, &executor.RenderError{Field: at("auth.bearer"), Cause: err}
+		}
+		out.Bearer = rv
+	}
+	if in.Basic != nil {
+		u, err := tpl.Render(in.Basic.User, vars)
+		if err != nil {
+			return nil, &executor.RenderError{Field: at("auth.basic.user"), Cause: err}
+		}
+		p, err := tpl.Render(in.Basic.Pass, vars)
+		if err != nil {
+			return nil, &executor.RenderError{Field: at("auth.basic.pass"), Cause: err}
+		}
+		basic := *in.Basic
+		basic.User = u
+		basic.Pass = p
+		out.Basic = &basic
+	}
+	if in.Header != nil {
+		name, err := tpl.Render(in.Header.Name, vars)
+		if err != nil {
+			return nil, &executor.RenderError{Field: at("auth.header.name"), Cause: err}
+		}
+		val, err := tpl.Render(in.Header.Value, vars)
+		if err != nil {
+			return nil, &executor.RenderError{Field: at("auth.header.value"), Cause: err}
+		}
+		hdr := *in.Header
+		hdr.Name = name
+		hdr.Value = val
+		out.Header = &hdr
+	}
+	return &out, nil
+}
+
+// buildExec takes a template-resolved HTTPRequest and assembles the
+// renderedRequest used by sendOnce. Does NOT call the template
+// renderer; assumes renderConfig has already run.
+func buildExec(r *config.HTTPRequest, fieldPrefix string) (*renderedRequest, error) {
 	method, err := normalizeMethod(r.Method)
 	if err != nil {
 		return nil, err
 	}
 
-	renderedURL, err := tpl.Render(r.URL, vars)
-	if err != nil {
-		return nil, &executor.RenderError{Field: actionName + ".url", Cause: err}
-	}
-
 	headers := make(map[string]string, len(r.Headers))
 	for k, v := range r.Headers {
-		rv, err := tpl.Render(v, vars)
-		if err != nil {
-			return nil, &executor.RenderError{Field: actionName + ".headers." + k, Cause: err}
-		}
-		headers[k] = rv
+		headers[k] = v
 	}
 
-	body, err := tpl.Render(r.Body, vars)
-	if err != nil {
-		return nil, &executor.RenderError{Field: actionName + ".body", Cause: err}
-	}
-
-	form := make(map[string]string, len(r.Form))
-	for k, v := range r.Form {
-		rv, err := tpl.Render(v, vars)
-		if err != nil {
-			return nil, &executor.RenderError{Field: actionName + ".form." + k, Cause: err}
-		}
-		form[k] = rv
-	}
-
-	// File path is rendered (but not expanded — keeping Wave 1 simple;
-	// file: today is best-paired with an absolute path or one already
-	// resolved via vars).
-	if r.File != "" {
-		rendered, err := tpl.Render(r.File, vars)
-		if err != nil {
-			return nil, &executor.RenderError{Field: actionName + ".file", Cause: err}
-		}
-		// Swap into a temporary copy so we don't mutate the user's
-		// declared struct.
-		rCopy := *r
-		rCopy.File = rendered
-		r = &rCopy
-	}
-
-	bodyBytes, defaultCT, err := buildBody(r, body, form)
+	bodyBytes, defaultCT, err := buildBody(r, r.Body, r.Form)
 	if err != nil {
 		return nil, err
 	}
 
-	// Auth → headers. Validate() guaranteed at most one form set.
 	sensitive := defaultSensitiveHeaders()
 	if r.Auth != nil {
 		switch {
 		case r.Auth.Bearer != "":
-			val, err := tpl.Render(r.Auth.Bearer, vars)
-			if err != nil {
-				return nil, &executor.RenderError{Field: actionName + ".auth.bearer", Cause: err}
-			}
-			headers["Authorization"] = "Bearer " + val
+			headers["Authorization"] = "Bearer " + r.Auth.Bearer
 			sensitive["authorization"] = true
 		case r.Auth.Basic != nil:
-			u, err := tpl.Render(r.Auth.Basic.User, vars)
-			if err != nil {
-				return nil, &executor.RenderError{Field: actionName + ".auth.basic.user", Cause: err}
-			}
-			p, err := tpl.Render(r.Auth.Basic.Pass, vars)
-			if err != nil {
-				return nil, &executor.RenderError{Field: actionName + ".auth.basic.pass", Cause: err}
-			}
-			encoded := base64.StdEncoding.EncodeToString([]byte(u + ":" + p))
+			encoded := base64.StdEncoding.EncodeToString([]byte(r.Auth.Basic.User + ":" + r.Auth.Basic.Pass))
 			headers["Authorization"] = "Basic " + encoded
 			sensitive["authorization"] = true
 		case r.Auth.Header != nil:
-			name, err := tpl.Render(r.Auth.Header.Name, vars)
-			if err != nil {
-				return nil, &executor.RenderError{Field: actionName + ".auth.header.name", Cause: err}
-			}
-			val, err := tpl.Render(r.Auth.Header.Value, vars)
-			if err != nil {
-				return nil, &executor.RenderError{Field: actionName + ".auth.header.value", Cause: err}
-			}
-			headers[name] = val
-			sensitive[strings.ToLower(name)] = true
+			headers[r.Auth.Header.Name] = r.Auth.Header.Value
+			sensitive[strings.ToLower(r.Auth.Header.Name)] = true
 		}
 	}
 
-	// IdempotencyKey, if set, ships as a standard header. Render so
-	// users can interpolate run IDs etc.
 	if r.IdempotencyKey != "" {
-		val, err := tpl.Render(r.IdempotencyKey, vars)
-		if err != nil {
-			return nil, &executor.RenderError{Field: actionName + ".idempotency_key", Cause: err}
-		}
-		headers["Idempotency-Key"] = val
+		headers["Idempotency-Key"] = r.IdempotencyKey
 	}
 
 	timeout := defaultTimeout
 	if r.Timeout != "" {
-		// Already validated in Validate().
 		timeout, _ = time.ParseDuration(r.Timeout)
 	}
 	retryDelay := defaultRetryDelay
@@ -145,9 +214,11 @@ func (h *Handler) render(ctx actions.Context, step *config.Step) (*renderedReque
 		follow = *r.FollowRedirects
 	}
 
-	rr := &renderedRequest{
+	_ = fieldPrefix // reserved for future error-context use; keep symmetric with render
+
+	return &renderedRequest{
 		method:           method,
-		url:              renderedURL,
+		url:              r.URL,
 		headers:          headers,
 		bodyBytes:        bodyBytes,
 		contentType:      defaultCT,
@@ -161,6 +232,5 @@ func (h *Handler) render(ctx actions.Context, step *config.Step) (*renderedReque
 		maxRespBytes:     maxResp,
 		followRedir:      follow,
 		sensitiveHeaders: sensitive,
-	}
-	return rr, nil
+	}, nil
 }

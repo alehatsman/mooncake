@@ -344,10 +344,78 @@ export interface HttpRequestAction {
   json?: any;
   max_response_bytes?: number;
   method?: string;
+  probe?: {
+    auth: {
+    basic: {
+    pass: string;
+    user: string;
+  };
+    bearer: string;
+    header: {
+    name: string;
+    value: string;
+  };
+  };
+    body: string;
+    creates_when: string;
+    expect_status: number[];
+    file: string;
+    follow_redirects: number;
+    form: Record<string, any>;
+    headers: Record<string, any>;
+    idempotency_key: string;
+    json: any;
+    max_response_bytes: number;
+    method: string;
+    probe: Record<string, any>;
+    redact_body: boolean;
+    retries: number;
+    retry_delay: string;
+    retry_on: string[];
+    reverse: Record<string, any>;
+    risk: string;
+    skip_tls_verify: boolean;
+    timeout: string;
+    url: string;
+  };
   redact_body?: boolean;
   retries?: number;
   retry_delay?: string;
   retry_on?: string[];
+  reverse?: {
+    auth: {
+    basic: {
+    pass: string;
+    user: string;
+  };
+    bearer: string;
+    header: {
+    name: string;
+    value: string;
+  };
+  };
+    body: string;
+    creates_when: string;
+    expect_status: number[];
+    file: string;
+    follow_redirects: number;
+    form: Record<string, any>;
+    headers: Record<string, any>;
+    idempotency_key: string;
+    json: any;
+    max_response_bytes: number;
+    method: string;
+    probe: Record<string, any>;
+    redact_body: boolean;
+    retries: number;
+    retry_delay: string;
+    retry_on: string[];
+    reverse: Record<string, any>;
+    risk: string;
+    skip_tls_verify: boolean;
+    timeout: string;
+    url: string;
+  };
   risk?: string;
   skip_tls_verify?: boolean;
   timeout?: string;

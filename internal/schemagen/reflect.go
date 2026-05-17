@@ -8,6 +8,16 @@ import (
 // extractStructProperties extracts schema properties from a Go struct type.
 // Returns the properties map and a list of required field names.
 func extractStructProperties(t reflect.Type) (map[string]*Property, []string) {
+	return extractStructPropertiesSeen(t, map[reflect.Type]bool{})
+}
+
+// extractStructPropertiesSeen is the cycle-safe inner form. The seen
+// map tracks struct types currently being expanded on the call stack
+// so a self-referential field (e.g. proposal-16 wave 2's
+// HTTPRequest.Probe *HTTPRequest) emits a generic object placeholder
+// instead of recursing forever. Without this, schemagen blows up the
+// goroutine stack the moment a Go type points at its own kind.
+func extractStructPropertiesSeen(t reflect.Type, seen map[reflect.Type]bool) (map[string]*Property, []string) {
 	if t.Kind() != reflect.Struct {
 		return nil, nil
 	}
@@ -66,7 +76,7 @@ func extractStructProperties(t reflect.Type) (map[string]*Property, []string) {
 			isOptional = true // Pointer fields are optional
 		}
 
-		setPropertyType(prop, fieldType)
+		setPropertyTypeSeen(prop, fieldType, seen)
 
 		// Add to properties
 		properties[fieldName] = prop
@@ -87,8 +97,10 @@ func extractStructProperties(t reflect.Type) (map[string]*Property, []string) {
 	return properties, required
 }
 
-// setPropertyType sets the JSON Schema type based on Go type.
-func setPropertyType(prop *Property, t reflect.Type) {
+// setPropertyTypeSeen sets the JSON Schema type based on a Go type,
+// using seen to break cycles. See extractStructPropertiesSeen for
+// why the seen set is load-bearing.
+func setPropertyTypeSeen(prop *Property, t reflect.Type, seen map[reflect.Type]bool) {
 	switch t.Kind() {
 	case reflect.String:
 		prop.Type = "string" //nolint:goconst // JSON Schema type
@@ -104,7 +116,7 @@ func setPropertyType(prop *Property, t reflect.Type) {
 		// Extract element type
 		elemType := t.Elem()
 		prop.Items = &Property{}
-		setPropertyType(prop.Items, elemType)
+		setPropertyTypeSeen(prop.Items, elemType, seen)
 	case reflect.Map:
 		prop.Type = "object" //nolint:goconst // JSON Schema type
 		// Maps are typically string -> interface{} in config
@@ -113,8 +125,19 @@ func setPropertyType(prop *Property, t reflect.Type) {
 		prop.AdditionalProps = &trueVal
 	case reflect.Struct:
 		prop.Type = "object" //nolint:goconst // JSON Schema type
+		// Cycle break: emit a generic object placeholder when we're
+		// already expanding this exact struct type higher up the
+		// stack. additionalProperties stays open so the recursive
+		// shape isn't rejected at validation time.
+		if seen[t] {
+			trueVal := true
+			prop.AdditionalProps = &trueVal
+			return
+		}
+		seen[t] = true
+		defer delete(seen, t)
 		// For nested structs, extract properties recursively
-		nestedProps, nestedRequired := extractStructProperties(t)
+		nestedProps, nestedRequired := extractStructPropertiesSeen(t, seen)
 		prop.Properties = nestedProps
 		if len(nestedRequired) > 0 {
 			prop.Required = nestedRequired
@@ -135,7 +158,7 @@ func setPropertyType(prop *Property, t reflect.Type) {
 		// Don't set type to allow any value
 	case reflect.Pointer:
 		// Dereference and recurse
-		setPropertyType(prop, t.Elem())
+		setPropertyTypeSeen(prop, t.Elem(), seen)
 	}
 }
 
