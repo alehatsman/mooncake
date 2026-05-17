@@ -1,6 +1,7 @@
 package apply
 
 import (
+	"context"
 	"os"
 
 	"github.com/alehatsman/mooncake/internal/actions"
@@ -46,6 +47,7 @@ func (c *reverseContext) GetVariables() map[string]interface{} { return map[stri
 func (c *reverseContext) GetEventPublisher() events.Publisher  { return events.NewPublisher() }
 func (c *reverseContext) GetCurrentStepID() string             { return "reverse" }
 func (c *reverseContext) Effects() actions.Performer           { return reverseNoopPerformer{} }
+func (c *reverseContext) Privileged() actions.PrivilegedRunner { return reverseNoopPrivileged{} }
 
 func (c *reverseContext) MergeUserVars(_ map[string]interface{}) {}
 func (c *reverseContext) SetChanged(_ bool)                      {}
@@ -86,4 +88,17 @@ func (reverseNoopPerformer) Chmod(string, os.FileMode, actions.PerformerOpts) ac
 }
 func (reverseNoopPerformer) Chown(string, string, string, actions.PerformerOpts) actions.Effect {
 	return actions.Effect{}
+}
+
+// reverseNoopPrivileged satisfies actions.PrivilegedRunner with no-op
+// returns. Reverse handlers should not shell out under sudo (their
+// inverse step belongs in the plan, not in-place); this guard keeps
+// misbehavior soft.
+type reverseNoopPrivileged struct{}
+
+func (reverseNoopPrivileged) Run(context.Context, string, ...string) ([]byte, error) {
+	return nil, nil
+}
+func (reverseNoopPrivileged) RunWithInput(context.Context, []byte, string, ...string) ([]byte, error) {
+	return nil, nil
 }

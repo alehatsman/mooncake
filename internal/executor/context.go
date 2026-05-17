@@ -224,6 +224,14 @@ func (ec *ExecutionContext) Effects() actions.Performer {
 	return effects.NewPerformer(ec.Mode, ec.Svc.SudoPass)
 }
 
+// Privileged returns the spec-69 sudo-wrapping command-exec
+// primitive. Handlers should call ctx.Privileged().Run(...) for
+// shell-outs that need root, instead of building exec.Command or
+// BecomeRunner manually.
+func (ec *ExecutionContext) Privileged() actions.PrivilegedRunner {
+	return security.PrivilegedRunner{SudoPass: ec.Svc.SudoPass}
+}
+
 // --- actions.Context interface implementation ---
 
 // GetTemplate returns the template renderer.

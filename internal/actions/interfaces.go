@@ -110,6 +110,14 @@ type Context interface {
 	// multiple times.
 	Effects() Performer
 
+	// Privileged returns a runner that escalates command execution to
+	// root (via sudo) when mooncake is not already running as root.
+	// Handlers should call ctx.Privileged().Run(...) for any shell-out
+	// that needs root, instead of constructing exec.Command or
+	// security.BecomeRunner themselves. See PrivilegedRunner and
+	// spec-69 for the rationale.
+	Privileged() PrivilegedRunner
+
 	// GetCurrentStepID returns the unique ID of the currently executing step.
 	//
 	// Format: "step-{global_step_number}"

@@ -1,6 +1,7 @@
 package print
 
 import (
+	"context"
 	"os"
 	"strings"
 	"testing"
@@ -71,7 +72,17 @@ func (m *mockContext) IsDryRun() bool {
 
 func (m *mockContext) Mode() actions.Mode { return m.mode }
 
-func (m *mockContext) Effects() actions.Performer { return printNoopPerformer{} }
+func (m *mockContext) Effects() actions.Performer           { return printNoopPerformer{} }
+func (m *mockContext) Privileged() actions.PrivilegedRunner { return printNoopPrivilegedRunner{} }
+
+type printNoopPrivilegedRunner struct{}
+
+func (printNoopPrivilegedRunner) Run(context.Context, string, ...string) ([]byte, error) {
+	return nil, nil
+}
+func (printNoopPrivilegedRunner) RunWithInput(context.Context, []byte, string, ...string) ([]byte, error) {
+	return nil, nil
+}
 
 func (m *mockContext) MergeUserVars(vars map[string]interface{}) {
 	if m.variables == nil {

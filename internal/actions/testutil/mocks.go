@@ -2,6 +2,7 @@
 package testutil
 
 import (
+	"context"
 	"fmt"
 	"os"
 
@@ -77,6 +78,14 @@ func (m *MockContext) Effects() actions.Performer {
 		return m.Performer
 	}
 	return noopPerformer{mode: m.Mode()}
+}
+
+// Privileged returns a no-op PrivilegedRunner. Handlers under test
+// that need to inspect sudo-exec interactions should swap in their
+// own fake; the default satisfies the actions.Context contract added
+// by spec-69 without shelling out to real sudo.
+func (m *MockContext) Privileged() actions.PrivilegedRunner {
+	return noopPrivilegedRunner{}
 }
 
 // MockPublisher implements events.Publisher for testing
@@ -201,4 +210,17 @@ func (p noopPerformer) Chmod(path string, _ os.FileMode, _ actions.PerformerOpts
 }
 func (p noopPerformer) Chown(path, _, _ string, _ actions.PerformerOpts) actions.Effect {
 	return actions.Effect{Action: actions.ActionChown, Path: path}
+}
+
+// noopPrivilegedRunner is the spec-69 sibling of noopPerformer:
+// satisfies actions.PrivilegedRunner without shelling out so handler
+// tests that don't care about sudo wiring get a default that won't
+// panic or hit the system.
+type noopPrivilegedRunner struct{}
+
+func (noopPrivilegedRunner) Run(context.Context, string, ...string) ([]byte, error) {
+	return nil, nil
+}
+func (noopPrivilegedRunner) RunWithInput(context.Context, []byte, string, ...string) ([]byte, error) {
+	return nil, nil
 }

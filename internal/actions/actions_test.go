@@ -1,6 +1,7 @@
 package actions
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -123,6 +124,8 @@ func (m *mockContext) Mode() Mode {
 
 func (m *mockContext) Effects() Performer { return testNoopPerformer{mode: m.Mode()} }
 
+func (m *mockContext) Privileged() PrivilegedRunner { return testNoopPrivilegedRunner{} }
+
 func (m *mockContext) MergeUserVars(vars map[string]interface{}) {
 	if m.variables == nil {
 		m.variables = make(map[string]interface{})
@@ -153,6 +156,18 @@ func (p testNoopPerformer) Remove(string, bool, PerformerOpts) Effect       { re
 func (p testNoopPerformer) Chmod(string, os.FileMode, PerformerOpts) Effect { return Effect{} }
 func (p testNoopPerformer) Chown(string, string, string, PerformerOpts) Effect {
 	return Effect{}
+}
+
+// testNoopPrivilegedRunner satisfies PrivilegedRunner for tests; both
+// methods return empty output and nil so handlers under test see a
+// success without shelling out to a real sudo.
+type testNoopPrivilegedRunner struct{}
+
+func (testNoopPrivilegedRunner) Run(context.Context, string, ...string) ([]byte, error) {
+	return nil, nil
+}
+func (testNoopPrivilegedRunner) RunWithInput(context.Context, []byte, string, ...string) ([]byte, error) {
+	return nil, nil
 }
 
 // mockPublisher implements events.Publisher for testing
