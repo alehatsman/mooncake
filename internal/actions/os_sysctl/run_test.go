@@ -77,7 +77,7 @@ func newStub(t *testing.T) *stubFS {
 		}
 		return v, nil
 	}
-	sysctlApply = func(name, value string) error {
+	sysctlApply = func(_ actions.PrivilegedRunner, name, value string) error {
 		if s.applyErr != nil {
 			return s.applyErr
 		}

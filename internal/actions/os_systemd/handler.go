@@ -32,6 +32,16 @@ import (
 // that stub the systemctl* hooks bypass this entirely. Package-level
 // state because the existing systemctl* hook plumbing already lives at
 // package scope and mooncake executes actions serially.
+//
+// Spec-69 phase-5 audit (NOT migrated to ctx.Privileged): this handler
+// keeps BecomeRunner directly because it needs the broader Command()
+// API in two places — writeAtomic captures sudo cp + sudo chmod
+// separately (each with its own combined-output capture so a chmod
+// failure surfaces distinctly from a cp failure), and runSystemctl
+// uses the conditional `systemctlBecome()` predicate to skip sudo
+// when mooncake is already root. PrivilegedRunner.Run is the "I need
+// root, unconditionally" common path and doesn't expose either knob.
+// See internal/actions/privileged.go for the design rationale.
 var becomeRunner security.BecomeRunner
 
 const (

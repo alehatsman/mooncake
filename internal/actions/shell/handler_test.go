@@ -26,16 +26,16 @@ func newMockExecutionContext() *executor.ExecutionContext {
 	}
 	return &executor.ExecutionContext{
 		Svc: &executor.RunServices{
-			Template: tmpl,
-			Evaluator: expression.NewExprEvaluator(),
-			PathUtil: pathutil.NewPathExpander(tmpl),
-			Logger: &testutil.MockLogger{Logs: []string{}},
+			Template:       tmpl,
+			Evaluator:      expression.NewExprEvaluator(),
+			PathUtil:       pathutil.NewPathExpander(tmpl),
+			Logger:         &testutil.MockLogger{Logs: []string{}},
 			EventPublisher: &testutil.MockPublisher{Events: []events.Event{}},
-			Redactor: security.NewRedactor(),
-			SudoPass: "",
-			Stats: executor.NewExecutionStats(),
+			Redactor:       security.NewRedactor(),
+			SudoPass:       "",
+			Stats:          executor.NewExecutionStats(),
 		},
-		Scope: executor.NewVariableScope(),
+		Scope:         executor.NewVariableScope(),
 		CurrentStepID: "step-1",
 	}
 }
@@ -505,60 +505,15 @@ func TestHandler_Execute_WithInvalidTimeout(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_WithRetry(t *testing.T) {
-	if testing.Short() {
-		t.Skip("Skipping retry test in short mode")
-	}
-
-	h := &Handler{}
-	ctx := newMockExecutionContext()
-
-	step := &config.Step{
-		Shell: &config.ShellAction{
-			Cmd: "ls /nonexistent/path/12345",
-		},
-		Retry: &config.RetryPolicy{Attempts: 2},
-	}
-
-	_, err := h.Run(ctx, step)
-
-	if err == nil {
-		t.Error("Execute() should fail after retries")
-	}
-
-	if !strings.Contains(err.Error(), "after") {
-		t.Errorf("Error should mention failed attempts, got: %v", err)
-	}
-}
-
-func TestHandler_Execute_WithRetryDelay(t *testing.T) {
-	if testing.Short() {
-		t.Skip("Skipping retry delay test in short mode")
-	}
-
-	h := &Handler{}
-	ctx := newMockExecutionContext()
-
-	step := &config.Step{
-		Shell: &config.ShellAction{
-			Cmd: "ls /nonexistent/path/12345",
-		},
-		Retry: &config.RetryPolicy{Attempts: 2, Delay: "100ms"},
-	}
-
-	start := time.Now()
-	_, err := h.Run(ctx, step)
-	elapsed := time.Since(start)
-
-	if err == nil {
-		t.Error("Execute() should fail after retries")
-	}
-
-	// Should wait at least 200ms total (2 retries * 100ms each)
-	if elapsed < 200*time.Millisecond {
-		t.Errorf("Execute() took %v, expected at least 200ms for retry delays", elapsed)
-	}
-}
+// Retry behavior is now owned by the executor's runWithRetry; the
+// in-handler retry loop was deleted in the spec-69 cleanup phase.
+// TestHandler_Execute_WithRetry + TestHandler_Execute_WithRetryDelay
+// (plus the dedicated MT-48 file) used to live here; their
+// invariants moved to internal/executor/retry_test.go
+// (TestRunWithRetry_WrapsAfterNAttempts, _HonorsMaxAttempts,
+// _BackoffHonored). Direct h.Run() in this test file now executes
+// exactly once, which is what the executor's RawRunner dispatch
+// expects in production too.
 
 func TestHandler_Execute_WithStdin(t *testing.T) {
 	h := &Handler{}
@@ -848,7 +803,6 @@ func TestHandler_Execute_WithCapture(t *testing.T) {
 		})
 	}
 }
-
 
 func TestHandler_Execute_InvalidCommandTemplate(t *testing.T) {
 	h := &Handler{}

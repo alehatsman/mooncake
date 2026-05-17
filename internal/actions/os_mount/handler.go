@@ -25,14 +25,14 @@ import (
 	"github.com/alehatsman/mooncake/internal/security"
 )
 
-// privRunner is the spec-69 sudo-aware runner used by realMount /
-// realUmount. Both need root: mount(8) requires CAP_SYS_ADMIN even
-// with an existing fstab entry unless the user= option is set.
-var privRunner actions.PrivilegedRunner = security.PrivilegedRunner{}
-
-// eff is the spec-69 sudo-aware Performer used by writeFstab and
-// snapshotFstab for /etc/fstab mutations.
-var eff actions.Performer
+// runnerOrDefault returns the supplied runner when non-nil, else the
+// security default. Lets test stubs pass nil without nil-deref.
+func runnerOrDefault(r actions.PrivilegedRunner) actions.PrivilegedRunner {
+	if r == nil {
+		return security.PrivilegedRunner{}
+	}
+	return r
+}
 
 const (
 	actionName       = "os.mount"
@@ -55,9 +55,11 @@ var mountPaths = struct {
 
 // Package-level hooks for the runtime side effects (`mount`/`umount`).
 // Tests stub these to keep apply-mode hermetic and assert calls.
+// Spec-69 phase-5: the hooks take the PrivilegedRunner explicitly so
+// the package no longer carries per-Run mutable state.
 var (
-	mountRun  = realMount
-	umountRun = realUmount
+	mountRun  = realMount  // func(runner, dest) error
+	umountRun = realUmount // func(runner, dest) error
 	clockNow  = time.Now
 )
 
@@ -141,9 +143,10 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		return result, fmt.Errorf("os.mount: only Linux is supported; got %s", runtime.GOOS)
 	}
 
-	// Wire spec-69 primitives for /etc/fstab writes + mount/umount.
-	privRunner = ctx.Privileged()
-	eff = ctx.Effects()
+	// Spec-69 phase 5: runner + performer are per-Run, threaded into
+	// applyPlan instead of riding package-level state.
+	runner := ctx.Privileged()
+	performer := ctx.Effects()
 
 	rendered, err := renderMount(ctx, m)
 	if err != nil {
@@ -178,7 +181,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 	// struct internals.
 	result.ReverseData = captureReverseInfo(rendered.dest, plan.touchesFstab, plan.doMount, plan.doUmount)
 
-	if err := applyPlan(plan, rendered); err != nil {
+	if err := applyPlan(performer, runner, plan, rendered); err != nil {
 		return result, err
 	}
 
@@ -486,19 +489,19 @@ func upsertEntry(lines []fstabLine, want fstabEntry) []fstabLine {
 	return out
 }
 
-func applyPlan(plan mountPlan, r renderedMount) error {
+func applyPlan(performer actions.Performer, runner actions.PrivilegedRunner, plan mountPlan, r renderedMount) error {
 	if plan.touchesFstab {
-		if err := writeFstab(plan.wantContent, plan.backup); err != nil {
+		if err := writeFstab(performer, plan.wantContent, plan.backup); err != nil {
 			return err
 		}
 	}
 	if plan.doUmount {
-		if err := umountRun(r.dest); err != nil {
+		if err := umountRun(runner, r.dest); err != nil {
 			return fmt.Errorf("os.mount: umount %s: %w", r.dest, err)
 		}
 	}
 	if plan.doMount {
-		if err := mountRun(r.dest); err != nil {
+		if err := mountRun(runner, r.dest); err != nil {
 			return fmt.Errorf("os.mount: mount %s: %w", r.dest, err)
 		}
 	}
@@ -539,17 +542,17 @@ func readMounts() (map[string]fstabEntry, error) {
 // writeFstab snapshots the existing file (when backup is enabled and
 // the file exists) and writes the new content atomically. Atomic
 // write is critical: a half-written fstab can prevent boot.
-func writeFstab(content string, backup bool) error {
+func writeFstab(performer actions.Performer, content string, backup bool) error {
 	if backup {
-		if err := snapshotFstab(); err != nil {
+		if err := snapshotFstab(performer); err != nil {
 			return err
 		}
 	}
 	pOpts := actions.PerformerOpts{Become: true}
-	if e := eff.Mkdir(filepath.Dir(mountPaths.fstab), 0o755, pOpts); e.Err != nil {
+	if e := performer.Mkdir(filepath.Dir(mountPaths.fstab), 0o755, pOpts); e.Err != nil {
 		return fmt.Errorf("os.mount: mkdir %s: %w", filepath.Dir(mountPaths.fstab), e.Err)
 	}
-	if e := eff.WriteFile(mountPaths.fstab, []byte(content), 0o644, actions.PerformerOpts{Become: true, ExplicitMode: true}); e.Err != nil {
+	if e := performer.WriteFile(mountPaths.fstab, []byte(content), 0o644, actions.PerformerOpts{Become: true, ExplicitMode: true}); e.Err != nil {
 		return fmt.Errorf("os.mount: write %s: %w", mountPaths.fstab, e.Err)
 	}
 	return nil
@@ -558,7 +561,7 @@ func writeFstab(content string, backup bool) error {
 // snapshotFstab copies the current fstab to fstab.bak.<unix-ts> when
 // the file exists. Missing file is not an error — there is nothing to
 // snapshot.
-func snapshotFstab() error {
+func snapshotFstab(performer actions.Performer) error {
 	data, err := os.ReadFile(mountPaths.fstab)
 	if errors.Is(err, fs.ErrNotExist) {
 		return nil
@@ -568,15 +571,15 @@ func snapshotFstab() error {
 	}
 	ts := clockNow().UTC().Format("20060102T150405Z")
 	dest := mountPaths.fstab + ".bak." + ts
-	if e := eff.WriteFile(dest, data, 0o644, actions.PerformerOpts{Become: true, ExplicitMode: true}); e.Err != nil {
+	if e := performer.WriteFile(dest, data, 0o644, actions.PerformerOpts{Become: true, ExplicitMode: true}); e.Err != nil {
 		return fmt.Errorf("os.mount: snapshot write %s: %w", dest, e.Err)
 	}
 	return nil
 }
 
-// realMount shells out to `mount <dest>` via ctx.Privileged().
-func realMount(dest string) error {
-	out, err := privRunner.Run(context.TODO(), "mount", dest)
+// realMount shells out to `mount <dest>` via the supplied runner.
+func realMount(runner actions.PrivilegedRunner, dest string) error {
+	out, err := runnerOrDefault(runner).Run(context.TODO(), "mount", dest)
 	if err != nil {
 		msg := strings.TrimSpace(string(out))
 		if msg != "" {
@@ -587,9 +590,9 @@ func realMount(dest string) error {
 	return nil
 }
 
-// realUmount shells out to `umount <dest>` via ctx.Privileged().
-func realUmount(dest string) error {
-	out, err := privRunner.Run(context.TODO(), "umount", dest)
+// realUmount shells out to `umount <dest>` via the supplied runner.
+func realUmount(runner actions.PrivilegedRunner, dest string) error {
+	out, err := runnerOrDefault(runner).Run(context.TODO(), "umount", dest)
 	if err != nil {
 		msg := strings.TrimSpace(string(out))
 		if msg != "" {

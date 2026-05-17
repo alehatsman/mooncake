@@ -28,16 +28,14 @@ import (
 	"github.com/alehatsman/mooncake/internal/security"
 )
 
-// privRunner is the spec-69 sudo-escalating command runner used by
-// realCleanCache. Set by Run() from ctx.Privileged() before calling
-// the apply / cleanCache hooks; tests that stub cleanCache bypass
-// this entirely.
-var privRunner actions.PrivilegedRunner = security.PrivilegedRunner{}
-
-// eff is the spec-69 sudo-aware Performer used by apply() for file
-// writes under /etc/. Set by Run() from ctx.Effects() before
-// dispatch.
-var eff actions.Performer
+// runnerOrDefault returns the supplied runner when non-nil, else the
+// security default. Lets test stubs pass nil without nil-deref.
+func runnerOrDefault(r actions.PrivilegedRunner) actions.PrivilegedRunner {
+	if r == nil {
+		return security.PrivilegedRunner{}
+	}
+	return r
+}
 
 // Paths controls where the dnf driver writes files. Tests override
 // via the package-level `paths` var to avoid touching /etc.
@@ -47,13 +45,15 @@ type Paths struct {
 }
 
 // Package-level hooks. Defaults are wired to real production paths
-// / binaries; tests substitute their own for hermetic runs.
+// / binaries; tests substitute their own for hermetic runs. Spec-69
+// phase-5: cleanCache takes a runner so the package no longer carries
+// per-Run mutable state.
 var (
 	paths = Paths{
 		ReposDir:   "/etc/yum.repos.d",
 		KeyringDir: "/etc/pki/rpm-gpg",
 	}
-	cleanCache = realCleanCache
+	cleanCache = realCleanCache // func(runner) error
 )
 
 // RepoPath returns the absolute path to the .repo INI file for
@@ -106,11 +106,12 @@ func Run(ctx actions.Context, r *config.PkgRepo, result *executor.Result) (actio
 		return result, nil
 	}
 
-	// Wire spec-69 primitives. Performer's try-direct-then-fallback
-	// (phase 5b) means apply()'s file writes work under sudo against
-	// /etc and under the test user against t.TempDir.
-	privRunner = ctx.Privileged()
-	eff = ctx.Effects()
+	// Spec-69 phase 5: runner + performer are per-Run, threaded into
+	// apply / cleanCache. Performer's try-direct-then-fallback (phase
+	// 5b) means file writes work under sudo against /etc and under
+	// the test user against t.TempDir.
+	runner := ctx.Privileged()
+	performer := ctx.Effects()
 
 	priorContent, priorExisted, _ := shared.ReadFile(plan.repoPath)
 	result.ReverseData = &shared.PkgRepoReverseInfo{
@@ -121,12 +122,12 @@ func Run(ctx actions.Context, r *config.PkgRepo, result *executor.Result) (actio
 		PriorContent: priorContent,
 	}
 
-	if err := apply(plan, rendered); err != nil {
+	if err := apply(performer, plan, rendered); err != nil {
 		return result, err
 	}
 
 	if rendered.updateCache && plan.touchesRepo {
-		if err := cleanCache(); err != nil {
+		if err := cleanCache(runner); err != nil {
 			return result, fmt.Errorf("pkg.repo.dnf: dnf clean expire-cache: %w", err)
 		}
 	}
@@ -328,26 +329,26 @@ func boolOneZero(b bool) string {
 	return "0"
 }
 
-func apply(p plan_, r rendered_) error {
-	// All file ops go through ctx.Effects() — Performer's spec-69
+func apply(performer actions.Performer, p plan_, r rendered_) error {
+	// All file ops go through the supplied Performer — its spec-69
 	// phase 5b try-direct-then-fallback makes Become: true work
 	// equally for /etc/yum.repos.d and tempdir-overridden test paths.
 	pOpts := actions.PerformerOpts{Become: true}
 	pOptsWithMode := actions.PerformerOpts{Become: true, ExplicitMode: true}
 
 	if p.operation == "delete" {
-		if e := eff.Remove(p.repoPath, false, pOpts); e.Err != nil && !errors.Is(e.Err, fs.ErrNotExist) {
+		if e := performer.Remove(p.repoPath, false, pOpts); e.Err != nil && !errors.Is(e.Err, fs.ErrNotExist) {
 			return fmt.Errorf("pkg.repo.dnf: remove repo file: %w", e.Err)
 		}
 		return nil
 	}
 
-	if e := eff.Mkdir(paths.ReposDir, 0o755, pOpts); e.Err != nil {
+	if e := performer.Mkdir(paths.ReposDir, 0o755, pOpts); e.Err != nil {
 		return fmt.Errorf("pkg.repo.dnf: mkdir repos: %w", e.Err)
 	}
 
 	if p.keyringPath != "" {
-		if e := eff.Mkdir(paths.KeyringDir, 0o755, pOpts); e.Err != nil {
+		if e := performer.Mkdir(paths.KeyringDir, 0o755, pOpts); e.Err != nil {
 			return fmt.Errorf("pkg.repo.dnf: mkdir keyring: %w", e.Err)
 		}
 		body, err := shared.HTTPFetchKey(r.gpgKeyURL)
@@ -359,12 +360,12 @@ func apply(p plan_, r rendered_) error {
 				return fmt.Errorf("pkg.repo.dnf: %w (key url: %s)", vErr, r.gpgKeyURL)
 			}
 		}
-		if e := eff.WriteFile(p.keyringPath, body, 0o644, pOptsWithMode); e.Err != nil {
+		if e := performer.WriteFile(p.keyringPath, body, 0o644, pOptsWithMode); e.Err != nil {
 			return fmt.Errorf("pkg.repo.dnf: write keyring: %w", e.Err)
 		}
 	}
 
-	if e := eff.WriteFile(p.repoPath, []byte(p.wantContent), 0o644, pOptsWithMode); e.Err != nil {
+	if e := performer.WriteFile(p.repoPath, []byte(p.wantContent), 0o644, pOptsWithMode); e.Err != nil {
 		return fmt.Errorf("pkg.repo.dnf: write repo file: %w", e.Err)
 	}
 	return nil
@@ -374,14 +375,14 @@ func apply(p plan_, r rendered_) error {
 // on RHEL 7). Invalidates the per-repo metadata cache so the next
 // `dnf install` sees the freshly-added repo without forcing a full
 // network refresh up front.
-func realCleanCache() error {
+func realCleanCache(runner actions.PrivilegedRunner) error {
 	bin := "dnf"
 	if _, err := exec.LookPath("dnf"); err != nil {
 		if _, fallbackErr := exec.LookPath("yum"); fallbackErr == nil {
 			bin = "yum"
 		}
 	}
-	out, err := privRunner.Run(context.TODO(), bin, "clean", "expire-cache")
+	out, err := runnerOrDefault(runner).Run(context.TODO(), bin, "clean", "expire-cache")
 	if err != nil {
 		msg := strings.TrimSpace(string(out))
 		if msg != "" {

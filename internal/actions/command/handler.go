@@ -57,54 +57,27 @@ func (h *Handler) Validate(step *config.Step) error {
 	return nil
 }
 
-// executeWithRetry executes the command with retry logic if
-// configured. MT-48: the retry decision is based on the underlying
-// exit code, NOT the post-failed_when verdict — otherwise
-// `retry: 3` + `failed_when: false` would mask the first failure
-// and skip retries entirely. We run executeCommandRaw on each
-// attempt (no failed_when applied); only the final result has
-// failed_when / changed_when applied via evaluateResultOverrides.
-func (h *Handler) executeWithRetry(ctx actions.Context, step *config.Step, renderedArgv []string) (actions.Result, error) {
-	maxAttempts := step.RetryAttempts() + 1
-
-	var lastResult actions.Result
-	var lastErr error
-
-	for attempt := 1; attempt <= maxAttempts; attempt++ {
-		if attempt > 1 {
-			ctx.GetLogger().Debugf("  Retry attempt %d/%d", attempt, maxAttempts)
-		}
-
-		result, err := h.executeCommandRaw(ctx, step, renderedArgv)
-		if err == nil {
-			// Raw success — apply overrides and return.
-			if r, ok := result.(*executor.Result); ok {
-				if oerr := h.applyOverrides(ctx, step, r); oerr != nil {
-					return r, oerr
-				}
-				if r.Failed {
-					return r, fmt.Errorf("command marked as failed by failed_when condition")
-				}
+// executeOnce runs the command exactly once and applies overrides
+// post-hoc. Production apply goes through RunRaw (executor handles
+// retry centrally per spec-69); Run is reached only by plan mode
+// and direct unit tests in this package. The in-handler retry loop
+// (executeWithRetry) was deleted in the spec-69 cleanup phase
+// after its MT-48 / MT-62 invariants were ported to
+// internal/executor/retry_test.go.
+func (h *Handler) executeOnce(ctx actions.Context, step *config.Step, renderedArgv []string) (actions.Result, error) {
+	result, err := h.executeCommandRaw(ctx, step, renderedArgv)
+	if err == nil {
+		if r, ok := result.(*executor.Result); ok {
+			if oerr := h.applyOverrides(ctx, step, r); oerr != nil {
+				return r, oerr
 			}
-			return result, nil
-		}
-
-		lastResult = result
-		lastErr = err
-
-		// Sleep before retry if configured
-		if attempt < maxAttempts && step.RetryDelayDuration() != "" {
-			delay, parseErr := time.ParseDuration(step.RetryDelayDuration())
-			if parseErr == nil && delay > 0 {
-				ctx.GetLogger().Debugf("  Waiting %v before retry", delay)
-				time.Sleep(delay)
+			if r.Failed {
+				return r, fmt.Errorf("command marked as failed by failed_when condition")
 			}
 		}
+		return result, nil
 	}
-
-	// All attempts failed — apply overrides to the final result.
-	// failed_when:false masks the failure; otherwise we propagate.
-	if r, ok := lastResult.(*executor.Result); ok && r.Failed {
+	if r, ok := result.(*executor.Result); ok && r.Failed {
 		if oerr := h.applyOverrides(ctx, step, r); oerr != nil {
 			return r, oerr
 		}
@@ -112,7 +85,7 @@ func (h *Handler) executeWithRetry(ctx actions.Context, step *config.Step, rende
 			return r, nil
 		}
 	}
-	return lastResult, lastErr
+	return result, err
 }
 
 // executeCommandRaw is the post-MT-48 retry-friendly variant of
@@ -312,7 +285,9 @@ func (h *Handler) evaluateBoolExpression(ctx actions.Context, expression string,
 // predicted for idempotency. Plan mode surfaces the rendered argv so
 // users see what would run. WouldChange is set because command steps
 // are assumed to mutate state. Apply mode renders the argv and runs
-// the command via executeWithRetry.
+// the command via executeOnce (retry is owned by the executor's
+// runWithRetry post-spec-69 cleanup; Run() is reached only by plan
+// mode + direct-call tests).
 //
 // F011: legacy Execute / DryRun pair folded into Run.
 // RunRaw is the spec-69 phase 2-3 entry point. Mirror of shell.RunRaw:
@@ -375,5 +350,5 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		renderedArgv[i] = rendered
 	}
 	ctx.GetLogger().Debugf("  Executing: %s", strings.Join(renderedArgv, " "))
-	return h.executeWithRetry(ctx, step, renderedArgv)
+	return h.executeOnce(ctx, step, renderedArgv)
 }

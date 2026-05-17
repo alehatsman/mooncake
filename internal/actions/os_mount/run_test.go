@@ -68,11 +68,11 @@ func newStub(t *testing.T) *stubFS {
 
 	mountPaths.fstab = s.fstab
 	mountPaths.mounts = s.mounts
-	mountRun = func(dest string) error {
+	mountRun = func(_ actions.PrivilegedRunner, dest string) error {
 		s.mounted = append(s.mounted, dest)
 		return nil
 	}
-	umountRun = func(dest string) error {
+	umountRun = func(_ actions.PrivilegedRunner, dest string) error {
 		s.umount = append(s.umount, dest)
 		// Remove from the mocked /proc/mounts so subsequent reads see
 		// the change.

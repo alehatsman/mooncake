@@ -42,22 +42,22 @@ var sysctlPaths = struct {
 }
 
 // Package-level hooks for the runtime read/apply primitives. Tests
-// override these to keep apply-mode hermetic.
+// override these to keep apply-mode hermetic. Spec-69 phase-5 cleanup:
+// sysctlApply takes an explicit PrivilegedRunner so we no longer ride
+// package-level state.
 var (
 	sysctlGet   = realSysctlGet
 	sysctlApply = realSysctlApply
 )
 
-// privRunner is the spec-69 sudo-aware runner used by realSysctlApply
-// for the live-kernel write (`sysctl -w …` writes to /proc/sys/* —
-// needs root). realSysctlGet is read-only so it stays on bare exec.
-// Set by Run() from ctx.Privileged() before dispatch.
-var privRunner actions.PrivilegedRunner = security.PrivilegedRunner{}
-
-// eff is the spec-69 sudo-aware Performer used by applyPlan() for
-// the persist-file write under /etc/sysctl.d. Set by Run() from
-// ctx.Effects() before dispatch.
-var eff actions.Performer
+// runnerOrDefault returns the supplied runner when non-nil, else the
+// security default. Lets test stubs pass nil without nil-deref.
+func runnerOrDefault(r actions.PrivilegedRunner) actions.PrivilegedRunner {
+	if r == nil {
+		return security.PrivilegedRunner{}
+	}
+	return r
+}
 
 // Handler implements os.sysctl.
 type Handler struct{}
@@ -141,10 +141,10 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		return result, fmt.Errorf("os.sysctl: only Linux is supported; got %s", runtime.GOOS)
 	}
 
-	// Wire spec-69 primitives for the persist-file write + the
-	// live-kernel `sysctl -w` apply.
-	privRunner = ctx.Privileged()
-	eff = ctx.Effects()
+	// Spec-69 phase 5: runner + performer are per-Run, threaded into
+	// applyPlan instead of riding package-level state.
+	runner := ctx.Privileged()
+	performer := ctx.Effects()
 
 	rendered, err := renderSysctl(ctx, s)
 	if err != nil {
@@ -188,7 +188,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		TouchedRuntime:     plan.apply,
 	}
 
-	if err := applyPlan(plan, rendered); err != nil {
+	if err := applyPlan(performer, runner, plan, rendered); err != nil {
 		return result, err
 	}
 
@@ -405,26 +405,26 @@ func renderPersistFile(lines []string) string {
 	return sb.String()
 }
 
-func applyPlan(plan sysctlPlan, r renderedSysctl) error {
+func applyPlan(performer actions.Performer, runner actions.PrivilegedRunner, plan sysctlPlan, r renderedSysctl) error {
 	pOpts := actions.PerformerOpts{Become: true}
 	if plan.touchesFile {
 		if plan.wantContent == "" || !hasContentLines(plan.wantContent) {
 			// All managed lines removed — drop the file rather than
 			// leave a stray header behind.
-			if e := eff.Remove(sysctlPaths.persistFile, false, pOpts); e.Err != nil && !errors.Is(e.Err, fs.ErrNotExist) {
+			if e := performer.Remove(sysctlPaths.persistFile, false, pOpts); e.Err != nil && !errors.Is(e.Err, fs.ErrNotExist) {
 				return fmt.Errorf("os.sysctl: remove %s: %w", sysctlPaths.persistFile, e.Err)
 			}
 		} else {
-			if e := eff.Mkdir(filepath.Dir(sysctlPaths.persistFile), 0o755, pOpts); e.Err != nil {
+			if e := performer.Mkdir(filepath.Dir(sysctlPaths.persistFile), 0o755, pOpts); e.Err != nil {
 				return fmt.Errorf("os.sysctl: mkdir %s: %w", filepath.Dir(sysctlPaths.persistFile), e.Err)
 			}
-			if e := eff.WriteFile(sysctlPaths.persistFile, []byte(plan.wantContent), 0o644, actions.PerformerOpts{Become: true, ExplicitMode: true}); e.Err != nil {
+			if e := performer.WriteFile(sysctlPaths.persistFile, []byte(plan.wantContent), 0o644, actions.PerformerOpts{Become: true, ExplicitMode: true}); e.Err != nil {
 				return fmt.Errorf("os.sysctl: write %s: %w", sysctlPaths.persistFile, e.Err)
 			}
 		}
 	}
 	if plan.apply {
-		if err := sysctlApply(r.name, r.value); err != nil {
+		if err := sysctlApply(runner, r.name, r.value); err != nil {
 			return fmt.Errorf("os.sysctl: apply %s=%s: %w", r.name, r.value, err)
 		}
 	}
@@ -551,10 +551,10 @@ func realSysctlGet(name string) (string, error) {
 }
 
 // realSysctlApply runs `sysctl -w name=value` to push the value to the
-// running kernel. Goes through ctx.Privileged() — writing /proc/sys/*
+// running kernel. Goes through the supplied runner — writing /proc/sys/*
 // requires root.
-func realSysctlApply(name, value string) error {
-	out, err := privRunner.Run(context.TODO(), "sysctl", "-w", name+"="+value)
+func realSysctlApply(runner actions.PrivilegedRunner, name, value string) error {
+	out, err := runnerOrDefault(runner).Run(context.TODO(), "sysctl", "-w", name+"="+value)
 	if err != nil {
 		msg := strings.TrimSpace(string(out))
 		if msg != "" {

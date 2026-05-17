@@ -9,7 +9,6 @@
 package download
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -17,6 +16,7 @@ import (
 	"os"
 	"runtime"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/alehatsman/mooncake/internal/actions"
@@ -190,7 +190,7 @@ func (h *Handler) runApply(ctx actions.Context, step *config.Step) (actions.Resu
 			ctx.GetLogger().Debugf("  Retry attempt %d/%d", attempt, maxRetries)
 		}
 
-		downloadedSize, downloadErr = h.downloadFile(renderedURL, renderedDest, downloadAction, mode, step, ec, ctx)
+		downloadedSize, downloadErr = h.downloadFile(renderedURL, renderedDest, downloadAction, mode, step, ctx)
 		if downloadErr == nil {
 			break // Success
 		}
@@ -262,7 +262,7 @@ func (h *Handler) parseFileMode(modeStr string, defaultMode os.FileMode) os.File
 	return os.FileMode(mode)
 }
 
-func (h *Handler) downloadFile(url, dest string, action *config.Download, mode os.FileMode, step *config.Step, ec *executor.ExecutionContext, ctx actions.Context) (int64, error) {
+func (h *Handler) downloadFile(url, dest string, action *config.Download, mode os.FileMode, step *config.Step, ctx actions.Context) (int64, error) {
 	// F012: base transport inherits httputil's bounded dial / TLS /
 	// response-headers timeouts. The client.Timeout wraps the whole
 	// transfer (kept zero-by-default so large downloads aren't yanked
@@ -391,7 +391,7 @@ func (h *Handler) downloadFile(url, dest string, action *config.Download, mode o
 		// became a code-execution vector under sudo. Use POSIX-safe
 		// single-quote wrapping via effects.ShellQuote.
 		cmd := fmt.Sprintf("mv %s %s", effects.ShellQuote(tmpPath), effects.ShellQuote(dest))
-		if err := h.executeSudoCommand(cmd, step, ec); err != nil {
+		if err := h.executeSudoCommand(ctx, cmd); err != nil {
 			return 0, fmt.Errorf("failed to move file with sudo: %w", err)
 		}
 	} else {
@@ -422,22 +422,20 @@ func actualChecksum(path, declared string) string {
 	return "<unreadable>"
 }
 
-func (h *Handler) executeSudoCommand(command string, _ *config.Step, ec *executor.ExecutionContext) error {
-	// F005 follow-up: route through security.BecomeRunner so the
-	// `IsBecomeSupported` and `SudoPass != ""` validation matches the
-	// project-wide policy. Pre-fix this site checked neither — empty
-	// SudoPass let sudo hang on its TTY prompt; Windows callers
-	// (unusual but possible via tests) hit the OS-level "exec sudo:
-	// no such file" instead of a typed error.
-	runner := security.BecomeRunner{SudoPass: ec.Svc.SudoPass}
-	cmd, err := runner.Command(true, "sh", "-c", command)
+func (h *Handler) executeSudoCommand(ctx actions.Context, command string) error {
+	// Spec-69 phase 5: route through ctx.Privileged() — the same
+	// centralized sudo path every other action uses. F005's
+	// IsBecomeSupported + SudoPass != "" validation lives inside
+	// PrivilegedRunner so this site inherits it for free. Combined
+	// output is folded into the error message so the operator sees
+	// the failing sh -c invocation verbatim.
+	out, err := ctx.Privileged().Run(context.TODO(), "sh", "-c", command)
 	if err != nil {
-		return err
-	}
-	var stderr bytes.Buffer
-	cmd.Stderr = &stderr
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("sudo command failed: %w (stderr: %s)", err, stderr.String())
+		msg := strings.TrimSpace(string(out))
+		if msg != "" {
+			return fmt.Errorf("sudo command failed: %w (output: %s)", err, msg)
+		}
+		return fmt.Errorf("sudo command failed: %w", err)
 	}
 	return nil
 }

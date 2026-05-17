@@ -26,21 +26,14 @@ import (
 	"github.com/alehatsman/mooncake/internal/security"
 )
 
-// eff is the spec-69 sudo-aware Performer used by writeAuthorizedKeys.
-// Phase 5b's try-direct-then-sudo semantic means the common case
-// (user manages their own ~/.ssh/authorized_keys) succeeds with no
-// sudo prompt, while the cross-user case (e.g. provisioning a new
-// user's keys from a non-root mooncake) escalates correctly instead
-// of the previous "chown EACCES — run with sudo / become: true"
-// dead-end. Set by Run() from ctx.Effects() before dispatch.
-var eff actions.Performer
-
-// privRunner backs the chown fallback for the cross-user case.
-// Performer.Chown supports Become but takes username/groupname
-// strings; the existing call site here passes numeric uid/gid via
-// the chownFn hook so the test suite can stub it. Keeping the hook
-// intact, the sudo fallback below uses /usr/bin/chown directly.
-var privRunner actions.PrivilegedRunner = security.PrivilegedRunner{}
+// runnerOrDefault returns the supplied runner when non-nil, else the
+// security default. Lets test stubs pass nil without nil-deref.
+func runnerOrDefault(r actions.PrivilegedRunner) actions.PrivilegedRunner {
+	if r == nil {
+		return security.PrivilegedRunner{}
+	}
+	return r
+}
 
 const (
 	actionName       = "os.ssh_key"
@@ -148,11 +141,12 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 	result := executor.NewResult()
 	result.Checkable = true
 
-	// Wire spec-69 primitives. Common case (user installs their own
-	// keys) succeeds without consulting sudo thanks to Performer's
-	// phase 5b try-direct-then-fallback; cross-user case escalates.
-	eff = ctx.Effects()
-	privRunner = ctx.Privileged()
+	// Spec-69 phase 5: runner + performer are per-Run. Common case
+	// (user installs their own keys) succeeds without consulting sudo
+	// thanks to Performer's phase 5b try-direct-then-fallback;
+	// cross-user case escalates via the runner.
+	performer := ctx.Effects()
+	runner := ctx.Privileged()
 
 	username, err := ctx.GetTemplate().Render(k.User, ctx.GetVariables())
 	if err != nil {
@@ -227,7 +221,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 			username, ownerLookupErr,
 		)
 	}
-	if err := writeAuthorizedKeys(path, plan.lines, uid, gid, !fileExists); err != nil {
+	if err := writeAuthorizedKeys(performer, runner, path, plan.lines, uid, gid, !fileExists); err != nil {
 		return result, fmt.Errorf("os.ssh_key: write: %w", err)
 	}
 
@@ -564,17 +558,17 @@ var chownFn = os.Chown
 // success. Now the file-itself chown returns its error; tests that
 // don't run as root must use a `path:` whose target uid matches their
 // own (existing tests already do via currentUsername).
-func writeAuthorizedKeys(path string, lines []string, uid, gid int, createParentMode bool) error {
+func writeAuthorizedKeys(performer actions.Performer, runner actions.PrivilegedRunner, path string, lines []string, uid, gid int, createParentMode bool) error {
 	parent := filepath.Dir(path)
 	pOpts := actions.PerformerOpts{Become: true}
-	if e := eff.Mkdir(parent, sshDirMode, pOpts); e.Err != nil {
+	if e := performer.Mkdir(parent, sshDirMode, pOpts); e.Err != nil {
 		return fmt.Errorf("mkdir %s: %w", parent, e.Err)
 	}
 	// F035: tighten parent perms unconditionally — Mkdir's idempotency
 	// is no-op-on-mode for an existing directory, so pre-existing 0755
 	// .ssh stays at 0755 without this. sshd rejects authorized_keys
 	// under a too-permissive parent.
-	if e := eff.Chmod(parent, sshDirMode, pOpts); e.Err != nil && !errors.Is(e.Err, fs.ErrPermission) {
+	if e := performer.Chmod(parent, sshDirMode, pOpts); e.Err != nil && !errors.Is(e.Err, fs.ErrPermission) {
 		return fmt.Errorf("chmod %s: %w", parent, e.Err)
 	}
 	_ = createParentMode // kept for ABI compat; the chmod above subsumes it.
@@ -584,7 +578,7 @@ func writeAuthorizedKeys(path string, lines []string, uid, gid int, createParent
 		content += "\n"
 	}
 
-	if e := eff.WriteFile(path, []byte(content), authorizedMode, actions.PerformerOpts{Become: true, ExplicitMode: true}); e.Err != nil {
+	if e := performer.WriteFile(path, []byte(content), authorizedMode, actions.PerformerOpts{Become: true, ExplicitMode: true}); e.Err != nil {
 		return fmt.Errorf("write %s: %w", path, e.Err)
 	}
 	if uid >= 0 && gid >= 0 {
@@ -593,14 +587,14 @@ func writeAuthorizedKeys(path string, lines []string, uid, gid int, createParent
 				return fmt.Errorf("chown %s: %w", path, err)
 			}
 			// Cross-user case: direct chown denied. Retry via
-			// ctx.Privileged() so installing keys for another user
+			// the supplied runner so installing keys for another user
 			// from a non-root mooncake works when sudo IS configured.
 			// When sudo isn't configured, fall back to the pre-spec-69
 			// fs.ErrPermission + "run with sudo" hint so existing
 			// downstream code (and the spec-22-era F035 test that
 			// asserts both behaviors) keeps working unchanged.
 			spec := strconv.Itoa(uid) + ":" + strconv.Itoa(gid)
-			out, sErr := privRunner.Run(context.TODO(), "chown", spec, path)
+			out, sErr := runnerOrDefault(runner).Run(context.TODO(), "chown", spec, path)
 			if sErr == nil {
 				// Sudo path succeeded — chown completed.
 			} else if errors.Is(sErr, security.ErrBecomeNoSudoPass) || errors.Is(sErr, security.ErrBecomeUnsupported) {

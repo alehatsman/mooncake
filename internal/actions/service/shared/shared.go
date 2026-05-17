@@ -93,6 +93,16 @@ type OsServiceReverseInfo struct {
 // doesn't support it (Windows) or no sudo password was supplied.
 // Centralizes the validate-then-construct policy that previously
 // lived in 6 hand-rolled copies across handler.go (F004 / F005).
+//
+// Spec-69 phase-5 audit (NOT migrated to ctx.Privileged): this helper
+// is the service action's per-step-conditional-become primitive. The
+// step's `become:` field decides per invocation whether to escalate
+// (a service-status check on a per-user systemd --user instance does
+// NOT need sudo even when an adjacent service-start does), so we
+// need BecomeRunner.Command(step.ShouldBecome(), ...) — the
+// PrivilegedRunner contract is unconditional root and would force
+// every service call through sudo. The same pattern recurs in
+// writeFileWithSudo below.
 func BecomeAwareCommand(step config.Step, ec *executor.ExecutionContext, program string, args ...string) (*exec.Cmd, error) {
 	runner := security.BecomeRunner{SudoPass: ec.Svc.SudoPass}
 	cmd, err := runner.Command(step.ShouldBecome(), program, args...)
@@ -208,6 +218,14 @@ func WriteFileWithPrivileges(path string, content []byte, mode string, step conf
 // temp-file + cp + chmod sequence. The first runner.Command call
 // validates both become-supported and sudo-pass-present (F005
 // final-mile centralized those preflight checks in BecomeRunner).
+//
+// Spec-69 phase-5 audit (NOT migrated to ctx.Privileged): this site
+// needs BecomeRunner.Command directly because each sub-step (cp,
+// chmod) constructs an *exec.Cmd whose CombinedOutput + ProcessState
+// are inspected separately so we can report distinct exit codes per
+// failure mode. PrivilegedRunner.Run returns ([]byte, error) and
+// collapses that distinction. See the os_systemd writeAtomic helper
+// for the same shape.
 func writeFileWithSudo(path string, content []byte, mode os.FileMode, ec *executor.ExecutionContext) error {
 	runner := security.BecomeRunner{SudoPass: ec.Svc.SudoPass}
 

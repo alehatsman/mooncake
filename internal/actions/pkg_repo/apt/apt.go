@@ -24,19 +24,14 @@ import (
 	"github.com/alehatsman/mooncake/internal/security"
 )
 
-// privRunner is the spec-69 sudo-escalating command runner used by the
-// apt-get update hook. Set by Run() from ctx.Privileged() before
-// calling apply / updateCache; tests that stub updateCache bypass this
-// entirely. See pkg_upgrade for the same pattern.
-var privRunner actions.PrivilegedRunner = security.PrivilegedRunner{}
-
-// eff is the spec-69 sudo-escalating Performer used by apply() for
-// file writes under /etc/. Set by Run() from ctx.Effects() before
-// dispatch. The Performer's try-direct-then-fallback semantic (phase
-// 5b) means PerformerOpts{Become: true} succeeds against both
-// /etc/apt/sources.list.d (production, requires sudo) and a
-// t.TempDir() the test owns (no sudo needed).
-var eff actions.Performer
+// runnerOrDefault returns the supplied runner when non-nil, else the
+// security default. Lets test stubs pass nil without nil-deref.
+func runnerOrDefault(r actions.PrivilegedRunner) actions.PrivilegedRunner {
+	if r == nil {
+		return security.PrivilegedRunner{}
+	}
+	return r
+}
 
 // Paths controls where the apt driver writes files. Tests override
 // these via the package-level `paths` var to avoid touching /etc.
@@ -46,13 +41,15 @@ type Paths struct {
 }
 
 // Package-level hooks. Defaults are wired to real production paths
-// / binaries; tests substitute their own for hermetic runs.
+// / binaries; tests substitute their own for hermetic runs. Spec-69
+// phase-5: updateCache takes a runner so the package no longer carries
+// per-Run mutable state.
 var (
 	paths = Paths{
 		SourcesDir:  "/etc/apt/sources.list.d",
 		KeyringsDir: "/etc/apt/keyrings",
 	}
-	updateCache = realAptGetUpdate
+	updateCache = realAptGetUpdate // func(runner) error
 )
 
 // SourcesPath returns the absolute path to the DEB822 sources file
@@ -108,12 +105,11 @@ func Run(ctx actions.Context, r *config.PkgRepo, result *executor.Result) (actio
 		return result, nil
 	}
 
-	// Wire the spec-69 primitives so apply / updateCache escalate to
-	// root via sudo when mooncake runs as a non-root user. Tests
-	// that override paths.SourcesDir to a t.TempDir continue to
-	// work because the Performer tries direct first.
-	privRunner = ctx.Privileged()
-	eff = ctx.Effects()
+	// Spec-69 phase 5: runner + performer are per-Run, threaded into
+	// apply / updateCache. Tests that override paths.SourcesDir to a
+	// t.TempDir continue to work because the Performer tries direct first.
+	runner := ctx.Privileged()
+	performer := ctx.Effects()
 
 	// Capture pre-apply sources file state for Reverse(). The plan
 	// path already calls ReadFile on the sources path when
@@ -128,12 +124,12 @@ func Run(ctx actions.Context, r *config.PkgRepo, result *executor.Result) (actio
 		PriorContent: priorContent,
 	}
 
-	if err := apply(plan, rendered); err != nil {
+	if err := apply(performer, plan, rendered); err != nil {
 		return result, err
 	}
 
 	if rendered.updateCache && plan.touchesSources {
-		if err := updateCache(); err != nil {
+		if err := updateCache(runner); err != nil {
 			return result, fmt.Errorf("pkg.repo.apt: apt-get update: %w", err)
 		}
 	}
@@ -325,16 +321,16 @@ func renderDEB822(r rendered_, keyringPath string) string {
 	return sb.String()
 }
 
-func apply(p plan_, r rendered_) error {
-	// All file ops go through ctx.Effects() with Become: true. The
-	// Performer (spec-69 phase 5b) tries the direct os.* first and
+func apply(performer actions.Performer, p plan_, r rendered_) error {
+	// All file ops go through the supplied Performer with Become: true.
+	// The Performer (spec-69 phase 5b) tries the direct os.* first and
 	// only sudos on EACCES, so this works equally well under sudo
 	// against /etc and against a user-owned tempdir in tests.
 	pOpts := actions.PerformerOpts{Become: true}
 	pOptsWithMode := actions.PerformerOpts{Become: true, ExplicitMode: true}
 
 	if p.operation == "delete" {
-		if e := eff.Remove(p.sourcesPath, false, pOpts); e.Err != nil && !errors.Is(e.Err, fs.ErrNotExist) {
+		if e := performer.Remove(p.sourcesPath, false, pOpts); e.Err != nil && !errors.Is(e.Err, fs.ErrNotExist) {
 			return fmt.Errorf("pkg.repo.apt: remove sources: %w", e.Err)
 		}
 		// Keyring isn't auto-removed: it may be shared with another
@@ -342,12 +338,12 @@ func apply(p plan_, r rendered_) error {
 		return nil
 	}
 
-	if e := eff.Mkdir(paths.SourcesDir, 0o755, pOpts); e.Err != nil {
+	if e := performer.Mkdir(paths.SourcesDir, 0o755, pOpts); e.Err != nil {
 		return fmt.Errorf("pkg.repo.apt: mkdir sources: %w", e.Err)
 	}
 
 	if p.keyringPath != "" {
-		if e := eff.Mkdir(paths.KeyringsDir, 0o755, pOpts); e.Err != nil {
+		if e := performer.Mkdir(paths.KeyringsDir, 0o755, pOpts); e.Err != nil {
 			return fmt.Errorf("pkg.repo.apt: mkdir keyrings: %w", e.Err)
 		}
 		body, err := shared.HTTPFetchKey(r.gpgKeyURL)
@@ -361,19 +357,19 @@ func apply(p plan_, r rendered_) error {
 				return fmt.Errorf("pkg.repo.apt: %w (key url: %s)", vErr, r.gpgKeyURL)
 			}
 		}
-		if e := eff.WriteFile(p.keyringPath, body, 0o644, pOptsWithMode); e.Err != nil {
+		if e := performer.WriteFile(p.keyringPath, body, 0o644, pOptsWithMode); e.Err != nil {
 			return fmt.Errorf("pkg.repo.apt: write keyring: %w", e.Err)
 		}
 	}
 
-	if e := eff.WriteFile(p.sourcesPath, []byte(p.wantContent), 0o644, pOptsWithMode); e.Err != nil {
+	if e := performer.WriteFile(p.sourcesPath, []byte(p.wantContent), 0o644, pOptsWithMode); e.Err != nil {
 		return fmt.Errorf("pkg.repo.apt: write sources: %w", e.Err)
 	}
 	return nil
 }
 
-func realAptGetUpdate() error {
-	out, err := privRunner.Run(context.TODO(), "apt-get", "update")
+func realAptGetUpdate(runner actions.PrivilegedRunner) error {
+	out, err := runnerOrDefault(runner).Run(context.TODO(), "apt-get", "update")
 	if err != nil {
 		msg := strings.TrimSpace(string(out))
 		if msg != "" {

@@ -41,18 +41,23 @@ const (
 
 // ufwRun / ufwStatus are package-level hooks so tests can swap the
 // shell-out for an in-memory ruleset. ufwLookPath gates "is ufw
-// installed" so backend=auto can fail cleanly in tests.
+// installed" so backend=auto can fail cleanly in tests. Spec-69
+// phase-5: the write/read hooks take an explicit PrivilegedRunner so
+// the package no longer carries per-Run mutable state.
 var (
-	ufwRun      = realUFWRun
-	ufwStatus   = realUFWStatus
+	ufwRun      = realUFWRun    // func(runner, args ...string) error
+	ufwStatus   = realUFWStatus // func(runner) (string, error)
 	ufwLookPath = realUFWLookPath
 )
 
-// privRunner is the spec-69 sudo-aware runner. ufw needs root for
-// both rule-mutation and rule-listing (the status output includes
-// PRIVATE per-IP rules) so we wrap both realUFWRun and realUFWStatus.
-// Set by Run() from ctx.Privileged() before dispatch.
-var privRunner actions.PrivilegedRunner = security.PrivilegedRunner{}
+// runnerOrDefault returns the supplied runner when non-nil, else the
+// security default. Lets test stubs pass nil without nil-deref.
+func runnerOrDefault(r actions.PrivilegedRunner) actions.PrivilegedRunner {
+	if r == nil {
+		return security.PrivilegedRunner{}
+	}
+	return r
+}
 
 // Handler implements os.firewall.
 type Handler struct{}
@@ -138,8 +143,9 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		return result, fmt.Errorf("os.firewall: only Linux is supported; got %s", runtime.GOOS)
 	}
 
-	// Wire spec-69 runner for the ufw shell-outs.
-	privRunner = ctx.Privileged()
+	// Spec-69 phase 5: runner is per-Run, threaded into applyPlan
+	// and readCurrent below.
+	runner := ctx.Privileged()
 
 	backend := normalizeBackend(f.Backend)
 	if backend == backendAuto {
@@ -154,7 +160,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		return result, err
 	}
 
-	current, err := readCurrent()
+	current, err := readCurrent(runner)
 	if err != nil {
 		return result, fmt.Errorf("os.firewall: read current rules: %w", err)
 	}
@@ -188,7 +194,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		RemovedRules: ruleSliceToSnapshot(plan.toRemove),
 	}
 
-	if err := applyPlan(plan); err != nil {
+	if err := applyPlan(runner, plan); err != nil {
 		return result, err
 	}
 
@@ -356,14 +362,14 @@ func ruleKey(r rule) string {
 	return fmt.Sprintf("%d/%s/%s/%s", r.Port, r.Protocol, r.Action, r.From)
 }
 
-func applyPlan(plan firewallPlan) error {
+func applyPlan(runner actions.PrivilegedRunner, plan firewallPlan) error {
 	for _, r := range plan.toRemove {
-		if err := ufwRun(deleteArgs(r)...); err != nil {
+		if err := ufwRun(runner, deleteArgs(r)...); err != nil {
 			return fmt.Errorf("ufw delete: %w", err)
 		}
 	}
 	for _, r := range plan.toAdd {
-		if err := ufwRun(addArgs(r)...); err != nil {
+		if err := ufwRun(runner, addArgs(r)...); err != nil {
 			return fmt.Errorf("ufw add: %w", err)
 		}
 	}
@@ -408,8 +414,8 @@ var statusLineRE = regexp.MustCompile(`^\s*\[\s*\d+\]\s+(\d+)/(\w+)\s+\(?(ALLOW|
 // readCurrent parses `ufw status numbered` into the normalized rule
 // shape. Ignores non-rule lines (headers, comments, IPv6 mirrors of
 // IPv4 entries with "(v6)" markers — collapsed via key).
-func readCurrent() ([]rule, error) {
-	out, err := ufwStatus()
+func readCurrent(runner actions.PrivilegedRunner) ([]rule, error) {
+	out, err := ufwStatus(runner)
 	if err != nil {
 		return nil, err
 	}
@@ -464,11 +470,11 @@ func normalizeSource(s string) string {
 	return low
 }
 
-// realUFWRun shells out to `ufw <args>` via ctx.Privileged(). The
-// action is registered as RequiresSudo: true; the wrapper handles
+// realUFWRun shells out to `ufw <args>` via the supplied runner. The
+// action is registered as RequiresSudo: true; the runner handles
 // escalation when mooncake runs as a non-root user.
-func realUFWRun(args ...string) error {
-	out, err := privRunner.Run(context.TODO(), "ufw", args...)
+func realUFWRun(runner actions.PrivilegedRunner, args ...string) error {
+	out, err := runnerOrDefault(runner).Run(context.TODO(), "ufw", args...)
 	if err != nil {
 		msg := strings.TrimSpace(string(out))
 		if msg != "" {
@@ -479,8 +485,8 @@ func realUFWRun(args ...string) error {
 	return nil
 }
 
-func realUFWStatus() (string, error) {
-	out, err := privRunner.Run(context.TODO(), "ufw", "status", "numbered")
+func realUFWStatus(runner actions.PrivilegedRunner) (string, error) {
+	out, err := runnerOrDefault(runner).Run(context.TODO(), "ufw", "status", "numbered")
 	if err != nil {
 		msg := strings.TrimSpace(string(out))
 		if msg != "" {

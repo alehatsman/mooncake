@@ -32,14 +32,6 @@ import (
 	"github.com/alehatsman/mooncake/internal/security"
 )
 
-// privRunner is the spec-69 sudo-aware runner used by the apt-mark and
-// dnf versionlock helpers (both need root for write ops). Brew runs
-// as the invoking user (Homebrew never under sudo), and the read-only
-// apt-mark showhold / brew list --pinned stay bare-exec — no
-// privilege needed. Set by Run() from ctx.Privileged() before
-// dispatch.
-var privRunner actions.PrivilegedRunner = security.PrivilegedRunner{}
-
 const (
 	actionName  = "pkg.hold"
 	stateHeld   = "held"
@@ -51,17 +43,21 @@ const (
 )
 
 // Package-level hooks for the side-effectful binary calls. Tests
-// replace these with recorders to keep apply-mode hermetic.
+// replace these with recorders to keep apply-mode hermetic. Spec-69
+// phase-5 cleanup: write hooks take an explicit PrivilegedRunner so
+// the package no longer carries per-Run mutable state. Read-only hooks
+// (showhold / list / show) don't need sudo and keep their original
+// signatures.
 var (
 	aptMarkShowHold    = realAptMarkShowHold    // func() (map[string]bool, error)
-	aptMarkHold        = realAptMarkHold        // func(pkgs []string) error
-	aptMarkUnhold      = realAptMarkUnhold      // func(pkgs []string) error
+	aptMarkHold        = realAptMarkHold        // func(runner, pkgs []string) error
+	aptMarkUnhold      = realAptMarkUnhold      // func(runner, pkgs []string) error
 	dnfVersionlockShow = realDnfVersionlockShow // func() (map[string]bool, error)
-	dnfVersionlockAdd  = realDnfVersionlockAdd  // func(pkgs []string) error
-	dnfVersionlockDel  = realDnfVersionlockDel  // func(pkgs []string) error
+	dnfVersionlockAdd  = realDnfVersionlockAdd  // func(runner, pkgs []string) error
+	dnfVersionlockDel  = realDnfVersionlockDel  // func(runner, pkgs []string) error
 	brewListPinned     = realBrewListPinned     // func() (map[string]bool, error)
-	brewPin            = realBrewPin            // func(pkgs []string) error
-	brewUnpin          = realBrewUnpin          // func(pkgs []string) error
+	brewPin            = realBrewPin            // func(runner, pkgs []string) error (runner unused; brew never sudo)
+	brewUnpin          = realBrewUnpin          // func(runner, pkgs []string) error (runner unused; brew never sudo)
 	lookPath           = exec.LookPath          // override in tests to fake manager detection
 )
 
@@ -155,9 +151,10 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 	result := executor.NewResult()
 	result.Checkable = true
 
-	// Wire the spec-69 sudo-aware runner for apt-mark hold/unhold and
-	// dnf versionlock add/del. Read-only paths + brew bypass it.
-	privRunner = ctx.Privileged()
+	// Spec-69 phase 5: the sudo-aware runner is per-Run and threaded
+	// through the apt-mark / dnf versionlock write hooks below.
+	// Read-only paths + brew ignore it.
+	runner := ctx.Privileged()
 
 	manager, err := resolveManager(p.Manager)
 	if err != nil {
@@ -236,12 +233,12 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 	}
 
 	if len(toHold) > 0 {
-		if err := runHold(manager, toHold); err != nil {
+		if err := runHold(runner, manager, toHold); err != nil {
 			return result, fmt.Errorf("pkg.hold: %s hold: %w", manager, err)
 		}
 	}
 	if len(toUnhold) > 0 {
-		if err := runUnhold(manager, toUnhold); err != nil {
+		if err := runUnhold(runner, manager, toUnhold); err != nil {
 			return result, fmt.Errorf("pkg.hold: %s unhold: %w", manager, err)
 		}
 	}
@@ -362,26 +359,26 @@ func readCurrentHolds(manager string) (map[string]bool, error) {
 	return nil, fmt.Errorf("readCurrentHolds: unsupported manager %q", manager)
 }
 
-func runHold(manager string, pkgs []string) error {
+func runHold(runner actions.PrivilegedRunner, manager string, pkgs []string) error {
 	switch manager {
 	case managerApt:
-		return aptMarkHold(pkgs)
+		return aptMarkHold(runner, pkgs)
 	case managerDnf:
-		return dnfVersionlockAdd(pkgs)
+		return dnfVersionlockAdd(runner, pkgs)
 	case managerBrew:
-		return brewPin(pkgs)
+		return brewPin(runner, pkgs)
 	}
 	return fmt.Errorf("runHold: unsupported manager %q", manager)
 }
 
-func runUnhold(manager string, pkgs []string) error {
+func runUnhold(runner actions.PrivilegedRunner, manager string, pkgs []string) error {
 	switch manager {
 	case managerApt:
-		return aptMarkUnhold(pkgs)
+		return aptMarkUnhold(runner, pkgs)
 	case managerDnf:
-		return dnfVersionlockDel(pkgs)
+		return dnfVersionlockDel(runner, pkgs)
 	case managerBrew:
-		return brewUnpin(pkgs)
+		return brewUnpin(runner, pkgs)
 	}
 	return fmt.Errorf("runUnhold: unsupported manager %q", manager)
 }
@@ -424,20 +421,30 @@ func realAptMarkShowHold() (map[string]bool, error) {
 	return held, nil
 }
 
-func realAptMarkHold(pkgs []string) error {
-	return runAptMark("hold", pkgs)
+// runnerOrDefault returns the supplied runner when non-nil, else the
+// security default. Lets test stubs that don't care about the runner
+// arg pass nil without nil-deref'ing through real* helpers.
+func runnerOrDefault(r actions.PrivilegedRunner) actions.PrivilegedRunner {
+	if r == nil {
+		return security.PrivilegedRunner{}
+	}
+	return r
 }
 
-func realAptMarkUnhold(pkgs []string) error {
-	return runAptMark("unhold", pkgs)
+func realAptMarkHold(runner actions.PrivilegedRunner, pkgs []string) error {
+	return runAptMark(runner, "hold", pkgs)
 }
 
-func runAptMark(verb string, pkgs []string) error {
+func realAptMarkUnhold(runner actions.PrivilegedRunner, pkgs []string) error {
+	return runAptMark(runner, "unhold", pkgs)
+}
+
+func runAptMark(runner actions.PrivilegedRunner, verb string, pkgs []string) error {
 	if len(pkgs) == 0 {
 		return nil
 	}
 	args := append([]string{verb}, pkgs...)
-	out, err := privRunner.Run(context.TODO(), "apt-mark", args...)
+	out, err := runnerOrDefault(runner).Run(context.TODO(), "apt-mark", args...)
 	if err != nil {
 		msg := strings.TrimSpace(string(out))
 		if msg != "" {
@@ -480,11 +487,11 @@ func realBrewListPinned() (map[string]bool, error) {
 	return pinned, nil
 }
 
-func realBrewPin(pkgs []string) error {
+func realBrewPin(_ actions.PrivilegedRunner, pkgs []string) error {
 	return runBrew("pin", pkgs)
 }
 
-func realBrewUnpin(pkgs []string) error {
+func realBrewUnpin(_ actions.PrivilegedRunner, pkgs []string) error {
 	return runBrew("unpin", pkgs)
 }
 
@@ -493,7 +500,7 @@ func realBrewUnpin(pkgs []string) error {
 // own error message ("Error: Cask <name> is not a formula") — we
 // surface it verbatim so the operator sees the actual brew
 // constraint rather than a mooncake-wrapped layer that obscures
-// the cause.
+// the cause. No runner arg: brew never runs under sudo.
 func runBrew(verb string, pkgs []string) error {
 	if len(pkgs) == 0 {
 		return nil
@@ -602,12 +609,12 @@ func parseVersionlockEntry(line string) string {
 	return ""
 }
 
-func realDnfVersionlockAdd(pkgs []string) error {
-	return runDnfVersionlock("add", pkgs)
+func realDnfVersionlockAdd(runner actions.PrivilegedRunner, pkgs []string) error {
+	return runDnfVersionlock(runner, "add", pkgs)
 }
 
-func realDnfVersionlockDel(pkgs []string) error {
-	return runDnfVersionlock("delete", pkgs)
+func realDnfVersionlockDel(runner actions.PrivilegedRunner, pkgs []string) error {
+	return runDnfVersionlock(runner, "delete", pkgs)
 }
 
 // runDnfVersionlock shells out to `dnf versionlock add|delete <pkgs>`.
@@ -615,13 +622,13 @@ func realDnfVersionlockDel(pkgs []string) error {
 // dnf message verbatim. The plugin-missing path is detected here too
 // (the showhold equivalent), turning a bare exec failure into a
 // targeted install hint.
-func runDnfVersionlock(verb string, pkgs []string) error {
+func runDnfVersionlock(runner actions.PrivilegedRunner, verb string, pkgs []string) error {
 	if len(pkgs) == 0 {
 		return nil
 	}
 	bin := dnfBinary()
 	args := append([]string{"versionlock", verb}, pkgs...)
-	out, err := privRunner.Run(context.TODO(), bin, args...)
+	out, err := runnerOrDefault(runner).Run(context.TODO(), bin, args...)
 	if err != nil {
 		msg := strings.TrimSpace(string(out))
 		if versionlockMissingPluginRE.MatchString(msg) {

@@ -86,85 +86,49 @@ func (h *Handler) Validate(step *config.Step) error {
 	return nil
 }
 
-// executeWithRetry wraps command execution with retry logic. MT-48:
-// retry decisions are based on the *raw* exit code, not the post-
-// failed_when verdict — otherwise `retry: 3` + `failed_when: false`
-// would mask the first failure and skip retries entirely. Each
-// attempt runs the command without applying failed_when; only the
-// final attempt's result has failed_when / changed_when overrides
-// applied.
-func (h *Handler) executeWithRetry(ctx actions.Context, step *config.Step, renderedCommand string) (actions.Result, error) {
-	maxAttempts := step.RetryAttempts() + 1
-	if maxAttempts < 1 {
-		maxAttempts = 1
-	}
-
-	var lastResult actions.Result
-	var lastErr error
-
-	for attempt := 1; attempt <= maxAttempts; attempt++ {
-		if attempt > 1 {
-			ctx.GetLogger().Debugf("  Retry attempt %d/%d", attempt-1, step.RetryAttempts())
-		}
-
-		result, err := h.executeShellCommandRaw(ctx, step, renderedCommand)
-		if err == nil {
-			// Raw success — apply overrides once and return.
-			if rr, ok := result.(*executor.Result); ok {
-				return h.finishResult(ctx, step, rr)
+// executeOnce runs the rendered command exactly once and applies
+// failed_when / changed_when overrides post-hoc. This is the path
+// that backs both:
+//
+//   - Production apply: the executor dispatches through RunRaw
+//     (single attempt, no overrides) and owns the retry loop +
+//     override application in its own pipeline (executor/retry.go
+//
+//   - executor/finalize.go). Run() is never reached.
+//
+//   - Direct h.Run() tests: many of the shell tests construct a
+//     mock context and call h.Run(...) without going through the
+//     executor. They expect single-attempt + overrides applied;
+//     retry behavior for those test paths is now covered at the
+//     executor unit-test level (TestRunWithRetry_*, TestApplyResult
+//     Overrides_*).
+//
+// Pre-spec-69, this codepath was an in-handler retry loop. Deleting
+// the loop required first porting the MT-48 / MT-62 invariants to
+// the executor's runWithRetry tests; both invariants are now
+// independently guarded there.
+func (h *Handler) executeOnce(ctx actions.Context, step *config.Step, renderedCommand string) (actions.Result, error) {
+	result, err := h.executeShellCommandRaw(ctx, step, renderedCommand)
+	if err != nil {
+		// Pre-exec / template / setup failures don't go through
+		// failed_when (failed_when is for command outcomes). Apply
+		// overrides only when the result reflects a real exec
+		// attempt the same way the pre-spec-69 loop did.
+		if r, ok := result.(*executor.Result); ok && r.Failed {
+			if oErr := h.evaluateResultOverrides(ctx, step, r); oErr != nil {
+				return r, oErr
 			}
-			return result, nil
-		}
-
-		lastResult = result
-		lastErr = err
-
-		// Don't sleep after the last attempt
-		if attempt < maxAttempts && step.RetryDelayDuration() != "" {
-			base, parseErr := time.ParseDuration(step.RetryDelayDuration())
-			if parseErr != nil {
-				ctx.GetLogger().Debugf("  Invalid retry_delay %q: %v", step.RetryDelayDuration(), parseErr)
-			} else {
-				// MT-62: backoff: linear|exponential were silently
-				// ignored; every retry slept for the bare delay. attempt
-				// is 1-indexed here (we're about to start attempt+1), so
-				// the n-th sleep multiplies the base delay accordingly.
-				delay := ScaleRetryDelay(base, step.RetryBackoffStrategy(), attempt)
-				ctx.GetLogger().Debugf("  Waiting %s before retry (backoff=%s)...", delay, step.RetryBackoffStrategy())
-				time.Sleep(delay)
+			if !r.Failed {
+				return r, nil // failed_when masked it
 			}
-		}
-	}
-
-	// Every attempt failed. Apply overrides once — failed_when may
-	// still mask the final failure (the documented "retry N times
-	// and don't fail the run no matter what" pattern). changed_when
-	// override applies to the final result the same way.
-	//
-	// Only apply overrides when lastResult reflects a real exec
-	// attempt (Failed=true means processCommandResult set it on a
-	// non-nil execErr). For pre-exec failures (invalid timeout,
-	// template render error) lastResult.Failed is false; in that
-	// path we just propagate lastErr without consulting failed_when
-	// — failed_when is for command outcomes, not setup errors.
-	if r, ok := lastResult.(*executor.Result); ok && r.Failed {
-		if err := h.evaluateResultOverrides(ctx, step, r); err != nil {
 			return r, err
 		}
-		if !r.Failed {
-			// failed_when masked it — successful end state.
-			return r, nil
-		}
-		if step.RetryAttempts() > 0 {
-			return r, fmt.Errorf("command failed after %d attempts: %w", maxAttempts, lastErr)
-		}
-		return r, lastErr
+		return result, err
 	}
-
-	if step.RetryAttempts() > 0 {
-		return lastResult, fmt.Errorf("command failed after %d attempts: %w", maxAttempts, lastErr)
+	if rr, ok := result.(*executor.Result); ok {
+		return h.finishResult(ctx, step, rr)
 	}
-	return lastResult, lastErr
+	return result, nil
 }
 
 // finishResult applies changed_when / failed_when overrides to the
@@ -602,10 +566,9 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 	}
 
 	// Apply mode: render command (strict — render failures bail) and
-	// dispatch to the retry-aware runner. Action-level creates / unless
-	// guards are evaluated upstream by the executor's idempotency check
-	// alongside step-level unless_exists/unless_command — by the time
-	// we get here the step is committed to running.
+	// dispatch to executeOnce. Production apply goes through RunRaw
+	// (executor handles retry + overrides centrally); Run() is only
+	// reached by direct-call tests in this package.
 	//
 	// F011: legacy Execute / DryRun pair folded into Run.
 	renderedCommand, err := ctx.GetTemplate().Render(cmd, ctx.GetVariables())
@@ -613,5 +576,5 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		return nil, fmt.Errorf("failed to render command: %w", err)
 	}
 	ctx.GetLogger().Debugf("  Executing: %s", renderedCommand)
-	return h.executeWithRetry(ctx, step, renderedCommand)
+	return h.executeOnce(ctx, step, renderedCommand)
 }

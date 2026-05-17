@@ -9,6 +9,9 @@ import (
 	"os/exec"
 	"strconv"
 	"strings"
+
+	"github.com/alehatsman/mooncake/internal/actions"
+	"github.com/alehatsman/mooncake/internal/security"
 )
 
 func init() {
@@ -65,12 +68,12 @@ func dsclGroupField(name, key string) (string, error) {
 // createArgs/removeArgs are shaped for Linux (groupadd flags) and
 // not consumed verbatim here — we re-derive the dscl operations
 // from the plan's structured fields (name, gid, system).
-func applyPlanDarwin(plan computedPlan) error {
+func applyPlanDarwin(runner actions.PrivilegedRunner, plan computedPlan) error {
 	switch plan.operation {
 	case "create":
-		return createGroupDarwin(plan)
+		return createGroupDarwin(runner, plan)
 	case "remove":
-		return removeGroupDarwin(plan)
+		return removeGroupDarwin(runner, plan)
 	case "modify":
 		// computePlan refuses GID renumbering (the only modify case
 		// Linux would attempt). If a future modify reason lands,
@@ -86,10 +89,10 @@ func applyPlanDarwin(plan computedPlan) error {
 // we always set one — either the operator-pinned gid or the next
 // available one in the appropriate range (system: 1–499, regular:
 // 500+).
-func createGroupDarwin(plan computedPlan) error {
+func createGroupDarwin(runner actions.PrivilegedRunner, plan computedPlan) error {
 	base := "/Groups/" + plan.name
 
-	if err := dsclGroupRun("-create", base); err != nil {
+	if err := dsclGroupRun(runner, "-create", base); err != nil {
 		return err
 	}
 
@@ -97,21 +100,21 @@ func createGroupDarwin(plan computedPlan) error {
 	if err != nil {
 		return fmt.Errorf("os.group darwin: assign gid: %w", err)
 	}
-	if err := dsclGroupRun("-create", base, "PrimaryGroupID", strconv.Itoa(gid)); err != nil {
+	if err := dsclGroupRun(runner, "-create", base, "PrimaryGroupID", strconv.Itoa(gid)); err != nil {
 		return err
 	}
 
 	// RealName mirrors the group name. macOS tools (Workgroup Manager,
 	// System Settings → Users & Groups) display the RealName rather
 	// than the record key; setting it keeps the GUI in sync.
-	if err := dsclGroupRun("-create", base, "RealName", plan.name); err != nil {
+	if err := dsclGroupRun(runner, "-create", base, "RealName", plan.name); err != nil {
 		return err
 	}
 	return nil
 }
 
-func removeGroupDarwin(plan computedPlan) error {
-	return dsclGroupRun("-delete", "/Groups/"+plan.name)
+func removeGroupDarwin(runner actions.PrivilegedRunner, plan computedPlan) error {
+	return dsclGroupRun(runner, "-delete", "/Groups/"+plan.name)
 }
 
 // pickGroupGID returns the GID to assign at creation time. Plan
@@ -177,11 +180,14 @@ func nextAvailableGID(minBound, maxBound int) (int, error) {
 }
 
 // dsclGroupRun is the write-side analogue of dsclGroupField. Goes
-// through ctx.Privileged() — dscl mutations on /Groups/* require
-// root on macOS.
-func dsclGroupRun(args ...string) error {
+// through the supplied PrivilegedRunner — dscl mutations on /Groups/*
+// require root on macOS.
+func dsclGroupRun(runner actions.PrivilegedRunner, args ...string) error {
+	if runner == nil {
+		runner = security.PrivilegedRunner{}
+	}
 	fullArgs := append([]string{"."}, args...)
-	out, err := privRunner.Run(context.TODO(), "dscl", fullArgs...)
+	out, err := runner.Run(context.TODO(), "dscl", fullArgs...)
 	if err != nil {
 		msg := strings.TrimSpace(string(out))
 		if msg != "" {

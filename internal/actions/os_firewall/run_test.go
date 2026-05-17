@@ -56,12 +56,12 @@ func newStub(t *testing.T) *stub {
 	t.Helper()
 	s := &stub{hasUFW: true}
 	origRun, origStatus, origLook := ufwRun, ufwStatus, ufwLookPath
-	ufwRun = func(args ...string) error {
+	ufwRun = func(_ actions.PrivilegedRunner, args ...string) error {
 		cp := append([]string(nil), args...)
 		s.calls = append(s.calls, cp)
 		return s.runErr
 	}
-	ufwStatus = func() (string, error) { return s.statusOut, s.statusErr }
+	ufwStatus = func(_ actions.PrivilegedRunner) (string, error) { return s.statusOut, s.statusErr }
 	ufwLookPath = func() (string, error) {
 		if !s.hasUFW {
 			return "", errors.New("ufw not installed")
@@ -364,7 +364,7 @@ func TestReadCurrent_CollapsesIPv6Duplicates(t *testing.T) {
 [ 1] 22/tcp                     ALLOW IN    Anywhere                   # ssh
 [ 2] 22/tcp (v6)                ALLOW IN    Anywhere (v6)              # ssh
 `
-	rules, err := readCurrent()
+	rules, err := readCurrent(nil)
 	if err != nil {
 		t.Fatal(err)
 	}

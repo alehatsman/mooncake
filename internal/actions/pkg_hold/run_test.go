@@ -62,7 +62,7 @@ func newStub(t *testing.T, held map[string]bool) *stub {
 		}
 		return out, nil
 	}
-	aptMarkHold = func(pkgs []string) error {
+	aptMarkHold = func(_ actions.PrivilegedRunner, pkgs []string) error {
 		cp := append([]string(nil), pkgs...)
 		s.holdCalls = append(s.holdCalls, cp)
 		for _, p := range cp {
@@ -70,7 +70,7 @@ func newStub(t *testing.T, held map[string]bool) *stub {
 		}
 		return nil
 	}
-	aptMarkUnhold = func(pkgs []string) error {
+	aptMarkUnhold = func(_ actions.PrivilegedRunner, pkgs []string) error {
 		cp := append([]string(nil), pkgs...)
 		s.unholdCalls = append(s.unholdCalls, cp)
 		for _, p := range cp {
@@ -258,7 +258,7 @@ func newBrewStub(t *testing.T, pinned map[string]bool) *brewStub {
 		}
 		return out, nil
 	}
-	brewPin = func(pkgs []string) error {
+	brewPin = func(_ actions.PrivilegedRunner, pkgs []string) error {
 		cp := append([]string(nil), pkgs...)
 		s.pinCalls = append(s.pinCalls, cp)
 		for _, p := range cp {
@@ -266,7 +266,7 @@ func newBrewStub(t *testing.T, pinned map[string]bool) *brewStub {
 		}
 		return nil
 	}
-	brewUnpin = func(pkgs []string) error {
+	brewUnpin = func(_ actions.PrivilegedRunner, pkgs []string) error {
 		cp := append([]string(nil), pkgs...)
 		s.unpinCalls = append(s.unpinCalls, cp)
 		for _, p := range cp {
@@ -370,7 +370,7 @@ func TestAutoDetect_PrefersAptOverBrew(t *testing.T) {
 	s := newStub(t, map[string]bool{}) // sets lookPath to find everything
 	// Sentinel: any brew call fails the test.
 	origBrewPin := brewPin
-	brewPin = func(pkgs []string) error {
+	brewPin = func(_ actions.PrivilegedRunner, pkgs []string) error {
 		t.Errorf("brew should not be invoked when apt-mark is on PATH; got pin %v", pkgs)
 		return nil
 	}
@@ -436,7 +436,7 @@ func newDnfStub(t *testing.T, locked map[string]bool) *dnfStub {
 		}
 		return out, nil
 	}
-	dnfVersionlockAdd = func(pkgs []string) error {
+	dnfVersionlockAdd = func(_ actions.PrivilegedRunner, pkgs []string) error {
 		cp := append([]string(nil), pkgs...)
 		s.addCalls = append(s.addCalls, cp)
 		for _, p := range cp {
@@ -444,7 +444,7 @@ func newDnfStub(t *testing.T, locked map[string]bool) *dnfStub {
 		}
 		return nil
 	}
-	dnfVersionlockDel = func(pkgs []string) error {
+	dnfVersionlockDel = func(_ actions.PrivilegedRunner, pkgs []string) error {
 		cp := append([]string(nil), pkgs...)
 		s.deleteCalls = append(s.deleteCalls, cp)
 		for _, p := range cp {
@@ -537,7 +537,7 @@ func TestApply_YumAlias_CanonicalizesToDnf(t *testing.T) {
 func TestAutoDetect_PrefersAptOverDnf(t *testing.T) {
 	s := newStub(t, map[string]bool{}) // sets lookPath to find everything
 	origDnfAdd := dnfVersionlockAdd
-	dnfVersionlockAdd = func(pkgs []string) error {
+	dnfVersionlockAdd = func(_ actions.PrivilegedRunner, pkgs []string) error {
 		t.Errorf("dnf should not be invoked when apt-mark is on PATH; got %v", pkgs)
 		return nil
 	}

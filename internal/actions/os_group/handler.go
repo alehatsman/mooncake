@@ -21,16 +21,7 @@ import (
 	"github.com/alehatsman/mooncake/internal/actions"
 	"github.com/alehatsman/mooncake/internal/config"
 	"github.com/alehatsman/mooncake/internal/executor"
-	"github.com/alehatsman/mooncake/internal/security"
 )
-
-// privRunner is the spec-69 sudo-aware runner used by the platform-
-// specific applyPlanLinux / applyPlanDarwin for groupadd/groupmod/
-// groupdel (Linux) and dscl writes (macOS, where root is also
-// required for /Groups/* mutations). The read-only lookup paths
-// (getent group / dscl -read) stay bare exec — no privilege needed.
-// Set by Run() from ctx.Privileged() before dispatch.
-var privRunner actions.PrivilegedRunner = security.PrivilegedRunner{}
 
 const (
 	actionName   = "os.group"
@@ -110,9 +101,10 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 	result := executor.NewResult()
 	result.Checkable = true
 
-	// Wire spec-69 runner for groupadd/groupmod/groupdel (linux) and
-	// the dscl write paths (darwin).
-	privRunner = ctx.Privileged()
+	// Spec-69 phase 5: runner is per-Run, threaded into applyPlan
+	// (which uses it for groupadd/groupmod/groupdel on linux and
+	// dscl writes on darwin).
+	runner := ctx.Privileged()
 
 	desired, err := renderDesired(ctx, g)
 	if err != nil {
@@ -157,7 +149,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 	}
 	result.ReverseData = info
 
-	if err := applyPlan(plan); err != nil {
+	if err := applyPlan(runner, plan); err != nil {
 		return result, err
 	}
 
@@ -214,7 +206,7 @@ var lookupGroup func(string) (*groupState, error) = func(string) (*groupState, e
 	return nil, fmt.Errorf("os.group: not implemented on %s", runtime.GOOS)
 }
 
-var applyPlan func(plan computedPlan) error = func(computedPlan) error {
+var applyPlan func(runner actions.PrivilegedRunner, plan computedPlan) error = func(actions.PrivilegedRunner, computedPlan) error {
 	return fmt.Errorf("os.group: not implemented on %s", runtime.GOOS)
 }
 

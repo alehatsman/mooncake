@@ -294,6 +294,14 @@ func (h *Handler) updateCache(ec *executor.ExecutionContext, manager string, bec
 // from exec.Command("sudo", ...) instead of a clean
 // ErrBecomeUnsupported; an empty SudoPass produced an unprintable
 // `"\n"` on sudo's stdin and let sudo hang on its TTY prompt.
+//
+// Spec-69 phase-5 audit (NOT migrated to ctx.Privileged): pkg's
+// install / check / remove paths take per-call `become bool` decided
+// by the step's `become:` field — a `pkg.install` on Homebrew runs
+// AS the operator's user, while the same step on apt runs under
+// sudo. PrivilegedRunner's unconditional-root contract would force
+// every brew install through sudo (which Homebrew explicitly
+// refuses), so this helper keeps the conditional shape.
 func (h *Handler) runCmd(ec *executor.ExecutionContext, become bool, cmdArgs []string) ([]byte, error) {
 	if len(cmdArgs) == 0 {
 		return nil, fmt.Errorf("pkg.runCmd: cmdArgs must not be empty")
