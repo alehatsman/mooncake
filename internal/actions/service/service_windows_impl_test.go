@@ -2,6 +2,7 @@ package service
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -240,6 +241,92 @@ func TestHandleWindowsService_EnabledTrue_FromDisabled(t *testing.T) {
 	}
 	if len(*calls) != 2 || !strings.Contains((*calls)[1], "Automatic") {
 		t.Errorf("expected Set-Service ... Automatic; got %v", *calls)
+	}
+}
+
+// TestCaptureWindowsPriorState_TagsPlatform pins the windows
+// branch of runApply's reverse-capture: the snapshot must carry
+// Platform="windows" so Reverse() picks the enabled-only policy.
+// PriorEnabled maps from StartType=Automatic (true) vs anything
+// else (false) — Manual and Disabled both count as "not enabled
+// on boot".
+func TestCaptureWindowsPriorState_TagsPlatform(t *testing.T) {
+	stubWindowsExec(t, func(string) (string, error) {
+		return `{"Name":"MSSQL","Status":4,"StartType":2,"CanStop":true}`, nil
+	})
+	enabled := true
+	step := config.Step{OsService: &config.ServiceAction{
+		Name:    "MSSQL",
+		State:   "started",
+		Enabled: &enabled,
+	}}
+	info := captureWindowsPriorState("MSSQL", step, newMockExecutionContext())
+	if info == nil {
+		t.Fatal("captureWindowsPriorState returned nil")
+	}
+	if info.Platform != "windows" {
+		t.Errorf("Platform = %q, want windows", info.Platform)
+	}
+	if !info.PriorActive {
+		t.Errorf("PriorActive must be true (Status=4 / Running)")
+	}
+	if !info.PriorEnabled {
+		t.Errorf("PriorEnabled must be true (StartType=2 / Automatic)")
+	}
+	if !info.HadStateIntent || !info.HadEnabledIntent {
+		t.Errorf("intent flags should mirror the step: HadStateIntent=%v HadEnabledIntent=%v",
+			info.HadStateIntent, info.HadEnabledIntent)
+	}
+}
+
+// TestCaptureWindowsPriorState_StartTypeMapping pins the
+// StartType→PriorEnabled mapping: Automatic (2) → true; Manual (3)
+// and Disabled (4) → false. Only Automatic counts as "enabled on
+// boot" — the semantic the operator's Enabled bool expresses.
+func TestCaptureWindowsPriorState_StartTypeMapping(t *testing.T) {
+	for _, c := range []struct {
+		name      string
+		startType int
+		want      bool
+	}{
+		{"automatic", 2, true},
+		{"manual", 3, false},
+		{"disabled", 4, false},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			stubWindowsExec(t, func(string) (string, error) {
+				return fmt.Sprintf(`{"Name":"S","Status":1,"StartType":%d,"CanStop":true}`, c.startType), nil
+			})
+			info := captureWindowsPriorState("S", config.Step{
+				OsService: &config.ServiceAction{Name: "S"},
+			}, newMockExecutionContext())
+			if info.PriorEnabled != c.want {
+				t.Errorf("StartType=%d: PriorEnabled = %v, want %v", c.startType, info.PriorEnabled, c.want)
+			}
+		})
+	}
+}
+
+// TestCaptureWindowsPriorState_MissingServiceReturnsZeroValues
+// pins the best-effort contract: probe failure / missing service
+// yields a tagged info with zero values (NOT nil, NOT an error).
+// Matches the linux/darwin behaviour — probe failure shouldn't
+// gate the apply, only the eventual reverse.
+func TestCaptureWindowsPriorState_MissingServiceReturnsZeroValues(t *testing.T) {
+	stubWindowsExec(t, func(string) (string, error) {
+		return "", nil // empty stdout = service not found
+	})
+	info := captureWindowsPriorState("Missing", config.Step{
+		OsService: &config.ServiceAction{Name: "Missing"},
+	}, newMockExecutionContext())
+	if info == nil {
+		t.Fatal("captureWindowsPriorState must never return nil")
+	}
+	if info.Platform != "windows" {
+		t.Errorf("Platform = %q, want windows", info.Platform)
+	}
+	if info.PriorActive || info.PriorEnabled {
+		t.Errorf("missing service: prior flags must be zero; got %+v", info)
 	}
 }
 

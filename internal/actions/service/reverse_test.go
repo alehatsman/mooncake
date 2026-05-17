@@ -84,6 +84,42 @@ func TestReverse_EmptyPlatformTreatedAsLinux(t *testing.T) {
 	}
 }
 
+// TestReverse_Windows_HonorsEnabledButNotState pins the windows
+// (SCM) policy: like darwin, only the Enabled axis (StartType
+// Automatic vs Disabled) inverts cleanly. Running/Stopped is
+// transient on a host where StartType=Automatic auto-starts the
+// service across reboots — a State reverse would over-promise.
+func TestReverse_Windows_HonorsEnabledButNotState(t *testing.T) {
+	h := &Handler{}
+	r := executor.NewResult()
+	r.ReverseData = &OsServiceReverseInfo{
+		Name:             "MSSQL",
+		Platform:         "windows",
+		PriorEnabled:     true,
+		HadStateIntent:   true,
+		HadEnabledIntent: true,
+	}
+	enabled := false
+	step := &config.Step{OsService: &config.ServiceAction{
+		Name:    "MSSQL",
+		State:   ServiceStateStopped,
+		Enabled: &enabled,
+	}}
+	rev, err := h.Reverse(nil, step, r)
+	if err != nil {
+		t.Fatalf("Reverse: %v", err)
+	}
+	if rev == nil || rev.OsService == nil {
+		t.Fatal("Reverse must return an os.service step")
+	}
+	if rev.OsService.State != "" {
+		t.Errorf("windows: State must stay empty (SCM doesn't reverse State cleanly); got %q", rev.OsService.State)
+	}
+	if rev.OsService.Enabled == nil || *rev.OsService.Enabled != true {
+		t.Errorf("windows: Enabled must reflect prior=true; got %v", rev.OsService.Enabled)
+	}
+}
+
 // TestReverse_Darwin_HonorsEnabledButNotState pins the launchd policy:
 // only the Enabled axis (load/unload) has clean inverse semantics; the
 // State axis (started/stopped) doesn't map to launchd's

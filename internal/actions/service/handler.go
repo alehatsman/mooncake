@@ -109,9 +109,9 @@ func (h *Handler) Validate(step *config.Step) error {
 // Dispatch by runtime.GOOS:
 //   - linux  → captureSystemdPriorState (systemctl is-active / is-enabled)
 //   - darwin → captureLaunchdPriorState (launchctl print loaded?)
+//   - windows → captureWindowsPriorState (Get-Service Status + StartType)
 //   - other  → no capture; Reverse() will return (nil, nil) for the
-//     nil-ReverseData case (Windows apply is itself a stub today,
-//     so reverse has nothing to invert there).
+//     nil-ReverseData case.
 func runApply(step *config.Step, ec *executor.ExecutionContext) (actions.Result, error) {
 	var priorInfo *OsServiceReverseInfo
 	if step.OsService != nil {
@@ -120,6 +120,8 @@ func runApply(step *config.Step, ec *executor.ExecutionContext) (actions.Result,
 			priorInfo = captureSystemdPriorState(step.OsService.Name, *step, ec)
 		case "darwin":
 			priorInfo = captureLaunchdPriorState(step.OsService.Name, *step, ec)
+		case "windows":
+			priorInfo = captureWindowsPriorState(step.OsService.Name, *step, ec)
 		}
 	}
 

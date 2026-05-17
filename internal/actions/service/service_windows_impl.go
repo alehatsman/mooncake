@@ -291,3 +291,35 @@ func manageWindowsServiceEnabled(name string, enabled bool, current *windowsServ
 func quoteWindowsPS(s string) string {
 	return "'" + strings.ReplaceAll(s, "'", "''") + "'"
 }
+
+// captureWindowsPriorState is the windows analogue of
+// captureSystemdPriorState / captureLaunchdPriorState. Snapshots the
+// service's pre-apply (Status, StartType) tuple plus the intent
+// flags from the step. Best-effort: probe failures yield an info
+// payload with zero values (matches the linux/darwin behaviour).
+//
+// Reverse policy (enforced in reverse.go via Platform tag): like
+// darwin, only HadEnabledIntent is honored on windows. SCM's
+// StartType (Automatic / Disabled) inverts cleanly; Running /
+// Stopped is transient and inverting it across a reboot is murky
+// (the service may have auto-started before reverse-apply runs).
+// State reverse on windows would over-promise.
+func captureWindowsPriorState(serviceName string, step config.Step, _ *executor.ExecutionContext) *OsServiceReverseInfo {
+	info := &OsServiceReverseInfo{Name: serviceName, Platform: "windows"}
+	if step.OsService != nil {
+		info.HadEnabledIntent = step.OsService.Enabled != nil
+		info.HadStateIntent = step.OsService.State != ""
+	}
+	current, err := readWindowsService(serviceName)
+	if err != nil || current == nil {
+		return info // probe failed / service missing — zero values
+	}
+	info.PriorActive = current.Status == winStatusRunning
+	// Map SCM StartType to a single boolean: Automatic is
+	// "enabled" for our purposes; Manual + Disabled both count as
+	// "not enabled" since neither auto-starts on boot. The intent
+	// behind Enabled=true on windows is "this service starts with
+	// the OS"; Automatic is the only value that delivers that.
+	info.PriorEnabled = current.StartType == winStartTypeAutomatic
+	return info
+}
