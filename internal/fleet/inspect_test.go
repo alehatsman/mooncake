@@ -205,9 +205,9 @@ func TestProbe_PartialFailureDoesNotFlipState(t *testing.T) {
 // asserted via the State field on the returned Status.
 func TestProbe_StatePrecedence(t *testing.T) {
 	tests := []struct {
-		name        string
-		mutate      func(*fakeAgentd)
-		wantState   State
+		name      string
+		mutate    func(*fakeAgentd)
+		wantState State
 	}{
 		{
 			name: "running because runs_running>0",
@@ -318,8 +318,8 @@ func TestHumanDuration_RoughBuckets(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(fmt.Sprintf("%v", tt.d), func(t *testing.T) {
-			if got := humanDuration(tt.d); got != tt.want {
-				t.Errorf("humanDuration(%v) = %q, want %q", tt.d, got, tt.want)
+			if got := HumanDuration(tt.d); got != tt.want {
+				t.Errorf("HumanDuration(%v) = %q, want %q", tt.d, got, tt.want)
 			}
 		})
 	}

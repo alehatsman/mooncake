@@ -206,10 +206,7 @@ func renderStatusTable(w io.Writer, rows []fleet.Status, useColor bool) {
 }
 
 // lastSeenSuffix returns " [last seen Xh ago]" when ts is non-zero, or
-// " [no prior contact on this controller]" otherwise. Cheap rough
-// time-since formatter matching fleet/inspect.go's humanDuration; kept
-// inline here so we don't have to export that helper just for the
-// table footnote.
+// " [no prior contact on this controller]" otherwise.
 func lastSeenSuffix(ts, now time.Time) string {
 	if ts.IsZero() {
 		return " [no prior contact on this controller]"
@@ -218,22 +215,7 @@ func lastSeenSuffix(ts, now time.Time) string {
 	if d < 0 {
 		d = 0
 	}
-	return " [last seen " + roughAge(d) + " ago]"
-}
-
-func roughAge(d time.Duration) string {
-	switch {
-	case d < time.Minute:
-		return fmt.Sprintf("%ds", int(d.Seconds()))
-	case d < time.Hour:
-		return fmt.Sprintf("%dm", int(d.Minutes()))
-	case d < 24*time.Hour:
-		return fmt.Sprintf("%dh", int(d.Hours()))
-	case d < 7*24*time.Hour:
-		return fmt.Sprintf("%dd", int(d.Hours()/24))
-	default:
-		return fmt.Sprintf("%dw", int(d.Hours()/(24*7)))
-	}
+	return " [last seen " + fleet.HumanDuration(d) + " ago]"
 }
 
 // colorAccessible renders the ACCESSIBLE cell as green "yes" / red "no".

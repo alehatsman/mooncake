@@ -354,7 +354,6 @@ func runIDDisplay(id string, short bool) string {
 }
 
 // ageDisplay renders the AGE column. Empty when no timestamp is available.
-// Reuses cmd/fleet_status.go:roughAge for the time-since label.
 func ageDisplay(when, now time.Time) string {
 	if when.IsZero() {
 		return "—"
@@ -363,7 +362,7 @@ func ageDisplay(when, now time.Time) string {
 	if d < 0 {
 		d = 0
 	}
-	return roughAge(d)
+	return fleet.HumanDuration(d)
 }
 
 // planDisplay trims the synced-root prefix when it shows up in a path,

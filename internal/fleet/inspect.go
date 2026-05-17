@@ -117,11 +117,11 @@ func Probe(ctx context.Context, name, addr, token string, timeout time.Duration)
 	}
 
 	type result struct {
-		ver   *transport.Version
-		verErr error
-		runs  []transport.RunRecord
-		runsErr error
-		facts map[string]any
+		ver      *transport.Version
+		verErr   error
+		runs     []transport.RunRecord
+		runsErr  error
+		facts    map[string]any
 		factsErr error
 	}
 	var r result
@@ -249,7 +249,7 @@ func humanRunAge(r transport.RunRecord) string {
 	if ts.IsZero() {
 		return ""
 	}
-	return humanDuration(time.Since(ts)) + " ago"
+	return HumanDuration(time.Since(ts)) + " ago"
 }
 
 func pickTimestamp(stamps ...string) time.Time {
@@ -267,10 +267,13 @@ func pickTimestamp(stamps ...string) time.Time {
 	return time.Time{}
 }
 
-// humanDuration is a deliberately rough time-since formatter. We don't
+// HumanDuration is a deliberately rough time-since formatter. We don't
 // need millisecond precision in a status table; we want short, glanceable
-// labels: "5s", "2m", "1h", "3d", "2w".
-func humanDuration(d time.Duration) string {
+// labels: "5s", "2m", "1h", "3d", "2w". Exported because the CLI
+// (cmd/fleet_status.go, cmd/fleet_ps.go) also formats peer "last seen"
+// labels in the same style — keeping it unexported forced a byte-identical
+// copy on the cmd side.
+func HumanDuration(d time.Duration) string {
 	switch {
 	case d < time.Minute:
 		return fmt.Sprintf("%ds", int(d.Seconds()))
