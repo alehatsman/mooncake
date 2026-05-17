@@ -2111,7 +2111,7 @@
     },
     "pkg.list": {
       "type": "object",
-      "description": "Return the installed packages and versions (read-only; apt only in v1)",
+      "description": "Return the installed packages and versions (read-only; apt on linux, brew on darwin)",
       "properties": {
         "manager": {
           "type": "string"
@@ -2119,7 +2119,8 @@
       },
       "additionalProperties": false,
       "x-platforms": [
-        "linux"
+        "linux",
+        "darwin"
       ],
       "x-implements-check": true,
       "x-implements-diff": true,
@@ -2788,7 +2789,7 @@
           "$ref": "#/definitions/pkg.hold"
         },
         "pkg.list": {
-          "description": "Return the installed packages and versions (read-only; apt only in v1)",
+          "description": "Return the installed packages and versions (read-only; apt on linux, brew on darwin)",
           "$ref": "#/definitions/pkg.list"
         },
         "pkg.repo": {

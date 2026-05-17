@@ -2,6 +2,7 @@
 package pkg_list
 
 import (
+	"os/exec"
 	"runtime"
 	"testing"
 
@@ -177,5 +178,180 @@ func TestRun_OnlyAptSupported(t *testing.T) {
 	_, err := (&Handler{}).Run(newCtx(t, false), step)
 	if err == nil {
 		t.Fatal("expected error for non-apt manager")
+	}
+}
+
+// stubBrewList replaces the brew binary call + makes lookPath
+// resolve `brew` (but NOT `dpkg-query`, so auto-detection picks
+// brew instead of falling through to apt).
+func stubBrewList(t *testing.T, stdout string) {
+	t.Helper()
+	origBrew := brewList
+	origLook := lookPath
+	brewList = func() (string, error) { return stdout, nil }
+	lookPath = func(name string) (string, error) {
+		if name == "brew" {
+			return "/opt/homebrew/bin/brew", nil
+		}
+		return "", exec.ErrNotFound
+	}
+	t.Cleanup(func() {
+		brewList = origBrew
+		lookPath = origLook
+	})
+}
+
+const sampleBrew = "git 2.43.0\n" +
+	"zsh 5.9\n" +
+	"node@20 20.10.0 20.10.1\n" + // multi-version: last wins
+	"\n" + // blank line ignored
+	"orphaned-no-version\n" + // skipped (single field)
+	"jq 1.7\n"
+
+// TestApply_Brew_ReturnsSortedPackages — brew detection + parse +
+// sort. Mirrors TestApply_ReturnsSortedPackages but for the darwin
+// path. Stubs make it host-agnostic.
+func TestApply_Brew_ReturnsSortedPackages(t *testing.T) {
+	stubBrewList(t, sampleBrew)
+	step := &config.Step{PkgList: &config.PkgList{}}
+	r := mustRun(t, false, step)
+	if r.Changed {
+		t.Errorf("pkg.list must never report Changed")
+	}
+	pkgs := r.Data["packages"].([]map[string]interface{})
+	wantNames := []string{"git", "jq", "node@20", "zsh"}
+	if len(pkgs) != len(wantNames) {
+		t.Fatalf("got %d packages, want %d: %v", len(pkgs), len(wantNames), pkgs)
+	}
+	for i, want := range wantNames {
+		if pkgs[i]["name"] != want {
+			t.Errorf("packages[%d].name = %v, want %s", i, pkgs[i]["name"], want)
+		}
+		if pkgs[i]["manager"] != "brew" {
+			t.Errorf("packages[%d].manager = %v, want brew", i, pkgs[i]["manager"])
+		}
+	}
+	if r.Data["manager"] != "brew" {
+		t.Errorf("manager fact = %v, want brew", r.Data["manager"])
+	}
+}
+
+// TestApply_Brew_LastVersionWins — `brew list --versions` can emit
+// multiple versions per line when several slots are installed
+// (`node@18` + `node@20`). We report the last token as the version,
+// matching the "most recently linked" convention.
+func TestApply_Brew_LastVersionWins(t *testing.T) {
+	stubBrewList(t, "python@3.11 3.11.5 3.11.7\n")
+	step := &config.Step{PkgList: &config.PkgList{}}
+	r := mustRun(t, false, step)
+	pkgs := r.Data["packages"].([]map[string]interface{})
+	if len(pkgs) != 1 {
+		t.Fatalf("got %d packages, want 1: %v", len(pkgs), pkgs)
+	}
+	if pkgs[0]["version"] != "3.11.7" {
+		t.Errorf("version = %v, want 3.11.7", pkgs[0]["version"])
+	}
+}
+
+// TestApply_ExplicitManagerBrew — explicit `manager: brew` routes
+// through the brew branch even when dpkg-query is on PATH. Pins the
+// operator-override semantic.
+func TestApply_ExplicitManagerBrew(t *testing.T) {
+	stubBrewList(t, "git 2.43.0\n")
+	// Force lookPath to find BOTH binaries — explicit manager must
+	// win regardless of detection order.
+	origLook := lookPath
+	lookPath = func(_ string) (string, error) { return "/usr/local/bin/x", nil }
+	t.Cleanup(func() { lookPath = origLook })
+
+	step := &config.Step{PkgList: &config.PkgList{Manager: "brew"}}
+	r := mustRun(t, false, step)
+	if r.Data["manager"] != "brew" {
+		t.Errorf("manager = %v, want brew", r.Data["manager"])
+	}
+}
+
+// TestAutoDetect_PrefersAptWhenBoth — on multi-manager hosts
+// (e.g. Linuxbrew on a Debian box), the system-level package list
+// is more authoritative than per-user brew. Detection picks apt
+// first, brew second. Operator can override via explicit manager:.
+func TestAutoDetect_PrefersAptWhenBoth(t *testing.T) {
+	stubDpkgQuery(t, "apt-pkg\t1.0\n")
+	// stubDpkgQuery already sets lookPath to succeed for all names,
+	// so brew would also be "detected" — apt should still win.
+	stubBrewList := func() (string, error) {
+		t.Errorf("brew should not be queried when dpkg-query is available")
+		return "", nil
+	}
+	origBrew := brewList
+	brewList = stubBrewList
+	t.Cleanup(func() { brewList = origBrew })
+
+	step := &config.Step{PkgList: &config.PkgList{}}
+	r := mustRun(t, false, step)
+	if r.Data["manager"] != "apt" {
+		t.Errorf("manager = %v, want apt (auto-detect must prefer apt)", r.Data["manager"])
+	}
+}
+
+// TestPermissions_BinaryByGOOS — darwin advertises `brew`, linux
+// (default) advertises `dpkg-query`. Spec-44 doctor consults this
+// to flag missing binaries before runtime.
+func TestPermissions_BinaryByGOOS(t *testing.T) {
+	ps := (Handler{}).Permissions(nil)
+	wantBin := "dpkg-query"
+	if runtime.GOOS == "darwin" {
+		wantBin = "brew"
+	}
+	if len(ps.RequiredBinaries) != 1 || ps.RequiredBinaries[0] != wantBin {
+		t.Errorf("RequiredBinaries = %v, want [%s]", ps.RequiredBinaries, wantBin)
+	}
+}
+
+// TestMetadata_AdvertisesLinuxAndDarwin guards the SupportedPlatforms
+// expansion. If darwin is later removed, this test fires to force a
+// doc + UX update in lockstep.
+func TestMetadata_AdvertisesLinuxAndDarwin(t *testing.T) {
+	m := (&Handler{}).Metadata()
+	want := map[string]bool{"linux": true, "darwin": true}
+	got := map[string]bool{}
+	for _, p := range m.SupportedPlatforms {
+		got[p] = true
+	}
+	for p := range want {
+		if !got[p] {
+			t.Errorf("SupportedPlatforms missing %s: %v", p, m.SupportedPlatforms)
+		}
+	}
+}
+
+// TestParseBrewList_DirectShapes pins the parser without going
+// through Run, so output-format regressions surface at the parsing
+// level instead of as a mis-sorted Data["packages"].
+func TestParseBrewList_DirectShapes(t *testing.T) {
+	cases := []struct {
+		name      string
+		in        string
+		wantNames []string
+	}{
+		{"empty", "", nil},
+		{"single", "foo 1.0\n", []string{"foo"}},
+		{"trailing newline", "foo 1.0\nbar 2.0\n", []string{"foo", "bar"}},
+		{"skip nameless", "  \nfoo 1.0\n", []string{"foo"}},
+		{"skip orphan", "noversion\nfoo 1.0\n", []string{"foo"}},
+		{"@-suffix kept", "node@20 20.10.0\n", []string{"node@20"}},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			got := parseBrewList(c.in, "brew")
+			if len(got) != len(c.wantNames) {
+				t.Fatalf("got %d, want %d: %v", len(got), len(c.wantNames), got)
+			}
+			for i, n := range c.wantNames {
+				if got[i]["name"] != n {
+					t.Errorf("[%d].name = %v, want %s", i, got[i]["name"], n)
+				}
+			}
+		})
 	}
 }

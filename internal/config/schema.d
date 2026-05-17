@@ -802,9 +802,9 @@ export interface PkgHoldAction {
 }
 
 /**
- * Return the installed packages and versions (read-only; apt only in v1)
+ * Return the installed packages and versions (read-only; apt on linux, brew on darwin)
  * 
- * @platforms linux
+ * @platforms linux, darwin
  * @category system
  */
 export interface PkgListAction {
@@ -1515,7 +1515,8 @@ export interface Step {
    */
   "pkg.hold"?: PkgHoldAction;
   /**
-   * Return the installed packages and versions (read-only; apt only in v1)
+   * Return the installed packages and versions (read-only; apt on linux,
+   * brew on darwin)
    */
   "pkg.list"?: PkgListAction;
   /**

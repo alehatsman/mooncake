@@ -1,8 +1,9 @@
 // Package pkg_list implements the pkg.list action: a read-only query
 // that returns the currently installed packages and their versions.
-// No side effects in any mode; Changed is always false. v1 implements
-// apt only via dpkg-query; other managers raise a clear "only apt is
-// supported in v1" error.
+// No side effects in any mode; Changed is always false. Supports apt
+// (via dpkg-query) on linux and brew (via brew list --versions) on
+// darwin. Auto-detects when manager is unset; explicit manager:
+// overrides routing.
 //
 //nolint:revive // Package name matches action name convention (pkg_list)
 package pkg_list
@@ -22,15 +23,17 @@ import (
 )
 
 const (
-	actionName = "pkg.list"
-	managerApt = "apt"
+	actionName  = "pkg.list"
+	managerApt  = "apt"
+	managerBrew = "brew"
 )
 
 // Package-level hooks for the side-effectful binary call. Tests
 // replace these to keep apply/plan hermetic.
 var (
-	dpkgQuery = realDpkgQuery   // func() (string, error)
-	lookPath  = exec.LookPath   // override in tests for manager detection
+	dpkgQuery = realDpkgQuery // func() (string, error)
+	brewList  = realBrewList  // func() (string, error)
+	lookPath  = exec.LookPath // override in tests for manager detection
 )
 
 // Handler implements pkg.list.
@@ -43,12 +46,12 @@ func init() {
 func (h *Handler) Metadata() actions.ActionMetadata {
 	return actions.ActionMetadata{
 		Name:               actionName,
-		Description:        "Return the installed packages and versions (read-only; apt only in v1)",
+		Description:        "Return the installed packages and versions (read-only; apt on linux, brew on darwin)",
 		Category:           actions.CategorySystem,
 		SupportsDryRun:     true,
 		SupportsBecome:     false,
 		Version:            "1.0.0",
-		SupportedPlatforms: []string{"linux"},
+		SupportedPlatforms: []string{"linux", "darwin"},
 		RequiresSudo:       false,
 		ImplementsCheck:    true,
 	}
@@ -56,12 +59,16 @@ func (h *Handler) Metadata() actions.ActionMetadata {
 
 // Permissions implements actions.Permitter (spec-22 phase 3).
 //
-// pkg.list is a read-only query: no Sudo, no Network. It shells out
-// to dpkg-query (v1 supports apt only) which any unprivileged user
-// can run.
+// pkg.list is a read-only query: no Sudo, no Network. The required
+// binary differs per host: dpkg-query on linux (apt path), brew on
+// darwin. Spec-44 doctor reports the right one for the local box.
 func (Handler) Permissions(_ *config.Step) actions.PermissionSet {
+	bin := "dpkg-query"
+	if runtime.GOOS == "darwin" {
+		bin = "brew"
+	}
 	return actions.PermissionSet{
-		RequiredBinaries: []string{"dpkg-query"},
+		RequiredBinaries: []string{bin},
 	}
 }
 
@@ -74,30 +81,37 @@ func (h *Handler) Validate(step *config.Step) error {
 
 // Run is identical in plan and apply mode: pkg.list never mutates.
 // Changed is always false; the live package list is placed in
-// result.Data["packages"].
+// result.Data["packages"]. Dispatch by manager (auto-detected when
+// the operator left it blank).
 func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, error) {
 	p := step.PkgList
 	result := executor.NewResult()
 	result.Checkable = true
 	result.Changed = false
 
-	if runtime.GOOS != "linux" {
-		return result, fmt.Errorf("pkg.list: only Linux is supported; got %s", runtime.GOOS)
-	}
-
 	manager, err := resolveManager(p.Manager)
 	if err != nil {
 		return result, err
 	}
-	if manager != managerApt {
-		return result, fmt.Errorf("pkg.list: only apt is supported in v1 (got %q)", manager)
+
+	var pkgs []map[string]interface{}
+	switch manager {
+	case managerApt:
+		out, err := dpkgQuery()
+		if err != nil {
+			return result, fmt.Errorf("pkg.list: dpkg-query: %w", err)
+		}
+		pkgs = parseDpkgQuery(out, manager)
+	case managerBrew:
+		out, err := brewList()
+		if err != nil {
+			return result, fmt.Errorf("pkg.list: brew list: %w", err)
+		}
+		pkgs = parseBrewList(out, manager)
+	default:
+		return result, fmt.Errorf("pkg.list: unsupported manager %q (supported: apt, brew)", manager)
 	}
 
-	out, err := dpkgQuery()
-	if err != nil {
-		return result, fmt.Errorf("pkg.list: dpkg-query: %w", err)
-	}
-	pkgs := parseDpkgQuery(out, manager)
 	sort.Slice(pkgs, func(i, j int) bool {
 		ni, _ := pkgs[i]["name"].(string)
 		nj, _ := pkgs[j]["name"].(string)
@@ -143,6 +157,13 @@ func parseDpkgQuery(stdout, manager string) []map[string]interface{} {
 	return out
 }
 
+// resolveManager picks the package manager to query. Explicit
+// manager: in the YAML wins over auto-detection. Auto-detection
+// prefers apt (dpkg-query) when available, then brew. The order
+// matters on multi-manager hosts (e.g. macOS with Linuxbrew under
+// /home/linuxbrew/.linuxbrew/bin/brew installed alongside a system
+// dpkg-query) — apt-the-installed is the more authoritative system
+// list when both exist, since brew under /home/linuxbrew is per-user.
 func resolveManager(requested string) (string, error) {
 	requested = strings.ToLower(strings.TrimSpace(requested))
 	if requested != "" {
@@ -151,7 +172,10 @@ func resolveManager(requested string) (string, error) {
 	if _, err := lookPath("dpkg-query"); err == nil {
 		return managerApt, nil
 	}
-	return "", fmt.Errorf("pkg.list: cannot auto-detect package manager (dpkg-query not on PATH); set manager explicitly")
+	if _, err := lookPath("brew"); err == nil {
+		return managerBrew, nil
+	}
+	return "", fmt.Errorf("pkg.list: cannot auto-detect package manager (no dpkg-query or brew on PATH); set manager explicitly")
 }
 
 func realDpkgQuery() (string, error) {
@@ -168,4 +192,55 @@ func realDpkgQuery() (string, error) {
 		return "", err
 	}
 	return stdout.String(), nil
+}
+
+func realBrewList() (string, error) {
+	// #nosec G204 -- fixed brew binary.
+	cmd := exec.Command("brew", "list", "--versions")
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	if err := cmd.Run(); err != nil {
+		msg := strings.TrimSpace(stderr.String())
+		if msg != "" {
+			return "", fmt.Errorf("%w: %s", err, msg)
+		}
+		return "", err
+	}
+	return stdout.String(), nil
+}
+
+// parseBrewList parses `brew list --versions` stdout. Output shape
+// is space-separated per line: "<name> <version> [<version> ...]".
+// Multiple versions can be installed simultaneously (`brew install
+// node@18 node@20` keeps both); we report the last version on the
+// line — by convention that's the most recently installed slot, the
+// one `brew --prefix <name>` would resolve to. Lines without a
+// version are skipped.
+func parseBrewList(stdout, manager string) []map[string]interface{} {
+	out := make([]map[string]interface{}, 0, 256)
+	sc := bufio.NewScanner(strings.NewReader(stdout))
+	sc.Buffer(make([]byte, 0, 64*1024), 1024*1024)
+	for sc.Scan() {
+		line := strings.TrimSpace(sc.Text())
+		if line == "" {
+			continue
+		}
+		fields := strings.Fields(line)
+		if len(fields) < 2 {
+			// Name without a version means brew failed to read the
+			// installed receipt — skip rather than emit an empty
+			// version (downstream consumers expect a non-empty
+			// version string per dpkg-query parity).
+			continue
+		}
+		name := fields[0]
+		version := fields[len(fields)-1]
+		out = append(out, map[string]interface{}{
+			"name":    name,
+			"version": version,
+			"manager": manager,
+		})
+	}
+	return out
 }
