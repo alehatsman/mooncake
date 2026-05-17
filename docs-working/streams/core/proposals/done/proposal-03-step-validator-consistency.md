@@ -1,6 +1,6 @@
 # Proposal 03: `mooncake step` enforces `additionalProperties: false` — close the validator gap
 
-**Status:** Draft proposal
+**Status:** Shipped (commit `4e6997e5`, merged `58a0d3e5`) — `mooncake step` now decodes via `dec.KnownFields(true)` so inline-step YAML rejects unknown fields. Closes MT-83.
 **Effort:** XS (~half day)
 **Value:** Medium — closes a known asymmetry (finding #83). Tiny
 refactor; significantly tightens the agent-facing entry point.

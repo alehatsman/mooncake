@@ -1,6 +1,6 @@
 # Proposal 01: Unify peer targeting — collapse `--peers` and `--peer-filter` into one DSL
 
-**Status:** Draft proposal
+**Status:** Shipped (commit `da68050b` "fleet(dx-01): collapse --peers + --peer-filter into one --peer DSL") — every `fleet *` subcommand now exposes a single `--peer` flag that accepts names, `key=value` filter terms, and `@k=v,k2=v2` AND-groups.
 **Effort:** S (~3 days; touches every fleet subcommand)
 **Value:** High — every fleet subcommand exposes both flags; users have
 to know which one to reach for. Halves the surface, simplifies docs.
