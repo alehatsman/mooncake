@@ -4,6 +4,13 @@ Discoverable surface for LLM agents working in this repo. For full project
 guide see [LLM_GUIDE.md](./LLM_GUIDE.md); for rules of engagement see
 [CLAUDE.md](./CLAUDE.md). This file is the working-memory cheat sheet.
 
+## 👉 What to work on right now
+
+Open [`docs-working/PICKUP.md`](./docs-working/PICKUP.md) first.
+Curated short list of pickups ranked by leverage, with claim
+slugs and "where to read" pointers. Saves you the 10-files-to-skim
+problem.
+
 ## Focused feedback (use these — avoid `make ci`)
 
 ```
@@ -67,7 +74,9 @@ Package graph + LOC + coupling metrics. Re-run after structural changes.
 | Generated docs | `docs-next/generated/` (regen via `make docs-generate`) |
 | Generated schema | `internal/config/schema.json` (regen via `make schema-generate`) |
 | Architecture report | `docs-working/arch-report/` |
-| Manual-test findings | `docs-working/analysis/findings-2026-05-15/` |
+| Manual-test findings (closed) | `docs-working/archive/analysis/findings-2026-05-15/` |
+| Code-review findings | `docs-working/code-review/findings/` (queue in `code-review/TODO.md`) |
+| Pickup list (start here) | `docs-working/PICKUP.md` |
 
 ## When tests look wrong
 
