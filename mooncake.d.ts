@@ -374,6 +374,7 @@ export interface HttpRequestAction {
     retry_on: string[];
     reverse: Record<string, any>;
     risk: string;
+    save_to: string;
     skip_tls_verify: boolean;
     timeout: string;
     url: string;
@@ -412,11 +413,13 @@ export interface HttpRequestAction {
     retry_on: string[];
     reverse: Record<string, any>;
     risk: string;
+    save_to: string;
     skip_tls_verify: boolean;
     timeout: string;
     url: string;
   };
   risk?: string;
+  save_to?: string;
   skip_tls_verify?: boolean;
   timeout?: string;
   url: string;

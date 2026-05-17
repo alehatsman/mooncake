@@ -1002,6 +1002,9 @@
             "risk": {
               "type": "string"
             },
+            "save_to": {
+              "type": "string"
+            },
             "skip_tls_verify": {
               "type": "boolean"
             },
@@ -1144,6 +1147,9 @@
             "risk": {
               "type": "string"
             },
+            "save_to": {
+              "type": "string"
+            },
             "skip_tls_verify": {
               "type": "boolean"
             },
@@ -1162,6 +1168,9 @@
           "additionalProperties": false
         },
         "risk": {
+          "type": "string"
+        },
+        "save_to": {
           "type": "string"
         },
         "skip_tls_verify": {

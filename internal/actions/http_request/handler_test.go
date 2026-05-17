@@ -179,3 +179,73 @@ func TestRun_Plan_RedactBodyHidesSize(t *testing.T) {
 		t.Errorf("plan reason should mention redaction: %q", r.Reason)
 	}
 }
+
+// TestPermissions_SaveToAddsFilesystemWrite — Wave 3: declaring
+// save_to adds the path to FilesystemWrite so spec-44 doctor can
+// flag obvious misuse before the network call runs.
+func TestPermissions_SaveToAddsFilesystemWrite(t *testing.T) {
+	step := &config.Step{HTTPRequest: &config.HTTPRequest{
+		URL:    "http://x",
+		SaveTo: "/var/run/hook.json",
+	}}
+	ps := (&Handler{}).Permissions(step)
+	if !ps.Network {
+		t.Error("Network must remain true")
+	}
+	if len(ps.FilesystemWrite) != 1 || ps.FilesystemWrite[0] != "/var/run/hook.json" {
+		t.Errorf("FilesystemWrite = %v, want [/var/run/hook.json]", ps.FilesystemWrite)
+	}
+}
+
+// TestPermissions_EmptySaveToHasNoFilesystemWrite — whitespace-only
+// SaveTo is treated as unset (matches the runApply check) so spec-44
+// doctor doesn't report a phantom write.
+func TestPermissions_EmptySaveToHasNoFilesystemWrite(t *testing.T) {
+	for _, val := range []string{"", "   ", "\t\n"} {
+		step := &config.Step{HTTPRequest: &config.HTTPRequest{URL: "http://x", SaveTo: val}}
+		ps := (&Handler{}).Permissions(step)
+		if len(ps.FilesystemWrite) != 0 {
+			t.Errorf("SaveTo=%q: FilesystemWrite = %v, want empty", val, ps.FilesystemWrite)
+		}
+	}
+}
+
+// TestValidate_RejectsSaveToOnProbe — probes are read-only
+// inspection; persisting the probe response confuses the audit
+// story. save_to belongs on the top-level request.
+func TestValidate_RejectsSaveToOnProbe(t *testing.T) {
+	step := &config.Step{HTTPRequest: &config.HTTPRequest{
+		URL: "http://x",
+		Probe: &config.HTTPRequest{
+			URL:    "http://x/health",
+			Method: "GET",
+			SaveTo: "/tmp/probe.json",
+		},
+	}}
+	err := (&Handler{}).Validate(step)
+	if err == nil {
+		t.Fatal("expected Validate to reject save_to on probe")
+	}
+	if !strings.Contains(err.Error(), "save_to") || !strings.Contains(err.Error(), "probe") {
+		t.Errorf("error should mention save_to + probe; got: %v", err)
+	}
+}
+
+// TestValidate_AllowsSaveToOnReverse — reverse is a real follow-up
+// request that can legitimately want to persist its response (e.g.
+// rollback receipts). Only probes are restricted.
+func TestValidate_AllowsSaveToOnReverse(t *testing.T) {
+	step := &config.Step{HTTPRequest: &config.HTTPRequest{
+		URL:            "http://x/hooks",
+		Method:         "POST",
+		IdempotencyKey: "k",
+		Reverse: &config.HTTPRequest{
+			URL:    "http://x/hooks/{{ .response.json.id }}",
+			Method: "DELETE",
+			SaveTo: "/var/log/rollback-receipts/{{ .response.json.id }}.json",
+		},
+	}}
+	if err := (&Handler{}).Validate(step); err != nil {
+		t.Errorf("Validate must accept save_to on reverse; got: %v", err)
+	}
+}

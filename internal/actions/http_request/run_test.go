@@ -667,3 +667,111 @@ func TestRun_Apply_WriteMethod_SetsChanged(t *testing.T) {
 		})
 	}
 }
+
+// TestRun_Apply_SaveTo_WritesBody — Wave 3 save_to persists the
+// response bytes to the configured path. Parent dir is created.
+// The path is template-rendered so callers can pin it under a
+// per-run state dir.
+func TestRun_Apply_SaveTo_WritesBody(t *testing.T) {
+	const wantBody = `{"ok":true,"id":42}`
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(wantBody))
+	}))
+	defer srv.Close()
+
+	dir := t.TempDir()
+	// Use a nested path so the mkdir -p branch fires.
+	target := filepath.Join(dir, "nested", "hook.json")
+
+	step := &config.Step{HTTPRequest: &config.HTTPRequest{
+		URL:     srv.URL,
+		Timeout: "2s",
+		SaveTo:  target,
+	}}
+	res, err := (&Handler{}).Run(newCtx(t, false), step)
+	if err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	r := res.(*executor.Result)
+	if r.Failed {
+		t.Fatalf("must not fail; got %+v", r)
+	}
+	if r.Data["saved_to"] != target {
+		t.Errorf("Data[saved_to] = %v, want %s", r.Data["saved_to"], target)
+	}
+
+	got, err := os.ReadFile(target)
+	if err != nil {
+		t.Fatalf("read save_to target: %v", err)
+	}
+	if string(got) != wantBody {
+		t.Errorf("file content = %q, want %q", got, wantBody)
+	}
+}
+
+// TestRun_Apply_SaveTo_TemplateInterpolation — the rendered path
+// may interpolate response facts (registered name + .json.id is
+// the canonical "post a thing, store its server-assigned id"
+// shape). Verifies render hook plumbed through writeResponseBody.
+func TestRun_Apply_SaveTo_TemplateInterpolation(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"id":"abc-123"}`))
+	}))
+	defer srv.Close()
+
+	dir := t.TempDir()
+	step := &config.Step{HTTPRequest: &config.HTTPRequest{
+		URL:     srv.URL,
+		Timeout: "2s",
+		SaveTo:  filepath.Join(dir, "{{ response.json.id }}.json"),
+	}}
+	res, err := (&Handler{}).Run(newCtx(t, false), step)
+	if err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	r := res.(*executor.Result)
+	want := filepath.Join(dir, "abc-123.json")
+	if r.Data["saved_to"] != want {
+		t.Errorf("saved_to = %v, want %s", r.Data["saved_to"], want)
+	}
+	if _, err := os.Stat(want); err != nil {
+		t.Errorf("expected rendered path to exist: %v", err)
+	}
+}
+
+// TestRun_Apply_SaveTo_WriteFailureFailsStep — if save_to points
+// at an unwritable location (here: a path under a non-directory),
+// the step fails rather than silently dropping the file. The user
+// asked for it; losing it is surprising.
+func TestRun_Apply_SaveTo_WriteFailureFailsStep(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte("ok"))
+	}))
+	defer srv.Close()
+
+	// Create a regular file, then try to save under it as if it were
+	// a directory. mkdir -p will fail because the parent is a file.
+	dir := t.TempDir()
+	blocker := filepath.Join(dir, "blocker")
+	if err := os.WriteFile(blocker, []byte("x"), 0o600); err != nil {
+		t.Fatalf("setup blocker: %v", err)
+	}
+
+	step := &config.Step{HTTPRequest: &config.HTTPRequest{
+		URL:     srv.URL,
+		Timeout: "2s",
+		SaveTo:  filepath.Join(blocker, "out.txt"), // parent is a file
+	}}
+	res, err := (&Handler{}).Run(newCtx(t, false), step)
+	if err == nil {
+		t.Fatalf("expected error for unwritable save_to; got nil (res=%+v)", res)
+	}
+	if r, ok := res.(*executor.Result); ok && !r.Failed {
+		t.Errorf("Result.Failed should be true on save_to error; got %+v", r)
+	}
+	if !strings.Contains(err.Error(), "save_to") {
+		t.Errorf("error should mention save_to; got: %v", err)
+	}
+}

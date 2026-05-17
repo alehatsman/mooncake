@@ -37,6 +37,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path/filepath"
 	"slices"
 	"strings"
 	"time"
@@ -92,12 +93,21 @@ func (Handler) Metadata() actions.ActionMetadata {
 
 // Permissions: Network always. FilesystemWrite only if save_to is set
 // (Wave 3). Sudo never; become is rejected by Validate.
+//
+// The path advertised here is the unrendered template — spec-44
+// doctor only uses it to spot obvious cases (a relative path that
+// can't be resolved, a parent dir that doesn't exist on the literal
+// path). When the path is fully template-driven the check is a
+// no-op; that's expected — doctor catches the static-misuse case,
+// the runtime path catches the rest.
 func (Handler) Permissions(step *config.Step) actions.PermissionSet {
 	ps := actions.PermissionSet{Network: true}
 	if step == nil || step.HTTPRequest == nil {
 		return ps
 	}
-	// Wave 3 will add FilesystemWrite=[save_to] here.
+	if strings.TrimSpace(step.HTTPRequest.SaveTo) != "" {
+		ps.FilesystemWrite = []string{step.HTTPRequest.SaveTo}
+	}
 	return ps
 }
 
@@ -128,13 +138,19 @@ func (Handler) Validate(step *config.Step) error {
 
 	// Wave 2: probe must be a read-method sub-request, and must not
 	// nest probe/reverse. Idempotency contract does NOT apply to
-	// probe (read-only).
+	// probe (read-only). Wave 3: probe also must not declare save_to —
+	// persisting an inspection-only response confuses the audit story
+	// (operators expect save_to to mean "the call I made", not "the
+	// pre-flight check").
 	if r.Probe != nil {
 		if r.Probe.Probe != nil {
 			return fmt.Errorf("%s: probe must not nest another probe", actionName)
 		}
 		if r.Probe.Reverse != nil {
 			return fmt.Errorf("%s: probe must not declare reverse", actionName)
+		}
+		if strings.TrimSpace(r.Probe.SaveTo) != "" {
+			return fmt.Errorf("%s: probe must not declare save_to (probes are read-only inspection; declare save_to on the top-level request)", actionName)
 		}
 		probeMethod, err := normalizeMethod(r.Probe.Method)
 		if err != nil {
@@ -150,7 +166,10 @@ func (Handler) Validate(step *config.Step) error {
 
 	// Wave 2: reverse is user-owned compensation; structural validity
 	// is enforced, but the idempotency contract is NOT — the operator
-	// signed up for the verb. No nested probe/reverse.
+	// signed up for the verb. No nested probe/reverse. Wave 3: reverse
+	// may declare its own save_to — useful when the rollback response
+	// also needs to be persisted (e.g., audit logs for compensating
+	// transactions).
 	if r.Reverse != nil {
 		if r.Reverse.Probe != nil {
 			return fmt.Errorf("%s: reverse must not declare probe", actionName)
@@ -598,6 +617,22 @@ func (h *Handler) runApply(ctx actions.Context, step *config.Step, rr *renderedR
 	// methods don't count as changes.
 	res.Changed = !readMethods[rr.method]
 
+	// Wave 3: persist the response body to save_to when set. The path
+	// is template-rendered so callers can interpolate response facts
+	// (e.g. `save_to: "/var/cache/hooks/{{ response.json.id }}.json"`).
+	// Parent directories are created (mkdir -p). A write failure fails
+	// the step — the user asked for the file; silent loss would
+	// surprise them. data["saved_to"] holds the rendered path so
+	// downstream steps can read the actual location.
+	if strings.TrimSpace(step.HTTPRequest.SaveTo) != "" {
+		rendered, err := writeResponseBody(ctx, step.HTTPRequest.SaveTo, got.body, data)
+		if err != nil {
+			res.Failed = true
+			return res, fmt.Errorf("%s: save_to: %w", actionName, err)
+		}
+		data["saved_to"] = rendered
+	}
+
 	// Wave 2: snapshot the reverse block with response fact merged in,
 	// so the eventual Reverse() call returns a Step with already-
 	// resolved URLs/headers/auth that reference the actual resource
@@ -824,3 +859,47 @@ func sanitizeURLForEvent(raw string) string {
 // readFile is the indirection that lets tests stub file reads. Honours
 // the same template-rendered path as everything else.
 var readFile = os.ReadFile
+
+// writeResponseBody persists the response bytes to a template-
+// rendered path. Parent directories are created with 0o755; the file
+// itself is written 0o644. Wave 3 / save_to.
+//
+// The render context exposes the response fact under `response` (a
+// stable name) and step-As (if set) — matches snapshotReverse's
+// convention so callers can interpolate response.json.id / .status_code
+// into the path.
+//
+// Errors propagate: a write failure fails the step, since the user
+// asked for the file and silent loss would surprise them. mkdir -p
+// is best-effort idempotent — re-running the same plan twice creates
+// the parent dir once.
+func writeResponseBody(ctx actions.Context, pathTemplate string, body []byte, responseFact map[string]interface{}) (string, error) {
+	base := ctx.GetVariables()
+	merged := make(map[string]interface{}, len(base)+1)
+	for k, v := range base {
+		merged[k] = v
+	}
+	merged["response"] = responseFact
+	rendered, err := ctx.GetTemplate().Render(pathTemplate, merged)
+	if err != nil {
+		return "", fmt.Errorf("render path %q: %w", pathTemplate, err)
+	}
+	rendered = strings.TrimSpace(rendered)
+	if rendered == "" {
+		return "", fmt.Errorf("save_to rendered to empty path (template %q)", pathTemplate)
+	}
+	if dir := filepath.Dir(rendered); dir != "" && dir != "." {
+		// #nosec G301 -- 0755 is the standard "parent dir for files
+		// the daemon writes"; the file itself is 0644.
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			return "", fmt.Errorf("mkdir -p %s: %w", dir, err)
+		}
+	}
+	// #nosec G306 -- 0644 is the standard "file the operator can
+	// read" mode; sensitive responses should declare redact_body and
+	// not be persisted via save_to.
+	if err := os.WriteFile(rendered, body, 0o644); err != nil {
+		return "", fmt.Errorf("write %s: %w", rendered, err)
+	}
+	return rendered, nil
+}

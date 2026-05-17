@@ -1365,6 +1365,23 @@ type HTTPRequest struct {
 	// error so transaction failures fail loudly rather than skip
 	// rollback silently. Nested probe / reverse are rejected.
 	Reverse *HTTPRequest `yaml:"reverse,omitempty" json:"reverse,omitempty"`
+
+	// SaveTo is the proposal-16 Wave 3 response-persistence sink.
+	// When set, the handler writes the response body bytes to this
+	// path after a successful apply. The path is template-rendered
+	// against vars (typical use: `save_to: "{{ .state_dir }}/last-
+	// hook.json"`); parent directories are created as needed (mkdir
+	// -p semantics). On plan-mode runs the write is skipped, only
+	// the intent is reported.
+	//
+	// Permissions: when SaveTo is set, the handler's Permissions
+	// adds FilesystemWrite=[save_to] so spec-44 doctor can flag a
+	// missing parent dir or unwritable path BEFORE the network call
+	// runs. Rejected inside the probe sub-block — probes are
+	// read-only inspection and persisting their body confuses the
+	// audit story; declare save_to on the top-level request
+	// instead.
+	SaveTo string `yaml:"save_to,omitempty" json:"save_to,omitempty"`
 }
 
 // HTTPAuth is the one-of credential block for HTTPRequest. Set at
