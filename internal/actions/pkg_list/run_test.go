@@ -573,3 +573,213 @@ func TestParseRpmQuery_DirectShapes(t *testing.T) {
 		})
 	}
 }
+
+// stubPacmanQuery replaces the pacman binary call + makes lookPath
+// resolve `pacman` (but NOT dpkg-query/rpm/brew, so auto-detection
+// picks pacman). Mirrors stubRpmQuery + stubBrewList.
+func stubPacmanQuery(t *testing.T, stdout string) {
+	t.Helper()
+	origPacman := pacmanQuery
+	origLook := lookPath
+	pacmanQuery = func() (string, error) { return stdout, nil }
+	lookPath = func(name string) (string, error) {
+		if name == "pacman" {
+			return "/usr/bin/pacman", nil
+		}
+		return "", exec.ErrNotFound
+	}
+	t.Cleanup(func() {
+		pacmanQuery = origPacman
+		lookPath = origLook
+	})
+}
+
+const samplePacman = "bash 5.2.026-1\n" +
+	"linux 6.8.7.arch1-1\n" +
+	"\n" + // blank line ignored
+	"orphan-no-version\n" + // skipped (single field)
+	"glibc 2.39-2\n" +
+	"systemd 256.4-1\n"
+
+// TestApply_Pacman_ReturnsSortedPackages — pacman detection + parse
+// + sort. Mirrors TestApply_Dnf_ReturnsSortedPackages for the Arch
+// family. Stubs make the test host-agnostic.
+func TestApply_Pacman_ReturnsSortedPackages(t *testing.T) {
+	if runtime.GOOS != "linux" {
+		t.Skip("Linux only")
+	}
+	stubPacmanQuery(t, samplePacman)
+	step := &config.Step{PkgList: &config.PkgList{}}
+	r := mustRun(t, false, step)
+	if r.Changed {
+		t.Errorf("pkg.list must never report Changed")
+	}
+	pkgs, ok := r.Data["packages"].([]map[string]interface{})
+	if !ok {
+		t.Fatalf("expected packages []map[string]interface{}; got %T", r.Data["packages"])
+	}
+	wantNames := []string{"bash", "glibc", "linux", "systemd"}
+	if len(pkgs) != len(wantNames) {
+		t.Fatalf("expected %d packages; got %d (%v)", len(wantNames), len(pkgs), pkgs)
+	}
+	for i, want := range wantNames {
+		if pkgs[i]["name"] != want {
+			t.Errorf("packages[%d].name = %v; want %s", i, pkgs[i]["name"], want)
+		}
+		if v, ok := pkgs[i]["version"].(string); !ok || v == "" {
+			t.Errorf("packages[%d].version missing", i)
+		}
+		if pkgs[i]["manager"] != "pacman" {
+			t.Errorf("packages[%d].manager = %v; want pacman", i, pkgs[i]["manager"])
+		}
+	}
+	if r.Data["manager"] != "pacman" {
+		t.Errorf("manager fact = %v, want pacman", r.Data["manager"])
+	}
+}
+
+// TestApply_Pacman_VersionPreserved — pacman versions can contain
+// hyphens and colons (epoch). The parser must keep the version
+// string intact rather than splitting on internal separators.
+func TestApply_Pacman_VersionPreserved(t *testing.T) {
+	if runtime.GOOS != "linux" {
+		t.Skip("Linux only")
+	}
+	stubPacmanQuery(t, "linux 6.8.7.arch1-1\n")
+	r := mustRun(t, false, &config.Step{PkgList: &config.PkgList{}})
+	pkgs := r.Data["packages"].([]map[string]interface{})
+	if len(pkgs) != 1 || pkgs[0]["version"] != "6.8.7.arch1-1" {
+		t.Errorf("expected linux 6.8.7.arch1-1; got %v", pkgs)
+	}
+}
+
+// TestApply_ExplicitManagerPacman — explicit `manager: pacman` routes
+// through the pacman branch even when dpkg-query is on PATH.
+func TestApply_ExplicitManagerPacman(t *testing.T) {
+	if runtime.GOOS != "linux" {
+		t.Skip("Linux only")
+	}
+	stubPacmanQuery(t, "vim 9.1.430-1\n")
+	origLook := lookPath
+	lookPath = func(_ string) (string, error) { return "/usr/bin/x", nil }
+	t.Cleanup(func() { lookPath = origLook })
+
+	step := &config.Step{PkgList: &config.PkgList{Manager: "pacman"}}
+	r := mustRun(t, false, step)
+	if r.Data["manager"] != "pacman" {
+		t.Errorf("manager = %v, want pacman", r.Data["manager"])
+	}
+}
+
+// TestApply_YayAlias — `manager: yay` and `manager: paru` are
+// synonyms for `manager: pacman` since the AUR wrappers read the
+// same /var/lib/pacman db. Result canonicalizes to "pacman" so
+// downstream consumers don't need to handle three spellings.
+func TestApply_YayAlias(t *testing.T) {
+	if runtime.GOOS != "linux" {
+		t.Skip("Linux only")
+	}
+	for _, alias := range []string{"yay", "paru"} {
+		t.Run(alias, func(t *testing.T) {
+			stubPacmanQuery(t, "google-chrome 124.0.6367.118-1\n")
+			origLook := lookPath
+			lookPath = func(_ string) (string, error) { return "/usr/bin/x", nil }
+			t.Cleanup(func() { lookPath = origLook })
+
+			step := &config.Step{PkgList: &config.PkgList{Manager: alias}}
+			r := mustRun(t, false, step)
+			if r.Data["manager"] != "pacman" {
+				t.Errorf("manager = %v, want pacman (%s canonicalizes to pacman)", r.Data["manager"], alias)
+			}
+		})
+	}
+}
+
+// TestAutoDetect_PacmanWhenNoAptOrDnf — auto-detect picks pacman on
+// a host with pacman but no dpkg-query / rpm. Pins the order
+// apt > dnf > pacman > brew.
+func TestAutoDetect_PacmanWhenNoAptOrDnf(t *testing.T) {
+	stubPacmanQuery(t, "base 3-2\n")
+	step := &config.Step{PkgList: &config.PkgList{}}
+	r := mustRun(t, false, step)
+	if r.Data["manager"] != "pacman" {
+		t.Errorf("manager = %v, want pacman (auto-detect must fall through apt→dnf→pacman when apt+dnf are absent)", r.Data["manager"])
+	}
+}
+
+// TestAutoDetect_PrefersDnfOverPacman — on the very rare host with
+// BOTH rpm and pacman (e.g. someone building rpm packages on an Arch
+// box), dnf wins. Symmetric to TestAutoDetect_PrefersAptOverDnf.
+func TestAutoDetect_PrefersDnfOverPacman(t *testing.T) {
+	stubRpmQuery(t, "bash\t5.1.8-9.el9\n")
+	pacStub := func() (string, error) {
+		t.Errorf("pacman should not be queried when rpm is available")
+		return "", nil
+	}
+	origPacman := pacmanQuery
+	pacmanQuery = pacStub
+	t.Cleanup(func() { pacmanQuery = origPacman })
+
+	step := &config.Step{PkgList: &config.PkgList{}}
+	r := mustRun(t, false, step)
+	if r.Data["manager"] != "dnf" {
+		t.Errorf("manager = %v, want dnf (auto-detect must prefer dnf over pacman)", r.Data["manager"])
+	}
+}
+
+// TestPermissions_BinaryByManager_Pacman extends the existing
+// per-manager binary preflight matrix to cover pacman and its AUR
+// aliases. Apt/dnf/yum/brew rows already pinned in the existing
+// TestPermissions_BinaryByManager — keeping the pacman rows in
+// their own test to keep the diff focused on the new manager.
+func TestPermissions_BinaryByManager_Pacman(t *testing.T) {
+	cases := []struct {
+		manager string
+		wantBin string
+	}{
+		{"pacman", "pacman"},
+		{"yay", "pacman"},
+		{"paru", "pacman"},
+	}
+	for _, c := range cases {
+		t.Run(c.manager, func(t *testing.T) {
+			step := &config.Step{PkgList: &config.PkgList{Manager: c.manager}}
+			ps := Handler{}.Permissions(step)
+			if len(ps.RequiredBinaries) != 1 || ps.RequiredBinaries[0] != c.wantBin {
+				t.Errorf("manager=%s: RequiredBinaries = %v, want [%s]", c.manager, ps.RequiredBinaries, c.wantBin)
+			}
+		})
+	}
+}
+
+// TestParsePacmanQuery_DirectShapes pins the parser without going
+// through Run, so output-format regressions surface at the parsing
+// level instead of as a mis-sorted Data["packages"].
+func TestParsePacmanQuery_DirectShapes(t *testing.T) {
+	cases := []struct {
+		name      string
+		in        string
+		wantNames []string
+	}{
+		{"empty", "", nil},
+		{"single", "foo 1.0\n", []string{"foo"}},
+		{"trailing newline", "foo 1.0\nbar 2.0\n", []string{"foo", "bar"}},
+		{"skip blank", "  \nfoo 1.0\n", []string{"foo"}},
+		{"skip orphan", "noversion\nfoo 1.0\n", []string{"foo"}},
+		{"hyphenated name", "gtk-doc 1.33.2-2", []string{"gtk-doc"}},
+		{"epoch in version", "openssl 1:3.3.1-1", []string{"openssl"}},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			got := parsePacmanQuery(c.in, "pacman")
+			if len(got) != len(c.wantNames) {
+				t.Fatalf("got %d, want %d: %v", len(got), len(c.wantNames), got)
+			}
+			for i, n := range c.wantNames {
+				if got[i]["name"] != n {
+					t.Errorf("[%d].name = %v, want %s", i, got[i]["name"], n)
+				}
+			}
+		})
+	}
+}

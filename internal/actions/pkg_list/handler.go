@@ -1,9 +1,10 @@
 // Package pkg_list implements the pkg.list action: a read-only query
 // that returns the currently installed packages and their versions.
 // No side effects in any mode; Changed is always false. Supports apt
-// (via dpkg-query) and dnf/yum (via rpm -qa) on linux, and brew (via
-// brew list --versions) on darwin. Auto-detects when manager is
-// unset; explicit manager: overrides routing.
+// (via dpkg-query), dnf/yum (via rpm -qa), and pacman/yay/paru (via
+// `pacman -Q`) on linux, and brew (via brew list --versions) on
+// darwin. Auto-detects when manager is unset; explicit manager:
+// overrides routing.
 //
 //nolint:revive // Package name matches action name convention (pkg_list)
 package pkg_list
@@ -23,19 +24,21 @@ import (
 )
 
 const (
-	actionName  = "pkg.list"
-	managerApt  = "apt"
-	managerDnf  = "dnf"
-	managerBrew = "brew"
+	actionName    = "pkg.list"
+	managerApt    = "apt"
+	managerDnf    = "dnf"
+	managerPacman = "pacman"
+	managerBrew   = "brew"
 )
 
 // Package-level hooks for the side-effectful binary call. Tests
 // replace these to keep apply/plan hermetic.
 var (
-	dpkgQuery = realDpkgQuery // func() (string, error)
-	rpmQuery  = realRpmQuery  // func() (string, error)
-	brewList  = realBrewList  // func() (string, error)
-	lookPath  = exec.LookPath // override in tests for manager detection
+	dpkgQuery   = realDpkgQuery   // func() (string, error)
+	rpmQuery    = realRpmQuery    // func() (string, error)
+	pacmanQuery = realPacmanQuery // func() (string, error)
+	brewList    = realBrewList    // func() (string, error)
+	lookPath    = exec.LookPath   // override in tests for manager detection
 )
 
 // Handler implements pkg.list.
@@ -48,7 +51,7 @@ func init() {
 func (h *Handler) Metadata() actions.ActionMetadata {
 	return actions.ActionMetadata{
 		Name:               actionName,
-		Description:        "Return the installed packages and versions (read-only; apt + dnf on linux, brew on darwin)",
+		Description:        "Return the installed packages and versions (read-only; apt + dnf + pacman on linux, brew on darwin)",
 		Category:           actions.CategorySystem,
 		SupportsDryRun:     true,
 		SupportsBecome:     false,
@@ -79,6 +82,8 @@ func (Handler) Permissions(step *config.Step) actions.PermissionSet {
 			bin = "dpkg-query"
 		case managerDnf, "yum":
 			bin = "rpm"
+		case managerPacman, "yay", "paru":
+			bin = "pacman"
 		case managerBrew:
 			bin = "brew"
 		}
@@ -128,6 +133,16 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		// is the same database on both managers.
 		pkgs = parseRpmQuery(out, managerDnf)
 		manager = managerDnf
+	case managerPacman, "yay", "paru":
+		out, err := pacmanQuery()
+		if err != nil {
+			return result, fmt.Errorf("pkg.list: pacman -Q: %w", err)
+		}
+		// Canonicalize to "pacman" regardless of CLI alias: yay and
+		// paru are pacman-compatible AUR wrappers that read the same
+		// /var/lib/pacman db. Same shape as the yum→dnf canonical fold.
+		pkgs = parsePacmanQuery(out, managerPacman)
+		manager = managerPacman
 	case managerBrew:
 		out, err := brewList()
 		if err != nil {
@@ -135,7 +150,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		}
 		pkgs = parseBrewList(out, manager)
 	default:
-		return result, fmt.Errorf("pkg.list: unsupported manager %q (supported: apt, dnf, brew)", manager)
+		return result, fmt.Errorf("pkg.list: unsupported manager %q (supported: apt, dnf, pacman, brew)", manager)
 	}
 
 	sort.Slice(pkgs, func(i, j int) bool {
@@ -185,13 +200,12 @@ func parseDpkgQuery(stdout, manager string) []map[string]interface{} {
 
 // resolveManager picks the package manager to query. Explicit
 // manager: in the YAML wins over auto-detection. Auto-detection
-// prefers apt (dpkg-query) when available, then dnf (rpm), then brew.
-// The order matters on multi-manager hosts (e.g. macOS with Linuxbrew
-// under /home/linuxbrew/.linuxbrew/bin/brew installed alongside a
-// system dpkg-query, or a RHEL host that happens to have apt-the-rpm
-// shipped in EPEL but isn't a dpkg system) — apt-the-installed is the
-// more authoritative system list when it's the native manager, and
-// rpm beats per-user brew on every dnf/yum distro.
+// prefers apt (dpkg-query), then dnf (rpm), then pacman, then brew.
+// The order matters on multi-manager hosts (Linuxbrew installed
+// alongside a system dpkg-query, EPEL hosts with apt-the-rpm, etc.) —
+// the native system manager is always the more authoritative list.
+// pacman wins over per-user brew on every Arch host; rpm wins on
+// every RHEL host.
 func resolveManager(requested string) (string, error) {
 	requested = strings.ToLower(strings.TrimSpace(requested))
 	if requested != "" {
@@ -203,10 +217,13 @@ func resolveManager(requested string) (string, error) {
 	if _, err := lookPath("rpm"); err == nil {
 		return managerDnf, nil
 	}
+	if _, err := lookPath("pacman"); err == nil {
+		return managerPacman, nil
+	}
 	if _, err := lookPath("brew"); err == nil {
 		return managerBrew, nil
 	}
-	return "", fmt.Errorf("pkg.list: cannot auto-detect package manager (no dpkg-query, rpm, or brew on PATH); set manager explicitly")
+	return "", fmt.Errorf("pkg.list: cannot auto-detect package manager (no dpkg-query, rpm, pacman, or brew on PATH); set manager explicitly")
 }
 
 func realDpkgQuery() (string, error) {
@@ -271,6 +288,64 @@ func parseRpmQuery(stdout, manager string) []map[string]interface{} {
 		name := strings.TrimSpace(parts[0])
 		version := strings.TrimSpace(parts[1])
 		if name == "" {
+			continue
+		}
+		out = append(out, map[string]interface{}{
+			"name":    name,
+			"version": version,
+			"manager": manager,
+		})
+	}
+	return out
+}
+
+// realPacmanQuery shells out to `pacman -Q`, which prints `<name>
+// <version>` per line (space-separated). Wired into the pacmanQuery
+// package var by default; tests substitute their own.
+//
+// We use `pacman -Q` rather than `-Qe` (explicitly-installed only)
+// because the inspector's contract is "what's installed on this
+// host" — the same denominator dpkg-query and rpm -qa report.
+func realPacmanQuery() (string, error) {
+	// #nosec G204 -- fixed pacman binary.
+	cmd := exec.Command("pacman", "-Q")
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	if err := cmd.Run(); err != nil {
+		msg := strings.TrimSpace(stderr.String())
+		if msg != "" {
+			return "", fmt.Errorf("%w: %s", err, msg)
+		}
+		return "", err
+	}
+	return stdout.String(), nil
+}
+
+// parsePacmanQuery parses `pacman -Q` output. Each line is `<name>
+// <version>`, single space separator. Pacman names cannot contain
+// spaces, so SplitN on space is safe — version strings can contain
+// hyphens, colons (epoch), dots, etc., but no space.
+//
+// Lines without a version are skipped (matches the parseBrewList
+// "orphan-no-version" convention; pacman shouldn't emit them but
+// defending against malformed output is cheap).
+func parsePacmanQuery(stdout, manager string) []map[string]interface{} {
+	out := make([]map[string]interface{}, 0, 256)
+	sc := bufio.NewScanner(strings.NewReader(stdout))
+	sc.Buffer(make([]byte, 0, 64*1024), 1024*1024)
+	for sc.Scan() {
+		line := sc.Text()
+		if line == "" {
+			continue
+		}
+		parts := strings.SplitN(line, " ", 2)
+		if len(parts) != 2 {
+			continue
+		}
+		name := strings.TrimSpace(parts[0])
+		version := strings.TrimSpace(parts[1])
+		if name == "" || version == "" {
 			continue
 		}
 		out = append(out, map[string]interface{}{
