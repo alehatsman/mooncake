@@ -249,6 +249,43 @@ This makes the "permission denied" failures we hit today appear at
 *plan* time with an actionable message, instead of at apply time with
 an opaque syscall error.
 
+### Phase 5b: Performer file-op semantics
+
+The current `Performer.WriteFile` / `Mkdir` / `Remove` implementations
+always sudo when `PerformerOpts{Become: true}` is passed, even when:
+
+- the mooncake process is already root (sudo is redundant), or
+- the target path is owned by the current user (sudo is unnecessary).
+
+This bit during the spec-69 phase 1 rollout: migrating
+`pkg.repo`'s apt/dnf drivers' file writes to `ctx.Effects()` broke
+tests that point `paths.SourcesDir` at a user-owned `t.TempDir()`,
+because `Become: true` triggered a sudo prompt against a directory the
+test user already owns. The same shape would burn anyone running
+`mooncake apply` as root (sudo wrap is just overhead).
+
+Fix shape (matches the precedent in
+`internal/actions/service/handler.go:writeFileWithPrivileges`):
+
+```go
+// Try direct first; only fall back to sudo on EACCES when Become
+// was requested. Mirrors what service/handler.go has done for a year.
+if err := os.WriteFile(path, content, mode); err != nil {
+    if os.IsPermission(err) && opts.Become {
+        return writeFileWithSudo(path, content, mode, p.sudoPass)
+    }
+    return err
+}
+```
+
+Once this lands, `pkg.repo` apt + dnf drivers can complete their
+migration: replace `os.MkdirAll` / `shared.WriteAtomic` / `os.Remove`
+calls in their `apply()` paths with `ctx.Effects().Mkdir` /
+`.WriteFile` / `.Remove` carrying `PerformerOpts{Become: true,
+ExplicitMode: true}`. The Phase 1 follow-up commit already wired
+`privRunner` for the `apt-get update` / `dnf clean expire-cache` exec
+paths; those are spec-69-clean today.
+
 ### Phase 5: Handler migrations
 
 Two kinds of migrations, both mechanical:

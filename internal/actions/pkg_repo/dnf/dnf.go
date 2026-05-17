@@ -11,7 +11,6 @@
 package dnf
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -26,7 +25,14 @@ import (
 	"github.com/alehatsman/mooncake/internal/config"
 	"github.com/alehatsman/mooncake/internal/events"
 	"github.com/alehatsman/mooncake/internal/executor"
+	"github.com/alehatsman/mooncake/internal/security"
 )
+
+// privRunner is the spec-69 sudo-escalating command runner used by
+// realCleanCache. Set by Run() from ctx.Privileged() before calling
+// the apply / cleanCache hooks; tests that stub cleanCache bypass
+// this entirely.
+var privRunner actions.PrivilegedRunner = security.PrivilegedRunner{}
 
 // Paths controls where the dnf driver writes files. Tests override
 // via the package-level `paths` var to avoid touching /etc.
@@ -94,6 +100,11 @@ func Run(ctx actions.Context, r *config.PkgRepo, result *executor.Result) (actio
 		result.Reason = plan.reason
 		return result, nil
 	}
+
+	// Wire the spec-69 sudo-aware runner for cleanCache. apply()'s
+	// file writes still use bare os.* (see comment in apply); full
+	// file-op migration deferred to spec-69 phase 5b.
+	privRunner = ctx.Privileged()
 
 	priorContent, priorExisted, _ := shared.ReadFile(plan.repoPath)
 	result.ReverseData = &shared.PkgRepoReverseInfo{
@@ -358,12 +369,9 @@ func realCleanCache() error {
 			bin = "yum"
 		}
 	}
-	// #nosec G204 -- fixed dnf/yum binary, fixed args.
-	cmd := exec.Command(bin, "clean", "expire-cache")
-	var stderr bytes.Buffer
-	cmd.Stderr = &stderr
-	if err := cmd.Run(); err != nil {
-		msg := strings.TrimSpace(stderr.String())
+	out, err := privRunner.Run(nil, bin, "clean", "expire-cache")
+	if err != nil {
+		msg := strings.TrimSpace(string(out))
 		if msg != "" {
 			return fmt.Errorf("%w: %s", err, msg)
 		}

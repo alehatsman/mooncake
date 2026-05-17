@@ -8,12 +8,10 @@
 package apt
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"io/fs"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -23,7 +21,14 @@ import (
 	"github.com/alehatsman/mooncake/internal/config"
 	"github.com/alehatsman/mooncake/internal/events"
 	"github.com/alehatsman/mooncake/internal/executor"
+	"github.com/alehatsman/mooncake/internal/security"
 )
+
+// privRunner is the spec-69 sudo-escalating command runner used by the
+// apt-get update hook. Set by Run() from ctx.Privileged() before
+// calling apply / updateCache; tests that stub updateCache bypass this
+// entirely. See pkg_upgrade for the same pattern.
+var privRunner actions.PrivilegedRunner = security.PrivilegedRunner{}
 
 // Paths controls where the apt driver writes files. Tests override
 // these via the package-level `paths` var to avoid touching /etc.
@@ -94,6 +99,11 @@ func Run(ctx actions.Context, r *config.PkgRepo, result *executor.Result) (actio
 		result.Reason = plan.reason
 		return result, nil
 	}
+
+	// Wire the spec-69 sudo-aware runner so apt-get update escalates
+	// to root when mooncake runs as a non-root user. File-op
+	// migration is deferred — see the apply() comment.
+	privRunner = ctx.Privileged()
 
 	// Capture pre-apply sources file state for Reverse(). The plan
 	// path already calls ReadFile on the sources path when
@@ -306,12 +316,23 @@ func renderDEB822(r rendered_, keyringPath string) string {
 }
 
 func apply(p plan_, r rendered_) error {
+	// Note (spec-69 phase 5b): the file ops below still call os.* /
+	// shared.WriteAtomic directly. Migrating them to ctx.Effects()
+	// with PerformerOpts{Become: true} regresses tests that point
+	// paths.SourcesDir at a user-owned tempdir (Performer always
+	// sudos when Become is set, even when the target is writable by
+	// the current user). Two-step fix lives in spec-69: (1) teach
+	// the Performer to fall back to direct ops when the user has
+	// write access (matches service/handler.go:writeFileWithPrivileges),
+	// (2) migrate this apply path. For now, the privRunner-driven
+	// apt-get update below is the only spec-69 site here — the file
+	// writes inherit pre-spec-69 behavior, which is the same
+	// "running as root works, non-root fails with EACCES" semantic
+	// the rest of pkg.repo had before today.
 	if p.operation == "delete" {
 		if err := os.Remove(p.sourcesPath); err != nil && !errors.Is(err, fs.ErrNotExist) {
 			return fmt.Errorf("pkg.repo.apt: remove sources: %w", err)
 		}
-		// Keyring isn't auto-removed: it may be shared with another
-		// repo. Future spec-22 reverse hook can do reference counting.
 		return nil
 	}
 
@@ -346,12 +367,9 @@ func apply(p plan_, r rendered_) error {
 }
 
 func realAptGetUpdate() error {
-	// #nosec G204 -- fixed apt-get binary.
-	cmd := exec.Command("apt-get", "update")
-	var stderr bytes.Buffer
-	cmd.Stderr = &stderr
-	if err := cmd.Run(); err != nil {
-		msg := strings.TrimSpace(stderr.String())
+	out, err := privRunner.Run(nil, "apt-get", "update")
+	if err != nil {
+		msg := strings.TrimSpace(string(out))
 		if msg != "" {
 			return fmt.Errorf("%w: %s", err, msg)
 		}
