@@ -120,6 +120,13 @@ func (h *Handler) Validate(step *config.Step) error {
 }
 
 // Run plans or applies drift between desired and observed git config state.
+// RunRaw signals spec-69 RawRunner participation so user-declared
+// `retry:` actually retries this idempotent action via the
+// centralized executor loop instead of being silently no-op'd.
+func (h *Handler) RunRaw(ctx actions.Context, step *config.Step) (actions.Result, error) {
+	return h.Run(ctx, step)
+}
+
 func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, error) {
 	g := step.GitConfig
 	scope := strings.TrimSpace(g.Scope)

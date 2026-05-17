@@ -108,6 +108,14 @@ func (h *Handler) parseFileMode(modeStr string, defaultMode os.FileMode) os.File
 //   - Source mtime is no longer preserved on the destination. Nothing
 //     else in the codebase depends on this; the freshness check that
 //     used it is replaced by Performer's content comparison.
+//
+// RunRaw signals spec-69 RawRunner participation so user-declared
+// `retry:` actually retries this idempotent action via the
+// centralized executor loop instead of being silently no-op'd.
+func (h *Handler) RunRaw(ctx actions.Context, step *config.Step) (actions.Result, error) {
+	return h.Run(ctx, step)
+}
+
 func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, error) {
 	cp := step.FileCopy
 

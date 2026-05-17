@@ -201,6 +201,13 @@ func (h *Handler) writeAtomic(path, content string) error {
 // commits it atomically (ModeApply). Drift between plan preview and
 // real execution is impossible because both modes compute the same
 // `newContent` and compare against the same on-disk content.
+// RunRaw signals spec-69 RawRunner participation so user-declared
+// `retry:` actually retries this idempotent action via the
+// centralized executor loop instead of being silently no-op'd.
+func (h *Handler) RunRaw(ctx actions.Context, step *config.Step) (actions.Result, error) {
+	return h.Run(ctx, step)
+}
+
 func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, error) {
 	fr := step.TextReplace
 

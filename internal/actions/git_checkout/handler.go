@@ -78,6 +78,13 @@ func (h *Handler) Validate(step *config.Step) error {
 
 // Run inspects the working tree, resolves the requested ref, and either
 // plans the checkout (ModePlan) or applies it (ModeApply).
+// RunRaw signals spec-69 RawRunner participation so user-declared
+// `retry:` actually retries this idempotent action via the
+// centralized executor loop instead of being silently no-op'd.
+func (h *Handler) RunRaw(ctx actions.Context, step *config.Step) (actions.Result, error) {
+	return h.Run(ctx, step)
+}
+
 func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, error) {
 	g := step.GitCheckout
 

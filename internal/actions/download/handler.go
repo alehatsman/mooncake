@@ -447,6 +447,13 @@ func (h *Handler) executeSudoCommand(command string, _ *config.Step, ec *executo
 // force=false and no checksum specified), reports already-ok;
 // otherwise reports would-download. Execute mode delegates to the
 // legacy Execute path which performs the HTTP fetch.
+// RunRaw signals spec-69 RawRunner participation so user-declared
+// `retry:` actually retries this idempotent action via the
+// centralized executor loop instead of being silently no-op'd.
+func (h *Handler) RunRaw(ctx actions.Context, step *config.Step) (actions.Result, error) {
+	return h.Run(ctx, step)
+}
+
 func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, error) {
 	if ctx.Mode() != actions.ModePlan {
 		return h.runApply(ctx, step)

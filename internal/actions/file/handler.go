@@ -250,6 +250,13 @@ func (h *Handler) parseFileMode(modeStr string, defaultMode os.FileMode) os.File
 // defaulting and predicate logic decides both the preview and the real
 // run. This is the structural fix for the drift class of bugs that
 // motivated Spec 16 (see docs-working/specs/done/spec-16-unify-dryrun-execute.md).
+// RunRaw signals spec-69 RawRunner participation so user-declared
+// `retry:` actually retries this idempotent action via the
+// centralized executor loop instead of being silently no-op'd.
+func (h *Handler) RunRaw(ctx actions.Context, step *config.Step) (actions.Result, error) {
+	return h.Run(ctx, step)
+}
+
 func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, error) {
 	file := step.FileWrite
 

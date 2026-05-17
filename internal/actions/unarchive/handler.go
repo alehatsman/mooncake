@@ -565,6 +565,13 @@ func (h *Handler) extractZipFile(file *zip.File, targetPath string, ctx actions.
 // plan output should set `creates:` to a path that exists after
 // successful extraction — the standard idempotency pattern for this
 // action.
+// RunRaw signals spec-69 RawRunner participation so user-declared
+// `retry:` actually retries this idempotent action via the
+// centralized executor loop instead of being silently no-op'd.
+func (h *Handler) RunRaw(ctx actions.Context, step *config.Step) (actions.Result, error) {
+	return h.Run(ctx, step)
+}
+
 func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, error) {
 	if ctx.Mode() != actions.ModePlan {
 		return h.runApply(ctx, step)
