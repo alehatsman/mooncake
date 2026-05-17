@@ -11,6 +11,7 @@
 package dnf
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -380,7 +381,7 @@ func realCleanCache() error {
 			bin = "yum"
 		}
 	}
-	out, err := privRunner.Run(nil, bin, "clean", "expire-cache")
+	out, err := privRunner.Run(context.TODO(), bin, "clean", "expire-cache")
 	if err != nil {
 		msg := strings.TrimSpace(string(out))
 		if msg != "" {

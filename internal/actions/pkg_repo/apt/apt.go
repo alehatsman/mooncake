@@ -8,6 +8,7 @@
 package apt
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -372,7 +373,7 @@ func apply(p plan_, r rendered_) error {
 }
 
 func realAptGetUpdate() error {
-	out, err := privRunner.Run(nil, "apt-get", "update")
+	out, err := privRunner.Run(context.TODO(), "apt-get", "update")
 	if err != nil {
 		msg := strings.TrimSpace(string(out))
 		if msg != "" {

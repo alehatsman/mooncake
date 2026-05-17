@@ -9,6 +9,7 @@
 package os_ssh_key
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -599,7 +600,7 @@ func writeAuthorizedKeys(path string, lines []string, uid, gid int, createParent
 			// downstream code (and the spec-22-era F035 test that
 			// asserts both behaviors) keeps working unchanged.
 			spec := strconv.Itoa(uid) + ":" + strconv.Itoa(gid)
-			out, sErr := privRunner.Run(nil, "chown", spec, path)
+			out, sErr := privRunner.Run(context.TODO(), "chown", spec, path)
 			if sErr == nil {
 				// Sudo path succeeded — chown completed.
 			} else if errors.Is(sErr, security.ErrBecomeNoSudoPass) || errors.Is(sErr, security.ErrBecomeUnsupported) {

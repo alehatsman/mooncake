@@ -3,6 +3,7 @@
 package os_group //nolint:revive // package name follows action convention
 
 import (
+	"context"
 	"fmt"
 	"os/exec"
 	"strconv"
@@ -58,7 +59,7 @@ func applyPlanLinux(plan computedPlan) error {
 }
 
 func runLinuxCmd(bin string, args ...string) error {
-	out, err := privRunner.Run(nil, bin, args...)
+	out, err := privRunner.Run(context.TODO(), bin, args...)
 	if err != nil {
 		msg := strings.TrimSpace(string(out))
 		if msg != "" {

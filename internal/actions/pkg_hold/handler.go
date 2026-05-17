@@ -17,6 +17,7 @@ package pkg_hold
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"fmt"
 	"os/exec"
 	"regexp"
@@ -436,7 +437,7 @@ func runAptMark(verb string, pkgs []string) error {
 		return nil
 	}
 	args := append([]string{verb}, pkgs...)
-	out, err := privRunner.Run(nil, "apt-mark", args...)
+	out, err := privRunner.Run(context.TODO(), "apt-mark", args...)
 	if err != nil {
 		msg := strings.TrimSpace(string(out))
 		if msg != "" {
@@ -620,7 +621,7 @@ func runDnfVersionlock(verb string, pkgs []string) error {
 	}
 	bin := dnfBinary()
 	args := append([]string{"versionlock", verb}, pkgs...)
-	out, err := privRunner.Run(nil, bin, args...)
+	out, err := privRunner.Run(context.TODO(), bin, args...)
 	if err != nil {
 		msg := strings.TrimSpace(string(out))
 		if versionlockMissingPluginRE.MatchString(msg) {

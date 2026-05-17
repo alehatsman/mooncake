@@ -18,6 +18,7 @@ package pkg_upgrade
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"os/exec"
 	"runtime"
@@ -322,7 +323,7 @@ func realAptUpgrade(names []string) error {
 	// preservation rules) is sufficient. apt-get auto-detects TTY
 	// absence under sudo and falls back to noninteractive anyway, so
 	// this is belt-and-suspenders.
-	out, err := privRunner.Run(nil, "apt-get", args...)
+	out, err := privRunner.Run(context.TODO(), "apt-get", args...)
 	if err != nil {
 		msg := strings.TrimSpace(string(out))
 		if msg != "" {
@@ -334,7 +335,7 @@ func realAptUpgrade(names []string) error {
 }
 
 func realAptAutoremove() error {
-	out, err := privRunner.Run(nil, "apt-get", "autoremove", "-y")
+	out, err := privRunner.Run(context.TODO(), "apt-get", "autoremove", "-y")
 	if err != nil {
 		msg := strings.TrimSpace(string(out))
 		if msg != "" {
@@ -358,7 +359,7 @@ func realAptAutoremove() error {
 func realDnfUpgrade(names []string) error {
 	bin := dnfBinary()
 	args := append([]string{"upgrade", "-y"}, names...)
-	out, err := privRunner.Run(nil, bin, args...)
+	out, err := privRunner.Run(context.TODO(), bin, args...)
 	if err != nil {
 		msg := strings.TrimSpace(string(out))
 		if msg != "" {
@@ -372,7 +373,7 @@ func realDnfUpgrade(names []string) error {
 // realDnfAutoremove shells out to `dnf autoremove -y`. Available on
 // dnf since RHEL 8 + Fedora; yum (RHEL 7) supports the same verb.
 func realDnfAutoremove() error {
-	out, err := privRunner.Run(nil, dnfBinary(), "autoremove", "-y")
+	out, err := privRunner.Run(context.TODO(), dnfBinary(), "autoremove", "-y")
 	if err != nil {
 		msg := strings.TrimSpace(string(out))
 		if msg != "" {
@@ -412,7 +413,7 @@ func realPacmanUpgrade(names []string) error {
 	if len(names) > 0 {
 		args = append([]string{"-S", "--noconfirm"}, names...)
 	}
-	out, err := privRunner.Run(nil, "pacman", args...)
+	out, err := privRunner.Run(context.TODO(), "pacman", args...)
 	if err != nil {
 		msg := strings.TrimSpace(string(out))
 		if msg != "" {
@@ -461,7 +462,7 @@ func realPacmanAutoremove() error {
 	}
 	// Step 2: remove orphans + their unused deps + config files.
 	args := append([]string{"-Rns", "--noconfirm"}, orphans...)
-	out, err := privRunner.Run(nil, "pacman", args...)
+	out, err := privRunner.Run(context.TODO(), "pacman", args...)
 	if err != nil {
 		msg := strings.TrimSpace(string(out))
 		if msg != "" {

@@ -9,6 +9,7 @@
 package os_firewall
 
 import (
+	"context"
 	"fmt"
 	"os/exec"
 	"regexp"
@@ -467,7 +468,7 @@ func normalizeSource(s string) string {
 // action is registered as RequiresSudo: true; the wrapper handles
 // escalation when mooncake runs as a non-root user.
 func realUFWRun(args ...string) error {
-	out, err := privRunner.Run(nil, "ufw", args...)
+	out, err := privRunner.Run(context.TODO(), "ufw", args...)
 	if err != nil {
 		msg := strings.TrimSpace(string(out))
 		if msg != "" {
@@ -479,7 +480,7 @@ func realUFWRun(args ...string) error {
 }
 
 func realUFWStatus() (string, error) {
-	out, err := privRunner.Run(nil, "ufw", "status", "numbered")
+	out, err := privRunner.Run(context.TODO(), "ufw", "status", "numbered")
 	if err != nil {
 		msg := strings.TrimSpace(string(out))
 		if msg != "" {

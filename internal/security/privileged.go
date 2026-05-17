@@ -71,7 +71,7 @@ func (p PrivilegedRunner) RunWithInput(ctx context.Context, stdin []byte, progra
 // a single error class.
 func (p PrivilegedRunner) command(ctx context.Context, program string, args ...string) (*exec.Cmd, error) {
 	become := becomeNeededFn()
-	runner := BecomeRunner{SudoPass: p.SudoPass}
+	runner := BecomeRunner(p)
 	cmd, err := runner.Command(become, program, args...)
 	if err != nil {
 		return nil, err

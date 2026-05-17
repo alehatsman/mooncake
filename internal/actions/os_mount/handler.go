@@ -8,6 +8,7 @@
 package os_mount
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -575,7 +576,7 @@ func snapshotFstab() error {
 
 // realMount shells out to `mount <dest>` via ctx.Privileged().
 func realMount(dest string) error {
-	out, err := privRunner.Run(nil, "mount", dest)
+	out, err := privRunner.Run(context.TODO(), "mount", dest)
 	if err != nil {
 		msg := strings.TrimSpace(string(out))
 		if msg != "" {
@@ -588,7 +589,7 @@ func realMount(dest string) error {
 
 // realUmount shells out to `umount <dest>` via ctx.Privileged().
 func realUmount(dest string) error {
-	out, err := privRunner.Run(nil, "umount", dest)
+	out, err := privRunner.Run(context.TODO(), "umount", dest)
 	if err != nil {
 		msg := strings.TrimSpace(string(out))
 		if msg != "" {

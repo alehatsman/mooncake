@@ -8,6 +8,7 @@ package os_sysctl
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -531,18 +532,6 @@ func splitKV(line string) (string, string, bool) {
 	return strings.TrimSpace(line[:eq]), strings.TrimSpace(line[eq+1:]), true
 }
 
-func writeAtomic(path string, content []byte, mode os.FileMode) error {
-	tmp := path + atomicTempSuffix
-	if err := os.WriteFile(tmp, content, mode); err != nil {
-		return err
-	}
-	if err := os.Rename(tmp, path); err != nil {
-		_ = os.Remove(tmp)
-		return err
-	}
-	return nil
-}
-
 // realSysctlGet shells out to `sysctl -n <name>` and returns the
 // trimmed stdout. A non-zero exit (unknown key) surfaces as an error
 // to the caller so the planner can decide whether to retry.
@@ -565,7 +554,7 @@ func realSysctlGet(name string) (string, error) {
 // running kernel. Goes through ctx.Privileged() — writing /proc/sys/*
 // requires root.
 func realSysctlApply(name, value string) error {
-	out, err := privRunner.Run(nil, "sysctl", "-w", name+"="+value)
+	out, err := privRunner.Run(context.TODO(), "sysctl", "-w", name+"="+value)
 	if err != nil {
 		msg := strings.TrimSpace(string(out))
 		if msg != "" {

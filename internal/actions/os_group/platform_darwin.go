@@ -3,6 +3,7 @@
 package os_group //nolint:revive // package name follows action convention
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os/exec"
@@ -180,7 +181,7 @@ func nextAvailableGID(minBound, maxBound int) (int, error) {
 // root on macOS.
 func dsclGroupRun(args ...string) error {
 	fullArgs := append([]string{"."}, args...)
-	out, err := privRunner.Run(nil, "dscl", fullArgs...)
+	out, err := privRunner.Run(context.TODO(), "dscl", fullArgs...)
 	if err != nil {
 		msg := strings.TrimSpace(string(out))
 		if msg != "" {

@@ -399,15 +399,3 @@ func readFile(path string) (string, bool, error) {
 	}
 	return string(data), true, nil
 }
-
-func writeAtomic(path string, content []byte, mode os.FileMode) error {
-	tmp := path + atomicTempSuffix
-	if err := os.WriteFile(tmp, content, mode); err != nil {
-		return err
-	}
-	if err := os.Rename(tmp, path); err != nil {
-		_ = os.Remove(tmp)
-		return err
-	}
-	return nil
-}
