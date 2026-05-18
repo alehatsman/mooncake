@@ -359,7 +359,7 @@ func readCurrentHolds(manager string) (map[string]bool, error) {
 	return nil, fmt.Errorf("readCurrentHolds: unsupported manager %q", manager)
 }
 
-func runHold(runner actions.PrivilegedRunner, manager string, pkgs []string) error {
+func runHold(runner *security.Privileged, manager string, pkgs []string) error {
 	switch manager {
 	case managerApt:
 		return aptMarkHold(runner, pkgs)
@@ -371,7 +371,7 @@ func runHold(runner actions.PrivilegedRunner, manager string, pkgs []string) err
 	return fmt.Errorf("runHold: unsupported manager %q", manager)
 }
 
-func runUnhold(runner actions.PrivilegedRunner, manager string, pkgs []string) error {
+func runUnhold(runner *security.Privileged, manager string, pkgs []string) error {
 	switch manager {
 	case managerApt:
 		return aptMarkUnhold(runner, pkgs)
@@ -421,30 +421,20 @@ func realAptMarkShowHold() (map[string]bool, error) {
 	return held, nil
 }
 
-// runnerOrDefault returns the supplied runner when non-nil, else the
-// security default. Lets test stubs that don't care about the runner
-// arg pass nil without nil-deref'ing through real* helpers.
-func runnerOrDefault(r actions.PrivilegedRunner) actions.PrivilegedRunner {
-	if r == nil {
-		return security.PrivilegedRunner{}
-	}
-	return r
-}
-
-func realAptMarkHold(runner actions.PrivilegedRunner, pkgs []string) error {
+func realAptMarkHold(runner *security.Privileged, pkgs []string) error {
 	return runAptMark(runner, "hold", pkgs)
 }
 
-func realAptMarkUnhold(runner actions.PrivilegedRunner, pkgs []string) error {
+func realAptMarkUnhold(runner *security.Privileged, pkgs []string) error {
 	return runAptMark(runner, "unhold", pkgs)
 }
 
-func runAptMark(runner actions.PrivilegedRunner, verb string, pkgs []string) error {
+func runAptMark(runner *security.Privileged, verb string, pkgs []string) error {
 	if len(pkgs) == 0 {
 		return nil
 	}
 	args := append([]string{verb}, pkgs...)
-	out, err := runnerOrDefault(runner).Run(context.TODO(), "apt-mark", args...)
+	out, err := runner.Run(context.TODO(), "apt-mark", args...)
 	if err != nil {
 		msg := strings.TrimSpace(string(out))
 		if msg != "" {
@@ -487,11 +477,11 @@ func realBrewListPinned() (map[string]bool, error) {
 	return pinned, nil
 }
 
-func realBrewPin(_ actions.PrivilegedRunner, pkgs []string) error {
+func realBrewPin(_ *security.Privileged, pkgs []string) error {
 	return runBrew("pin", pkgs)
 }
 
-func realBrewUnpin(_ actions.PrivilegedRunner, pkgs []string) error {
+func realBrewUnpin(_ *security.Privileged, pkgs []string) error {
 	return runBrew("unpin", pkgs)
 }
 
@@ -609,11 +599,11 @@ func parseVersionlockEntry(line string) string {
 	return ""
 }
 
-func realDnfVersionlockAdd(runner actions.PrivilegedRunner, pkgs []string) error {
+func realDnfVersionlockAdd(runner *security.Privileged, pkgs []string) error {
 	return runDnfVersionlock(runner, "add", pkgs)
 }
 
-func realDnfVersionlockDel(runner actions.PrivilegedRunner, pkgs []string) error {
+func realDnfVersionlockDel(runner *security.Privileged, pkgs []string) error {
 	return runDnfVersionlock(runner, "delete", pkgs)
 }
 
@@ -622,13 +612,13 @@ func realDnfVersionlockDel(runner actions.PrivilegedRunner, pkgs []string) error
 // dnf message verbatim. The plugin-missing path is detected here too
 // (the showhold equivalent), turning a bare exec failure into a
 // targeted install hint.
-func runDnfVersionlock(runner actions.PrivilegedRunner, verb string, pkgs []string) error {
+func runDnfVersionlock(runner *security.Privileged, verb string, pkgs []string) error {
 	if len(pkgs) == 0 {
 		return nil
 	}
 	bin := dnfBinary()
 	args := append([]string{"versionlock", verb}, pkgs...)
-	out, err := runnerOrDefault(runner).Run(context.TODO(), bin, args...)
+	out, err := runner.Run(context.TODO(), bin, args...)
 	if err != nil {
 		msg := strings.TrimSpace(string(out))
 		if versionlockMissingPluginRE.MatchString(msg) {

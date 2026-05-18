@@ -48,7 +48,7 @@ func TestReverse_UnsetsKeysThatDidNotExistBefore(t *testing.T) {
 	result.ReverseData = &GitConfigReverseInfo{
 		Scope: "global",
 		Entries: []GitConfigReverseEntry{
-			{Key: "user.email", HadValue: false},          // didn't exist before — reverse should unset
+			{Key: "user.email", HadValue: false},                    // didn't exist before — reverse should unset
 			{Key: "user.name", PriorValue: "Alice", HadValue: true}, // existed — reverse restores
 		},
 	}

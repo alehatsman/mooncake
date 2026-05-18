@@ -19,8 +19,8 @@ import (
 // multi-status invocations actually issue one request per status.
 type runsFake struct {
 	mu        sync.Mutex
-	calls     []string                       // raw RawQuery captured per request
-	perStatus map[string][]map[string]any    // status → runs payload; "" key = no-status-filter
+	calls     []string                    // raw RawQuery captured per request
+	perStatus map[string][]map[string]any // status → runs payload; "" key = no-status-filter
 	fail      bool
 }
 

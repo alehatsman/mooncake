@@ -22,7 +22,7 @@ import (
 type captureSubscriber struct {
 	mu      sync.Mutex
 	events  []events.Event
-	stepIDs []string                       // in observed order
+	stepIDs []string // in observed order
 	step    map[string]events.StepStartedData
 	result  map[string]*executor.Result
 	plan    events.PlanLoadedData

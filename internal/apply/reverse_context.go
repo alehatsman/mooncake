@@ -1,14 +1,13 @@
 package apply
 
 import (
-	"context"
 	"os"
-	"os/exec"
 
 	"github.com/alehatsman/mooncake/internal/actions"
 	"github.com/alehatsman/mooncake/internal/events"
 	"github.com/alehatsman/mooncake/internal/expression"
 	"github.com/alehatsman/mooncake/internal/logger"
+	"github.com/alehatsman/mooncake/internal/security"
 	"github.com/alehatsman/mooncake/internal/template"
 )
 
@@ -48,7 +47,14 @@ func (c *reverseContext) GetVariables() map[string]interface{} { return map[stri
 func (c *reverseContext) GetEventPublisher() events.Publisher  { return events.NewPublisher() }
 func (c *reverseContext) GetCurrentStepID() string             { return "reverse" }
 func (c *reverseContext) Effects() actions.Performer           { return reverseNoopPerformer{} }
-func (c *reverseContext) Privileged() actions.PrivilegedRunner { return reverseNoopPrivileged{} }
+func (c *reverseContext) Privileged() *security.Privileged {
+	// Reverse runs after the original — give it an already-root
+	// no-sudo primitive so any handler that misbehaves and shells
+	// out doesn't get blocked on a sudo prompt.
+	return &security.Privileged{
+		Escalation: security.EscalationReport{Available: true, Reason: security.EscalationAvailableRoot},
+	}
+}
 
 func (c *reverseContext) MergeUserVars(_ map[string]interface{}) {}
 func (c *reverseContext) SetChanged(_ bool)                      {}
@@ -89,23 +95,4 @@ func (reverseNoopPerformer) Chmod(string, os.FileMode, actions.PerformerOpts) ac
 }
 func (reverseNoopPerformer) Chown(string, string, string, actions.PerformerOpts) actions.Effect {
 	return actions.Effect{}
-}
-
-// reverseNoopPrivileged satisfies actions.PrivilegedRunner with no-op
-// returns. Reverse handlers should not shell out under sudo (their
-// inverse step belongs in the plan, not in-place); this guard keeps
-// misbehavior soft.
-type reverseNoopPrivileged struct{}
-
-func (reverseNoopPrivileged) Run(context.Context, string, ...string) ([]byte, error) {
-	return nil, nil
-}
-func (reverseNoopPrivileged) RunWithInput(context.Context, []byte, string, ...string) ([]byte, error) {
-	return nil, nil
-}
-func (reverseNoopPrivileged) RunWithBecome(context.Context, bool, string, ...string) ([]byte, error) {
-	return nil, nil
-}
-func (reverseNoopPrivileged) Command(_ context.Context, _ bool, program string, args ...string) (*exec.Cmd, error) {
-	return exec.Command(program, args...), nil //nolint:gosec // test-only noop runner
 }

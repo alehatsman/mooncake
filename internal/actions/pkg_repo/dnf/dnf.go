@@ -28,15 +28,6 @@ import (
 	"github.com/alehatsman/mooncake/internal/security"
 )
 
-// runnerOrDefault returns the supplied runner when non-nil, else the
-// security default. Lets test stubs pass nil without nil-deref.
-func runnerOrDefault(r actions.PrivilegedRunner) actions.PrivilegedRunner {
-	if r == nil {
-		return security.PrivilegedRunner{}
-	}
-	return r
-}
-
 // Paths controls where the dnf driver writes files. Tests override
 // via the package-level `paths` var to avoid touching /etc.
 type Paths struct {
@@ -375,14 +366,14 @@ func apply(performer actions.Performer, p plan_, r rendered_) error {
 // on RHEL 7). Invalidates the per-repo metadata cache so the next
 // `dnf install` sees the freshly-added repo without forcing a full
 // network refresh up front.
-func realCleanCache(runner actions.PrivilegedRunner) error {
+func realCleanCache(runner *security.Privileged) error {
 	bin := "dnf"
 	if _, err := exec.LookPath("dnf"); err != nil {
 		if _, fallbackErr := exec.LookPath("yum"); fallbackErr == nil {
 			bin = "yum"
 		}
 	}
-	out, err := runnerOrDefault(runner).Run(context.TODO(), bin, "clean", "expire-cache")
+	out, err := runner.Run(context.TODO(), bin, "clean", "expire-cache")
 	if err != nil {
 		msg := strings.TrimSpace(string(out))
 		if msg != "" {

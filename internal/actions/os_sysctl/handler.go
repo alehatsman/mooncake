@@ -50,15 +50,6 @@ var (
 	sysctlApply = realSysctlApply
 )
 
-// runnerOrDefault returns the supplied runner when non-nil, else the
-// security default. Lets test stubs pass nil without nil-deref.
-func runnerOrDefault(r actions.PrivilegedRunner) actions.PrivilegedRunner {
-	if r == nil {
-		return security.PrivilegedRunner{}
-	}
-	return r
-}
-
 // Handler implements os.sysctl.
 type Handler struct{}
 
@@ -405,7 +396,7 @@ func renderPersistFile(lines []string) string {
 	return sb.String()
 }
 
-func applyPlan(performer actions.Performer, runner actions.PrivilegedRunner, plan sysctlPlan, r renderedSysctl) error {
+func applyPlan(performer actions.Performer, runner *security.Privileged, plan sysctlPlan, r renderedSysctl) error {
 	pOpts := actions.PerformerOpts{Become: true}
 	if plan.touchesFile {
 		if plan.wantContent == "" || !hasContentLines(plan.wantContent) {
@@ -553,8 +544,8 @@ func realSysctlGet(name string) (string, error) {
 // realSysctlApply runs `sysctl -w name=value` to push the value to the
 // running kernel. Goes through the supplied runner — writing /proc/sys/*
 // requires root.
-func realSysctlApply(runner actions.PrivilegedRunner, name, value string) error {
-	out, err := runnerOrDefault(runner).Run(context.TODO(), "sysctl", "-w", name+"="+value)
+func realSysctlApply(runner *security.Privileged, name, value string) error {
+	out, err := runner.Run(context.TODO(), "sysctl", "-w", name+"="+value)
 	if err != nil {
 		msg := strings.TrimSpace(string(out))
 		if msg != "" {

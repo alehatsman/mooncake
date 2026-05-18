@@ -24,7 +24,7 @@ func TestStep_ValidateOneAction(t *testing.T) {
 		{
 			name: "single file action",
 			step: Step{
-				Name: "test",
+				Name:      "test",
 				FileWrite: &File{Path: "/tmp/test"},
 			},
 			wantErr: false,
@@ -32,7 +32,7 @@ func TestStep_ValidateOneAction(t *testing.T) {
 		{
 			name: "single template action",
 			step: Step{
-				Name:     "test",
+				Name:         "test",
 				FileTemplate: &Template{Src: "src", Dest: "dest"},
 			},
 			wantErr: false,
@@ -40,7 +40,7 @@ func TestStep_ValidateOneAction(t *testing.T) {
 		{
 			name: "single include action",
 			step: Step{
-				Name:    "test",
+				Name:   "test",
 				Import: stringPtr("other.yml"),
 			},
 			wantErr: false,
@@ -48,7 +48,7 @@ func TestStep_ValidateOneAction(t *testing.T) {
 		{
 			name: "single include_vars action",
 			step: Step{
-				Name:        "test",
+				Name:     "test",
 				VarsLoad: stringPtr("vars.yml"),
 			},
 			wantErr: false,
@@ -64,27 +64,27 @@ func TestStep_ValidateOneAction(t *testing.T) {
 		{
 			name: "multiple actions - shell and file",
 			step: Step{
-				Name:  "test",
-				Shell: shellActionPtr("echo hello"),
-				FileWrite:  &File{Path: "/tmp/test"},
+				Name:      "test",
+				Shell:     shellActionPtr("echo hello"),
+				FileWrite: &File{Path: "/tmp/test"},
 			},
 			wantErr: true,
 		},
 		{
 			name: "multiple actions - template and shell",
 			step: Step{
-				Name:     "test",
+				Name:         "test",
 				FileTemplate: &Template{Src: "src", Dest: "dest"},
-				Shell:    shellActionPtr("echo hello"),
+				Shell:        shellActionPtr("echo hello"),
 			},
 			wantErr: true,
 		},
 		{
 			name: "multiple actions - include and vars",
 			step: Step{
-				Name:    "test",
+				Name:   "test",
 				Import: stringPtr("other.yml"),
-				Vars:    &map[string]interface{}{"key": "value"},
+				Vars:   &map[string]interface{}{"key": "value"},
 			},
 			wantErr: true,
 		},
@@ -117,7 +117,7 @@ func TestStep_ValidateHasAction(t *testing.T) {
 		{
 			name: "has file action",
 			step: Step{
-				Name: "test",
+				Name:      "test",
 				FileWrite: &File{Path: "/tmp/test"},
 			},
 			wantErr: false,
@@ -165,7 +165,7 @@ func TestStep_Validate(t *testing.T) {
 		{
 			name: "valid step with file",
 			step: Step{
-				Name: "test",
+				Name:      "test",
 				FileWrite: &File{Path: "/tmp/test", State: "file"},
 			},
 			wantErr: false,
@@ -180,9 +180,9 @@ func TestStep_Validate(t *testing.T) {
 		{
 			name: "invalid - multiple actions",
 			step: Step{
-				Name:  "test",
-				Shell: shellActionPtr("echo hello"),
-				FileWrite:  &File{Path: "/tmp/test"},
+				Name:      "test",
+				Shell:     shellActionPtr("echo hello"),
+				FileWrite: &File{Path: "/tmp/test"},
 			},
 			wantErr: true,
 		},
@@ -218,14 +218,14 @@ func TestStep_Validate(t *testing.T) {
 
 func TestStep_Copy(t *testing.T) {
 	original := Step{
-		Name:    "test step",
-		When:    "os == 'linux'",
-		Shell:   shellActionPtr("echo hello"),
-		AsUser: "root",
-		Tags:    []string{"tag1", "tag2"},
-		FileWrite:    &File{Path: "/tmp/test", State: "file"},
-		Import: stringPtr("other.yml"),
-		Vars:    &map[string]interface{}{"key": "value"},
+		Name:      "test step",
+		When:      "os == 'linux'",
+		Shell:     shellActionPtr("echo hello"),
+		AsUser:    "root",
+		Tags:      []string{"tag1", "tag2"},
+		FileWrite: &File{Path: "/tmp/test", State: "file"},
+		Import:    stringPtr("other.yml"),
+		Vars:      &map[string]interface{}{"key": "value"},
 	}
 
 	copied := original.Clone()
@@ -333,8 +333,8 @@ func TestStep_CountActions(t *testing.T) {
 		{
 			name: "two actions - shell and template",
 			step: Step{
-				Name:     "test",
-				Shell:    shellActionPtr("echo test"),
+				Name:         "test",
+				Shell:        shellActionPtr("echo test"),
 				FileTemplate: &Template{Src: "src", Dest: "dest"},
 			},
 			want: 2,
@@ -360,11 +360,11 @@ func TestStep_NewCommonFields(t *testing.T) {
 		step := Step{
 			Name:        "test",
 			Shell:       shellActionPtr("echo test"),
-			AsUser:  "postgres",
+			AsUser:      "postgres",
 			Env:         map[string]string{"PATH": "/usr/bin", "HOME": "/home/user"},
 			Cwd:         "/tmp",
 			Timeout:     "30s",
-			Retry: &RetryPolicy{Attempts: 3, Delay: "5s"},
+			Retry:       &RetryPolicy{Attempts: 3, Delay: "5s"},
 			ChangedWhen: "result.rc == 0",
 			FailedWhen:  "result.rc != 0",
 		}
@@ -400,11 +400,11 @@ func TestStep_CopyWithNewFields(t *testing.T) {
 	original := Step{
 		Name:        "test",
 		Shell:       shellActionPtr("echo test"),
-		AsUser:  "postgres",
+		AsUser:      "postgres",
 		Env:         map[string]string{"PATH": "/usr/bin"},
 		Cwd:         "/tmp",
 		Timeout:     "30s",
-		Retry: &RetryPolicy{Attempts: 3, Delay: "5s"},
+		Retry:       &RetryPolicy{Attempts: 3, Delay: "5s"},
 		ChangedWhen: "result.rc == 0",
 		FailedWhen:  "result.rc != 0",
 	}

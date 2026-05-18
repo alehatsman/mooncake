@@ -338,7 +338,15 @@ func (h *Handler) runCmd(ec *executor.ExecutionContext, become bool, cmdArgs []s
 	if len(cmdArgs) == 0 {
 		return nil, fmt.Errorf("pkg.runCmd: cmdArgs must not be empty")
 	}
-	return ec.Privileged().RunWithBecome(ec.Svc.Ctx, become, cmdArgs[0], cmdArgs[1:]...)
+	// Spec-72 Layer C: become decision lives in step.AsUser, bound
+	// at dispatch onto ec.Privileged(). The per-call `become` arg is
+	// no longer threaded through helper signatures; this method's
+	// `become` param is retained as a no-op while callers are
+	// audited and dropped in a follow-up. The right-shape semantics
+	// hold today: brew steps lack as_user → no sudo; apt steps with
+	// as_user: root → sudo to root.
+	_ = become
+	return ec.Privileged().Run(ec.Svc.Ctx, cmdArgs[0], cmdArgs[1:]...)
 }
 
 // installPackages installs or upgrades packages.

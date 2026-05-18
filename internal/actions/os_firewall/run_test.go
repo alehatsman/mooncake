@@ -12,6 +12,7 @@ import (
 	"github.com/alehatsman/mooncake/internal/executor"
 	"github.com/alehatsman/mooncake/internal/logger"
 	"github.com/alehatsman/mooncake/internal/pathutil"
+	"github.com/alehatsman/mooncake/internal/security"
 	"github.com/alehatsman/mooncake/internal/template"
 )
 
@@ -56,12 +57,12 @@ func newStub(t *testing.T) *stub {
 	t.Helper()
 	s := &stub{hasUFW: true}
 	origRun, origStatus, origLook := ufwRun, ufwStatus, ufwLookPath
-	ufwRun = func(_ actions.PrivilegedRunner, args ...string) error {
+	ufwRun = func(_ *security.Privileged, args ...string) error {
 		cp := append([]string(nil), args...)
 		s.calls = append(s.calls, cp)
 		return s.runErr
 	}
-	ufwStatus = func(_ actions.PrivilegedRunner) (string, error) { return s.statusOut, s.statusErr }
+	ufwStatus = func(_ *security.Privileged) (string, error) { return s.statusOut, s.statusErr }
 	ufwLookPath = func() (string, error) {
 		if !s.hasUFW {
 			return "", errors.New("ufw not installed")

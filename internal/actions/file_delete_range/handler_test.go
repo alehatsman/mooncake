@@ -428,4 +428,3 @@ func TestHandler_Execute_EmptyRange(t *testing.T) {
 		t.Errorf("expected content:\n%s\ngot:\n%s", expected, string(newContent))
 	}
 }
-

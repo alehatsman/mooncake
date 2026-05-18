@@ -10,6 +10,7 @@ import (
 	"github.com/alehatsman/mooncake/internal/executor"
 	"github.com/alehatsman/mooncake/internal/logger"
 	"github.com/alehatsman/mooncake/internal/pathutil"
+	"github.com/alehatsman/mooncake/internal/security"
 	"github.com/alehatsman/mooncake/internal/template"
 )
 
@@ -50,12 +51,12 @@ func newStub(t *testing.T) *stub {
 	origUp := aptUpgrade
 	origAr := aptAutoremove
 	origLookPath := lookPath
-	aptUpgrade = func(_ actions.PrivilegedRunner, names []string) error {
+	aptUpgrade = func(_ *security.Privileged, names []string) error {
 		cp := append([]string(nil), names...)
 		s.upgradeCalls = append(s.upgradeCalls, cp)
 		return nil
 	}
-	aptAutoremove = func(_ actions.PrivilegedRunner) error {
+	aptAutoremove = func(_ *security.Privileged) error {
 		s.autoremoveCalls++
 		return nil
 	}
@@ -192,12 +193,12 @@ func newBrewStub(t *testing.T) *brewStub {
 	origUp := brewUpgrade
 	origAr := brewAutoremove
 	origLookPath := lookPath
-	brewUpgrade = func(_ actions.PrivilegedRunner, names []string) error {
+	brewUpgrade = func(_ *security.Privileged, names []string) error {
 		cp := append([]string(nil), names...)
 		s.upgradeCalls = append(s.upgradeCalls, cp)
 		return nil
 	}
-	brewAutoremove = func(_ actions.PrivilegedRunner) error {
+	brewAutoremove = func(_ *security.Privileged) error {
 		s.autoremoveCalls++
 		return nil
 	}
@@ -275,7 +276,7 @@ func TestAutoDetect_PrefersAptOverBrew(t *testing.T) {
 	s := newStub(t)
 	// Sentinel: brew should not be invoked.
 	origBrew := brewUpgrade
-	brewUpgrade = func(_ actions.PrivilegedRunner, names []string) error {
+	brewUpgrade = func(_ *security.Privileged, names []string) error {
 		t.Errorf("brew should not be invoked when apt-get is on PATH; got %v", names)
 		return nil
 	}
@@ -336,12 +337,12 @@ func newDnfStub(t *testing.T) *dnfStub {
 	origUp := dnfUpgrade
 	origAr := dnfAutoremove
 	origLookPath := lookPath
-	dnfUpgrade = func(_ actions.PrivilegedRunner, names []string) error {
+	dnfUpgrade = func(_ *security.Privileged, names []string) error {
 		cp := append([]string(nil), names...)
 		s.upgradeCalls = append(s.upgradeCalls, cp)
 		return nil
 	}
-	dnfAutoremove = func(_ actions.PrivilegedRunner) error {
+	dnfAutoremove = func(_ *security.Privileged) error {
 		s.autoremoveCalls++
 		return nil
 	}
@@ -433,7 +434,7 @@ func TestApply_YumAlias(t *testing.T) {
 func TestAutoDetect_PrefersAptOverDnf(t *testing.T) {
 	s := newStub(t)
 	origDnf := dnfUpgrade
-	dnfUpgrade = func(_ actions.PrivilegedRunner, names []string) error {
+	dnfUpgrade = func(_ *security.Privileged, names []string) error {
 		t.Errorf("dnf should not be invoked when apt-get is on PATH; got %v", names)
 		return nil
 	}
@@ -507,12 +508,12 @@ func newPacmanStub(t *testing.T) *pacmanStub {
 	origUp := pacmanUpgrade
 	origAr := pacmanAutoremove
 	origLookPath := lookPath
-	pacmanUpgrade = func(_ actions.PrivilegedRunner, names []string) error {
+	pacmanUpgrade = func(_ *security.Privileged, names []string) error {
 		cp := append([]string(nil), names...)
 		s.upgradeCalls = append(s.upgradeCalls, cp)
 		return nil
 	}
-	pacmanAutoremove = func(_ actions.PrivilegedRunner) error {
+	pacmanAutoremove = func(_ *security.Privileged) error {
 		s.autoremoveCalls++
 		return nil
 	}
@@ -634,7 +635,7 @@ func TestAutoDetect_PacmanWhenNoAptOrDnf(t *testing.T) {
 func TestAutoDetect_PrefersDnfOverPacman(t *testing.T) {
 	s := newDnfStub(t)
 	origPacman := pacmanUpgrade
-	pacmanUpgrade = func(_ actions.PrivilegedRunner, names []string) error {
+	pacmanUpgrade = func(_ *security.Privileged, names []string) error {
 		t.Errorf("pacman should not be invoked when dnf is on PATH; got %v", names)
 		return nil
 	}

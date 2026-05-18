@@ -21,11 +21,11 @@ import (
 // state machine. Each test plans the sequence of run-list snapshots
 // the controller will see, plus per-run SSE event scripts.
 type watchFake struct {
-	mu         sync.Mutex
-	listCalls  int32
-	listSeq    []listResp                       // one entry per poll; last entry is sticky
-	streams    map[string][]map[string]any      // runID → event bodies emitted on SSE
-	failList   bool
+	mu        sync.Mutex
+	listCalls int32
+	listSeq   []listResp                  // one entry per poll; last entry is sticky
+	streams   map[string][]map[string]any // runID → event bodies emitted on SSE
+	failList  bool
 }
 
 type listResp struct {

@@ -156,19 +156,3 @@ func TestPreflight_PasswordlessSudoSatisfiesSudoAvailable(t *testing.T) {
 		t.Errorf("sudoAvailable=true (e.g. via NOPASSWD probe) should pass preflight, got: %v", err)
 	}
 }
-
-// TestProbeEscalation_NilContext_NoPanic — the executor calls
-// ProbeEscalation at RunServices construction; some callers (MCP,
-// in-process apply) pass a nil context all the way through. The probe
-// must defend against that rather than panicking inside
-// context.WithTimeout. Pre-spec-72 the same guarantee was tested
-// against detectPasswordlessSudo; ProbeEscalation inherits the
-// guarantee and is now the single sudo probe at run startup.
-func TestProbeEscalation_NilContext_NoPanic(t *testing.T) {
-	defer func() {
-		if r := recover(); r != nil {
-			t.Fatalf("ProbeEscalation panicked on nil context: %v", r)
-		}
-	}()
-	_ = ProbeEscalation(nil, "") //nolint:staticcheck // nil ctx is the case under test
-}

@@ -252,8 +252,8 @@ func TestSynthesize_PortValidation(t *testing.T) {
 
 func TestParsePortShorthand(t *testing.T) {
 	cases := []struct {
-		in       string
-		wantPort int
+		in        string
+		wantPort  int
 		wantProto string
 	}{
 		{":80", 80, ""},

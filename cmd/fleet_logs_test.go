@@ -178,8 +178,8 @@ func TestFleetLogs_LatestInFlightPreferredOverTerminal(t *testing.T) {
 	fake := &fakeAgentd{
 		ExpectToken: "tok",
 		Runs: []map[string]any{
-			{"id": "RUN-002", "status": "running"},  // newer, in-flight
-			{"id": "RUN-001", "status": "success"},  // older, terminal
+			{"id": "RUN-002", "status": "running"}, // newer, in-flight
+			{"id": "RUN-001", "status": "success"}, // older, terminal
 		},
 		Events: map[string][]sseFrame{
 			"RUN-002": {{Type: "step.start", Data: map[string]any{"name": "install"}, Seq: 1}},
@@ -207,7 +207,7 @@ func TestFleetLogs_FallsBackToNewestTerminal(t *testing.T) {
 	fake := &fakeAgentd{
 		ExpectToken: "tok",
 		Runs: []map[string]any{
-			{"id": "RUN-003", "status": "success"},  // newest
+			{"id": "RUN-003", "status": "success"}, // newest
 			{"id": "RUN-002", "status": "failed"},
 			{"id": "RUN-001", "status": "success"},
 		},

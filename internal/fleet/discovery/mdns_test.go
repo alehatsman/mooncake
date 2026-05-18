@@ -78,10 +78,10 @@ func TestAdvertise_RejectsZeroPortAndEmptyName(t *testing.T) {
 
 func TestSplitKV(t *testing.T) {
 	tests := []struct {
-		in      string
-		wantK   string
-		wantV   string
-		wantOK  bool
+		in     string
+		wantK  string
+		wantV  string
+		wantOK bool
 	}{
 		{"hn=mainpc", "hn", "mainpc", true},
 		{"ver=0.9.0", "ver", "0.9.0", true},

@@ -28,16 +28,16 @@ func mockExecutionContext() *executor.ExecutionContext {
 	}
 	return &executor.ExecutionContext{
 		Svc: &executor.RunServices{
-			Template: tmpl,
-			Evaluator: ctx.GetEvaluator(),
-			Logger: ctx.Log,
+			Template:       tmpl,
+			Evaluator:      ctx.GetEvaluator(),
+			Logger:         ctx.Log,
 			EventPublisher: ctx.Publisher,
-			PathUtil: pathutil.NewPathExpander(tmpl),
-			Mode: actions.ModeApply,
+			PathUtil:       pathutil.NewPathExpander(tmpl),
+			Mode:           actions.ModeApply,
 		},
-		Scope: executor.NewVariableScope(),
+		Scope:         executor.NewVariableScope(),
 		CurrentStepID: ctx.StepID,
-		CurrentDir: "/tmp",
+		CurrentDir:    "/tmp",
 	}
 }
 

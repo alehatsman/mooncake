@@ -18,7 +18,6 @@ func mustNewRenderer() template.Renderer {
 	return r
 }
 
-
 // TestRenderActionTemplates_AllActionTypes tests the renderActionTemplates function
 // for all action types to improve coverage from 26.2% to 80%+
 func TestRenderActionTemplates_AllActionTypes(t *testing.T) {
@@ -221,7 +220,6 @@ func TestRenderActionTemplates_AllActionTypes(t *testing.T) {
 		})
 	}
 }
-
 
 // TestConvertToSliceExtended tests additional edge cases for convertToSlice
 func TestConvertToSliceExtended(t *testing.T) {

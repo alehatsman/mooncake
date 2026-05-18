@@ -431,10 +431,10 @@ func TestRun_RecurseSubmodules_PassesFlag(t *testing.T) {
 // clone via the real git binary while credentials are configured. The
 // local file:// remote does not challenge for auth, so the credential
 // env is "carried but unused" — the test asserts that:
-//   1. the real git invocation succeeds with the env in place,
-//   2. the credentials env actually reached git (probed via a sentinel
-//      var our wiring does not strip),
-//   3. the askpass tempfile lifecycle (create → cleanup) holds.
+//  1. the real git invocation succeeds with the env in place,
+//  2. the credentials env actually reached git (probed via a sentinel
+//     var our wiring does not strip),
+//  3. the askpass tempfile lifecycle (create → cleanup) holds.
 //
 // This is the smoke test the unit-level mocks can't provide.
 func TestRun_Apply_RealCloneWithCredentialsWired(t *testing.T) {

@@ -9,7 +9,7 @@ package utils
 //
 //   - Empty filter            → every step runs (no name filter active).
 //   - Step has no name        → step is skipped (name filter is exact
-//                               match; an unnamed step can't be named).
+//     match; an unnamed step can't be named).
 //   - Step has a name         → must match the filter exactly.
 //
 // Note this differs from MatchesTags: untagged steps run on a tag filter

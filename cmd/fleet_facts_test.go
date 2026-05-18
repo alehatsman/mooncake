@@ -45,7 +45,7 @@ func TestFleetFacts_DotPathFilter(t *testing.T) {
 	fake := &fakeAgentd{
 		ExpectToken: "tok",
 		Facts: map[string]any{
-			"go_version":     "1.22.3",
+			"go_version":      "1.22.3",
 			"os_distribution": "arch",
 		},
 	}
@@ -59,7 +59,7 @@ func TestFleetFacts_DotPathFilter(t *testing.T) {
 		want string
 	}{
 		{"go_version", "1.22.3"},
-		{"go.version", "1.22.3"},        // dot form maps to underscore key
+		{"go.version", "1.22.3"}, // dot form maps to underscore key
 		{"os.distribution", "arch"},
 	}
 	for _, tt := range tests {

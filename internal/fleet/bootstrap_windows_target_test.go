@@ -13,9 +13,9 @@ func TestWinContext_PathRenderers(t *testing.T) {
 		TempDir:      `C:\Users\aleh\AppData\Local\Temp`,
 	}
 	cases := map[string]string{
-		wc.FullUserID():   `DESKTOP-R809R54\aleh`,
-		wc.BinaryPath():   `C:\Users\aleh\AppData\Local\Mooncake\bin\mooncake.exe`,
-		wc.TokenPath():    `C:\Users\aleh\AppData\Local\Mooncake\agentd.token`,
+		wc.FullUserID():  `DESKTOP-R809R54\aleh`,
+		wc.BinaryPath():  `C:\Users\aleh\AppData\Local\Mooncake\bin\mooncake.exe`,
+		wc.TokenPath():   `C:\Users\aleh\AppData\Local\Mooncake\agentd.token`,
 		wc.TaskXMLPath(): `C:\Users\aleh\AppData\Local\Mooncake\agentd-task.xml`,
 	}
 	for got, want := range cases {
@@ -78,13 +78,13 @@ func TestParseWinContext_RejectsEmptyValue(t *testing.T) {
 
 func TestPsQuote(t *testing.T) {
 	cases := map[string]string{
-		"":             "''",
-		"plain":        "'plain'",
-		"with space":   "'with space'",
-		`it's`:         `'it''s'`,
-		`C:\path\foo`:  `'C:\path\foo'`,
-		`'leading`:     `'''leading'`,
-		`trailing'`:    `'trailing'''`,
+		"":            "''",
+		"plain":       "'plain'",
+		"with space":  "'with space'",
+		`it's`:        `'it''s'`,
+		`C:\path\foo`: `'C:\path\foo'`,
+		`'leading`:    `'''leading'`,
+		`trailing'`:   `'trailing'''`,
 	}
 	for in, want := range cases {
 		if got := psQuote(in); got != want {

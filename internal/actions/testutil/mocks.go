@@ -2,15 +2,14 @@
 package testutil
 
 import (
-	"context"
 	"fmt"
 	"os"
-	"os/exec"
 
 	"github.com/alehatsman/mooncake/internal/actions"
 	"github.com/alehatsman/mooncake/internal/events"
 	"github.com/alehatsman/mooncake/internal/expression"
 	"github.com/alehatsman/mooncake/internal/logger"
+	"github.com/alehatsman/mooncake/internal/security"
 	"github.com/alehatsman/mooncake/internal/template"
 )
 
@@ -85,8 +84,18 @@ func (m *MockContext) Effects() actions.Performer {
 // that need to inspect sudo-exec interactions should swap in their
 // own fake; the default satisfies the actions.Context contract added
 // by spec-69 without shelling out to real sudo.
-func (m *MockContext) Privileged() actions.PrivilegedRunner {
-	return noopPrivilegedRunner{}
+// Privileged returns a Privileged primitive bound to AvailableRoot
+// — i.e. "this process is already root, no sudo wrap needed." Tests
+// that need to assert against sudo-exec interactions construct
+// their own *security.Privileged with the AsUser / Escalation
+// values they want to drive.
+func (m *MockContext) Privileged() *security.Privileged {
+	return &security.Privileged{
+		Escalation: security.EscalationReport{
+			Available: true,
+			Reason:    security.EscalationAvailableRoot,
+		},
+	}
 }
 
 // MockPublisher implements events.Publisher for testing
@@ -211,23 +220,4 @@ func (p noopPerformer) Chmod(path string, _ os.FileMode, _ actions.PerformerOpts
 }
 func (p noopPerformer) Chown(path, _, _ string, _ actions.PerformerOpts) actions.Effect {
 	return actions.Effect{Action: actions.ActionChown, Path: path}
-}
-
-// noopPrivilegedRunner is the spec-69 sibling of noopPerformer:
-// satisfies actions.PrivilegedRunner without shelling out so handler
-// tests that don't care about sudo wiring get a default that won't
-// panic or hit the system.
-type noopPrivilegedRunner struct{}
-
-func (noopPrivilegedRunner) Run(context.Context, string, ...string) ([]byte, error) {
-	return nil, nil
-}
-func (noopPrivilegedRunner) RunWithInput(context.Context, []byte, string, ...string) ([]byte, error) {
-	return nil, nil
-}
-func (noopPrivilegedRunner) RunWithBecome(context.Context, bool, string, ...string) ([]byte, error) {
-	return nil, nil
-}
-func (noopPrivilegedRunner) Command(_ context.Context, _ bool, program string, args ...string) (*exec.Cmd, error) {
-	return exec.Command(program, args...), nil //nolint:gosec // test-only noop runner
 }

@@ -140,8 +140,8 @@ func TestRun_Plan_ReportsDriftCount(t *testing.T) {
 		Scope: "local",
 		Repo:  repo,
 		Set: map[string]string{
-			"user.email":     "dev@example.com",
-			"core.autocrlf":  "false",
+			"user.email":    "dev@example.com",
+			"core.autocrlf": "false",
 		},
 		Unset: []string{"credential.helper"},
 	}}

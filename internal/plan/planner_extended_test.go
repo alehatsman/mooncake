@@ -285,10 +285,10 @@ func TestExpandStepsWithContext_EmptySteps(t *testing.T) {
 	}
 	pathExp := pathutil.NewPathExpander(tmpl)
 	planner := &Planner{
-		template: tmpl,
-		pathUtil: pathExp,
-		fileTree: filetree.NewWalker(pathExp),
-		seenFiles: make(map[string]bool),
+		template:    tmpl,
+		pathUtil:    pathExp,
+		fileTree:    filetree.NewWalker(pathExp),
+		seenFiles:   make(map[string]bool),
 		locationMap: make(map[int]*IncludeFrame),
 	}
 

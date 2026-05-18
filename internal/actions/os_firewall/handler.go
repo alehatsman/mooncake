@@ -50,15 +50,6 @@ var (
 	ufwLookPath = realUFWLookPath
 )
 
-// runnerOrDefault returns the supplied runner when non-nil, else the
-// security default. Lets test stubs pass nil without nil-deref.
-func runnerOrDefault(r actions.PrivilegedRunner) actions.PrivilegedRunner {
-	if r == nil {
-		return security.PrivilegedRunner{}
-	}
-	return r
-}
-
 // Handler implements os.firewall.
 type Handler struct{}
 
@@ -362,7 +353,7 @@ func ruleKey(r rule) string {
 	return fmt.Sprintf("%d/%s/%s/%s", r.Port, r.Protocol, r.Action, r.From)
 }
 
-func applyPlan(runner actions.PrivilegedRunner, plan firewallPlan) error {
+func applyPlan(runner *security.Privileged, plan firewallPlan) error {
 	for _, r := range plan.toRemove {
 		if err := ufwRun(runner, deleteArgs(r)...); err != nil {
 			return fmt.Errorf("ufw delete: %w", err)
@@ -414,7 +405,7 @@ var statusLineRE = regexp.MustCompile(`^\s*\[\s*\d+\]\s+(\d+)/(\w+)\s+\(?(ALLOW|
 // readCurrent parses `ufw status numbered` into the normalized rule
 // shape. Ignores non-rule lines (headers, comments, IPv6 mirrors of
 // IPv4 entries with "(v6)" markers — collapsed via key).
-func readCurrent(runner actions.PrivilegedRunner) ([]rule, error) {
+func readCurrent(runner *security.Privileged) ([]rule, error) {
 	out, err := ufwStatus(runner)
 	if err != nil {
 		return nil, err
@@ -473,8 +464,8 @@ func normalizeSource(s string) string {
 // realUFWRun shells out to `ufw <args>` via the supplied runner. The
 // action is registered as RequiresSudo: true; the runner handles
 // escalation when mooncake runs as a non-root user.
-func realUFWRun(runner actions.PrivilegedRunner, args ...string) error {
-	out, err := runnerOrDefault(runner).Run(context.TODO(), "ufw", args...)
+func realUFWRun(runner *security.Privileged, args ...string) error {
+	out, err := runner.Run(context.TODO(), "ufw", args...)
 	if err != nil {
 		msg := strings.TrimSpace(string(out))
 		if msg != "" {
@@ -485,8 +476,8 @@ func realUFWRun(runner actions.PrivilegedRunner, args ...string) error {
 	return nil
 }
 
-func realUFWStatus(runner actions.PrivilegedRunner) (string, error) {
-	out, err := runnerOrDefault(runner).Run(context.TODO(), "ufw", "status", "numbered")
+func realUFWStatus(runner *security.Privileged) (string, error) {
+	out, err := runner.Run(context.TODO(), "ufw", "status", "numbered")
 	if err != nil {
 		msg := strings.TrimSpace(string(out))
 		if msg != "" {

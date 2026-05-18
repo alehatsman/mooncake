@@ -18,10 +18,10 @@ import (
 func makeOpErr(op string, syscallName string, errno syscall.Errno) error {
 	inner := &os.SyscallError{Syscall: syscallName, Err: errno}
 	opErr := &net.OpError{
-		Op:     op,
-		Net:    "tcp",
-		Addr:   &net.TCPAddr{IP: net.ParseIP("192.0.2.1"), Port: 7878},
-		Err:    inner,
+		Op:   op,
+		Net:  "tcp",
+		Addr: &net.TCPAddr{IP: net.ParseIP("192.0.2.1"), Port: 7878},
+		Err:  inner,
 	}
 	return &url.Error{Op: "Get", URL: "http://192.0.2.1:7878/v1/version", Err: opErr}
 }

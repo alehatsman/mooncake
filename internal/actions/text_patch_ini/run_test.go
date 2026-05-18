@@ -137,10 +137,10 @@ func TestParser_RoundTripPreservesByteIdentical(t *testing.T) {
 		"[A]\nkey=val\n",
 		"[A]\nkey = val\n[B]\nkey2 = val2\n",
 		"# top comment\n[A]\n; section comment\nkey=val\n\n[B]\nx=1\n",
-		"Port 22\nPermitRootLogin no\n",                          // ssh_config style
-		"[Section]\r\nkey=val\r\n",                               // CRLF
-		"[A]\n\tindented=val\n  spaced = val2\n",                 // mixed indent
-		"[A]\nkey =   val with spaces   \n",                      // value spacing
+		"Port 22\nPermitRootLogin no\n",          // ssh_config style
+		"[Section]\r\nkey=val\r\n",               // CRLF
+		"[A]\n\tindented=val\n  spaced = val2\n", // mixed indent
+		"[A]\nkey =   val with spaces   \n",      // value spacing
 		"only_top_level=here\n[After]\nx=y\n",
 	}
 	for _, in := range inputs {
@@ -421,9 +421,9 @@ func TestFile_DoesNotExist_DeleteOnlyIsNoop(t *testing.T) {
 
 func TestSplitKey(t *testing.T) {
 	cases := []struct {
-		in       string
-		wantSec  string
-		wantKey  string
+		in      string
+		wantSec string
+		wantKey string
 	}{
 		{"PHP.memory_limit", "PHP", "memory_limit"},
 		{"Section.key.with.dots", "Section", "key.with.dots"},

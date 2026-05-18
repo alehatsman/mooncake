@@ -376,4 +376,3 @@ func detectBinaryTarget(path string) (goos, goarch string, err error) {
 	}
 	return "", "", errors.New("binary is neither ELF (Linux) nor PE (Windows)")
 }
-

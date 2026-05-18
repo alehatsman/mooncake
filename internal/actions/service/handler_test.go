@@ -698,7 +698,11 @@ func TestHandleService_BecomeWithoutPassword(t *testing.T) {
 	}
 
 	ctx := newMockExecutionContext()
-	ctx.Svc.SudoPass = "" // No password provided
+	ctx.Svc.SudoPass = ""      // No password provided
+	ctx.CurrentAsUser = "root" // Under spec-72 Layer C dispatchRunner binds
+	// step.AsUser onto ec.CurrentAsUser before runner.Run; this test
+	// calls HandleService directly so we bind it explicitly to drive
+	// the escalation path.
 
 	step := config.Step{
 		OsService: &config.ServiceAction{

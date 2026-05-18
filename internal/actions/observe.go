@@ -15,10 +15,10 @@ import (
 // with the un-wrapped value at "value") so spec-37 `as:` capture
 // exposes both shapes to downstream templates:
 //
-//	- {{ name.value.<field> }}  — the typed per-handler payload
-//	- {{ name.found }}          — universal Found flag
-//	- {{ name.as_of }}          — observation timestamp
-//	- {{ name.error }}          — user-facing error when Found=false
+//   - {{ name.value.<field> }}  — the typed per-handler payload
+//   - {{ name.found }}          — universal Found flag
+//   - {{ name.as_of }}          — observation timestamp
+//   - {{ name.error }}          — user-facing error when Found=false
 //
 // Mutation is forbidden by contract: observe handlers must return
 // Changed=false and declare empty Diff / nil Reverse / Cost{Risk:1}

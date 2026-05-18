@@ -32,18 +32,18 @@ func newMockExecutionContext() *executor.ExecutionContext {
 	tmpDir, _ := os.MkdirTemp("", "assert-test-*")
 	return &executor.ExecutionContext{
 		Svc: &executor.RunServices{
-			Template: tmpl,
-			Evaluator: expression.NewExprEvaluator(),
-			PathUtil: pathutil.NewPathExpander(tmpl),
-			Logger: &testutil.MockLogger{Logs: []string{}},
+			Template:       tmpl,
+			Evaluator:      expression.NewExprEvaluator(),
+			PathUtil:       pathutil.NewPathExpander(tmpl),
+			Logger:         &testutil.MockLogger{Logs: []string{}},
 			EventPublisher: &testutil.MockPublisher{Events: []events.Event{}},
-			Redactor: security.NewRedactor(),
-			SudoPass: "",
-			Stats: executor.NewExecutionStats(),
+			Redactor:       security.NewRedactor(),
+			SudoPass:       "",
+			Stats:          executor.NewExecutionStats(),
 		},
-		Scope: executor.NewVariableScope(),
+		Scope:         executor.NewVariableScope(),
 		CurrentStepID: "step-1",
-		CurrentDir: tmpDir,
+		CurrentDir:    tmpDir,
 	}
 }
 

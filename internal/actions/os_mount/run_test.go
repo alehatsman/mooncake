@@ -14,6 +14,7 @@ import (
 	"github.com/alehatsman/mooncake/internal/executor"
 	"github.com/alehatsman/mooncake/internal/logger"
 	"github.com/alehatsman/mooncake/internal/pathutil"
+	"github.com/alehatsman/mooncake/internal/security"
 	"github.com/alehatsman/mooncake/internal/template"
 )
 
@@ -68,11 +69,11 @@ func newStub(t *testing.T) *stubFS {
 
 	mountPaths.fstab = s.fstab
 	mountPaths.mounts = s.mounts
-	mountRun = func(_ actions.PrivilegedRunner, dest string) error {
+	mountRun = func(_ *security.Privileged, dest string) error {
 		s.mounted = append(s.mounted, dest)
 		return nil
 	}
-	umountRun = func(_ actions.PrivilegedRunner, dest string) error {
+	umountRun = func(_ *security.Privileged, dest string) error {
 		s.umount = append(s.umount, dest)
 		// Remove from the mocked /proc/mounts so subsequent reads see
 		// the change.

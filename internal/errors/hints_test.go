@@ -6,10 +6,10 @@ import (
 
 func TestInferHint(t *testing.T) {
 	tests := []struct {
-		name          string
-		stderr        string
-		wantText      string
-		wantStep      string
+		name     string
+		stderr   string
+		wantText string
+		wantStep string
 	}{
 		{
 			name:     "no match returns empty hint",

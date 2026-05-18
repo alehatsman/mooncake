@@ -11,16 +11,16 @@ func TestParseSize(t *testing.T) {
 		input    string
 		expected int64
 	}{
-		{"100G", 100},       // 100GB
-		{"1024G", 1024},     // 1024GB
-		{"0G", 0},           // Zero with G
-		{"50G", 50},         // 50GB
-		{"1G", 1},           // 1GB
-		{"100", 100},        // No G suffix
-		{"1024", 1024},      // No G suffix
-		{"0", 0},            // Zero
-		{"invalid", 0},      // Invalid input
-		{"", 0},             // Empty string
+		{"100G", 100},   // 100GB
+		{"1024G", 1024}, // 1024GB
+		{"0G", 0},       // Zero with G
+		{"50G", 50},     // 50GB
+		{"1G", 1},       // 1GB
+		{"100", 100},    // No G suffix
+		{"1024", 1024},  // No G suffix
+		{"0", 0},        // Zero
+		{"invalid", 0},  // Invalid input
+		{"", 0},         // Empty string
 	}
 
 	for _, tt := range tests {
@@ -235,7 +235,7 @@ func TestParseSize_EdgeCases(t *testing.T) {
 		{"with decimal", "1024.5G", 0}, // Parsing fails, returns 0
 		{"with K suffix", "1024K", 0},  // Only strips G, parsing fails
 		{"special characters", "!@#$", 0},
-		{"with spaces", "  100G  ", 0}, // TrimSuffix doesn't trim spaces
+		{"with spaces", "  100G  ", 0},  // TrimSuffix doesn't trim spaces
 		{"negative percent", "-50%", 0}, // Doesn't apply to size
 	}
 

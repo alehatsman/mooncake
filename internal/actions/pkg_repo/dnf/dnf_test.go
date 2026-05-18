@@ -14,6 +14,7 @@ import (
 	"github.com/alehatsman/mooncake/internal/executor"
 	"github.com/alehatsman/mooncake/internal/logger"
 	"github.com/alehatsman/mooncake/internal/pathutil"
+	"github.com/alehatsman/mooncake/internal/security"
 	"github.com/alehatsman/mooncake/internal/template"
 )
 
@@ -67,7 +68,7 @@ func newStubFS(t *testing.T) *stubFS {
 	paths = Paths{ReposDir: s.reposDir, KeyringDir: s.keyringDir}
 	shared.HTTPFetchKey = func(string) ([]byte, error) { return s.keyBody, nil }
 	shared.VerifyKeyFingerprint = func([]byte, string) error { return nil }
-	cleanCache = func(_ actions.PrivilegedRunner) error {
+	cleanCache = func(_ *security.Privileged) error {
 		s.cacheCalled++
 		return nil
 	}

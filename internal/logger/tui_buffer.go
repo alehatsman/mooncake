@@ -31,10 +31,10 @@ type BufferSnapshot struct {
 
 // TUIBuffer manages step history and message buffering.
 type TUIBuffer struct {
-	stepHistory   []StepEntry // Circular buffer
-	historySize   int
-	historyStart  int // Start index for circular buffer
-	historyCount  int // Number of items in buffer
+	stepHistory  []StepEntry // Circular buffer
+	historySize  int
+	historyStart int // Start index for circular buffer
+	historyCount int // Number of items in buffer
 
 	currentStep string
 	progress    ProgressInfo

@@ -81,7 +81,7 @@ func dsclField(name, key string) (string, error) {
 	return "", nil
 }
 
-func applyPlanDarwin(runner actions.PrivilegedRunner, plan computedPlan, current *userState, d desired) error {
+func applyPlanDarwin(runner *security.Privileged, plan computedPlan, current *userState, d desired) error {
 	switch plan.operation {
 	case "create":
 		return createUserDarwin(runner, d)
@@ -93,7 +93,7 @@ func applyPlanDarwin(runner actions.PrivilegedRunner, plan computedPlan, current
 	return nil
 }
 
-func createUserDarwin(runner actions.PrivilegedRunner, d desired) error {
+func createUserDarwin(runner *security.Privileged, d desired) error {
 	base := "/Users/" + d.name
 
 	if err := dsclRun(runner, "-create", base); err != nil {
@@ -174,7 +174,7 @@ func createUserDarwin(runner actions.PrivilegedRunner, d desired) error {
 	return nil
 }
 
-func modifyUserDarwin(runner actions.PrivilegedRunner, current *userState, d desired) error {
+func modifyUserDarwin(runner *security.Privileged, current *userState, d desired) error {
 	base := "/Users/" + d.name
 
 	if d.uid != nil && *d.uid != current.uid {
@@ -212,7 +212,7 @@ func modifyUserDarwin(runner actions.PrivilegedRunner, current *userState, d des
 	return nil
 }
 
-func removeUserDarwin(runner actions.PrivilegedRunner, d desired) error {
+func removeUserDarwin(runner *security.Privileged, d desired) error {
 	// Read home dir before the record is gone, in case we need to remove it.
 	var home string
 	if d.removeHome {
@@ -234,7 +234,7 @@ func removeUserDarwin(runner actions.PrivilegedRunner, d desired) error {
 
 // applyGroupsDarwin reconciles supplementary group membership.
 // When appendGroups is false, groups not in desired are removed first.
-func applyGroupsDarwin(runner actions.PrivilegedRunner, username string, currentGroups, desiredGroups []string, appendGroups bool) error {
+func applyGroupsDarwin(runner *security.Privileged, username string, currentGroups, desiredGroups []string, appendGroups bool) error {
 	have := stringSet(currentGroups)
 	want := stringSet(desiredGroups)
 
@@ -262,10 +262,7 @@ func applyGroupsDarwin(runner actions.PrivilegedRunner, username string, current
 // root; the runner takes care of the sudo wrap when mooncake isn't
 // already running as root. Empty stderr on success; non-zero exit
 // surfaces with the captured output for diagnosis.
-func dsclRun(runner actions.PrivilegedRunner, args ...string) error {
-	if runner == nil {
-		runner = security.PrivilegedRunner{}
-	}
+func dsclRun(runner *security.Privileged, args ...string) error {
 	fullArgs := append([]string{"."}, args...)
 	out, err := runner.Run(context.TODO(), "dscl", fullArgs...)
 	if err != nil {
@@ -281,10 +278,7 @@ func dsclRun(runner actions.PrivilegedRunner, args ...string) error {
 // runDarwinCmd is the createhomedir / rm escape hatch — same shape
 // as dsclRun but for the non-dscl helpers Darwin's apply path still
 // needs root for.
-func runDarwinCmd(runner actions.PrivilegedRunner, bin string, args ...string) error {
-	if runner == nil {
-		runner = security.PrivilegedRunner{}
-	}
+func runDarwinCmd(runner *security.Privileged, bin string, args ...string) error {
 	out, err := runner.Run(context.TODO(), bin, args...)
 	if err != nil {
 		msg := strings.TrimSpace(string(out))

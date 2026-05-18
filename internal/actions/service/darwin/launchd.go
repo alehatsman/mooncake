@@ -202,8 +202,8 @@ func managePlist(serviceName string, unit *config.ServiceUnit, isSystem bool, st
 // F005 final-mile rationale: routing through BecomeAwareCommand
 // catches the Linux + become asymmetry the previous inline `sudo`
 // construction missed.
-func IsServiceLoaded(serviceID string, step config.Step, ec *executor.ExecutionContext) (bool, error) {
-	cmd, err := shared.BecomeAwareCommand(step, ec, "launchctl", "print", serviceID)
+func IsServiceLoaded(serviceID string, _ config.Step, ec *executor.ExecutionContext) (bool, error) {
+	cmd, err := shared.BecomeAwareCommand(ec, "launchctl", "print", serviceID)
 	if err != nil {
 		return false, err
 	}
@@ -294,9 +294,9 @@ func manageEnabled(serviceID, plistPath, domain string, shouldBeEnabled bool, is
 // unloaded / not found" condition, we treat the rc!=0 as success
 // and avoid the error wrap. Can't share shared.RunBecomeAware
 // because that path doesn't inspect stderr for idempotency markers.
-func executeLaunchctlCommand(command, domain, plistPath string, step config.Step, ec *executor.ExecutionContext, idempotencyCheck []string, successMsg, errorMsg string) error {
+func executeLaunchctlCommand(command, domain, plistPath string, _ config.Step, ec *executor.ExecutionContext, idempotencyCheck []string, successMsg, errorMsg string) error {
 	ec.Svc.Logger.Debugf("  Running launchctl %s %s %s", command, domain, plistPath)
-	cmd, err := shared.BecomeAwareCommand(step, ec, "launchctl", command, domain, plistPath)
+	cmd, err := shared.BecomeAwareCommand(ec, "launchctl", command, domain, plistPath)
 	if err != nil {
 		return err
 	}
@@ -347,7 +347,7 @@ func bootout(domain, plistPath string, step config.Step, ec *executor.ExecutionC
 	)
 }
 
-func kickstart(serviceID string, killAndRestart bool, step config.Step, ec *executor.ExecutionContext) error {
+func kickstart(serviceID string, killAndRestart bool, _ config.Step, ec *executor.ExecutionContext) error {
 	args := []string{"kickstart"}
 	if killAndRestart {
 		args = append(args, "-k")
@@ -356,7 +356,7 @@ func kickstart(serviceID string, killAndRestart bool, step config.Step, ec *exec
 
 	ec.Svc.Logger.Debugf("  Running launchctl %s", strings.Join(args, " "))
 
-	cmd, err := shared.BecomeAwareCommand(step, ec, "launchctl", args...)
+	cmd, err := shared.BecomeAwareCommand(ec, "launchctl", args...)
 	if err != nil {
 		return err
 	}
@@ -376,10 +376,10 @@ func kickstart(serviceID string, killAndRestart bool, step config.Step, ec *exec
 	return nil
 }
 
-func kill(serviceID string, step config.Step, ec *executor.ExecutionContext) error {
+func kill(serviceID string, _ config.Step, ec *executor.ExecutionContext) error {
 	ec.Svc.Logger.Debugf("  Running launchctl kill SIGTERM %s", serviceID)
 
-	cmd, err := shared.BecomeAwareCommand(step, ec, "launchctl", "kill", "SIGTERM", serviceID)
+	cmd, err := shared.BecomeAwareCommand(ec, "launchctl", "kill", "SIGTERM", serviceID)
 	if err != nil {
 		return err
 	}

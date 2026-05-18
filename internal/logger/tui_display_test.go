@@ -100,10 +100,10 @@ func TestTUIDisplay_RenderCurrentStep(t *testing.T) {
 	display := NewTUIDisplay(animator, buffer, 80, 24)
 
 	tests := []struct {
-		name          string
-		currentStep   string
-		progress      ProgressInfo
-		wantContains  []string
+		name         string
+		currentStep  string
+		progress     ProgressInfo
+		wantContains []string
 	}{
 		{
 			name:        "with current step and progress",

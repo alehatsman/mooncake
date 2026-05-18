@@ -47,13 +47,13 @@ func planMode(b bool) actions.Mode {
 // inject pre-canned enabled/active states. All package-level systemctl
 // hooks are redirected to its methods for the duration of the test.
 type stub struct {
-	t              *testing.T
-	enabled        map[string]bool
-	active         map[string]bool
-	enableErr      map[string]error
-	activeErr      map[string]error
-	calls          []string
-	reloadErr      error
+	t               *testing.T
+	enabled         map[string]bool
+	active          map[string]bool
+	enableErr       map[string]error
+	activeErr       map[string]error
+	calls           []string
+	reloadErr       error
 	enableActionErr map[string]error
 	startActionErr  map[string]error
 }

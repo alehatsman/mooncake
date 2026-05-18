@@ -67,16 +67,16 @@ type StepResult struct {
 // events.RunCompletedData so MCP / agent / SDK callers can map
 // 1-to-1.
 type RunSummary struct {
-	TotalSteps    int
-	Ok            int
-	Changed       int
-	Skipped       int
-	Failed        int
-	Reverted      int
-	DurationMs    int64
-	Success       bool
-	ErrorMessage  string
-	CheckMode     bool
+	TotalSteps   int
+	Ok           int
+	Changed      int
+	Skipped      int
+	Failed       int
+	Reverted     int
+	DurationMs   int64
+	Success      bool
+	ErrorMessage string
+	CheckMode    bool
 }
 
 // Reverse builds the inverse plan from this run's reversible

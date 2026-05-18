@@ -473,7 +473,6 @@ func TestHandler_Execute_Idempotency(t *testing.T) {
 	}
 }
 
-
 // Helper function to create int pointer
 func ptrInt(v int) *int {
 	return &v

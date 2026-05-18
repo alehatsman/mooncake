@@ -217,9 +217,9 @@ func manageDropin(serviceName string, dropin *config.ServiceDropin, step config.
 
 // DaemonReload runs `systemctl daemon-reload`. Exported so plan-mode
 // (in the parent package) can call it directly.
-func DaemonReload(step config.Step, ec *executor.ExecutionContext) error {
+func DaemonReload(_ config.Step, ec *executor.ExecutionContext) error {
 	ec.Svc.Logger.Debugf("  Running systemctl daemon-reload")
-	_, err := shared.RunBecomeAware(step, ec, "daemon-reload", "systemctl", "daemon-reload")
+	_, err := shared.RunBecomeAware(ec, "daemon-reload", "systemctl", "daemon-reload")
 	return err
 }
 
@@ -259,7 +259,7 @@ func ManageServiceState(serviceName, desiredState string, step config.Step, ec *
 	}
 
 	ec.Svc.Logger.Debugf("  Running systemctl %s %s", action, serviceName)
-	if _, err := shared.RunBecomeAware(step, ec, "systemctl "+action, "systemctl", action, serviceName); err != nil {
+	if _, err := shared.RunBecomeAware(ec, "systemctl "+action, "systemctl", action, serviceName); err != nil {
 		return false, err
 	}
 	return true, nil
@@ -269,8 +269,8 @@ func ManageServiceState(serviceName, desiredState string, step config.Step, ec *
 // reported by systemctl is-active. is-active exits non-zero for
 // inactive services, but we want the state string regardless, so the
 // command error is intentionally ignored.
-func GetServiceState(serviceName string, step config.Step, ec *executor.ExecutionContext) (string, error) {
-	cmd, err := shared.BecomeAwareCommand(step, ec, "systemctl", "is-active", serviceName)
+func GetServiceState(serviceName string, _ config.Step, ec *executor.ExecutionContext) (string, error) {
+	cmd, err := shared.BecomeAwareCommand(ec, "systemctl", "is-active", serviceName)
 	if err != nil {
 		return "", err
 	}
@@ -300,7 +300,7 @@ func ManageServiceEnabled(serviceName string, shouldBeEnabled bool, step config.
 	}
 
 	ec.Svc.Logger.Debugf("  Running systemctl %s %s", action, serviceName)
-	if _, err := shared.RunBecomeAware(step, ec, "systemctl "+action, "systemctl", action, serviceName); err != nil {
+	if _, err := shared.RunBecomeAware(ec, "systemctl "+action, "systemctl", action, serviceName); err != nil {
 		return false, err
 	}
 	return true, nil
@@ -310,8 +310,8 @@ func ManageServiceEnabled(serviceName string, shouldBeEnabled bool, step config.
 // is-enabled exits non-zero for disabled / masked / not-found units;
 // we treat the output strings "enabled" / "static" / "indirect" as
 // enabled and everything else as disabled.
-func IsServiceEnabled(serviceName string, step config.Step, ec *executor.ExecutionContext) (bool, error) {
-	cmd, err := shared.BecomeAwareCommand(step, ec, "systemctl", "is-enabled", serviceName)
+func IsServiceEnabled(serviceName string, _ config.Step, ec *executor.ExecutionContext) (bool, error) {
+	cmd, err := shared.BecomeAwareCommand(ec, "systemctl", "is-enabled", serviceName)
 	if err != nil {
 		return false, err
 	}

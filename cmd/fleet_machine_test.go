@@ -31,9 +31,9 @@ func TestResolveMachinePhase_FindsPeerAndLayersVarsAndTags(t *testing.T) {
 	in, err := fleet.ResolveMachinePhase(
 		fleet.MachinePhaseInput{Phase: phase, PhaseNum: 1, TotalPhases: 2},
 		peers, "/abs/plan-dir",
-		[]string{"/abs/cli.yml"},  // CLI-level --vars-file
-		[]string{"deploy"},        // CLI-level --tags
-		[]string{"install nvim"},  // step-filter names
+		[]string{"/abs/cli.yml"}, // CLI-level --vars-file
+		[]string{"deploy"},       // CLI-level --tags
+		[]string{"install nvim"}, // step-filter names
 		1024, 4, "controller-id",
 		nil, // no peer filter
 	)

@@ -1,9 +1,7 @@
 package print
 
 import (
-	"context"
 	"os"
-	"os/exec"
 	"strings"
 	"testing"
 	"time"
@@ -14,6 +12,7 @@ import (
 	"github.com/alehatsman/mooncake/internal/executor"
 	"github.com/alehatsman/mooncake/internal/expression"
 	"github.com/alehatsman/mooncake/internal/logger"
+	"github.com/alehatsman/mooncake/internal/security"
 	"github.com/alehatsman/mooncake/internal/template"
 )
 
@@ -73,22 +72,11 @@ func (m *mockContext) IsDryRun() bool {
 
 func (m *mockContext) Mode() actions.Mode { return m.mode }
 
-func (m *mockContext) Effects() actions.Performer           { return printNoopPerformer{} }
-func (m *mockContext) Privileged() actions.PrivilegedRunner { return printNoopPrivilegedRunner{} }
-
-type printNoopPrivilegedRunner struct{}
-
-func (printNoopPrivilegedRunner) Run(context.Context, string, ...string) ([]byte, error) {
-	return nil, nil
-}
-func (printNoopPrivilegedRunner) RunWithInput(context.Context, []byte, string, ...string) ([]byte, error) {
-	return nil, nil
-}
-func (printNoopPrivilegedRunner) RunWithBecome(context.Context, bool, string, ...string) ([]byte, error) {
-	return nil, nil
-}
-func (printNoopPrivilegedRunner) Command(_ context.Context, _ bool, program string, args ...string) (*exec.Cmd, error) {
-	return exec.Command(program, args...), nil //nolint:gosec // test-only noop runner
+func (m *mockContext) Effects() actions.Performer { return printNoopPerformer{} }
+func (m *mockContext) Privileged() *security.Privileged {
+	return &security.Privileged{
+		Escalation: security.EscalationReport{Available: true, Reason: security.EscalationAvailableRoot},
+	}
 }
 
 func (m *mockContext) MergeUserVars(vars map[string]interface{}) {

@@ -26,15 +26,6 @@ import (
 	"github.com/alehatsman/mooncake/internal/security"
 )
 
-// runnerOrDefault returns the supplied runner when non-nil, else the
-// security default. Lets test stubs pass nil without nil-deref.
-func runnerOrDefault(r actions.PrivilegedRunner) actions.PrivilegedRunner {
-	if r == nil {
-		return security.PrivilegedRunner{}
-	}
-	return r
-}
-
 const (
 	actionName       = "os.ssh_key"
 	statePresent     = "present"
@@ -558,7 +549,7 @@ var chownFn = os.Chown
 // success. Now the file-itself chown returns its error; tests that
 // don't run as root must use a `path:` whose target uid matches their
 // own (existing tests already do via currentUsername).
-func writeAuthorizedKeys(performer actions.Performer, runner actions.PrivilegedRunner, path string, lines []string, uid, gid int, createParentMode bool) error {
+func writeAuthorizedKeys(performer actions.Performer, runner *security.Privileged, path string, lines []string, uid, gid int, createParentMode bool) error {
 	parent := filepath.Dir(path)
 	pOpts := actions.PerformerOpts{Become: true}
 	if e := performer.Mkdir(parent, sshDirMode, pOpts); e.Err != nil {
@@ -594,7 +585,7 @@ func writeAuthorizedKeys(performer actions.Performer, runner actions.PrivilegedR
 			// downstream code (and the spec-22-era F035 test that
 			// asserts both behaviors) keeps working unchanged.
 			spec := strconv.Itoa(uid) + ":" + strconv.Itoa(gid)
-			out, sErr := runnerOrDefault(runner).Run(context.TODO(), "chown", spec, path)
+			out, sErr := runner.Run(context.TODO(), "chown", spec, path)
 			if sErr == nil {
 				// Sudo path succeeded — chown completed.
 			} else if errors.Is(sErr, security.ErrBecomeNoSudoPass) || errors.Is(sErr, security.ErrBecomeUnsupported) {

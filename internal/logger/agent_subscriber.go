@@ -12,26 +12,26 @@ import (
 
 // agentEvent is the flat JSONL record written per event.
 type agentEvent struct {
-	Event          string   `json:"event"`
-	TS             string   `json:"ts"`
-	StepID         string   `json:"step_id,omitempty"`
-	Name           string   `json:"name,omitempty"`
-	Action         string   `json:"action,omitempty"`
-	Changed        *bool    `json:"changed,omitempty"`
-	DurationMs     *int64   `json:"duration_ms,omitempty"`
-	Reason         string   `json:"reason,omitempty"`
-	Error          string   `json:"error,omitempty"`
-	ExitCode       *int     `json:"exit_code,omitempty"`
-	Stdout         string   `json:"stdout,omitempty"`
-	Stderr         string   `json:"stderr,omitempty"`
-	Hint           string   `json:"hint,omitempty"`
-	SuggestedStep  string   `json:"suggested_step,omitempty"`
-	TotalSteps     *int     `json:"total_steps,omitempty"`
-	DryRun         *bool    `json:"dry_run,omitempty"`
-	Ok             *int     `json:"ok,omitempty"`
-	Skipped        *int     `json:"skipped,omitempty"`
-	Failed         *int     `json:"failed,omitempty"`
-	Success        *bool    `json:"success,omitempty"`
+	Event         string `json:"event"`
+	TS            string `json:"ts"`
+	StepID        string `json:"step_id,omitempty"`
+	Name          string `json:"name,omitempty"`
+	Action        string `json:"action,omitempty"`
+	Changed       *bool  `json:"changed,omitempty"`
+	DurationMs    *int64 `json:"duration_ms,omitempty"`
+	Reason        string `json:"reason,omitempty"`
+	Error         string `json:"error,omitempty"`
+	ExitCode      *int   `json:"exit_code,omitempty"`
+	Stdout        string `json:"stdout,omitempty"`
+	Stderr        string `json:"stderr,omitempty"`
+	Hint          string `json:"hint,omitempty"`
+	SuggestedStep string `json:"suggested_step,omitempty"`
+	TotalSteps    *int   `json:"total_steps,omitempty"`
+	DryRun        *bool  `json:"dry_run,omitempty"`
+	Ok            *int   `json:"ok,omitempty"`
+	Skipped       *int   `json:"skipped,omitempty"`
+	Failed        *int   `json:"failed,omitempty"`
+	Success       *bool  `json:"success,omitempty"`
 	// Package summary fields (EventPackageManaged only)
 	Manager        string   `json:"manager,omitempty"`
 	Installed      []string `json:"installed,omitempty"`

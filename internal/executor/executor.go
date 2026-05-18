@@ -1172,12 +1172,12 @@ func executePlanWithCapture(ctx context.Context, p *plan.Plan, sudoPass string, 
 	// detectPasswordlessSudo returned true (NOPASSWD probe
 	// succeeded), so existing call sites that read the bool see no
 	// behavior change.
-	escalation := ProbeEscalation(ctx, sudoPass)
+	escalation := security.ProbeEscalation(ctx, sudoPass)
 	svc := &RunServices{
 		Logger:           log.WithPadLevel(0),
 		SudoPass:         sudoPass,
 		Escalation:       escalation,
-		PasswordlessSudo: escalation.Reason == EscalationAvailablePasswordless,
+		PasswordlessSudo: escalation.Reason == security.EscalationAvailablePasswordless,
 		Tags:             []string{}, // tag filtering done by planner (step.Skipped)
 		Mode:             mode,
 		Stats: &ExecutionStats{
@@ -1292,6 +1292,15 @@ func dispatchRunner(step config.Step, ec *ExecutionContext, runner actions.Runne
 			return err
 		}
 	}
+
+	// Spec-72 Layer C: bind the step's AsUser to ec for the duration
+	// of this dispatch. ctx.Privileged() reads CurrentAsUser, so
+	// handlers don't have to thread step.AsUser themselves. Cleared
+	// after dispatch returns so a follow-up step that lacks AsUser
+	// doesn't inherit this step's binding.
+	prevAsUser := ec.CurrentAsUser
+	ec.CurrentAsUser = step.AsUser
+	defer func() { ec.CurrentAsUser = prevAsUser }()
 	// spec-23 §3: resolve any `!secret env:FOO` markers to their actual
 	// values just before the handler sees them. No-op in plan mode —
 	// markers stay so plan output redaction can rewrite them as

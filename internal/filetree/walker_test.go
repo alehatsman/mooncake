@@ -19,7 +19,6 @@ func mustNewRenderer() template.Renderer {
 	return r
 }
 
-
 func TestWalker_GetFileTree(t *testing.T) {
 	// Create temporary directory structure for testing
 	tmpDir := t.TempDir()
@@ -124,7 +123,7 @@ func TestWalker_GetFileTreeErrors(t *testing.T) {
 
 	t.Run("nonexistent directory", func(t *testing.T) {
 		_, err := walker.GetFileTree("/nonexistent/path", "/tmp", nil)
-		if err == nil{
+		if err == nil {
 			t.Error("GetFileTree() should return error for nonexistent directory")
 		}
 	})

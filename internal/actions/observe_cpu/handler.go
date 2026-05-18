@@ -19,12 +19,12 @@ const actionName = "observe.cpu"
 
 // CPUObservation is the typed Value payload for observe.cpu.
 type CPUObservation struct {
-	Cores        int     `json:"cores"`
-	UsagePct     float64 `json:"usage_pct"`
-	IdlePct      float64 `json:"idle_pct"`
-	LoadAvg1m    float64 `json:"load_1m"`
-	LoadAvg5m    float64 `json:"load_5m"`
-	LoadAvg15m   float64 `json:"load_15m"`
+	Cores      int     `json:"cores"`
+	UsagePct   float64 `json:"usage_pct"`
+	IdlePct    float64 `json:"idle_pct"`
+	LoadAvg1m  float64 `json:"load_1m"`
+	LoadAvg5m  float64 `json:"load_5m"`
+	LoadAvg15m float64 `json:"load_15m"`
 }
 
 type Handler struct{}

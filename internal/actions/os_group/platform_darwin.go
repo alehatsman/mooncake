@@ -69,7 +69,7 @@ func dsclGroupField(name, key string) (string, error) {
 // createArgs/removeArgs are shaped for Linux (groupadd flags) and
 // not consumed verbatim here — we re-derive the dscl operations
 // from the plan's structured fields (name, gid, system).
-func applyPlanDarwin(runner actions.PrivilegedRunner, plan computedPlan) error {
+func applyPlanDarwin(runner *security.Privileged, plan computedPlan) error {
 	switch plan.operation {
 	case "create":
 		return createGroupDarwin(runner, plan)
@@ -90,7 +90,7 @@ func applyPlanDarwin(runner actions.PrivilegedRunner, plan computedPlan) error {
 // we always set one — either the operator-pinned gid or the next
 // available one in the appropriate range (system: 1–499, regular:
 // 500+).
-func createGroupDarwin(runner actions.PrivilegedRunner, plan computedPlan) error {
+func createGroupDarwin(runner *security.Privileged, plan computedPlan) error {
 	base := "/Groups/" + plan.name
 
 	if err := dsclGroupRun(runner, "-create", base); err != nil {
@@ -111,7 +111,7 @@ func createGroupDarwin(runner actions.PrivilegedRunner, plan computedPlan) error
 	return dsclGroupRun(runner, "-create", base, "RealName", plan.name)
 }
 
-func removeGroupDarwin(runner actions.PrivilegedRunner, plan computedPlan) error {
+func removeGroupDarwin(runner *security.Privileged, plan computedPlan) error {
 	return dsclGroupRun(runner, "-delete", "/Groups/"+plan.name)
 }
 
@@ -163,10 +163,7 @@ func nextAvailableGID(minBound, maxBound int) (int, error) {
 // dsclGroupRun is the write-side analogue of dsclGroupField. Goes
 // through the supplied PrivilegedRunner — dscl mutations on /Groups/*
 // require root on macOS.
-func dsclGroupRun(runner actions.PrivilegedRunner, args ...string) error {
-	if runner == nil {
-		runner = security.PrivilegedRunner{}
-	}
+func dsclGroupRun(runner *security.Privileged, args ...string) error {
 	fullArgs := append([]string{"."}, args...)
 	out, err := runner.Run(context.TODO(), "dscl", fullArgs...)
 	if err != nil {

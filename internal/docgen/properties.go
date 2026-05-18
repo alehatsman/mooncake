@@ -36,24 +36,24 @@ type SchemaDefinition struct {
 
 // ActionDefinition represents an action in the schema.
 type ActionDefinition struct {
-	Type                 string                       `json:"type"`
-	Description          string                       `json:"description"`
-	Properties           map[string]PropertySchema    `json:"properties"`
-	Required             []string                     `json:"required"`
-	AdditionalProperties interface{}                  `json:"additionalProperties"`
-	Category             string                       `json:"x-category"`
-	Version              string                       `json:"x-version"`
+	Type                 string                    `json:"type"`
+	Description          string                    `json:"description"`
+	Properties           map[string]PropertySchema `json:"properties"`
+	Required             []string                  `json:"required"`
+	AdditionalProperties interface{}               `json:"additionalProperties"`
+	Category             string                    `json:"x-category"`
+	Version              string                    `json:"x-version"`
 }
 
 // PropertySchema represents a property in the schema.
 type PropertySchema struct {
-	Type        interface{} `json:"type"` // Can be string or array
-	Description string      `json:"description"`
-	Default     interface{} `json:"default"`
-	Enum        []interface{} `json:"enum"`
-	Ref         string      `json:"$ref"`
+	Type        interface{}               `json:"type"` // Can be string or array
+	Description string                    `json:"description"`
+	Default     interface{}               `json:"default"`
+	Enum        []interface{}             `json:"enum"`
+	Ref         string                    `json:"$ref"`
 	Properties  map[string]PropertySchema `json:"properties"`
-	Items       *PropertySchema `json:"items"`
+	Items       *PropertySchema           `json:"items"`
 }
 
 // generateActionProperties generates properties tables from schema.json.

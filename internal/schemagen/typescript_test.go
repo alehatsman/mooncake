@@ -306,8 +306,8 @@ func TestGenerateTypeScriptPropertyTypes(t *testing.T) {
 			expected: "string[]",
 		},
 		{
-			name: "object type",
-			prop: &Property{Type: "object"},
+			name:     "object type",
+			prop:     &Property{Type: "object"},
 			expected: "object",
 		},
 		{

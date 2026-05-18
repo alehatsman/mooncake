@@ -297,4 +297,3 @@ func findPeer(peers []fleet.Peer, name string) (fleet.Peer, bool) {
 	}
 	return fleet.Peer{}, false
 }
-

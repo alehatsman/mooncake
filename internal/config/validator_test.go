@@ -162,7 +162,7 @@ func TestSchemaValidator_ValidConfig(t *testing.T) {
 
 			// Validate
 			parsedConfig := &ParsedConfig{Steps: steps, GlobalVars: make(map[string]interface{}), Version: ""}
-	diagnostics := validator.Validate(parsedConfig, locationMap, "test.yml")
+			diagnostics := validator.Validate(parsedConfig, locationMap, "test.yml")
 
 			// Should have no errors
 			if len(diagnostics) > 0 {
@@ -293,7 +293,7 @@ func TestSchemaValidator_MissingRequiredField(t *testing.T) {
 			}
 
 			parsedConfig := &ParsedConfig{Steps: steps, GlobalVars: make(map[string]interface{}), Version: ""}
-	diagnostics := validator.Validate(parsedConfig, locationMap, "test.yml")
+			diagnostics := validator.Validate(parsedConfig, locationMap, "test.yml")
 
 			// Should have validation errors
 			if len(diagnostics) == 0 {
@@ -443,7 +443,7 @@ func TestSchemaValidator_InvalidFileMode(t *testing.T) {
 			}
 
 			parsedConfig := &ParsedConfig{Steps: steps, GlobalVars: make(map[string]interface{}), Version: ""}
-	diagnostics := validator.Validate(parsedConfig, locationMap, "test.yml")
+			diagnostics := validator.Validate(parsedConfig, locationMap, "test.yml")
 
 			// Should have validation errors
 			if len(diagnostics) == 0 {

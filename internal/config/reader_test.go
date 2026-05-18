@@ -410,9 +410,9 @@ func TestYAMLReader_ReadConfigComplexSteps(t *testing.T) {
 // expected.
 func TestReadConfigWithValidation_EmptyFileGivesClearError(t *testing.T) {
 	for name, content := range map[string]string{
-		"truly empty":           "",
-		"newlines only":         "\n\n\n",
-		"spaces and newlines":   "   \n   \n",
+		"truly empty":         "",
+		"newlines only":       "\n\n\n",
+		"spaces and newlines": "   \n   \n",
 	} {
 		t.Run(name, func(t *testing.T) {
 			tmpFile := createTempYAML(t, content)
@@ -516,10 +516,10 @@ func createTempYAML(t *testing.T, content string) string {
 
 func TestYAMLReader_ReadConfig_RunConfigFormat(t *testing.T) {
 	tests := []struct {
-		name          string
-		yamlContent   string
-		expectSteps   int
-		expectError   bool
+		name        string
+		yamlContent string
+		expectSteps int
+		expectError bool
 	}{
 		{
 			name: "new format with version and vars",
@@ -715,7 +715,7 @@ steps:
 			expectArray: false,
 		},
 		{
-			name: "empty array",
+			name:        "empty array",
 			yamlContent: `[]`,
 			expectArray: true,
 		},

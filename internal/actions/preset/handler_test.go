@@ -142,11 +142,11 @@ func mockExecutionContext(variables map[string]interface{}) *executor.ExecutionC
 
 	return &executor.ExecutionContext{
 		Svc: &executor.RunServices{
-			Template: mustNewRenderer(),
+			Template:       mustNewRenderer(),
 			EventPublisher: &testutil.MockPublisher{Events: []events.Event{}},
-			Logger: &testutil.MockLogger{Logs: []string{}},
-			Evaluator: expression.NewExprEvaluator(),
-			Mode: actions.ModeApply,
+			Logger:         &testutil.MockLogger{Logs: []string{}},
+			Evaluator:      expression.NewExprEvaluator(),
+			Mode:           actions.ModeApply,
 		},
 		Scope:      scope,
 		CurrentDir: ".",

@@ -87,10 +87,10 @@ type RunServices struct {
 
 	// Escalation is the unified, once-per-run answer to "can this
 	// process escalate to root, and if not, why not?". Populated by
-	// ProbeEscalation at RunServices construction (spec-72 §1).
-	// Phase 1 wires the field but doesn't yet replace the
-	// PasswordlessSudo bool at call sites; phases 2–5 do.
-	Escalation EscalationReport
+	// security.ProbeEscalation at RunServices construction
+	// (spec-72 §1). Consumed by *security.Privileged for the actual
+	// sudo wrap and by preflight for diagnostic messages.
+	Escalation security.EscalationReport
 	// Capture, if non-nil, records the compiled plan and per-step
 	// outcomes for callers that want the typed *KernelResult shape
 	// (internal/apply.Runner for R1.1b). nil for the legacy
@@ -159,6 +159,18 @@ type ExecutionContext struct {
 	// CurrentResult holds the result of the currently executing step.
 	// Not copied on Clone — resets per step.
 	CurrentResult *Result
+
+	// CurrentAsUser is the step's declared AsUser, bound by
+	// dispatchRunner before calling runner.Run. Consumed by
+	// ec.Privileged() and ec.Effects() so handlers don't read
+	// step.AsUser for execution decisions — the primitive sees it
+	// transparently. Spec-72 Layer C.
+	//
+	// Not copied on Clone — each step gets its own binding; nested
+	// scopes (loops, includes) inherit through the per-step
+	// dispatchRunner re-binding rather than through structural
+	// copying. Empty for steps that didn't declare as_user.
+	CurrentAsUser string
 
 	// ChangedByStepID records the .Changed outcome of each step that has
 	// completed in this execution context, keyed by step.ID. Read by
@@ -241,12 +253,20 @@ func (ec *ExecutionContext) Effects() actions.Performer {
 	return effects.NewPerformer(ec.Mode, ec.Svc.SudoPass, ec.Svc.PasswordlessSudo)
 }
 
-// Privileged returns the spec-69 sudo-wrapping command-exec
-// primitive. Handlers should call ctx.Privileged().Run(...) for
-// shell-outs that need root, instead of building exec.Command or
-// BecomeRunner manually.
-func (ec *ExecutionContext) Privileged() actions.PrivilegedRunner {
-	return security.PrivilegedRunner{SudoPass: ec.Svc.SudoPass, PasswordlessSudo: ec.Svc.PasswordlessSudo}
+// Privileged returns the spec-72 Layer C escalation primitive,
+// pre-bound to the current step's AsUser. Handlers should call
+// ctx.Privileged().Run(...) / .Command(...) for shell-outs and let
+// the primitive decide the sudo wrap from the bound AsUser. No
+// per-call `become bool` plumbing; no per-handler `step.ShouldBecome`
+// reads. dispatchRunner sets ec.CurrentAsUser from step.AsUser
+// before calling Run, so each step sees a primitive bound to its
+// own declared identity.
+func (ec *ExecutionContext) Privileged() *security.Privileged {
+	return &security.Privileged{
+		SudoPass:   ec.Svc.SudoPass,
+		Escalation: ec.Svc.Escalation,
+		AsUser:     ec.CurrentAsUser,
+	}
 }
 
 // --- actions.Context interface implementation ---

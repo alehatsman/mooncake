@@ -16,18 +16,18 @@ import (
 // doesn't clutter test runs.
 type silentLogger struct{}
 
-func (silentLogger) Infof(string, ...interface{})       {}
-func (silentLogger) Debugf(string, ...interface{})      {}
-func (silentLogger) Errorf(string, ...interface{})      {}
-func (silentLogger) Codef(string, ...interface{})       {}
-func (silentLogger) Textf(string, ...interface{})       {}
-func (silentLogger) Mooncake()                          {}
-func (silentLogger) SetLogLevel(int)                    {}
-func (silentLogger) SetLogLevelStr(string) error        { return nil }
-func (silentLogger) WithPadLevel(int) logger.Logger     { return silentLogger{} }
-func (silentLogger) LogStep(logger.StepInfo)            {}
-func (silentLogger) Complete(logger.ExecutionStats)     {}
-func (silentLogger) SetRedactor(logger.Redactor)        {}
+func (silentLogger) Infof(string, ...interface{})   {}
+func (silentLogger) Debugf(string, ...interface{})  {}
+func (silentLogger) Errorf(string, ...interface{})  {}
+func (silentLogger) Codef(string, ...interface{})   {}
+func (silentLogger) Textf(string, ...interface{})   {}
+func (silentLogger) Mooncake()                      {}
+func (silentLogger) SetLogLevel(int)                {}
+func (silentLogger) SetLogLevelStr(string) error    { return nil }
+func (silentLogger) WithPadLevel(int) logger.Logger { return silentLogger{} }
+func (silentLogger) LogStep(logger.StepInfo)        {}
+func (silentLogger) Complete(logger.ExecutionStats) {}
+func (silentLogger) SetRedactor(logger.Redactor)    {}
 
 // TestInspectPlan_FileStep verifies that InspectPlan reports an
 // accurate would-change prediction for a file directory step against a
@@ -116,14 +116,14 @@ func TestInspectPlan_TolerantWhenInPlanMode(t *testing.T) {
 		RootFile:    "<test>",
 		Steps: []config.Step{
 			{
-				ID:   "step-0001",
-				Name: "file step",
+				ID:        "step-0001",
+				Name:      "file step",
 				FileWrite: &config.File{Path: target, State: "directory", Mode: "0755"},
 			},
 			{
-				ID:   "step-0002",
-				Name: "conditional",
-				When: "{{ no_such_var.changed }}",
+				ID:        "step-0002",
+				Name:      "conditional",
+				When:      "{{ no_such_var.changed }}",
 				FileWrite: &config.File{Path: target, State: "directory", Mode: "0755"},
 			},
 		},

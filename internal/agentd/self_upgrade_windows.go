@@ -31,12 +31,12 @@ func scheduledTaskName() string {
 // destination is locked. Windows DOES allow moving the running .exe to
 // a different name (Vista+), so we use that trick:
 //
-//   1. MoveFile dst → dst.pre-upgrade-<ts>   (running process keeps its
-//      open handle to the renamed inode; nothing crashes)
-//   2. MoveFile src → dst                    (staged binary now lives at
-//      the canonical path)
-//   3. When the scheduled task restarts agentd, it spawns from the
-//      replaced binary at dst — fresh process image.
+//  1. MoveFile dst → dst.pre-upgrade-<ts>   (running process keeps its
+//     open handle to the renamed inode; nothing crashes)
+//  2. MoveFile src → dst                    (staged binary now lives at
+//     the canonical path)
+//  3. When the scheduled task restarts agentd, it spawns from the
+//     replaced binary at dst — fresh process image.
 //
 // On failure we best-effort restore dst from the backup so we don't
 // leave the host in a no-binary state.

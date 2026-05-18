@@ -234,12 +234,12 @@ func TestHandler_Execute(t *testing.T) {
 			}
 			ctx := &executor.ExecutionContext{
 				Svc: &executor.RunServices{
-					Template: mockCtx.Tmpl,
+					Template:       mockCtx.Tmpl,
 					EventPublisher: mockCtx.Publisher,
-					Logger: mockCtx.Log,
-					PathUtil: pathExpander,
+					Logger:         mockCtx.Log,
+					PathUtil:       pathExpander,
 				},
-				Scope: scope,
+				Scope:      scope,
 				CurrentDir: filepath.Dir(tmpFile.Name()),
 			}
 
@@ -378,12 +378,12 @@ func TestHandler_Execute_PathExpansion(t *testing.T) {
 			}
 			ctx := &executor.ExecutionContext{
 				Svc: &executor.RunServices{
-					Template: mockCtx.Tmpl,
+					Template:       mockCtx.Tmpl,
 					EventPublisher: mockCtx.Publisher,
-					Logger: mockCtx.Log,
-					PathUtil: pathExpander,
+					Logger:         mockCtx.Log,
+					PathUtil:       pathExpander,
 				},
-				Scope: scope,
+				Scope:      scope,
 				CurrentDir: "/tmp",
 			}
 
@@ -441,12 +441,12 @@ func TestHandler_Execute_FileNotFound(t *testing.T) {
 
 	ctx := &executor.ExecutionContext{
 		Svc: &executor.RunServices{
-			Template: mockCtx.Tmpl,
+			Template:       mockCtx.Tmpl,
 			EventPublisher: mockCtx.Publisher,
-			Logger: mockCtx.Log,
-			PathUtil: pathExpander,
+			Logger:         mockCtx.Log,
+			PathUtil:       pathExpander,
 		},
-		Scope: executor.NewVariableScope(),
+		Scope:      executor.NewVariableScope(),
 		CurrentDir: "/tmp",
 	}
 
@@ -483,12 +483,12 @@ func TestHandler_Execute_InvalidYAML(t *testing.T) {
 
 	ctx := &executor.ExecutionContext{
 		Svc: &executor.RunServices{
-			Template: mockCtx.Tmpl,
+			Template:       mockCtx.Tmpl,
 			EventPublisher: mockCtx.Publisher,
-			Logger: mockCtx.Log,
-			PathUtil: pathExpander,
+			Logger:         mockCtx.Log,
+			PathUtil:       pathExpander,
 		},
-		Scope: executor.NewVariableScope(),
+		Scope:      executor.NewVariableScope(),
 		CurrentDir: filepath.Dir(tmpFile.Name()),
 	}
 
@@ -514,12 +514,12 @@ func TestHandler_Execute_NilIncludeVars(t *testing.T) {
 
 	ctx := &executor.ExecutionContext{
 		Svc: &executor.RunServices{
-			Template: mockCtx.Tmpl,
+			Template:       mockCtx.Tmpl,
 			EventPublisher: mockCtx.Publisher,
-			Logger: mockCtx.Log,
-			PathUtil: pathExpander,
+			Logger:         mockCtx.Log,
+			PathUtil:       pathExpander,
 		},
-		Scope: executor.NewVariableScope(),
+		Scope:      executor.NewVariableScope(),
 		CurrentDir: "/tmp",
 	}
 
@@ -563,12 +563,12 @@ func TestHandler_Execute_NoPublisher(t *testing.T) {
 
 	ctx := &executor.ExecutionContext{
 		Svc: &executor.RunServices{
-			Template: mockCtx.Tmpl,
+			Template:       mockCtx.Tmpl,
 			EventPublisher: nil, // No publisher,
-			Logger: mockCtx.Log,
-			PathUtil: pathExpander,
+			Logger:         mockCtx.Log,
+			PathUtil:       pathExpander,
 		},
-		Scope: executor.NewVariableScope(),
+		Scope:      executor.NewVariableScope(),
 		CurrentDir: filepath.Dir(tmpFile.Name()),
 	}
 
@@ -611,7 +611,6 @@ func TestHandler_Execute_NotExecutionContext(t *testing.T) {
 		t.Error("Execute() should error when context is not an ExecutionContext")
 	}
 }
-
 
 // Helper functions
 

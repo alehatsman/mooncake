@@ -57,8 +57,8 @@ type Check interface {
 // here so individual checks don't re-do work.
 type Context struct {
 	Ctx         context.Context
-	HomeDir     string   // absolute path to ~/.mooncake/ (may not exist yet)
-	Cwd         string   // absolute path to the directory invocation ran from
+	HomeDir     string // absolute path to ~/.mooncake/ (may not exist yet)
+	Cwd         string // absolute path to the directory invocation ran from
 	SkipProject bool
 	PresetPaths []string // ordered preset search paths (see internal/presets)
 }

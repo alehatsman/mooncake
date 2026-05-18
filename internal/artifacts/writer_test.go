@@ -397,14 +397,14 @@ func TestWriter_OnEvent_RunCompleted(t *testing.T) {
 		Type:      events.EventRunCompleted,
 		Timestamp: time.Now(),
 		Data: events.RunCompletedData{
-			TotalSteps:    5,
-			SuccessSteps:  4,
-			FailedSteps:   0,
-			SkippedSteps:  1,
-			ChangedSteps:  3,
-			DurationMs:    1000,
-			Success:       true,
-			ErrorMessage:  "",
+			TotalSteps:   5,
+			SuccessSteps: 4,
+			FailedSteps:  0,
+			SkippedSteps: 1,
+			ChangedSteps: 3,
+			DurationMs:   1000,
+			Success:      true,
+			ErrorMessage: "",
 		},
 	}
 

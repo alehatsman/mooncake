@@ -245,4 +245,3 @@ func TestResult_ToRegisteredResult(t *testing.T) {
 		t.Errorf("Data[key] = %v, want val", rr.Data["key"])
 	}
 }
-

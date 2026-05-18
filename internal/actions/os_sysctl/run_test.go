@@ -14,6 +14,7 @@ import (
 	"github.com/alehatsman/mooncake/internal/executor"
 	"github.com/alehatsman/mooncake/internal/logger"
 	"github.com/alehatsman/mooncake/internal/pathutil"
+	"github.com/alehatsman/mooncake/internal/security"
 	"github.com/alehatsman/mooncake/internal/template"
 )
 
@@ -77,7 +78,7 @@ func newStub(t *testing.T) *stubFS {
 		}
 		return v, nil
 	}
-	sysctlApply = func(_ actions.PrivilegedRunner, name, value string) error {
+	sysctlApply = func(_ *security.Privileged, name, value string) error {
 		if s.applyErr != nil {
 			return s.applyErr
 		}

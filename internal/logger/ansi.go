@@ -16,7 +16,8 @@ var (
 // This includes color codes, cursor movement, and other terminal control sequences.
 //
 // Example:
-//   StripANSI("\x1b[31mRed Text\x1b[0m") → "Red Text"
+//
+//	StripANSI("\x1b[31mRed Text\x1b[0m") → "Red Text"
 func StripANSI(s string) string {
 	return ansiRegex.ReplaceAllString(s, "")
 }
@@ -28,8 +29,9 @@ func StripANSI(s string) string {
 // so emoji and other multi-byte characters count as 1.
 //
 // Example:
-//   VisibleLength("\x1b[31mRed\x1b[0m") → 3
-//   VisibleLength("Hello 🌙") → 7
+//
+//	VisibleLength("\x1b[31mRed\x1b[0m") → 3
+//	VisibleLength("Hello 🌙") → 7
 func VisibleLength(s string) int {
 	stripped := StripANSI(s)
 	return utf8.RuneCountInString(stripped)
@@ -45,7 +47,8 @@ func VisibleLength(s string) int {
 // 4. Handles UTF-8 characters correctly
 //
 // Example:
-//   TruncateANSI("\x1b[31mLong Red Text\x1b[0m", 8) → "\x1b[31mLong...\x1b[0m"
+//
+//	TruncateANSI("\x1b[31mLong Red Text\x1b[0m", 8) → "\x1b[31mLong...\x1b[0m"
 func TruncateANSI(s string, maxWidth int) string {
 	// Check if truncation is needed
 	visibleLen := VisibleLength(s)

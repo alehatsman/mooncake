@@ -5,6 +5,7 @@ import (
 	"github.com/alehatsman/mooncake/internal/events"
 	"github.com/alehatsman/mooncake/internal/expression"
 	"github.com/alehatsman/mooncake/internal/logger"
+	"github.com/alehatsman/mooncake/internal/security"
 	"github.com/alehatsman/mooncake/internal/template"
 )
 
@@ -110,13 +111,15 @@ type Context interface {
 	// multiple times.
 	Effects() Performer
 
-	// Privileged returns a runner that escalates command execution to
-	// root (via sudo) when mooncake is not already running as root.
+	// Privileged returns the spec-72 Layer C escalation primitive,
+	// pre-bound by dispatchRunner to the current step's AsUser.
 	// Handlers should call ctx.Privileged().Run(...) for any shell-out
-	// that needs root, instead of constructing exec.Command or
-	// security.BecomeRunner themselves. See PrivilegedRunner and
-	// spec-69 for the rationale.
-	Privileged() PrivilegedRunner
+	// that needs escalation; the primitive decides the sudo wrap
+	// (none / sudo / sudo -u <name>) from the bound AsUser. Handlers
+	// must NOT read step.AsUser or step.ShouldBecome() for execution
+	// decisions — the primitive sees them transparently. See
+	// security.Privileged and spec-72 for the rationale.
+	Privileged() *security.Privileged
 
 	// GetCurrentStepID returns the unique ID of the currently executing step.
 	//

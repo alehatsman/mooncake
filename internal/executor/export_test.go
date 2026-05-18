@@ -4,12 +4,12 @@ package executor
 // This file is compiled only during `go test`.
 
 var (
-	MarkStepFailed           = markStepFailed
-	HandleVars               = handleVars
-	HandleWhenExpression     = handleWhenExpression
-	ShouldSkipByTags         = shouldSkipByTags
+	MarkStepFailed             = markStepFailed
+	HandleVars                 = handleVars
+	HandleWhenExpression       = handleWhenExpression
+	ShouldSkipByTags           = shouldSkipByTags
 	CheckIdempotencyConditions = checkIdempotencyConditions
-	CheckSkipConditions      = checkSkipConditions
-	GetStepDisplayName       = getStepDisplayName
-	ParseFileMode            = parseFileMode
+	CheckSkipConditions        = checkSkipConditions
+	GetStepDisplayName         = getStepDisplayName
+	ParseFileMode              = parseFileMode
 )

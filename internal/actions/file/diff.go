@@ -25,7 +25,7 @@ import (
 type FileSnapshot struct {
 	Path   string `json:"path"`
 	Exists bool   `json:"exists"`
-	Kind   string `json:"kind,omitempty"`   // file | directory | symlink | other
+	Kind   string `json:"kind,omitempty"` // file | directory | symlink | other
 	Size   int64  `json:"size,omitempty"`
 	Sha256 string `json:"sha256,omitempty"` // lowercase hex; empty for non-regular files
 	Mode   string `json:"mode,omitempty"`   // octal e.g. "0644"

@@ -64,9 +64,9 @@ func TestHandler_Validate(t *testing.T) {
 func TestToTask_TriggerSugar(t *testing.T) {
 	// Trigger (singular) should be lifted into Triggers (plural).
 	tk, err := toTask(&config.WindowsScheduledTask{
-		Name:    "x",
-		Trigger: &config.WindowsScheduledTaskTrigger{Type: "boot"},
-		Actions: []config.WindowsScheduledTaskAction{{Execute: "x"}},
+		Name:      "x",
+		Trigger:   &config.WindowsScheduledTaskTrigger{Type: "boot"},
+		Actions:   []config.WindowsScheduledTaskAction{{Execute: "x"}},
 		Principal: &config.WindowsScheduledTaskPrincipal{User: `X\u`, LogonType: "s4u"},
 	})
 	if err != nil {
@@ -87,7 +87,7 @@ func TestToTask_RepetitionTriggerInterval(t *testing.T) {
 			Type:     "repetition",
 			Interval: "5m",
 		}},
-		Actions: []config.WindowsScheduledTaskAction{{Execute: "x"}},
+		Actions:   []config.WindowsScheduledTaskAction{{Execute: "x"}},
 		Principal: &config.WindowsScheduledTaskPrincipal{User: `X\u`},
 	})
 	if err != nil {
@@ -118,8 +118,8 @@ func TestToTask_RepetitionISO8601(t *testing.T) {
 
 func TestParseISO8601(t *testing.T) {
 	cases := map[string]time.Duration{
-		"PT5M":   5 * time.Minute,
-		"PT1H":   time.Hour,
+		"PT5M":    5 * time.Minute,
+		"PT1H":    time.Hour,
 		"PT1H30M": time.Hour + 30*time.Minute,
 		"P1D":     24 * time.Hour,
 		"P1DT2H":  26 * time.Hour,
@@ -139,12 +139,12 @@ func TestParseISO8601(t *testing.T) {
 
 func TestTitleCase_MappingTable(t *testing.T) {
 	cases := map[string]string{
-		"s4u":             "S4U",
-		"interactive":     "Interactive",
-		"ignore_new":      "IgnoreNew",
-		"stop_existing":   "StopExisting",
-		"":                "",
-		"already":         "Already",
+		"s4u":           "S4U",
+		"interactive":   "Interactive",
+		"ignore_new":    "IgnoreNew",
+		"stop_existing": "StopExisting",
+		"":              "",
+		"already":       "Already",
 	}
 	for in, want := range cases {
 		if got := titleCase(in); got != want {

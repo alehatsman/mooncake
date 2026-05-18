@@ -77,4 +77,3 @@ func systemModeDefaults() Config {
 		MaxSyncBytes: DefaultMaxSyncBytes,
 	}
 }
-

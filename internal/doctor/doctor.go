@@ -26,14 +26,14 @@ type Options struct {
 // deterministic (catalogue order, filtered by Options.Sections). Field
 // names participate in the JSON contract; see spec-41 §"JSON output".
 type Report struct {
-	Cwd       string   `json:"cwd"`
-	Ok        int      `json:"ok"`
-	Warnings  int      `json:"warnings"`
-	Errors    int      `json:"errors"`
-	Infos     int      `json:"infos"`
-	Results   []Result `json:"checks"`
-	StartedAt string   `json:"started_at"`
-	DurationMs int64   `json:"duration_ms"`
+	Cwd        string   `json:"cwd"`
+	Ok         int      `json:"ok"`
+	Warnings   int      `json:"warnings"`
+	Errors     int      `json:"errors"`
+	Infos      int      `json:"infos"`
+	Results    []Result `json:"checks"`
+	StartedAt  string   `json:"started_at"`
+	DurationMs int64    `json:"duration_ms"`
 }
 
 // HasErrors reports whether any check came back as StatusError.

@@ -58,7 +58,9 @@ func (c *nvidiaGPUCollector) Collect(m *Metrics) error {
 }
 
 // parseNvidiaSmiCSV parses CSV output of:
-//   nvidia-smi --query-gpu=index,utilization.gpu,memory.used,memory.total,temperature.gpu --format=csv,noheader,nounits
+//
+//	nvidia-smi --query-gpu=index,utilization.gpu,memory.used,memory.total,temperature.gpu --format=csv,noheader,nounits
+//
 // Result is sorted by Index ascending so callers can correlate positionally
 // with facts.Facts.GPUs (which uses the same nvidia-smi index ordering).
 func parseNvidiaSmiCSV(data string) ([]GPUMetrics, error) {

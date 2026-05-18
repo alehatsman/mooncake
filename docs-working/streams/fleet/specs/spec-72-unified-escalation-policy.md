@@ -333,54 +333,70 @@ function arg) — but the migration target is the same.
 
 ## Migration
 
-Phased so each phase is independently shippable and reverts cleanly:
+The original 5-phase plan was revised after Phase 2b. Investigation
+revealed the actual design flaw: the `actions.PrivilegedRunner`
+interface was doing two unrelated jobs ("run a command, get bytes"
+for 20 callers, and "build an exec.Cmd I can manipulate" for 3
+callers) and 13 `runnerOrDefault` nil-guards existed purely to
+satisfy a test-injection workaround that production never triggered.
+The real fix was an architectural Layer-shift (the "Layer C"
+discussion in the spec history): escalation becomes a property of
+the *step*, bound by `dispatchRunner` onto the per-step ctx, with
+handlers describing intent and the primitive consulting its bound
+`AsUser` to decide the sudo wrap.
 
-1. **Phase 1** — Land `EscalationReport`, `ProbeEscalation`, and
-   `RunServices.Escalation`. The old `PasswordlessSudo bool` on
-   `RunServices` is preserved but now *derived* from the new report
-   (`Escalation.Reason == EscalationAvailablePasswordless`), so
-   the four call sites that read the bool see no behavior change.
-   **Status: shipped (worktree-spec-72).** `detectPasswordlessSudo`
-   removed in favor of `ProbeEscalation`; the nil-context regression
-   test moved to assert the same guarantee on the new entry point.
-2. **Phase 2a** — Add the lint rule as warning-only
-   (`scripts/escalation-lint.sh`, wired into `task ci` as step
-   `[9/9]`). Add `RunWithBecome(ctx, become, program, args...)`
-   to the `actions.PrivilegedRunner` interface (resolves
-   Open Question §1 — chose the additive-method route over
-   breaking `Run`'s signature). Migrate the single cleanest
-   hand-rolled site — `pkg.runCmd` — to consume it via
-   `ec.Privileged().RunWithBecome(...)`. **Status: shipped
-   (worktree-spec-72).** Lint baseline: 16 production sites
-   (13 nil-guard literals + 3 deferred hand-rolled).
-3. **Phase 2b** — Migrate the three remaining hand-rolled sites
-   (`service/shared.BecomeAwareCommand` + `writeFileWithSudo`,
-   `os_systemd.becomeRunner`) onto `ctx.Privileged()`. Resolution
-   picked: option (a) — added `Command(ctx, become, program,
-   args...) (*exec.Cmd, error)` to `actions.PrivilegedRunner`,
-   accepting the leak of `*exec.Cmd` through the interface in
-   exchange for preserving per-cp-vs-per-chmod diagnostics that
-   operators read in service-install errors. `os_systemd` keeps
-   its package-level escalation state but the type changes from
-   `security.BecomeRunner` to `actions.PrivilegedRunner` +
-   `context.Context`, accessed via a new `becomeCommand` helper
-   that nil-guards loudly so test paths bypassing `Run()` fail
-   with a clear "not initialized" error instead of NPE. **Status:
-   shipped (worktree-spec-72).** Lint baseline drops from 16 → 13;
-   all remaining violations are nil-guard `PrivilegedRunner{}`
-   literals — exactly the Phase 3 audit target.
-4. **Phase 3** — Audit the 13 nil-guard sites (the lint reports
-   13; F051's "12" miscounted `os_user/platform_darwin.go`, which
-   has two such literals). Each commit either deletes the empty
-   literal (test-only) or migrates to the runner-from-
-   `RunServices` constructor.
-5. **Phase 4** — Pin the systemd-unit knobs (§4 test matrix).
-6. **Phase 5** — Flip the lint rule to a CI-blocker (`bash
-   scripts/escalation-lint.sh --fail` in the `task ci` step).
-   Drop the `PasswordlessSudo bool` shim from Phase 1. Direct
-   `BecomeRunner` / `PrivilegedRunner` construction outside the
-   allowlist (`internal/security/`, `internal/executor/context.go`,
-   `internal/effects/default.go`) no longer passes CI.
+The phasing collapsed into three commits:
+
+1. **Phase α — foundation (shipped).** Move `EscalationReport`,
+   `EscalationReason`, and `ProbeEscalation` from `internal/executor`
+   to `internal/security` so the new primitive can live next to its
+   inputs without forcing `internal/actions` to import
+   `internal/executor`. Add the concrete `security.Privileged`
+   struct (`SudoPass`, `Escalation`, `AsUser`) with two methods —
+   `Run(ctx, prog, args)` and `Command(ctx, prog, args)`. `AsUser`
+   semantics:
+   - `""`           → run as current process (no sudo)
+   - `"root"`/`"0"` → sudo (no-op when already root)
+   - `"<name>"`     → sudo -u `<name>` (no-op when already `<name>`)
+   `dispatchRunner` sets `ec.CurrentAsUser = step.AsUser` before
+   `runner.Run`, restoring on defer. `ec.Privileged()` returns
+   `*security.Privileged` with all three fields bound from
+   `ec.Svc` + `ec.CurrentAsUser`.
+2. **Phase β — handler migration (shipped).** Drop the
+   `actions.PrivilegedRunner` interface entirely; `ec.Privileged()`
+   returns the concrete `*security.Privileged`. The four mock
+   contexts (testutil.MockContext, apply.reverseContext,
+   actions_test.mockContext, print.mockContext) construct a real
+   `*security.Privileged` with `AvailableRoot` escalation instead
+   of implementing a fake interface. The 10 `runnerOrDefault`
+   helpers and their 13 nil-guard `security.PrivilegedRunner{}`
+   literals are deleted — production never reached them, tests
+   substitute the var-hook entirely. Per-call `become bool`
+   parameters in `pkg.runCmd`, `service/shared.BecomeAwareCommand`,
+   `os_systemd.becomeCommand`, and the effects layer all collapse:
+   the bound `AsUser` is the single source of truth.
+3. **Phase γ — cleanup + lint flip (shipped).** Drop
+   `RunWithBecome` and `RunWithInput` from the old interface
+   (zero callers after migration). Flip
+   `scripts/escalation-lint.sh` to `--fail` in `task ci`. Lint
+   baseline: **0 production violations** (down from 16 at the
+   end of Phase 2b).
+
+What this means for the originally-scoped Phase 3 / Phase 4 /
+Phase 5: the 13-site audit (Phase 3) disappeared — those sites
+were deleted along with `runnerOrDefault`. The CI-blocker flip
+(Phase 5) shipped as part of Phase γ. The unit-knob test matrix
+(Phase 4) is independent of the escalation-primitive redesign and
+remains open as a separate hardening task.
+
+**Latent feature unlocked**: `as_user: <name>` (non-root named
+user) now works universally across handlers, not just in
+`command` / `shell`. Previously most handlers interpreted
+`as_user: postgres` as "escalate to root" because the underlying
+escalator only knew about root. The Layer C primitive supports
+the named-user case via `sudo -u <name>`. Filesystem operations
+(write-as-named-user) still escalate to root and don't chown
+the resulting file — that's a follow-up if needed.
 
 Backward compatibility: zero protocol changes (peers.toml, agentd
 HTTP, daemon config); the work is structural and inside the executor.
@@ -389,16 +405,19 @@ HTTP, daemon config); the work is structural and inside the executor.
 
 ## Open questions
 
-1. ~~**`PrivilegedRunner.Run` signature.**~~ **Resolved (Phase 2a):**
-   added `RunWithBecome(ctx, become, program, args...) ([]byte, error)`
-   alongside the existing `Run` / `RunWithInput`. Reasoning:
-   `Run`-callers outnumber per-call-become callers ~20:1, so an
-   additive method keeps the common case zero-touch. `Run` stays
-   the implicit-always-escalate primitive; `RunWithBecome` carries
-   the explicit flag for the brew-vs-apt class of caller. Mock
-   `PrivilegedRunner` implementations in `testutil`, `apply`,
-   `actions_test`, and `print/handler_test` updated to satisfy the
-   new method.
+1. ~~**`PrivilegedRunner.Run` signature.**~~ **Resolved (Layer C
+   redesign):** the question was rendered moot by dropping the
+   `PrivilegedRunner` interface entirely. The Phase 2a answer
+   (additive `RunWithBecome`) and Phase 2b answer (additive
+   `Command(become bool, ...)`) both shipped but were superseded
+   when investigation showed the per-call `become bool` parameter
+   was conflating two concepts: the step's declared `AsUser`
+   (a per-step property) was being read by every handler and
+   threaded through helper signatures as a boolean. Layer C
+   binds `AsUser` to the primitive once per step via
+   `dispatchRunner`; handlers stop reading `step.AsUser` for
+   execution decisions; helper signatures shrink. `RunWithBecome`
+   and `RunWithInput` were deleted in Phase γ.
 2. **Cached `EscalationReport` vs re-probe under controller
    instructions.** If the operator passes `--sudo-pass` mid-run-life
    (a future feature?), should the cached report invalidate? v1

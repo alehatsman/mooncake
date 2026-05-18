@@ -34,10 +34,10 @@ func TestParseWindowsProbe_RejectsBadInput(t *testing.T) {
 	cases := []string{
 		"",
 		"only-one-line",
-		"Linux\nx86_64",       // wrong OS marker
-		"Windows\nIA64",       // unsupported arch
-		"Windows\nx86\n",      // 32-bit not in scope
-		"WSL\nAMD64",          // OS marker is "WSL" not "Windows"
+		"Linux\nx86_64",  // wrong OS marker
+		"Windows\nIA64",  // unsupported arch
+		"Windows\nx86\n", // 32-bit not in scope
+		"WSL\nAMD64",     // OS marker is "WSL" not "Windows"
 	}
 	for _, in := range cases {
 		t.Run(strings.ReplaceAll(in, "\n", "|"), func(t *testing.T) {

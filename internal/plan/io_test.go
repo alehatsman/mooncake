@@ -19,8 +19,8 @@ func TestSavePlanToFile_JSON(t *testing.T) {
 		RootFile: "test.yml",
 		Steps: []config.Step{
 			{
-				Name:  "Test Step",
-				Log: &config.PrintAction{Msg: "test message"},
+				Name: "Test Step",
+				Log:  &config.PrintAction{Msg: "test message"},
 			},
 		},
 	}
@@ -62,8 +62,8 @@ func TestSavePlanToFile_YAML(t *testing.T) {
 		RootFile: "test.yml",
 		Steps: []config.Step{
 			{
-				Name:  "Test Step",
-				Log: &config.PrintAction{Msg: "test message"},
+				Name: "Test Step",
+				Log:  &config.PrintAction{Msg: "test message"},
 			},
 		},
 	}
@@ -334,12 +334,12 @@ func TestSaveAndLoadRoundTrip(t *testing.T) {
 		RootFile: "test.yml",
 		Steps: []config.Step{
 			{
-				Name:  "First Step",
-				Log: &config.PrintAction{Msg: "First message"},
+				Name: "First Step",
+				Log:  &config.PrintAction{Msg: "First message"},
 			},
 			{
-				Name:  "Second Step",
-				Log: &config.PrintAction{Msg: "Second message"},
+				Name: "Second Step",
+				Log:  &config.PrintAction{Msg: "Second message"},
 			},
 		},
 	}

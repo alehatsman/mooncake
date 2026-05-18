@@ -55,9 +55,13 @@ func TestRun_UserLookupFailureRefusesWrite(t *testing.T) {
 
 func TestRun_ChownEPERMSurfacesAsError(t *testing.T) {
 	// Stub chownFn to simulate EPERM (a non-root operator trying to
-	// install keys for another user). The real Run path resolves a
-	// real current user for the lookup, then hits the stubbed chown
-	// and must surface the failure rather than swallow it.
+	// install keys for another user). Under spec-72 Layer C, the
+	// handler's retry path goes through ctx.Privileged().Run, which
+	// escalates only when the step declares as_user. Drive the
+	// cross-user case explicitly via AsUser="root" on the step + a
+	// test context with no SudoPass configured — the primitive then
+	// returns ErrBecomeNoSudoPass and the handler must surface the
+	// failure with the "run with sudo" hint.
 	originalChown := chownFn
 	chownFn = func(_ string, _, _ int) error {
 		return &os.PathError{Op: "chown", Path: "stub", Err: fs.ErrPermission}
@@ -66,11 +70,16 @@ func TestRun_ChownEPERMSurfacesAsError(t *testing.T) {
 
 	dir := t.TempDir()
 	path := filepath.Join(dir, "authorized_keys")
-	_, err := (&Handler{}).Run(newCtx(t, false), &config.Step{OsSSHKey: &config.OsSSHKey{
-		User: currentUsername(t),
-		Key:  key1,
-		Path: path,
-	}})
+	ctx := newCtx(t, false)
+	ctx.CurrentAsUser = "root" // drive the escalation retry path
+	_, err := (&Handler{}).Run(ctx, &config.Step{
+		AsUser: "root",
+		OsSSHKey: &config.OsSSHKey{
+			User: currentUsername(t),
+			Key:  key1,
+			Path: path,
+		},
+	})
 	if err == nil {
 		t.Fatal("expected Run to surface chown EPERM; got nil error")
 	}

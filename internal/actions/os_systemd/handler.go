@@ -26,6 +26,7 @@ import (
 	"github.com/alehatsman/mooncake/internal/config"
 	"github.com/alehatsman/mooncake/internal/events"
 	"github.com/alehatsman/mooncake/internal/executor"
+	"github.com/alehatsman/mooncake/internal/security"
 )
 
 // privilegedRunner + privilegedCtx are the escalation primitives used
@@ -45,7 +46,7 @@ import (
 // exposes both knobs while keeping the SudoPass+Escalation read
 // centralized at ctx.Privileged().
 var (
-	privilegedRunner actions.PrivilegedRunner
+	privilegedRunner *security.Privileged
 	privilegedCtx    context.Context
 )
 
@@ -55,11 +56,17 @@ var (
 // initialized" error otherwise so test paths that wire the
 // systemctl* hooks but accidentally fall through to a sudo'd helper
 // fail loudly instead of nil-pointer-panicking.
-func becomeCommand(become bool, program string, args ...string) (*exec.Cmd, error) {
+func becomeCommand(_ bool, program string, args ...string) (*exec.Cmd, error) {
+	// The legacy `become` arg is preserved for the per-call sites
+	// (writeAtomic always passes true, runSystemctl passes
+	// systemctlBecome()) but is now a no-op: spec-72 Layer C moved
+	// the escalation decision to step.AsUser, bound onto the
+	// primitive at dispatch. The arg is dropped from call sites in
+	// a follow-up so this function's signature can shrink.
 	if privilegedRunner == nil {
 		return nil, errors.New("os_systemd: privilegedRunner not initialized — Run() must be invoked through ExecutionContext before writeAtomic/runSystemctl")
 	}
-	return privilegedRunner.Command(privilegedCtx, become, program, args...)
+	return privilegedRunner.Command(privilegedCtx, program, args...)
 }
 
 const (

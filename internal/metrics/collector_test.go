@@ -30,9 +30,9 @@ type fakeCollector struct {
 	apply   func(*Metrics) // optional, defaults to no-op
 }
 
-func (f *fakeCollector) Name() string         { return f.name }
-func (f *fakeCollector) Outputs() []string    { return f.outputs }
-func (f *fakeCollector) TTL() time.Duration   { return f.ttl }
+func (f *fakeCollector) Name() string       { return f.name }
+func (f *fakeCollector) Outputs() []string  { return f.outputs }
+func (f *fakeCollector) TTL() time.Duration { return f.ttl }
 func (f *fakeCollector) Collect(m *Metrics) error {
 	f.calls++
 	if f.apply != nil {

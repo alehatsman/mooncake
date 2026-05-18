@@ -21,16 +21,16 @@ type SystemSnapshot struct {
 }
 
 type osInfo struct {
-	Name    string `json:"name"`
-	Distro  string `json:"distro,omitempty"`
-	Kernel  string `json:"kernel,omitempty"`
-	Arch    string `json:"arch"`
+	Name   string `json:"name"`
+	Distro string `json:"distro,omitempty"`
+	Kernel string `json:"kernel,omitempty"`
+	Arch   string `json:"arch"`
 }
 
 type hostInfo struct {
-	Name     string `json:"name"`
-	User     string `json:"user"`
-	UptimeS  int64  `json:"uptime_s,omitempty"`
+	Name    string `json:"name"`
+	User    string `json:"user"`
+	UptimeS int64  `json:"uptime_s,omitempty"`
 }
 
 type hwInfo struct {

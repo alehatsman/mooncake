@@ -201,10 +201,10 @@ func TestRunInitPrompts_AddsNewCandidateWithTokenAndTags(t *testing.T) {
 		},
 	}
 	stdin := strings.NewReader(strings.Join([]string{
-		"y",        // Yes, add new peers
-		"",         // accept default name (desktop1)
+		"y",                 // Yes, add new peers
+		"",                  // accept default name (desktop1)
 		"linux,workstation", // tags
-		"abc123",   // token
+		"abc123",            // token
 		"",
 	}, "\n"))
 	var out bytes.Buffer

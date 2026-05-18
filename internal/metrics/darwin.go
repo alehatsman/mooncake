@@ -35,9 +35,9 @@ var runCmd = func(name string, args ...string) ([]byte, error) {
 
 type darwinCPUCollector struct{}
 
-func (darwinCPUCollector) Name() string             { return "cpu" }
-func (darwinCPUCollector) Outputs() []string        { return []string{"cpu_usage_pct", "cpu_usage_per_core"} }
-func (darwinCPUCollector) TTL() time.Duration       { return 2 * time.Second }
+func (darwinCPUCollector) Name() string       { return "cpu" }
+func (darwinCPUCollector) Outputs() []string  { return []string{"cpu_usage_pct", "cpu_usage_per_core"} }
+func (darwinCPUCollector) TTL() time.Duration { return 2 * time.Second }
 func (darwinCPUCollector) Collect(m *Metrics) error {
 	// `top -l 2 -n 0 -s 1`: emit headers twice 1s apart, no process rows.
 	// The second "CPU usage:" line is the steady-state delta.
@@ -80,9 +80,11 @@ func parseDarwinTopCPU(out string) (float64, error) {
 
 type darwinLoadCollector struct{}
 
-func (darwinLoadCollector) Name() string             { return "load" }
-func (darwinLoadCollector) Outputs() []string        { return []string{"load_avg_1m", "load_avg_5m", "load_avg_15m"} }
-func (darwinLoadCollector) TTL() time.Duration       { return 5 * time.Second }
+func (darwinLoadCollector) Name() string { return "load" }
+func (darwinLoadCollector) Outputs() []string {
+	return []string{"load_avg_1m", "load_avg_5m", "load_avg_15m"}
+}
+func (darwinLoadCollector) TTL() time.Duration { return 5 * time.Second }
 func (darwinLoadCollector) Collect(m *Metrics) error {
 	out, err := runCmd("sysctl", "-n", "vm.loadavg")
 	if err != nil {
@@ -122,8 +124,10 @@ func parseDarwinLoadAvg(out string) (float64, float64, float64, error) {
 
 type darwinMemCollector struct{}
 
-func (darwinMemCollector) Name() string       { return "mem" }
-func (darwinMemCollector) Outputs() []string  { return []string{"memory_used_mb", "memory_used_pct", "swap_used_mb"} }
+func (darwinMemCollector) Name() string { return "mem" }
+func (darwinMemCollector) Outputs() []string {
+	return []string{"memory_used_mb", "memory_used_pct", "swap_used_mb"}
+}
 func (darwinMemCollector) TTL() time.Duration { return 5 * time.Second }
 func (darwinMemCollector) Collect(m *Metrics) error {
 	vmOut, err := runCmd("vm_stat")
@@ -219,9 +223,9 @@ func parseDarwinSwap(out string) (int64, error) {
 
 type darwinNetCollector struct{}
 
-func (darwinNetCollector) Name() string             { return "net" }
-func (darwinNetCollector) Outputs() []string        { return []string{"net_rx_bps", "net_tx_bps"} }
-func (darwinNetCollector) TTL() time.Duration       { return 2 * time.Second }
+func (darwinNetCollector) Name() string       { return "net" }
+func (darwinNetCollector) Outputs() []string  { return []string{"net_rx_bps", "net_tx_bps"} }
+func (darwinNetCollector) TTL() time.Duration { return 2 * time.Second }
 func (darwinNetCollector) Collect(m *Metrics) error {
 	first, err := readNetstatIBN()
 	if err != nil {
@@ -247,7 +251,9 @@ func readNetstatIBN() (netDevSample, error) {
 }
 
 // parseNetstatIBN parses BSD-style `netstat -ibn` output. Columns:
-//   Name  Mtu Network  Address  Ipkts  Ierrs  Ibytes  Opkts  Oerrs  Obytes  Coll
+//
+//	Name  Mtu Network  Address  Ipkts  Ierrs  Ibytes  Opkts  Oerrs  Obytes  Coll
+//
 // We want Ibytes (col 6, 0-indexed) and Obytes (col 9). Multiple rows can
 // share an interface (one per address family); we keep the first.
 func parseNetstatIBN(out string) netDevSample {

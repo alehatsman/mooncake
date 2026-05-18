@@ -275,7 +275,6 @@ func TestTestLogger_GetLogs(t *testing.T) {
 	}
 }
 
-
 func TestTestLogger_SetLogLevelStr(t *testing.T) {
 	testLog := NewTestLogger()
 

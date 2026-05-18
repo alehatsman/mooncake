@@ -22,7 +22,6 @@ func mustNewRenderer() template.Renderer {
 	return r
 }
 
-
 // TestGetStepDisplayName_WithFileTreeItem tests display name for filetree items
 func TestGetStepDisplayName_WithFileTreeItem(t *testing.T) {
 	tests := []struct {

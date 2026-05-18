@@ -122,7 +122,6 @@ func (p *ChannelPublisher) Flush() {
 	p.pendingMu.Unlock()
 }
 
-
 // Close closes the publisher and all subscriber channels
 func (p *ChannelPublisher) Close() {
 	p.mu.Lock()

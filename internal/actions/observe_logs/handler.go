@@ -18,22 +18,22 @@ import (
 )
 
 const (
-	actionName        = "observe.logs"
-	defaultSince      = 60 * time.Second
-	defaultSamples    = 5
-	defaultMaxBytes   = int64(1 << 20) // 1 MiB
-	defaultMaxLines   = 10000
+	actionName         = "observe.logs"
+	defaultSince       = 60 * time.Second
+	defaultSamples     = 5
+	defaultMaxBytes    = int64(1 << 20) // 1 MiB
+	defaultMaxLines    = 10000
 	matchSampleHardCap = 50 // a single pattern can't keep more than this even if user asks
 )
 
 // LogObservation is the typed Value payload for observe.logs.
 type LogObservation struct {
-	Source    string          `json:"source"`     // "file" / "journal" / "container"
-	Identifier string         `json:"identifier"` // path / unit / container name
-	Window    string          `json:"window"`     // e.g. "60s"
-	LinesRead int             `json:"lines_read"`
-	Truncated bool            `json:"truncated"`  // hit byte or line cap
-	Matches   []LogMatchGroup `json:"matches,omitempty"`
+	Source     string          `json:"source"`     // "file" / "journal" / "container"
+	Identifier string          `json:"identifier"` // path / unit / container name
+	Window     string          `json:"window"`     // e.g. "60s"
+	LinesRead  int             `json:"lines_read"`
+	Truncated  bool            `json:"truncated"` // hit byte or line cap
+	Matches    []LogMatchGroup `json:"matches,omitempty"`
 }
 
 // LogMatchGroup is one regex pattern's outcome.

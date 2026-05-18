@@ -66,6 +66,7 @@ func factsHandler(w http.ResponseWriter, _ *http.Request) {
 // metricsHandler mirrors the `mooncake metrics` CLI response shape:
 //   - no fields  → full metrics map at the top level
 //   - fields=... → only the requested top-level keys, plus `_collected_at`
+//
 // ?refresh=true bypasses the TTL cache.
 func metricsHandler(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Query().Get("refresh") == "true" {

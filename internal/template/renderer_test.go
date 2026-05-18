@@ -6,10 +6,10 @@ import (
 )
 
 func TestPongo2Renderer_Render(t *testing.T) {
-renderer, err := NewPongo2Renderer()
-if err != nil {
-	panic("Failed to create renderer: " + err.Error())
-}
+	renderer, err := NewPongo2Renderer()
+	if err != nil {
+		panic("Failed to create renderer: " + err.Error())
+	}
 
 	tests := []struct {
 		name     string
@@ -126,10 +126,10 @@ if err != nil {
 }
 
 func TestPongo2Renderer_RenderComplex(t *testing.T) {
-renderer, err := NewPongo2Renderer()
-if err != nil {
-	panic("Failed to create renderer: " + err.Error())
-}
+	renderer, err := NewPongo2Renderer()
+	if err != nil {
+		panic("Failed to create renderer: " + err.Error())
+	}
 
 	template := `
 Name: {{ user.name }}
@@ -163,10 +163,10 @@ Items:
 }
 
 func TestPongo2Renderer_Concurrent(t *testing.T) {
-renderer, err := NewPongo2Renderer()
-if err != nil {
-	panic("Failed to create renderer: " + err.Error())
-}
+	renderer, err := NewPongo2Renderer()
+	if err != nil {
+		panic("Failed to create renderer: " + err.Error())
+	}
 
 	// Test that renderer is safe for concurrent use
 	done := make(chan bool)
@@ -189,10 +189,10 @@ if err != nil {
 }
 
 func TestNewPongo2Renderer(t *testing.T) {
-renderer, err := NewPongo2Renderer()
-if err != nil {
-	panic("Failed to create renderer: " + err.Error())
-}
+	renderer, err := NewPongo2Renderer()
+	if err != nil {
+		panic("Failed to create renderer: " + err.Error())
+	}
 	if renderer == nil {
 		t.Error("NewPongo2Renderer() returned nil")
 	}
@@ -205,7 +205,7 @@ if err != nil {
 func contains(s, substr string) bool {
 	return len(s) >= len(substr) && (s == substr || len(s) > len(substr) &&
 		(s[:len(substr)] == substr || s[len(s)-len(substr):] == substr ||
-		containsMiddle(s, substr)))
+			containsMiddle(s, substr)))
 }
 
 func containsMiddle(s, substr string) bool {
@@ -218,10 +218,10 @@ func containsMiddle(s, substr string) bool {
 }
 
 func TestPongo2Renderer_ExpandUserFilter(t *testing.T) {
-renderer, err := NewPongo2Renderer()
-if err != nil {
-	panic("Failed to create renderer: " + err.Error())
-}
+	renderer, err := NewPongo2Renderer()
+	if err != nil {
+		panic("Failed to create renderer: " + err.Error())
+	}
 
 	tests := []struct {
 		name     string
@@ -254,10 +254,10 @@ if err != nil {
 }
 
 func TestPongo2Renderer_ErrorHandling(t *testing.T) {
-renderer, err := NewPongo2Renderer()
-if err != nil {
-	panic("Failed to create renderer: " + err.Error())
-}
+	renderer, err := NewPongo2Renderer()
+	if err != nil {
+		panic("Failed to create renderer: " + err.Error())
+	}
 
 	tests := []struct {
 		name     string
@@ -302,10 +302,10 @@ func TestPongo2Renderer_RenderPreserving(t *testing.T) {
 	}
 
 	tests := []struct {
-		name  string
-		tmpl  string
-		vars  map[string]interface{}
-		want  string
+		name string
+		tmpl string
+		vars map[string]interface{}
+		want string
 	}{
 		{
 			name: "defined variable renders normally",
@@ -385,10 +385,10 @@ func TestPongo2Renderer_RenderPreserving(t *testing.T) {
 }
 
 func TestPongo2Renderer_ExecuteErrors(t *testing.T) {
-renderer, err := NewPongo2Renderer()
-if err != nil {
-	panic("Failed to create renderer: " + err.Error())
-}
+	renderer, err := NewPongo2Renderer()
+	if err != nil {
+		panic("Failed to create renderer: " + err.Error())
+	}
 
 	tests := []struct {
 		name     string

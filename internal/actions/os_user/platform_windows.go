@@ -158,7 +158,7 @@ func listUserLocalGroups(name string) ([]string, error) {
 // this action. `security.PrivilegedRunner.Run` on Windows would
 // return ErrBecomeUnsupported, so threading the runner through here
 // would break the existing PS-cmdlet path.
-func applyPlanWindows(_ actions.PrivilegedRunner, plan computedPlan, current *userState, d desired) error {
+func applyPlanWindows(_ *security.Privileged, plan computedPlan, current *userState, d desired) error {
 	switch plan.operation {
 	case "create":
 		return createUserWindows(d)

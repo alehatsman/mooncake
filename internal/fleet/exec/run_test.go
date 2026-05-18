@@ -117,13 +117,13 @@ func TestNewULID_UniqueAndStable(t *testing.T) {
 const fakeToken = "test-token-spec52"
 
 type fakeAgentd struct {
-	srv         *httptest.Server
-	mu          sync.Mutex
-	syncedRoot  string
-	uploaded    map[string][]byte // path → bytes
-	streamFunc  func(runID string, w http.ResponseWriter) // installed per-test
+	srv          *httptest.Server
+	mu           sync.Mutex
+	syncedRoot   string
+	uploaded     map[string][]byte                         // path → bytes
+	streamFunc   func(runID string, w http.ResponseWriter) // installed per-test
 	planPathSeen string
-	exitOnRun   int // simulated exit code (0 = success)
+	exitOnRun    int // simulated exit code (0 = success)
 }
 
 func newFakeAgentd(t *testing.T) *fakeAgentd {

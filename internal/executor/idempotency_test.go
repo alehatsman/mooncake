@@ -403,9 +403,9 @@ func TestCheckIdempotencyConditions_ShellLevelCreates(t *testing.T) {
 
 // MT-2 (step-level form): when the user writes
 //
-//	- name: ...
-//	  shell: touch /tmp/once.flag
-//	  creates: /tmp/once.flag
+//   - name: ...
+//     shell: touch /tmp/once.flag
+//     creates: /tmp/once.flag
 //
 // the YAML produces step.Shell.Cmd = "touch /tmp/once.flag" and
 // step.Creates = "/tmp/once.flag". The verification doc reported

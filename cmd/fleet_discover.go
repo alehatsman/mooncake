@@ -181,4 +181,3 @@ func discoverStatusCell(c discovery.Candidate) string {
 	}
 	return "(probe skipped)"
 }
-

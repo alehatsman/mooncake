@@ -1,4 +1,4 @@
-package executor
+package security
 
 import (
 	"context"
@@ -176,10 +176,7 @@ func TestEscalationReason_String_StableNames(t *testing.T) {
 
 // TestEscalationReason_Remediation_BlockedReasonsHaveHints — every
 // blocked_* reason carries an operator-facing remediation; every
-// available_* reason returns the empty string. The actual wording
-// is the implementation's call (deliberately not pinned here) but
-// the presence/absence contract is part of phase 3's diagnostic
-// pipeline and must hold from phase 1 onward.
+// available_* reason returns the empty string.
 func TestEscalationReason_Remediation_BlockedReasonsHaveHints(t *testing.T) {
 	for _, r := range []EscalationReason{
 		EscalationAvailableRoot,
@@ -200,4 +197,18 @@ func TestEscalationReason_Remediation_BlockedReasonsHaveHints(t *testing.T) {
 			t.Errorf("Remediation(%s) = empty, want non-empty hint for blocked_* reasons", r)
 		}
 	}
+}
+
+// TestProbeEscalation_NilContext_NoPanic — runtime callers may
+// pass a nil context; the probe must defend against that rather
+// than panicking inside context.WithTimeout. Pre-Layer-C the same
+// guarantee was tested in executor; the test moves here when the
+// probe moves.
+func TestProbeEscalation_NilContext_NoPanic(t *testing.T) {
+	defer func() {
+		if r := recover(); r != nil {
+			t.Fatalf("ProbeEscalation panicked on nil context: %v", r)
+		}
+	}()
+	_ = ProbeEscalation(nil, "") //nolint:staticcheck // nil ctx is the case under test
 }

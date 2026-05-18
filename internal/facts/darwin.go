@@ -96,7 +96,7 @@ func detectMacOSDisks() []Disk {
 		// Only show main user-relevant mounts
 		// Skip system volumes except root and Data
 		if strings.HasPrefix(mountPoint, "/System") &&
-		   mountPoint != "/System/Volumes/Data" {
+			mountPoint != "/System/Volumes/Data" {
 			continue
 		}
 

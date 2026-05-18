@@ -1,11 +1,9 @@
 package actions
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"os"
-	"os/exec"
 	"sync"
 	"testing"
 
@@ -13,6 +11,7 @@ import (
 	"github.com/alehatsman/mooncake/internal/events"
 	"github.com/alehatsman/mooncake/internal/expression"
 	"github.com/alehatsman/mooncake/internal/logger"
+	"github.com/alehatsman/mooncake/internal/security"
 	"github.com/alehatsman/mooncake/internal/template"
 )
 
@@ -125,7 +124,11 @@ func (m *mockContext) Mode() Mode {
 
 func (m *mockContext) Effects() Performer { return testNoopPerformer{mode: m.Mode()} }
 
-func (m *mockContext) Privileged() PrivilegedRunner { return testNoopPrivilegedRunner{} }
+func (m *mockContext) Privileged() *security.Privileged {
+	return &security.Privileged{
+		Escalation: security.EscalationReport{Available: true, Reason: security.EscalationAvailableRoot},
+	}
+}
 
 func (m *mockContext) MergeUserVars(vars map[string]interface{}) {
 	if m.variables == nil {
@@ -157,24 +160,6 @@ func (p testNoopPerformer) Remove(string, bool, PerformerOpts) Effect       { re
 func (p testNoopPerformer) Chmod(string, os.FileMode, PerformerOpts) Effect { return Effect{} }
 func (p testNoopPerformer) Chown(string, string, string, PerformerOpts) Effect {
 	return Effect{}
-}
-
-// testNoopPrivilegedRunner satisfies PrivilegedRunner for tests; both
-// methods return empty output and nil so handlers under test see a
-// success without shelling out to a real sudo.
-type testNoopPrivilegedRunner struct{}
-
-func (testNoopPrivilegedRunner) Run(context.Context, string, ...string) ([]byte, error) {
-	return nil, nil
-}
-func (testNoopPrivilegedRunner) RunWithInput(context.Context, []byte, string, ...string) ([]byte, error) {
-	return nil, nil
-}
-func (testNoopPrivilegedRunner) RunWithBecome(context.Context, bool, string, ...string) ([]byte, error) {
-	return nil, nil
-}
-func (testNoopPrivilegedRunner) Command(_ context.Context, _ bool, program string, args ...string) (*exec.Cmd, error) {
-	return exec.Command(program, args...), nil //nolint:gosec // test-only noop runner
 }
 
 // mockPublisher implements events.Publisher for testing

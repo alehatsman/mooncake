@@ -9,8 +9,8 @@ import (
 
 const (
 	// TUI buffer and animation settings
-	tuiBufferHistorySize   = 10                  // Number of completed steps to keep in history
-	tuiAnimationFrameRate  = 150 * time.Millisecond // Animation frame update interval
+	tuiBufferHistorySize  = 10                     // Number of completed steps to keep in history
+	tuiAnimationFrameRate = 150 * time.Millisecond // Animation frame update interval
 )
 
 // TUILogger implements Logger interface with animated TUI display.

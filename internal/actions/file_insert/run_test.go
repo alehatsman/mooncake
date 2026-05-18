@@ -24,11 +24,11 @@ func newCtx(t *testing.T, plan bool) *executor.ExecutionContext {
 		Svc: &executor.RunServices{
 			Template: r,
 			PathUtil: pathutil.NewPathExpander(r),
-			Logger: logger.NewLogger(logger.ErrorLevel),
-			Mode: planMode(plan),
-			Stats: executor.NewExecutionStats(),
+			Logger:   logger.NewLogger(logger.ErrorLevel),
+			Mode:     planMode(plan),
+			Stats:    executor.NewExecutionStats(),
 		},
-		Scope: executor.NewVariableScope(),
+		Scope:      executor.NewVariableScope(),
 		CurrentDir: "/tmp",
 	}
 }

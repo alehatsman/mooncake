@@ -69,8 +69,8 @@ func TestRenderXML_ContainsExpectedElements(t *testing.T) {
 		`<URI>\Mooncake-Agentd-Autostart</URI>`,
 		`<Description>Start mooncake agentd at boot</Description>`,
 		`<BootTrigger>`,
-		`<LogonType>S4U</LogonType>`,           // default applied
-		`<RunLevel>HighestAvailable</RunLevel>`, // default applied
+		`<LogonType>S4U</LogonType>`,                                   // default applied
+		`<RunLevel>HighestAvailable</RunLevel>`,                        // default applied
 		`<MultipleInstancesPolicy>IgnoreNew</MultipleInstancesPolicy>`, // default applied
 		`<Command>C:\Users\aleh\AppData\Local\Mooncake\bin\mooncake.exe</Command>`,
 		`<Arguments>agentd --bind 0.0.0.0:7879 --token-file &quot;C:\Users\aleh\AppData\Local\Mooncake\agentd.token&quot;</Arguments>`,
@@ -172,14 +172,14 @@ func TestDurationToISO8601(t *testing.T) {
 
 func TestXMLEscape(t *testing.T) {
 	cases := map[string]string{
-		"":                "",
-		"plain":           "plain",
-		"a < b":           "a &lt; b",
-		"a > b":           "a &gt; b",
-		"a & b":           "a &amp; b",
-		`a "quoted" b`:    "a &quot;quoted&quot; b",
-		"a 'apo' b":       "a &apos;apo&apos; b",
-		"all <>&\"' mix":  "all &lt;&gt;&amp;&quot;&apos; mix",
+		"":               "",
+		"plain":          "plain",
+		"a < b":          "a &lt; b",
+		"a > b":          "a &gt; b",
+		"a & b":          "a &amp; b",
+		`a "quoted" b`:   "a &quot;quoted&quot; b",
+		"a 'apo' b":      "a &apos;apo&apos; b",
+		"all <>&\"' mix": "all &lt;&gt;&amp;&quot;&apos; mix",
 	}
 	for in, want := range cases {
 		if got := xmlEscape(in); got != want {

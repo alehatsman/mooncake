@@ -116,8 +116,8 @@ type ArtifactMetadata struct {
 
 // EmbeddedPlan represents the plan that was executed during artifact capture.
 type EmbeddedPlan struct {
-	StepCount   int           `json:"step_count"`
-	Steps       []config.Step `json:"steps"`
+	StepCount   int                    `json:"step_count"`
+	Steps       []config.Step          `json:"steps"`
 	InitialVars map[string]interface{} `json:"initial_vars,omitempty"`
 }
 

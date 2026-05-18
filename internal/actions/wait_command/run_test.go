@@ -129,9 +129,9 @@ func TestRun_Apply_FileBecomesReady(t *testing.T) {
 // instead of the intended ~5.
 func TestRun_Apply_IntervalAliasHonored(t *testing.T) {
 	step := &config.Step{WaitCommand: &config.WaitCommand{
-		Cmd:      "false",     // never satisfies
+		Cmd:      "false", // never satisfies
 		Timeout:  "500ms",
-		Interval: "100ms",     // alias: should produce ~5 attempts
+		Interval: "100ms", // alias: should produce ~5 attempts
 	}}
 	_, err := (&Handler{}).Run(newCtx(t, false), step)
 	if err == nil {

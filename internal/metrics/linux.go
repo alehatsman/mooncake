@@ -23,9 +23,9 @@ func init() {
 
 type linuxCPUCollector struct{}
 
-func (linuxCPUCollector) Name() string             { return "cpu" }
-func (linuxCPUCollector) Outputs() []string        { return []string{"cpu_usage_pct", "cpu_usage_per_core"} }
-func (linuxCPUCollector) TTL() time.Duration       { return 2 * time.Second }
+func (linuxCPUCollector) Name() string       { return "cpu" }
+func (linuxCPUCollector) Outputs() []string  { return []string{"cpu_usage_pct", "cpu_usage_per_core"} }
+func (linuxCPUCollector) TTL() time.Duration { return 2 * time.Second }
 func (linuxCPUCollector) Collect(m *Metrics) error {
 	first, err := readProcStat()
 	if err != nil {
@@ -139,9 +139,11 @@ func cpuUsagePct(a, b cpuTimes) float64 {
 
 type linuxLoadCollector struct{}
 
-func (linuxLoadCollector) Name() string             { return "load" }
-func (linuxLoadCollector) Outputs() []string        { return []string{"load_avg_1m", "load_avg_5m", "load_avg_15m"} }
-func (linuxLoadCollector) TTL() time.Duration       { return 5 * time.Second }
+func (linuxLoadCollector) Name() string { return "load" }
+func (linuxLoadCollector) Outputs() []string {
+	return []string{"load_avg_1m", "load_avg_5m", "load_avg_15m"}
+}
+func (linuxLoadCollector) TTL() time.Duration { return 5 * time.Second }
 func (linuxLoadCollector) Collect(m *Metrics) error {
 	data, err := os.ReadFile("/proc/loadavg")
 	if err != nil {
@@ -179,8 +181,10 @@ func parseLoadAvg(data string) (float64, float64, float64, error) {
 
 type linuxMemCollector struct{}
 
-func (linuxMemCollector) Name() string       { return "mem" }
-func (linuxMemCollector) Outputs() []string  { return []string{"memory_used_mb", "memory_used_pct", "swap_used_mb"} }
+func (linuxMemCollector) Name() string { return "mem" }
+func (linuxMemCollector) Outputs() []string {
+	return []string{"memory_used_mb", "memory_used_pct", "swap_used_mb"}
+}
 func (linuxMemCollector) TTL() time.Duration { return 5 * time.Second }
 func (linuxMemCollector) Collect(m *Metrics) error {
 	data, err := os.ReadFile("/proc/meminfo")
@@ -236,9 +240,9 @@ func parseMemInfo(data string) (usedMB int64, usedPct float64, swapUsedMB int64,
 
 type linuxNetCollector struct{}
 
-func (linuxNetCollector) Name() string             { return "net" }
-func (linuxNetCollector) Outputs() []string        { return []string{"net_rx_bps", "net_tx_bps"} }
-func (linuxNetCollector) TTL() time.Duration       { return 2 * time.Second }
+func (linuxNetCollector) Name() string       { return "net" }
+func (linuxNetCollector) Outputs() []string  { return []string{"net_rx_bps", "net_tx_bps"} }
+func (linuxNetCollector) TTL() time.Duration { return 2 * time.Second }
 func (linuxNetCollector) Collect(m *Metrics) error {
 	first, err := readProcNetDev()
 	if err != nil {
@@ -287,4 +291,3 @@ func parseProcNetDev(data string) netDevSample {
 	}
 	return s
 }
-

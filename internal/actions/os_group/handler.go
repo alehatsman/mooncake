@@ -21,6 +21,7 @@ import (
 	"github.com/alehatsman/mooncake/internal/actions"
 	"github.com/alehatsman/mooncake/internal/config"
 	"github.com/alehatsman/mooncake/internal/executor"
+	"github.com/alehatsman/mooncake/internal/security"
 )
 
 const (
@@ -206,7 +207,9 @@ var lookupGroup func(string) (*groupState, error) = func(string) (*groupState, e
 	return nil, fmt.Errorf("os.group: not implemented on %s", runtime.GOOS)
 }
 
-var applyPlan func(runner actions.PrivilegedRunner, plan computedPlan) error = func(actions.PrivilegedRunner, computedPlan) error {
+var applyPlan = func(runner *security.Privileged, plan computedPlan) error {
+	_ = runner
+	_ = plan
 	return fmt.Errorf("os.group: not implemented on %s", runtime.GOOS)
 }
 

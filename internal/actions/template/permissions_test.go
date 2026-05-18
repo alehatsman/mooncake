@@ -14,10 +14,10 @@ import (
 func TestPermissions_TableDriven(t *testing.T) {
 	h := Handler{}
 	tests := []struct {
-		name        string
-		dest        string
-		wantSudo    bool
-		wantWrite   []string
+		name      string
+		dest      string
+		wantSudo  bool
+		wantWrite []string
 	}{
 		{"system dest /etc", "/etc/nginx/nginx.conf", true, []string{"/etc/nginx/nginx.conf"}},
 		{"system dest /usr/local", "/usr/local/bin/foo.sh", true, []string{"/usr/local/bin/foo.sh"}},

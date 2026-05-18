@@ -227,9 +227,9 @@ func TestDetectUnitLinuxDistribution_OsRelease(t *testing.T) {
 // TestDetectUnitLinuxPackageManager_Distros tests package manager detection
 func TestDetectUnitLinuxPackageManager_Distros(t *testing.T) {
 	tests := []struct {
-		distro          string
-		expected        []string // possible values
-		mustBeOneOf     bool
+		distro      string
+		expected    []string // possible values
+		mustBeOneOf bool
 	}{
 		{"ubuntu", []string{"apt"}, false},
 		{"debian", []string{"apt"}, false},

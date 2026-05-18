@@ -1,4 +1,4 @@
-package executor
+package security
 
 import (
 	"context"
@@ -12,15 +12,16 @@ import (
 // EscalationReport captures the once-per-run answer to "can this
 // process escalate to root, and if not, why not?". Computed by the
 // executor at run startup via ProbeEscalation and stored on
-// RunServices.Escalation; in spec-72 phase 1 it is consumed only as
-// the source of truth for the (now-derived) PasswordlessSudo bool.
-// Phases 2+ migrate preflight, BecomeRunner, and the diagnostic
-// error messages to consult it directly. See
-// docs-working/streams/fleet/specs/spec-72-unified-escalation-policy.md.
+// RunServices.Escalation. Consumed by *Privileged (this package)
+// to decide the sudo wrap, by preflight (executor) for diagnostic
+// error messages, and by future policy layers.
+//
+// Moved from internal/executor in spec-72's Layer C redesign so the
+// escalation primitive (*Privileged) can live next to its inputs
+// without forcing internal/actions to import internal/executor.
 type EscalationReport struct {
-	// Available is true iff a Sudo+AsUser step can be expected to
-	// succeed against this process. The union of every "available_*"
-	// Reason.
+	// Available is true iff a Sudo step can be expected to succeed
+	// against this process. The union of every "available_*" Reason.
 	Available bool
 
 	// Reason explains the verdict. Stable across a run.
@@ -52,7 +53,7 @@ const (
 
 	// EscalationAvailablePasswordless — `sudo -n true` succeeded, so a
 	// NOPASSWD sudoers rule covers this user for at least the trivial
-	// command. BecomeRunner uses `sudo -n <cmd>` on this path.
+	// command. *Privileged uses `sudo -n <cmd>` on this path.
 	EscalationAvailablePasswordless
 
 	// EscalationBlockedNNP — /proc/self/status reports NoNewPrivs=1.
@@ -102,9 +103,7 @@ func (r EscalationReason) String() string {
 }
 
 // Remediation returns a one-line operator-facing hint for the
-// blocker, or "" for the available_* reasons. Phase 1 consumers
-// don't surface this yet; phase 3 wires it into preflight's
-// diagnostic.
+// blocker, or "" for the available_* reasons.
 func (r EscalationReason) Remediation() string {
 	switch r {
 	case EscalationBlockedNNP:

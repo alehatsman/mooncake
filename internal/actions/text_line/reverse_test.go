@@ -24,8 +24,8 @@ func TestReverse_Cycle(t *testing.T) {
 
 	step := &config.Step{
 		TextLine: &config.TextLine{
-			Path: path,
-			Line: "beta=42",
+			Path:   path,
+			Line:   "beta=42",
 			Regexp: "^beta",
 		},
 	}

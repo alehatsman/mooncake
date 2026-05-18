@@ -14,10 +14,10 @@ import (
 type StaleReason string
 
 const (
-	StaleReasonHostMismatch  StaleReason = "host_mismatch"
-	StaleReasonHashMismatch  StaleReason = "input_files_changed"
-	StaleReasonFileMissing   StaleReason = "input_file_missing"
-	StaleReasonAgeExceeded   StaleReason = "max_age_exceeded"
+	StaleReasonHostMismatch StaleReason = "host_mismatch"
+	StaleReasonHashMismatch StaleReason = "input_files_changed"
+	StaleReasonFileMissing  StaleReason = "input_file_missing"
+	StaleReasonAgeExceeded  StaleReason = "max_age_exceeded"
 )
 
 // StaleError describes a stale-plan rejection. Callers compare Reason

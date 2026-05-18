@@ -12,7 +12,9 @@ import (
 // manual-test #64 (2026-05-15): the inspectFormat constant used
 // {{.ImageName}}, a field docker's `container inspect` JSON does not
 // expose. The bad template produced
-//   "template parsing error: ... map has no entry for key \"ImageName\""
+//
+//	"template parsing error: ... map has no entry for key \"ImageName\""
+//
 // every time the idempotency check ran, so the second apply of any
 // `container:` step failed. Pin the constant to the fields docker
 // (and podman) actually expose.

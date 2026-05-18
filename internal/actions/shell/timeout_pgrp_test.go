@@ -38,7 +38,7 @@ func TestTimeout_KillsProcessGroup_NotJustShell(t *testing.T) {
 
 	h := &Handler{}
 	step := &config.Step{
-		Shell: &config.ShellAction{Cmd: script},
+		Shell:   &config.ShellAction{Cmd: script},
 		Timeout: "500ms",
 	}
 	ctx := newCtx(t, false)

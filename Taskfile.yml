@@ -649,5 +649,5 @@ tasks:
   ci:escalation:
     internal: true
     cmds:
-      - 'echo "[9/9] escalation-lint (spec-72 §G1, warning-only)"'
-      - bash ./scripts/escalation-lint.sh
+      - 'echo "[9/9] escalation-lint (spec-72 §G1)"'
+      - bash ./scripts/escalation-lint.sh --fail

@@ -69,8 +69,8 @@ func TestTemplateValidator_ValidateSteps(t *testing.T) {
 	locationMap := NewLocationMap()
 
 	tests := []struct {
-		name               string
-		steps              []Step
+		name                string
+		steps               []Step
 		expectedDiagnostics int
 	}{
 		{
@@ -166,7 +166,7 @@ func TestTemplateValidator_ValidateSteps(t *testing.T) {
 					Name:        "test",
 					Shell:       shellActionPtr("echo {{message}}"),
 					When:        "os == 'linux'",
-					AsUser:  "{{user}}",
+					AsUser:      "{{user}}",
 					Cwd:         "/tmp/{{project}}",
 					Timeout:     "30s",
 					ChangedWhen: "result.rc == 0",

@@ -21,14 +21,14 @@ func newTestExecutionContext(ctx *testutil.MockContext, tmpDir string) *executor
 	}
 	return &executor.ExecutionContext{
 		Svc: &executor.RunServices{
-			Logger: ctx.Log,
-			Mode: ctx.CurrentMode,
-			Template: ctx.Tmpl,
-			PathUtil: pathutil.NewPathExpander(ctx.Tmpl),
+			Logger:         ctx.Log,
+			Mode:           ctx.CurrentMode,
+			Template:       ctx.Tmpl,
+			PathUtil:       pathutil.NewPathExpander(ctx.Tmpl),
 			EventPublisher: ctx.Publisher,
 		},
-		Scope: scope,
-		CurrentDir: tmpDir,
+		Scope:         scope,
+		CurrentDir:    tmpDir,
 		CurrentStepID: ctx.StepID,
 	}
 }
@@ -769,7 +769,6 @@ func TestHandler_ParseFileMode(t *testing.T) {
 		})
 	}
 }
-
 
 func TestHandler_Run_WithRelativePaths(t *testing.T) {
 	h := &Handler{}

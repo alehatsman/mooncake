@@ -11,9 +11,9 @@ import (
 // marks it executable. The destination filename is, in order of
 // preference:
 //
-//   1. spec.Bin (when set — already the lockfile-recorded bin name)
-//   2. plan.BinRel (when set — basename of the configured bin path)
-//   3. spec.Name (the canonical fallback)
+//  1. spec.Bin (when set — already the lockfile-recorded bin name)
+//  2. plan.BinRel (when set — basename of the configured bin path)
+//  3. spec.Name (the canonical fallback)
 //
 // destDir must exist. Permission bits on the final file are 0o755 so
 // the tool is executable for the installing user and readable by

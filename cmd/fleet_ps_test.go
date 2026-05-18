@@ -67,7 +67,7 @@ func TestBuildPsRows_GroupsByPeerThenNewestFirst(t *testing.T) {
 	}
 	results := []fleet.PeerRuns{
 		{Name: "alpha", Runs: []transport.RunRecord{mk("A-old", 10*time.Minute), mk("A-new", time.Minute)}},
-		{Name: "beta", Runs: []transport.RunRecord{mk("B", 2 * time.Minute)}},
+		{Name: "beta", Runs: []transport.RunRecord{mk("B", 2*time.Minute)}},
 	}
 	rows := buildPsRows(results, "peer")
 	if len(rows) != 3 {

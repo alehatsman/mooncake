@@ -142,7 +142,7 @@ func parseSSE(ctx context.Context, r io.Reader, sink chan<- Event) error {
 				curData.WriteByte('\n')
 			}
 			curData.WriteString(v)
-		// Other fields (event:, retry:) ignored; agentd doesn't emit them.
+			// Other fields (event:, retry:) ignored; agentd doesn't emit them.
 		}
 	}
 

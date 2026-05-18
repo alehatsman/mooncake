@@ -24,6 +24,7 @@ import (
 	"github.com/alehatsman/mooncake/internal/actions"
 	"github.com/alehatsman/mooncake/internal/config"
 	"github.com/alehatsman/mooncake/internal/executor"
+	"github.com/alehatsman/mooncake/internal/security"
 )
 
 const (
@@ -168,7 +169,7 @@ var lookupUser func(string) (*userState, error) = func(string) (*userState, erro
 	return nil, fmt.Errorf("os.user: not implemented on %s", runtime.GOOS)
 }
 
-var applyPlan func(runner actions.PrivilegedRunner, plan computedPlan, current *userState, d desired) error = func(actions.PrivilegedRunner, computedPlan, *userState, desired) error {
+var applyPlan func(runner *security.Privileged, plan computedPlan, current *userState, d desired) error = func(*security.Privileged, computedPlan, *userState, desired) error {
 	return fmt.Errorf("os.user: not implemented on %s", runtime.GOOS)
 }
 

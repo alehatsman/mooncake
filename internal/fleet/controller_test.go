@@ -112,12 +112,12 @@ func TestIsValidUUIDv4(t *testing.T) {
 		// Wrong variant (c):
 		"00000000-0000-4000-c000-000000000000": false,
 		// Wrong length:
-		"00000000-0000-4000-8000-00000000000":  false,
+		"00000000-0000-4000-8000-00000000000":   false,
 		"00000000-0000-4000-8000-0000000000000": false,
 		// Uppercase rejected (we standardize on lowercase):
 		"00000000-0000-4000-8000-00000000000A": false,
 		// Missing hyphens:
-		"00000000000040008000000000000000":      false,
+		"00000000000040008000000000000000": false,
 		// Garbage:
 		"not-a-uuid": false,
 		"":           false,

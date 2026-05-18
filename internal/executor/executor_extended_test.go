@@ -109,4 +109,3 @@ func TestExecutionContext_ModeRoundtrip(t *testing.T) {
 		t.Error("Mode() should return ModeApply when Mode is ModeApply")
 	}
 }
-

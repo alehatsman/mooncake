@@ -31,11 +31,11 @@ type GPUObservation struct {
 
 // GPUDevice carries one GPU's live state.
 type GPUDevice struct {
-	Index            int     `json:"index"`
-	UtilizationPct   float64 `json:"utilization_pct"`
-	MemoryUsedBytes  int64   `json:"memory_used_bytes"`
-	MemoryUsedPct    float64 `json:"memory_used_pct"`
-	TemperatureC     int     `json:"temperature_c,omitempty"`
+	Index           int     `json:"index"`
+	UtilizationPct  float64 `json:"utilization_pct"`
+	MemoryUsedBytes int64   `json:"memory_used_bytes"`
+	MemoryUsedPct   float64 `json:"memory_used_pct"`
+	TemperatureC    int     `json:"temperature_c,omitempty"`
 }
 
 // GPUAggregate summarizes across all detected GPUs.

@@ -27,10 +27,10 @@ const (
 // number formatting (e.g. 1.0 vs 1) round-trips verbatim.
 type node struct {
 	kind   nodeKind
-	raw    json.RawMessage   // nScalar
-	keys   []string          // nObject — source order
-	fields map[string]*node  // nObject
-	items  []*node           // nArray
+	raw    json.RawMessage  // nScalar
+	keys   []string         // nObject — source order
+	fields map[string]*node // nObject
+	items  []*node          // nArray
 }
 
 func newObject() *node {

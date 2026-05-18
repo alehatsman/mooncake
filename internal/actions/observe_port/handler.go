@@ -26,13 +26,13 @@ const (
 // Pid+Listener are best-effort; on systems where /proc/net/tcp isn't
 // readable without root, Pid will be 0 and Listener will be "".
 type PortObservation struct {
-	Open      bool   `json:"open"`                  // a listener is bound to (host, port)
-	Protocol  string `json:"protocol,omitempty"`    // "tcp" | "udp"
-	Host      string `json:"host,omitempty"`        // resolved host that was probed
-	Port      int    `json:"port"`                  // probed port
-	LocalAddr string `json:"local_addr,omitempty"`  // host:port as probed
-	Listener  string `json:"listener,omitempty"`    // process name, when discoverable
-	Pid       int    `json:"pid,omitempty"`         // process pid, when discoverable
+	Open      bool   `json:"open"`                 // a listener is bound to (host, port)
+	Protocol  string `json:"protocol,omitempty"`   // "tcp" | "udp"
+	Host      string `json:"host,omitempty"`       // resolved host that was probed
+	Port      int    `json:"port"`                 // probed port
+	LocalAddr string `json:"local_addr,omitempty"` // host:port as probed
+	Listener  string `json:"listener,omitempty"`   // process name, when discoverable
+	Pid       int    `json:"pid,omitempty"`        // process pid, when discoverable
 }
 
 type Handler struct{}
@@ -105,9 +105,9 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 	// zero-value typed payload so downstream templates still type-check.
 	if ctx.Mode() == actions.ModePlan {
 		envelope := actions.PlanDeferred(PortObservation{
-			Protocol: protocol,
-			Host:     host,
-			Port:     o.Port,
+			Protocol:  protocol,
+			Host:      host,
+			Port:      o.Port,
 			LocalAddr: addr,
 		})
 		publish(result, envelope)

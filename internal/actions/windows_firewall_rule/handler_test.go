@@ -173,10 +173,10 @@ func TestStringSliceEqualUnsorted(t *testing.T) {
 
 func TestParseProfileMask(t *testing.T) {
 	cases := map[string][]string{
-		"":                  nil,
-		"Domain":            {"domain"},
-		"Domain, Private":   {"domain", "private"},
-		"Any":               {"any"},
+		"":                      nil,
+		"Domain":                {"domain"},
+		"Domain, Private":       {"domain", "private"},
+		"Any":                   {"any"},
 		"Domain,Private,Public": {"domain", "private", "public"},
 	}
 	for in, want := range cases {

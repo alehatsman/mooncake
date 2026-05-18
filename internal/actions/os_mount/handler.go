@@ -25,15 +25,6 @@ import (
 	"github.com/alehatsman/mooncake/internal/security"
 )
 
-// runnerOrDefault returns the supplied runner when non-nil, else the
-// security default. Lets test stubs pass nil without nil-deref.
-func runnerOrDefault(r actions.PrivilegedRunner) actions.PrivilegedRunner {
-	if r == nil {
-		return security.PrivilegedRunner{}
-	}
-	return r
-}
-
 const (
 	actionName       = "os.mount"
 	stateMounted     = "mounted"
@@ -489,7 +480,7 @@ func upsertEntry(lines []fstabLine, want fstabEntry) []fstabLine {
 	return out
 }
 
-func applyPlan(performer actions.Performer, runner actions.PrivilegedRunner, plan mountPlan, r renderedMount) error {
+func applyPlan(performer actions.Performer, runner *security.Privileged, plan mountPlan, r renderedMount) error {
 	if plan.touchesFstab {
 		if err := writeFstab(performer, plan.wantContent, plan.backup); err != nil {
 			return err
@@ -578,8 +569,8 @@ func snapshotFstab(performer actions.Performer) error {
 }
 
 // realMount shells out to `mount <dest>` via the supplied runner.
-func realMount(runner actions.PrivilegedRunner, dest string) error {
-	out, err := runnerOrDefault(runner).Run(context.TODO(), "mount", dest)
+func realMount(runner *security.Privileged, dest string) error {
+	out, err := runner.Run(context.TODO(), "mount", dest)
 	if err != nil {
 		msg := strings.TrimSpace(string(out))
 		if msg != "" {
@@ -591,8 +582,8 @@ func realMount(runner actions.PrivilegedRunner, dest string) error {
 }
 
 // realUmount shells out to `umount <dest>` via the supplied runner.
-func realUmount(runner actions.PrivilegedRunner, dest string) error {
-	out, err := runnerOrDefault(runner).Run(context.TODO(), "umount", dest)
+func realUmount(runner *security.Privileged, dest string) error {
+	out, err := runner.Run(context.TODO(), "umount", dest)
 	if err != nil {
 		msg := strings.TrimSpace(string(out))
 		if msg != "" {

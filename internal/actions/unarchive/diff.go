@@ -24,13 +24,13 @@ import (
 //   - After: a FileSnapshot with Kind="directory" at Dest.
 //   - Operation depends on:
 //     1. step.Creates marker present + exists on disk → OpNoop
-//        (mirrors the runtime idempotency check — if the marker
-//        file/dir is already there, the archive was already
-//        extracted).
+//     (mirrors the runtime idempotency check — if the marker
+//     file/dir is already there, the archive was already
+//     extracted).
 //     2. Dest exists (any kind) → OpUpdate. Even if Dest is a
-//        non-directory, the apply path will fail; Diff stays honest
-//        about the user's intent ("there will be an extraction here")
-//        and the runtime error path remains the backstop.
+//     non-directory, the apply path will fail; Diff stays honest
+//     about the user's intent ("there will be an extraction here")
+//     and the runtime error path remains the backstop.
 //     3. Dest missing → OpCreate.
 //
 // Src is NOT included in the Diff's Resource ref — it's a read-only

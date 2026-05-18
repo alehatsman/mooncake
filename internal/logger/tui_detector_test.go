@@ -22,11 +22,11 @@ func TestDetectTerminal(t *testing.T) {
 
 func TestDetectTerminal_WithEnvironmentVariables(t *testing.T) {
 	tests := []struct {
-		name         string
-		envVar       string
-		envValue     string
-		wantANSI     bool
-		description  string
+		name        string
+		envVar      string
+		envValue    string
+		wantANSI    bool
+		description string
 	}{
 		{
 			name:        "CI environment",

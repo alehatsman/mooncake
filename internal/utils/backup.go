@@ -46,7 +46,7 @@ func CreateBackup(path string) (backupPath string, err error) {
 
 	// Copy contents
 	if _, copyErr := io.Copy(dst, src); copyErr != nil {
-		_ = dst.Close() // Ignore close error in error path
+		_ = dst.Close()           // Ignore close error in error path
 		_ = os.Remove(backupPath) // Clean up partial backup
 		return "", fmt.Errorf("failed to copy file contents: %w", copyErr)
 	}

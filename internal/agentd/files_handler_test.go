@@ -47,14 +47,14 @@ func TestResolveSyncPath_RejectsNullByte(t *testing.T) {
 func TestResolveSyncPath_RejectsBadScope(t *testing.T) {
 	root := t.TempDir()
 	cases := map[string]string{
-		"empty":               "",
-		"contains slash slash":      "a//b",
-		"too many segments":   "a/b/c",
-		"bad char":            "alice;rm",
-		"space":               "with space",
-		"unicode":             "Ünicode",
-		"way too long":        strings.Repeat("a", maxScopeBytes+1),
-		"segment too long":    strings.Repeat("a", maxScopeSegBytes+1),
+		"empty":                "",
+		"contains slash slash": "a//b",
+		"too many segments":    "a/b/c",
+		"bad char":             "alice;rm",
+		"space":                "with space",
+		"unicode":              "Ünicode",
+		"way too long":         strings.Repeat("a", maxScopeBytes+1),
+		"segment too long":     strings.Repeat("a", maxScopeSegBytes+1),
 	}
 	for name, scope := range cases {
 		if _, err := resolveSyncPath(root, scope, "foo.txt"); err == nil {

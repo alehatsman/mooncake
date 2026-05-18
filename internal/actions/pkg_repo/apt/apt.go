@@ -24,15 +24,6 @@ import (
 	"github.com/alehatsman/mooncake/internal/security"
 )
 
-// runnerOrDefault returns the supplied runner when non-nil, else the
-// security default. Lets test stubs pass nil without nil-deref.
-func runnerOrDefault(r actions.PrivilegedRunner) actions.PrivilegedRunner {
-	if r == nil {
-		return security.PrivilegedRunner{}
-	}
-	return r
-}
-
 // Paths controls where the apt driver writes files. Tests override
 // these via the package-level `paths` var to avoid touching /etc.
 type Paths struct {
@@ -368,8 +359,8 @@ func apply(performer actions.Performer, p plan_, r rendered_) error {
 	return nil
 }
 
-func realAptGetUpdate(runner actions.PrivilegedRunner) error {
-	out, err := runnerOrDefault(runner).Run(context.TODO(), "apt-get", "update")
+func realAptGetUpdate(runner *security.Privileged) error {
+	out, err := runner.Run(context.TODO(), "apt-get", "update")
 	if err != nil {
 		msg := strings.TrimSpace(string(out))
 		if msg != "" {

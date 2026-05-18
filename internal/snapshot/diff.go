@@ -10,10 +10,10 @@ import (
 
 // SnapshotDiff holds the difference between two SystemSnapshot values.
 type SnapshotDiff struct {
-	Tools    *MapDiff            `json:"tools,omitempty"`
-	HW       map[string]ValDiff  `json:"hw,omitempty"`
-	Services *SliceDiff          `json:"services_failed,omitempty"`
-	OS       map[string]ValDiff  `json:"os,omitempty"`
+	Tools    *MapDiff           `json:"tools,omitempty"`
+	HW       map[string]ValDiff `json:"hw,omitempty"`
+	Services *SliceDiff         `json:"services_failed,omitempty"`
+	OS       map[string]ValDiff `json:"os,omitempty"`
 }
 
 // MapDiff records string-map changes (e.g., tool versions).

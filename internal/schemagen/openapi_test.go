@@ -92,14 +92,14 @@ func TestConvertDefinitionToOpenAPISchema(t *testing.T) {
 				Description: "Field 1",
 			},
 			"field2": {
-				Type:        "integer",
-				Minimum:     ptrFloat64(0),
-				Maximum:     ptrFloat64(100),
+				Type:    "integer",
+				Minimum: ptrFloat64(0),
+				Maximum: ptrFloat64(100),
 			},
 		},
-		Required: []string{"field1"},
+		Required:   []string{"field1"},
 		XPlatforms: []string{"linux", "darwin"},
-		XCategory: "test",
+		XCategory:  "test",
 	}
 
 	schema := convertDefinitionToOpenAPISchema(def)

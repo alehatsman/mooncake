@@ -36,7 +36,7 @@ func newCtx(t *testing.T, mode actions.Mode) *executor.ExecutionContext {
 			Mode:     mode,
 			Stats:    executor.NewExecutionStats(),
 		},
-		Scope: executor.NewVariableScope(),
+		Scope:      executor.NewVariableScope(),
 		CurrentDir: "/tmp",
 	}
 }

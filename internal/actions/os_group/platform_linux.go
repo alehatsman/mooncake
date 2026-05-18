@@ -9,7 +9,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/alehatsman/mooncake/internal/actions"
 	"github.com/alehatsman/mooncake/internal/security"
 )
 
@@ -49,7 +48,7 @@ func lookupGroupViaGetent(name string) (*groupState, error) {
 
 // applyPlanLinux dispatches to groupadd/groupmod/groupdel. Argument
 // validation already ran in computePlan; this is just the spawn.
-func applyPlanLinux(runner actions.PrivilegedRunner, plan computedPlan) error {
+func applyPlanLinux(runner *security.Privileged, plan computedPlan) error {
 	switch plan.operation {
 	case "create":
 		return runLinuxCmd(runner, "groupadd", plan.createArgs...)
@@ -59,10 +58,7 @@ func applyPlanLinux(runner actions.PrivilegedRunner, plan computedPlan) error {
 	return nil
 }
 
-func runLinuxCmd(runner actions.PrivilegedRunner, bin string, args ...string) error {
-	if runner == nil {
-		runner = security.PrivilegedRunner{}
-	}
+func runLinuxCmd(runner *security.Privileged, bin string, args ...string) error {
 	out, err := runner.Run(context.TODO(), bin, args...)
 	if err != nil {
 		msg := strings.TrimSpace(string(out))

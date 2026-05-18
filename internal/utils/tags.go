@@ -36,7 +36,7 @@ func MatchesTags(stepTags, filterTags []string) bool {
 //
 //   - Empty skipTags      → false (no exclusion active).
 //   - Step has no tags    → false (untagged steps are scaffolding;
-//                                  excluding them by tag is a no-op).
+//     excluding them by tag is a no-op).
 //   - Step has any tag in skipTags → true (exclude).
 //
 // Designed to compose with MatchesTags: a step runs when

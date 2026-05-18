@@ -97,12 +97,14 @@ type OsServiceReverseInfo struct {
 // Spec-72 phase 2b: migrated from direct security.BecomeRunner{}
 // construction to ec.Privileged().Command(...), which routes the
 // SudoPass+Escalation read through the single ctx.Privileged()
-// factory. The per-step-conditional-become semantics is preserved
-// via the explicit `become` arg on PrivilegedRunner.Command —
-// a service-status check on a per-user systemd --user instance still
-// runs without sudo when step.ShouldBecome() is false.
-func BecomeAwareCommand(step config.Step, ec *executor.ExecutionContext, program string, args ...string) (*exec.Cmd, error) {
-	cmd, err := ec.Privileged().Command(ec.Svc.Ctx, step.ShouldBecome(), program, args...)
+// factory. Per-step-conditional-become semantics is preserved by
+// the step's bound AsUser: empty → no escalation, non-empty →
+// sudo (or sudo -u <name>). A service-status check on a per-user
+// systemd --user instance runs without sudo because the step
+// itself declared no as_user; the primitive does the right thing
+// from the bound state, with no per-call decision in this helper.
+func BecomeAwareCommand(ec *executor.ExecutionContext, program string, args ...string) (*exec.Cmd, error) {
+	cmd, err := ec.Privileged().Command(ec.Svc.Ctx, program, args...)
 	if err != nil {
 		return nil, WrapBecomeErrorAsSetup(err)
 	}
@@ -132,8 +134,8 @@ func WrapBecomeErrorAsSetup(err error) error {
 // RunBecomeAware is BecomeAwareCommand + CombinedOutput + the
 // standard CommandError wrap. The `what` label fronts the error
 // message ("daemon-reload failed", "systemctl start failed", etc.).
-func RunBecomeAware(step config.Step, ec *executor.ExecutionContext, what, program string, args ...string) ([]byte, error) {
-	cmd, err := BecomeAwareCommand(step, ec, program, args...)
+func RunBecomeAware(ec *executor.ExecutionContext, what, program string, args ...string) ([]byte, error) {
+	cmd, err := BecomeAwareCommand(ec, program, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -241,7 +243,7 @@ func writeFileWithSudo(path string, content []byte, mode os.FileMode, ec *execut
 		return &executor.FileOperationError{Operation: "close temp", Path: tmpPath, Cause: err}
 	}
 
-	cmd, err := runner.Command(ec.Svc.Ctx, true, "cp", tmpPath, path)
+	cmd, err := runner.Command(ec.Svc.Ctx, "cp", tmpPath, path)
 	if err != nil {
 		return WrapBecomeErrorAsSetup(err)
 	}
@@ -256,7 +258,7 @@ func writeFileWithSudo(path string, content []byte, mode os.FileMode, ec *execut
 		}
 	}
 
-	cmd, err = runner.Command(ec.Svc.Ctx, true, "chmod", fmt.Sprintf("%o", mode), path)
+	cmd, err = runner.Command(ec.Svc.Ctx, "chmod", fmt.Sprintf("%o", mode), path)
 	if err != nil {
 		return WrapBecomeErrorAsSetup(err)
 	}
