@@ -35,17 +35,16 @@ func TestPermissions_NetworkAlways(t *testing.T) {
 // TestPermissions_SudoByManager — F049: pkg.Permissions must read
 // step.Pkg.Manager and refuse to declare Sudo:true for managers that
 // refuse root by design (yay/paru — AUR wrappers; brew — user-prefix
-// installer). Empty manager (auto-detect resolves at apply-time)
-// stays Sudo:true so the preflight remains the safer default; a
-// regression that flips that would silently allow unelevated `pkg:`
-// against system managers.
+// installer). Spec-72 follow-up: the auto-detect (empty manager)
+// case is covered separately by TestPermissions_SudoByManager_AutoDetect
+// because the resolved manager depends on what's on the test host's
+// PATH.
 func TestPermissions_SudoByManager(t *testing.T) {
 	h := &Handler{}
 	cases := []struct {
 		manager  string
 		wantSudo bool
 	}{
-		{"", true},       // auto-detect: safer default
 		{"apt", true},    // dpkg-based, writes /var/lib/dpkg
 		{"dnf", true},    // rpm-based
 		{"yum", true},    // rpm-based, RHEL 7
@@ -63,6 +62,40 @@ func TestPermissions_SudoByManager(t *testing.T) {
 				t.Errorf("manager=%q: Sudo = %v, want %v", c.manager, got.Sudo, c.wantSudo)
 			}
 		})
+	}
+}
+
+// TestPermissions_SudoByManager_AutoDetect — spec-72 follow-up:
+// empty manager triggers determinePackageManager at preflight time,
+// not at apply time, so a macOS-with-brew host gets Sudo:false at
+// preflight and rejects `as_user: root` before the brew driver runs.
+// This was the gap the F049 author punted on ("auto-detection
+// resolves at apply-time"); Layer C makes it cheap to close because
+// the preflight reason taxonomy lets operators see precisely why an
+// auto-detect step was rejected.
+//
+// What we can assert here without mocking lookPath: whatever manager
+// auto-detection resolved to on the test host must match the
+// manager's Sudo policy. If the resolution failed entirely (no
+// manager on PATH), Sudo stays true as the safer default.
+func TestPermissions_SudoByManager_AutoDetect(t *testing.T) {
+	h := &Handler{}
+	step := &config.Step{Pkg: &config.Package{}} // Manager intentionally empty
+	got := h.Permissions(step)
+
+	resolved, err := h.determinePackageManager("", nil)
+	if err != nil {
+		// No manager detected on PATH → Sudo:true is the documented
+		// safer default; the apply will fail with a manager-detection
+		// error inside Run regardless.
+		if !got.Sudo {
+			t.Errorf("Sudo = false, want true (no manager auto-detected, safer default)")
+		}
+		return
+	}
+	wantSudo := managerRequiresSudo(resolved)
+	if got.Sudo != wantSudo {
+		t.Errorf("auto-detected manager=%q: Sudo = %v, want %v", resolved, got.Sudo, wantSudo)
 	}
 }
 

@@ -101,15 +101,26 @@ func (h *Handler) Metadata() actions.ActionMetadata {
 // wrappers) and brew (user-prefix installer) refuse root by design;
 // declaring Sudo:true for them makes the preflight reject any
 // non-elevated invocation and forces operators into an as_user:root
-// workaround that the manager itself then refuses at runtime. Empty
-// manager (auto-detect) keeps Sudo:true — auto-detection resolves at
-// apply-time after preflight, and Sudo:true is the safer-for-most-
-// targets default; operators on Arch hosts who want yay should be
-// explicit.
+// workaround that the manager itself then refuses at runtime.
+//
+// Spec-72 follow-up: auto-detect (empty step.Pkg.Manager) now also
+// goes through resolveManager so a macOS host with brew on PATH
+// gets Sudo:false at preflight — closing the gap where
+// `pkg: {name: foo}` (no explicit manager) plus `as_user: root`
+// would pass preflight and then fail inside the brew driver with
+// "Running Homebrew as root is extremely dangerous". When
+// resolveManager errors (no manager on PATH), we keep Sudo:true as
+// the safer default — preflight then fails with a manager-detection
+// hint via Run anyway.
 func (h *Handler) Permissions(step *config.Step) actions.PermissionSet {
 	manager := ""
 	if step != nil && step.Pkg != nil {
 		manager = step.Pkg.Manager
+	}
+	if manager == "" {
+		if resolved, err := h.determinePackageManager(manager, nil); err == nil {
+			manager = resolved
+		}
 	}
 	return actions.PermissionSet{
 		Sudo:    managerRequiresSudo(manager),
