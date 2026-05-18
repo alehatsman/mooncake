@@ -419,12 +419,12 @@ tasks:
         echo "Preset testing has moved to testing-next/"
         echo ""
         echo "Quick start:"
-        echo "  cd testing-next && make help"
+        echo "  cd testing-next && task"
         echo ""
         echo "Common commands:"
-        echo "  cd testing-next && make test-ubuntu          # Test all presets (native arch)"
-        echo "  cd testing-next && make test-preset PRESET=jq  # Test single preset"
-        echo "  cd testing-next && make clean-all            # Cleanup"
+        echo "  cd testing-next && task test-ubuntu          # Test all presets (native arch)"
+        echo "  cd testing-next && task test-preset PRESET=jq  # Test single preset"
+        echo "  cd testing-next && task clean-all            # Cleanup"
 
   # ---------------------------------------------------------------------------
   # Fast gate — pre-commit. Cheap checks only (<5s on warm cache).

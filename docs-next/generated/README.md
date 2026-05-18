@@ -16,7 +16,7 @@ Documentation is automatically generated from code. To update:
 
 ```bash
 # Regenerate all documentation
-make docs-generate
+task docs-generate
 
 # Or use the command directly
 mooncake docs generate --section all --output docs-next/generated/actions.md
@@ -30,7 +30,7 @@ Documentation freshness is checked in CI:
 
 - **Pull Requests**: CI fails if docs are out of sync
 - **Pre-commit Hook**: Automatically regenerates docs before commit
-- **Manual Check**: Run `make docs-check` to verify
+- **Manual Check**: Run `task docs-check` to verify
 
 ## Setup Pre-commit Hook (Optional)
 
@@ -67,7 +67,7 @@ This documentation is generated from:
 
 - **Generator**: `internal/docgen/` package
 - **CLI Command**: `mooncake docs generate`
-- **Makefile Target**: `make docs-generate`
+- **Taskfile Task**: `task docs-generate`
 - **CI Job**: `.github/workflows/ci.yml` (docs-check)
 
 ## Timestamps

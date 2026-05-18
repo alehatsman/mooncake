@@ -25,7 +25,7 @@ Real LLM calls cost real money. The runner refuses to start unless
 you opt in:
 
 ```
-MOONCAKE_PILOT_EVAL=1 make pilot-evals
+MOONCAKE_PILOT_EVAL=1 task pilot-evals
 ```
 
 Or directly:
