@@ -105,7 +105,7 @@ func TestHandler_BuildBatchInstallCommand(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := h.buildBatchInstallCommand(tt.manager, tt.pkgs, false, tt.extra)
+			got := h.buildBatchInstallCommand(tt.manager, tt.pkgs, false, false, tt.extra)
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("buildBatchInstallCommand() = %v, want %v", got, tt.want)
 			}
@@ -169,7 +169,7 @@ func TestHandler_BuildBatchRemoveCommand(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := h.buildBatchRemoveCommand(tt.manager, tt.pkgs, tt.extra)
+			got := h.buildBatchRemoveCommand(tt.manager, tt.pkgs, false, tt.extra)
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("buildBatchRemoveCommand() = %v, want %v", got, tt.want)
 			}
@@ -181,7 +181,7 @@ func TestHandler_BuildBatchRemoveCommand(t *testing.T) {
 // shim still produces the same output as the batched form with one element.
 func TestHandler_BuildInstallCommand_BackwardCompat(t *testing.T) {
 	h := &Handler{}
-	got := h.buildInstallCommand(pmApt, "vim", false, []string{"--no-install-recommends"})
+	got := h.buildInstallCommand(pmApt, "vim", false, false, []string{"--no-install-recommends"})
 	want := []string{"apt-get", "install", "-y", "--no-install-recommends", "vim"}
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("buildInstallCommand single-package = %v, want %v", got, want)
@@ -321,13 +321,13 @@ func TestHandler_Execute_TemplatedNames(t *testing.T) {
 func TestPacmanFamilyShareFlags(t *testing.T) {
 	h := &Handler{}
 	for _, mgr := range []string{pmYay, pmParu} {
-		install := h.buildBatchInstallCommand(mgr, []string{"pkg"}, false, nil)
-		pacInstall := h.buildBatchInstallCommand(pmPacman, []string{"pkg"}, false, nil)
+		install := h.buildBatchInstallCommand(mgr, []string{"pkg"}, false, false, nil)
+		pacInstall := h.buildBatchInstallCommand(pmPacman, []string{"pkg"}, false, false, nil)
 		if len(install) != len(pacInstall) || install[1] != pacInstall[1] || install[2] != pacInstall[2] || install[3] != pacInstall[3] {
 			t.Errorf("%s install flags = %v; want pacman shape %v with binary swapped", mgr, install, pacInstall)
 		}
-		remove := h.buildBatchRemoveCommand(mgr, []string{"pkg"}, nil)
-		pacRemove := h.buildBatchRemoveCommand(pmPacman, []string{"pkg"}, nil)
+		remove := h.buildBatchRemoveCommand(mgr, []string{"pkg"}, false, nil)
+		pacRemove := h.buildBatchRemoveCommand(pmPacman, []string{"pkg"}, false, nil)
 		if len(remove) != len(pacRemove) || remove[1] != pacRemove[1] || remove[2] != pacRemove[2] {
 			t.Errorf("%s remove flags = %v; want pacman shape %v with binary swapped", mgr, remove, pacRemove)
 		}
@@ -347,10 +347,10 @@ func TestPacmanFamilyShareFlags(t *testing.T) {
 func TestYayParuNotInAutoDetectionList(t *testing.T) {
 	h := &Handler{}
 	// Sanity: both managers ARE wired (so they work when explicit).
-	if cmd := h.buildBatchInstallCommand(pmYay, []string{"x"}, false, nil); len(cmd) == 0 {
+	if cmd := h.buildBatchInstallCommand(pmYay, []string{"x"}, false, false, nil); len(cmd) == 0 {
 		t.Error("yay install command is empty; the explicit-opt-in path is broken")
 	}
-	if cmd := h.buildBatchInstallCommand(pmParu, []string{"x"}, false, nil); len(cmd) == 0 {
+	if cmd := h.buildBatchInstallCommand(pmParu, []string{"x"}, false, false, nil); len(cmd) == 0 {
 		t.Error("paru install command is empty; the explicit-opt-in path is broken")
 	}
 }

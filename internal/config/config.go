@@ -424,6 +424,7 @@ type Package struct {
 	Manager     string   `yaml:"manager" json:"manager,omitempty"`           // Package manager to use (auto-detected if empty)
 	UpdateCache bool     `yaml:"update_cache" json:"update_cache,omitempty"` // Update package cache before operation
 	Upgrade     bool     `yaml:"upgrade" json:"upgrade,omitempty"`           // Upgrade all packages (ignores name/names)
+	Cask        bool     `yaml:"cask" json:"cask,omitempty"`                 // Install as Homebrew cask (macOS only; requires manager: brew)
 	Extra       []string `yaml:"extra" json:"extra,omitempty"`               // Extra arguments to pass to package manager
 }
 
@@ -518,6 +519,7 @@ func (p *Package) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		Manager     string      `yaml:"manager"`
 		UpdateCache bool        `yaml:"update_cache"`
 		Upgrade     bool        `yaml:"upgrade"`
+		Cask        bool        `yaml:"cask"`
 		Extra       []string    `yaml:"extra"`
 	}
 	var raw rawPackage
@@ -530,6 +532,7 @@ func (p *Package) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	p.Manager = raw.Manager
 	p.UpdateCache = raw.UpdateCache
 	p.Upgrade = raw.Upgrade
+	p.Cask = raw.Cask
 	p.Extra = raw.Extra
 
 	switch v := raw.Names.(type) {

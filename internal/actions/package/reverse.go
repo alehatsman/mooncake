@@ -33,6 +33,11 @@ type PkgReverseInfo struct {
 	// different one mid-rollback.
 	Manager string
 
+	// Cask mirrors pkg.Cask so the reverse step reinstates or
+	// removes the package through the cask channel it was
+	// installed from.
+	Cask bool
+
 	// Mutated is the list of package names that the apply
 	// actually installed (when AppliedState=present) or actually
 	// removed (when AppliedState=absent). nil/empty means the
@@ -98,6 +103,7 @@ func (h *Handler) Reverse(_ actions.Context, step *config.Step, result actions.R
 				Names:   append([]string(nil), info.Mutated...),
 				State:   stateAbsent,
 				Manager: info.Manager,
+				Cask:    info.Cask,
 			},
 		}, nil
 	case stateAbsent:
@@ -108,6 +114,7 @@ func (h *Handler) Reverse(_ actions.Context, step *config.Step, result actions.R
 				Names:   append([]string(nil), info.Mutated...),
 				State:   statePresent,
 				Manager: info.Manager,
+				Cask:    info.Cask,
 			},
 		}, nil
 	case stateLatest:

@@ -2031,6 +2031,9 @@
       "type": "object",
       "description": "Manage system packages (install/remove/update)",
       "properties": {
+        "cask": {
+          "type": "boolean"
+        },
         "extra": {
           "type": "array",
           "items": {
