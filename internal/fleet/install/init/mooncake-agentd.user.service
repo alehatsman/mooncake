@@ -10,6 +10,15 @@ Type=simple
 # and avoids baking an absolute /home/<user>/... path into the unit so
 # the same template renders identically across machines.
 ExecStart=%h/.local/bin/mooncake agentd run --bind 0.0.0.0:{{PORT}}
+# PATH= prepends %h/.local/bin so shell-action steps can call
+# user-installed binaries (claude, mcsearch, language toolchains
+# pinned via mise/asdf/etc.) without the step having to hardcode
+# the full path. systemd's default user-unit PATH omits %h/.local/bin,
+# and shell actions invoke `bash -c <cmd>` non-interactively — bash
+# doesn't source ~/.bashrc in that mode, so PATH stays whatever the
+# parent passes. The system unit doesn't need this: root's default
+# PATH covers /usr/local/bin and root doesn't have a per-user bin.
+Environment=PATH=%h/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 # Restart=always parity with the system unit: clean exits (self-upgrade
 # exec, SIGTERM during deploy, controller-side race) still get the daemon
 # back. RestartSec=5 + default StartLimitInterval bound any boot loop.

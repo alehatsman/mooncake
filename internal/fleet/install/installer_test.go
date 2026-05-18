@@ -270,6 +270,10 @@ func TestInstaller_Render_LinuxUser(t *testing.T) {
 	for _, want := range []string{
 		"ExecStart=%h/.local/bin/mooncake agentd run --bind 0.0.0.0:7878",
 		"WantedBy=default.target",
+		// PATH= must include %h/.local/bin so shell actions can find
+		// user-installed binaries (claude, mcsearch, mise-pinned
+		// toolchains). Default systemd-user PATH omits it.
+		"Environment=PATH=%h/.local/bin:",
 	} {
 		if !strings.Contains(s, want) {
 			t.Errorf("user unit missing %q:\n%s", want, s)
