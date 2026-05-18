@@ -68,3 +68,6 @@ artifacts/
 .mcp.json
 .playwright-mcp/
 docs-working/ARCH_SNAPSHOT.md
+
+.claude/
+.mcsearch/
