@@ -354,10 +354,26 @@ func (h *Handler) installPackages(ec *executor.ExecutionContext, manager string,
 
 	var toInstall, existingPkgs []string
 
-	for _, pkg := range packages {
-		installed, err := h.isPackageInstalled(ec, manager, pkg, cask)
+	// For brew, fetch the full installed set in one subprocess instead of one per package.
+	var brewInstalled map[string]struct{}
+	if manager == pmBrew {
+		var err error
+		brewInstalled, err = h.fetchBrewInstalledSet(ec, cask)
 		if err != nil {
-			return nil, fmt.Errorf("failed to check if package %q is installed: %w", pkg, err)
+			return nil, fmt.Errorf("failed to fetch brew installed set: %w", err)
+		}
+	}
+
+	for _, pkg := range packages {
+		var installed bool
+		if brewInstalled != nil {
+			_, installed = brewInstalled[pkg]
+		} else {
+			var err error
+			installed, err = h.isPackageInstalled(ec, manager, pkg, cask)
+			if err != nil {
+				return nil, fmt.Errorf("failed to check if package %q is installed: %w", pkg, err)
+			}
 		}
 
 		if installed && !upgrade {
@@ -449,10 +465,26 @@ func (h *Handler) removePackages(ec *executor.ExecutionContext, manager string, 
 
 	var toRemove []string
 
-	for _, pkg := range packages {
-		installed, err := h.isPackageInstalled(ec, manager, pkg, cask)
+	// For brew, fetch the full installed set in one subprocess instead of one per package.
+	var brewInstalled map[string]struct{}
+	if manager == pmBrew {
+		var err error
+		brewInstalled, err = h.fetchBrewInstalledSet(ec, cask)
 		if err != nil {
-			return nil, fmt.Errorf("failed to check if package %q is installed: %w", pkg, err)
+			return nil, fmt.Errorf("failed to fetch brew installed set: %w", err)
+		}
+	}
+
+	for _, pkg := range packages {
+		var installed bool
+		if brewInstalled != nil {
+			_, installed = brewInstalled[pkg]
+		} else {
+			var err error
+			installed, err = h.isPackageInstalled(ec, manager, pkg, cask)
+			if err != nil {
+				return nil, fmt.Errorf("failed to check if package %q is installed: %w", pkg, err)
+			}
 		}
 
 		if !installed {
@@ -585,6 +617,30 @@ func (h *Handler) isPackageInstalled(ec *executor.ExecutionContext, manager, pkg
 
 	// If command succeeds (exit code 0), package is installed
 	return err == nil, nil
+}
+
+// fetchBrewInstalledSet runs `brew list --formula` or `brew list --cask` once
+// and returns the installed package names as a set. This allows callers to
+// replace N per-package subprocess calls with two bulk calls total.
+func (h *Handler) fetchBrewInstalledSet(ec *executor.ExecutionContext, cask bool) (map[string]struct{}, error) {
+	var args []string
+	if cask {
+		args = []string{pmBrew, "list", "--cask"}
+	} else {
+		args = []string{pmBrew, "list", "--formula"}
+	}
+	ec.Svc.Logger.Debugf("    Fetching installed brew %s list", map[bool]string{true: "casks", false: "formulae"}[cask])
+	out, err := h.runCmd(ec, false, args)
+	if err != nil {
+		return nil, fmt.Errorf("brew list failed: %w", err)
+	}
+	set := make(map[string]struct{})
+	for _, line := range strings.Split(strings.TrimSpace(string(out)), "\n") {
+		if name := strings.TrimSpace(line); name != "" {
+			set[name] = struct{}{}
+		}
+	}
+	return set, nil
 }
 
 // buildInstallCommand builds the install command for a single package.
@@ -853,11 +909,29 @@ func (h *Handler) runPlan(ec *executor.ExecutionContext, manager, state string, 
 	// First package that would change wins the reason string; the
 	// inspection short-circuits as soon as a change is detected, which
 	// matches the legacy Check behavior.
-	for _, name := range packages {
-		installed, err := h.isPackageInstalled(ec, manager, name, pkg.Cask)
+	//
+	// For brew, pre-fetch the full installed set to avoid one subprocess per package.
+	var brewInstalled map[string]struct{}
+	if manager == pmBrew {
+		var err error
+		brewInstalled, err = h.fetchBrewInstalledSet(ec, pkg.Cask)
 		if err != nil {
 			result.Reason = fmt.Sprintf("check error: %v", err)
 			return result, nil
+		}
+	}
+
+	for _, name := range packages {
+		var installed bool
+		if brewInstalled != nil {
+			_, installed = brewInstalled[name]
+		} else {
+			var err error
+			installed, err = h.isPackageInstalled(ec, manager, name, pkg.Cask)
+			if err != nil {
+				result.Reason = fmt.Sprintf("check error: %v", err)
+				return result, nil
+			}
 		}
 		switch state {
 		case statePresent, stateLatest:
