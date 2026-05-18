@@ -566,7 +566,10 @@ tasks:
   ci:lint:
     internal: true
     cmds:
-      - 'echo "[3/8] golangci-lint"'
+      # Cache leaks across sibling worktrees and surfaces phantom findings from
+      # ../mooncake-*/ paths. Clean before each run so results reflect this tree.
+      - 'echo "[3/8] golangci-lint (clean cache first)"'
+      - golangci-lint cache clean
       - golangci-lint run {{.PKG}}
 
   ci:vuln:
