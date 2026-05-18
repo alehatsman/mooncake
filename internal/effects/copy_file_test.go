@@ -35,7 +35,7 @@ func TestCopyFile_StreamsLargeFileByteIdentical(t *testing.T) {
 		t.Fatalf("seed src: %v", err)
 	}
 
-	p := NewPerformer(func() actions.Mode { return actions.ModeApply }, "")
+	p := NewPerformer(func() actions.Mode { return actions.ModeApply }, "", false)
 	eff := p.CopyFile(src, dest, 0o644, actions.PerformerOpts{})
 	if eff.Err != nil {
 		t.Fatalf("CopyFile: %v", eff.Err)
@@ -71,7 +71,7 @@ func TestCopyFile_IdempotentOnIdenticalContentAndMode(t *testing.T) {
 		t.Fatalf("seed dest: %v", err)
 	}
 
-	p := NewPerformer(func() actions.Mode { return actions.ModeApply }, "")
+	p := NewPerformer(func() actions.Mode { return actions.ModeApply }, "", false)
 	eff := p.CopyFile(src, dest, 0o644, actions.PerformerOpts{})
 	if eff.Err != nil {
 		t.Fatalf("CopyFile: %v", eff.Err)
@@ -96,7 +96,7 @@ func TestCopyFile_PlanModePredictsChangeWithoutMutating(t *testing.T) {
 		t.Fatalf("seed dest: %v", err)
 	}
 
-	p := NewPerformer(func() actions.Mode { return actions.ModePlan }, "")
+	p := NewPerformer(func() actions.Mode { return actions.ModePlan }, "", false)
 	eff := p.CopyFile(src, dest, 0o644, actions.PerformerOpts{})
 	if eff.Err != nil {
 		t.Fatalf("CopyFile: %v", eff.Err)

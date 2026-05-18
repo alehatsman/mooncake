@@ -35,8 +35,19 @@ type BecomeRunner struct {
 	// SudoPass is the password piped to sudo's stdin via `sudo -S`.
 	// Empty when the operator didn't supply one; callers requesting
 	// become with an empty SudoPass get a clean error rather than a
-	// hung sudo prompt.
+	// hung sudo prompt — *unless* PasswordlessSudo is true, in which
+	// case the command runs under `sudo -n` (sudo's "no password
+	// prompt" mode, succeeds iff a NOPASSWD sudoers rule covers it).
 	SudoPass string
+
+	// PasswordlessSudo signals that the operator's sudo is configured
+	// with NOPASSWD (typically via /etc/sudoers.d/<user>-nopasswd).
+	// Set by the executor at run startup via a `sudo -n true` probe.
+	// When true, Command builds `sudo -n <cmd>` even with an empty
+	// SudoPass — sudo declines to prompt and either succeeds via the
+	// NOPASSWD rule or fails fast with a clear "a password is
+	// required" message instead of hanging.
+	PasswordlessSudo bool
 }
 
 // ErrBecomeUnsupported is returned by BecomeRunner.Command when
@@ -64,11 +75,24 @@ func (r BecomeRunner) Command(become bool, program string, args ...string) (*exe
 	if !IsBecomeSupported() {
 		return nil, fmt.Errorf("%w (GOOS=%s)", ErrBecomeUnsupported, runtime.GOOS)
 	}
-	if r.SudoPass == "" {
+	if r.SudoPass == "" && !r.PasswordlessSudo {
 		return nil, ErrBecomeNoSudoPass
 	}
-	sudoArgs := append([]string{"-S", program}, args...)
+	// `sudo -n` runs non-interactively: succeeds under NOPASSWD,
+	// fails immediately with a "password is required" diagnostic
+	// otherwise. `sudo -S` reads the password from stdin. We use -n
+	// when no password is configured (passwordless path) and -S when
+	// one is — never both: -nS makes -S a no-op since sudo never reads
+	// stdin in non-interactive mode.
+	var sudoArgs []string
+	if r.SudoPass == "" {
+		sudoArgs = append([]string{"-n", program}, args...)
+	} else {
+		sudoArgs = append([]string{"-S", program}, args...)
+	}
 	cmd := exec.Command("sudo", sudoArgs...) //nolint:gosec // provisioning tool runs user-defined programs
-	cmd.Stdin = bytes.NewBufferString(r.SudoPass + "\n")
+	if r.SudoPass != "" {
+		cmd.Stdin = bytes.NewBufferString(r.SudoPass + "\n")
+	}
 	return cmd, nil
 }

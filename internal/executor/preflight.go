@@ -1,9 +1,11 @@
 package executor
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
+	"time"
 
 	"github.com/alehatsman/mooncake/internal/actions"
 	"github.com/alehatsman/mooncake/internal/config"
@@ -31,7 +33,7 @@ import (
 // implements actions.Permitter. Handlers without a Permitter
 // implementation never trigger preflight — they get the legacy
 // "runtime error" path until they opt in.
-func preflightPermissions(perms actions.PermissionSet, step *config.Step, sudoPassConfigured bool) error {
+func preflightPermissions(perms actions.PermissionSet, step *config.Step, sudoAvailable bool) error {
 	if step != nil && perms.Sudo && !runningElevated() {
 		if step.AsUser == "" {
 			return fmt.Errorf(
@@ -39,9 +41,9 @@ func preflightPermissions(perms actions.PermissionSet, step *config.Step, sudoPa
 				stepLabel(step),
 			)
 		}
-		if !sudoPassConfigured {
+		if !sudoAvailable {
 			return fmt.Errorf(
-				"step %q requires elevated privileges (as_user: %s, Sudo: true) but no sudo password is configured; pass --sudo-pass / --sudo-pass-file / --ask-become-pass, or run mooncake as root",
+				"step %q requires elevated privileges (as_user: %s, Sudo: true) but no sudo password is configured and `sudo -n true` failed; configure a NOPASSWD sudoers rule for this user, pass --sudo-pass / --sudo-pass-file / --ask-become-pass, or run mooncake as root",
 				stepLabel(step), step.AsUser,
 			)
 		}
@@ -59,6 +61,36 @@ func preflightPermissions(perms actions.PermissionSet, step *config.Step, sudoPa
 		}
 	}
 	return nil
+}
+
+// detectPasswordlessSudo probes `sudo -n true` once to determine
+// whether the current user can escalate without a password (i.e.
+// covered by a NOPASSWD sudoers rule). Returns false on any failure
+// — the executor then falls back to the legacy "require configured
+// password" rule. The probe is short-timed (2s) so a misconfigured
+// sudoers file can't stall startup.
+//
+// Called once at RunServices construction; the result is cached on
+// Svc.PasswordlessSudo for the rest of the run.
+func detectPasswordlessSudo(ctx context.Context) bool {
+	// Already root → escalation is moot; report false so callers
+	// take the no-escalation branch via runningElevated().
+	if runningElevated() {
+		return false
+	}
+	// Test/MCP callers occasionally pass a nil context (executor.Start
+	// is invoked without a root context wired in). Fall back to
+	// Background so context.WithTimeout doesn't panic on nil.
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	probeCtx, cancel := context.WithTimeout(ctx, 2*time.Second)
+	defer cancel()
+	cmd := exec.CommandContext(probeCtx, "sudo", "-n", "true") //nolint:gosec // fixed args, no interpolation
+	if err := cmd.Run(); err != nil {
+		return false
+	}
+	return true
 }
 
 // runningElevated reports whether the current process has effective

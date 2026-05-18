@@ -138,3 +138,35 @@ func TestRunningElevated_MatchesEuid(t *testing.T) {
 		t.Errorf("runningElevated() = %v, want %v (euid=%d)", got, want, os.Geteuid())
 	}
 }
+
+// TestPreflight_PasswordlessSudoSatisfiesSudoAvailable pins the
+// rename of the third arg from `sudoPassConfigured` to `sudoAvailable`:
+// the executor now feeds it the union of (SudoPass set) or (NOPASSWD
+// probe succeeded), so a NOPASSWD operator with no --sudo-pass flag
+// passes preflight. Without this contract, switching the agentd from
+// root system unit to a user unit + NOPASSWD sudoers entry would
+// still fail at "no sudo password is configured" because preflight
+// would only honor explicit --sudo-pass.
+func TestPreflight_PasswordlessSudoSatisfiesSudoAvailable(t *testing.T) {
+	if os.Geteuid() == 0 {
+		t.Skip("test requires non-root euid")
+	}
+	step := &config.Step{Name: "apt-upgrade", AsUser: "root"}
+	if err := preflightPermissions(actions.PermissionSet{Sudo: true}, step, true); err != nil {
+		t.Errorf("sudoAvailable=true (e.g. via NOPASSWD probe) should pass preflight, got: %v", err)
+	}
+}
+
+// TestDetectPasswordlessSudo_NilContext_NoPanic — the executor calls
+// detectPasswordlessSudo at RunServices construction; some callers
+// (MCP, in-process apply) pass a nil context all the way through.
+// The probe must defend against that rather than panicking inside
+// context.WithTimeout.
+func TestDetectPasswordlessSudo_NilContext_NoPanic(t *testing.T) {
+	defer func() {
+		if r := recover(); r != nil {
+			t.Fatalf("detectPasswordlessSudo panicked on nil context: %v", r)
+		}
+	}()
+	_ = detectPasswordlessSudo(nil) //nolint:staticcheck // nil ctx is the case under test
+}

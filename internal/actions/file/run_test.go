@@ -28,10 +28,10 @@ func newRunContext(t *testing.T, plan bool) *executor.ExecutionContext {
 		Svc: &executor.RunServices{
 			Template: renderer,
 			PathUtil: pathutil.NewPathExpander(renderer),
-			Mode: planMode(plan),
-			Stats: stats,
+			Mode:     planMode(plan),
+			Stats:    stats,
 		},
-		Scope: executor.NewVariableScope(),
+		Scope:      executor.NewVariableScope(),
 		CurrentDir: "/tmp",
 	}
 }
@@ -205,7 +205,7 @@ func TestEffects_RoundTrip(t *testing.T) {
 		t.Errorf("Plan ctx Effects() mode = %v, want ModePlan", planEc.Effects().Mode())
 	}
 	// Ensure NewPerformer returns the same concrete type
-	custom := effects.NewPerformer(ec.Mode, "")
+	custom := effects.NewPerformer(ec.Mode, "", false)
 	if custom.Mode() != actions.ModeApply {
 		t.Errorf("NewPerformer mode = %v, want ModeApply", custom.Mode())
 	}

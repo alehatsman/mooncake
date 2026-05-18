@@ -1166,8 +1166,13 @@ func executePlanWithCapture(ctx context.Context, p *plan.Plan, sudoPass string, 
 	svc := &RunServices{
 		Logger:   log.WithPadLevel(0),
 		SudoPass: sudoPass,
-		Tags:     []string{}, // tag filtering done by planner (step.Skipped)
-		Mode:     mode,
+		// One-shot `sudo -n true` probe at run startup. NOPASSWD is
+		// stable per host (operator-configured sudoers, not per-run
+		// state), so caching the answer for the duration of the run
+		// is correct and saves a sudo invocation per privileged step.
+		PasswordlessSudo: detectPasswordlessSudo(ctx),
+		Tags:             []string{}, // tag filtering done by planner (step.Skipped)
+		Mode:             mode,
 		Stats: &ExecutionStats{
 			Global:   &globalExecuted,
 			Executed: &statsExecuted,
@@ -1275,8 +1280,8 @@ func truncate(s string, maxLen int) string {
 // up-casting.
 func dispatchRunner(step config.Step, ec *ExecutionContext, runner actions.Runner) error {
 	if p, ok := runner.(actions.Permitter); ok {
-		sudoPassConfigured := ec.Svc != nil && ec.Svc.SudoPass != ""
-		if err := preflightPermissions(p.Permissions(&step), &step, sudoPassConfigured); err != nil {
+		sudoAvailable := ec.Svc != nil && (ec.Svc.SudoPass != "" || ec.Svc.PasswordlessSudo)
+		if err := preflightPermissions(p.Permissions(&step), &step, sudoAvailable); err != nil {
 			return err
 		}
 	}

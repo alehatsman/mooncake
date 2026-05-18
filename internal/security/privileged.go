@@ -20,8 +20,14 @@ import (
 type PrivilegedRunner struct {
 	// SudoPass is the password piped into `sudo -S` when escalation is
 	// needed. Carries the same "empty = unsupported" semantics as
-	// BecomeRunner.SudoPass.
+	// BecomeRunner.SudoPass — except when PasswordlessSudo is true.
 	SudoPass string
+
+	// PasswordlessSudo mirrors BecomeRunner.PasswordlessSudo: when
+	// set, an empty SudoPass is allowed and commands run via `sudo -n`.
+	// The `BecomeRunner(p)` conversion below relies on the field order
+	// matching BecomeRunner.
+	PasswordlessSudo bool
 }
 
 // becomeNeeded reports whether commands need to be wrapped in sudo to
@@ -51,7 +57,7 @@ func (p PrivilegedRunner) RunWithInput(ctx context.Context, stdin []byte, progra
 	if err != nil {
 		return nil, err
 	}
-	if becomeNeededFn() {
+	if becomeNeededFn() && p.SudoPass != "" {
 		// BecomeRunner.Command already wired the password as stdin;
 		// append the caller's stdin after it so sudo reads the
 		// password first and forwards the rest to the program.
@@ -61,6 +67,9 @@ func (p PrivilegedRunner) RunWithInput(ctx context.Context, stdin []byte, progra
 		combined.Write(stdin)
 		cmd.Stdin = &combined
 	} else {
+		// Either no escalation needed, or escalation via `sudo -n`
+		// (PasswordlessSudo) — sudo doesn't read stdin in -n mode,
+		// so the caller's stdin goes straight through to the program.
 		cmd.Stdin = bytes.NewReader(stdin)
 	}
 	return cmd.CombinedOutput()

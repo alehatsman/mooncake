@@ -33,16 +33,18 @@ type ModeFunc func() actions.Mode
 
 // defaultPerformer is the production implementation of actions.Performer.
 type defaultPerformer struct {
-	modeFn   ModeFunc
-	sudoPass string
+	modeFn           ModeFunc
+	sudoPass         string
+	passwordlessSudo bool
 }
 
 // NewPerformer constructs an actions.Performer that performs real
 // filesystem operations in ModeApply and inspects state in ModePlan.
 // modeFn is called once per primitive to decide the path; sudoPass is
-// consulted when opts.Become is true.
-func NewPerformer(modeFn ModeFunc, sudoPass string) actions.Performer {
-	return &defaultPerformer{modeFn: modeFn, sudoPass: sudoPass}
+// consulted when opts.Become is true. passwordlessSudo lets a NOPASSWD
+// operator skip configuring a password — runSudo then uses `sudo -n`.
+func NewPerformer(modeFn ModeFunc, sudoPass string, passwordlessSudo bool) actions.Performer {
+	return &defaultPerformer{modeFn: modeFn, sudoPass: sudoPass, passwordlessSudo: passwordlessSudo}
 }
 
 func (p *defaultPerformer) Mode() actions.Mode { return p.modeFn() }
@@ -757,7 +759,7 @@ func (p *defaultPerformer) Chown(path, owner, group string, opts actions.Perform
 // case (SudoPass="") was not caught — the runner happily wrote
 // `"\n"` to sudo's stdin and let sudo hang on its password prompt.
 func (p *defaultPerformer) runSudo(command string) error {
-	runner := security.BecomeRunner{SudoPass: p.sudoPass}
+	runner := security.BecomeRunner{SudoPass: p.sudoPass, PasswordlessSudo: p.passwordlessSudo}
 	cmd, err := runner.Command(true, "sh", "-c", command)
 	if err != nil {
 		return err

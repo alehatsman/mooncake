@@ -62,3 +62,51 @@ func TestBecomeRunner_NoBecomeNeverReturnsErrBecomeUnsupported(t *testing.T) {
 		t.Error("non-become path must not return ErrBecomeUnsupported")
 	}
 }
+
+// TestBecomeRunner_PasswordlessSudoUsesDashN pins the NOPASSWD path
+// added when the user-mode agentd landed: empty SudoPass +
+// PasswordlessSudo=true builds `sudo -n <cmd>` (non-interactive — sudo
+// fails fast instead of prompting). Without this branch, every
+// `as_user: root` step on a NOPASSWD host would erroneously demand
+// --sudo-pass even though sudo wouldn't read it.
+func TestBecomeRunner_PasswordlessSudoUsesDashN(t *testing.T) {
+	if !IsBecomeSupported() {
+		t.Skipf("become not supported on %s", runtime.GOOS)
+	}
+	r := BecomeRunner{PasswordlessSudo: true} // SudoPass empty on purpose
+	cmd, err := r.Command(true, "/usr/bin/apt-get", "install", "-y", "nginx")
+	if err != nil {
+		t.Fatalf("PasswordlessSudo path must not error: %v", err)
+	}
+	got := strings.Join(cmd.Args, " ")
+	want := "sudo -n /usr/bin/apt-get install -y nginx"
+	if got != want {
+		t.Errorf("cmd.Args = %q, want %q", got, want)
+	}
+	if cmd.Stdin != nil {
+		t.Error("PasswordlessSudo path must not wire stdin (sudo -n doesn't read it)")
+	}
+}
+
+// TestBecomeRunner_SudoPassWinsOverPasswordless verifies the
+// precedence when both are set: a configured password takes the
+// `sudo -S` path so the operator's `--sudo-pass` choice isn't
+// silently ignored on a host that also happens to have NOPASSWD.
+func TestBecomeRunner_SudoPassWinsOverPasswordless(t *testing.T) {
+	if !IsBecomeSupported() {
+		t.Skipf("become not supported on %s", runtime.GOOS)
+	}
+	r := BecomeRunner{SudoPass: "secret", PasswordlessSudo: true}
+	cmd, err := r.Command(true, "/usr/bin/apt-get", "install", "nginx")
+	if err != nil {
+		t.Fatalf("Command: %v", err)
+	}
+	got := strings.Join(cmd.Args, " ")
+	want := "sudo -S /usr/bin/apt-get install nginx"
+	if got != want {
+		t.Errorf("cmd.Args = %q, want %q", got, want)
+	}
+	if cmd.Stdin == nil {
+		t.Error("SudoPass-set path must wire stdin so sudo reads the password")
+	}
+}

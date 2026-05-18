@@ -74,6 +74,11 @@ type RunServices struct {
 	Mode           actions.Mode
 	Tags           []string
 	SudoPass       string
+	// PasswordlessSudo is set at run construction by probing
+	// `sudo -n true`. When true, Sudo+AsUser steps don't need a
+	// password flag — preflight passes and BecomeRunner uses
+	// `sudo -n <cmd>` instead of `sudo -S`.
+	PasswordlessSudo bool
 	// Capture, if non-nil, records the compiled plan and per-step
 	// outcomes for callers that want the typed *KernelResult shape
 	// (internal/apply.Runner for R1.1b). nil for the legacy
@@ -221,7 +226,7 @@ func (ec *ExecutionContext) Mode() Mode {
 // Effects returns a Performer that routes filesystem and command
 // primitives by the current Mode.
 func (ec *ExecutionContext) Effects() actions.Performer {
-	return effects.NewPerformer(ec.Mode, ec.Svc.SudoPass)
+	return effects.NewPerformer(ec.Mode, ec.Svc.SudoPass, ec.Svc.PasswordlessSudo)
 }
 
 // Privileged returns the spec-69 sudo-wrapping command-exec
@@ -229,7 +234,7 @@ func (ec *ExecutionContext) Effects() actions.Performer {
 // shell-outs that need root, instead of building exec.Command or
 // BecomeRunner manually.
 func (ec *ExecutionContext) Privileged() actions.PrivilegedRunner {
-	return security.PrivilegedRunner{SudoPass: ec.Svc.SudoPass}
+	return security.PrivilegedRunner{SudoPass: ec.Svc.SudoPass, PasswordlessSudo: ec.Svc.PasswordlessSudo}
 }
 
 // --- actions.Context interface implementation ---
