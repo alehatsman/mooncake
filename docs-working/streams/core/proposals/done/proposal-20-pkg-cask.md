@@ -1,6 +1,6 @@
 # Request — `pkg.install`: brew cask support (`--cask`)
 
-**Status**: Draft proposal
+**Status**: Shipped — merged 2026-05-18
 **Filed**: 2026-05-17 by aleh
 **Related**: shipped [`proposal-07-pkg-aur-support`](done/proposal-07-pkg-aur-support.md), shipped [`proposal-08-pkg-brew-taps-and-tolerant-rc`](done/proposal-08-pkg-brew-taps-and-tolerant-rc.md). Casks are the third major slice of the Homebrew surface; the first two already landed.
 
