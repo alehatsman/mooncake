@@ -78,7 +78,19 @@ type RunServices struct {
 	// `sudo -n true`. When true, Sudo+AsUser steps don't need a
 	// password flag — preflight passes and BecomeRunner uses
 	// `sudo -n <cmd>` instead of `sudo -S`.
+	//
+	// spec-72 phase 1: derived from Escalation.Reason ==
+	// EscalationAvailablePasswordless. Kept on RunServices as the
+	// backward-compat shim while preflight/BecomeRunner/effects still
+	// read the bool; phase 5 drops it in favor of Escalation.
 	PasswordlessSudo bool
+
+	// Escalation is the unified, once-per-run answer to "can this
+	// process escalate to root, and if not, why not?". Populated by
+	// ProbeEscalation at RunServices construction (spec-72 §1).
+	// Phase 1 wires the field but doesn't yet replace the
+	// PasswordlessSudo bool at call sites; phases 2–5 do.
+	Escalation EscalationReport
 	// Capture, if non-nil, records the compiled plan and per-step
 	// outcomes for callers that want the typed *KernelResult shape
 	// (internal/apply.Runner for R1.1b). nil for the legacy

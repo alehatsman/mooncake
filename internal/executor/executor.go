@@ -1163,14 +1163,21 @@ func executePlanWithCapture(ctx context.Context, p *plan.Plan, sudoPass string, 
 	statsChanged := 0
 	statsReverted := 0
 
+	// spec-72 §1: probe escalation once per run. NOPASSWD / NNP /
+	// sudo availability are stable per host (operator-configured,
+	// not per-run state), so caching the report for the run is
+	// correct and saves a sudo invocation per privileged step. The
+	// PasswordlessSudo bool below is the phase-1 backward-compat
+	// shim: it stays true for exactly the cases the old
+	// detectPasswordlessSudo returned true (NOPASSWD probe
+	// succeeded), so existing call sites that read the bool see no
+	// behavior change.
+	escalation := ProbeEscalation(ctx, sudoPass)
 	svc := &RunServices{
-		Logger:   log.WithPadLevel(0),
-		SudoPass: sudoPass,
-		// One-shot `sudo -n true` probe at run startup. NOPASSWD is
-		// stable per host (operator-configured sudoers, not per-run
-		// state), so caching the answer for the duration of the run
-		// is correct and saves a sudo invocation per privileged step.
-		PasswordlessSudo: detectPasswordlessSudo(ctx),
+		Logger:           log.WithPadLevel(0),
+		SudoPass:         sudoPass,
+		Escalation:       escalation,
+		PasswordlessSudo: escalation.Reason == EscalationAvailablePasswordless,
 		Tags:             []string{}, // tag filtering done by planner (step.Skipped)
 		Mode:             mode,
 		Stats: &ExecutionStats{
