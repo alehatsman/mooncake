@@ -13,7 +13,7 @@ import (
 
 func TestPermissions_AlwaysSudo(t *testing.T) {
 	h := Handler{}
-	ps := h.Permissions(&config.Step{PkgHold: &config.PkgHold{Name: "git"}})
+	ps := h.Permissions(&config.Step{PkgHold: &config.PkgHold{Name: "git", Manager: "apt"}})
 	if !ps.Sudo {
 		t.Errorf("Sudo must be true for pkg.hold; got %+v", ps)
 	}

@@ -11,7 +11,7 @@ import (
 
 func TestPermissions_NoSudoNoNetwork(t *testing.T) {
 	h := Handler{}
-	ps := h.Permissions(&config.Step{PkgList: &config.PkgList{}})
+	ps := h.Permissions(&config.Step{PkgList: &config.PkgList{Manager: "apt"}})
 	if ps.Sudo {
 		t.Errorf("Sudo must be false; pkg.list is read-only. got %+v", ps)
 	}

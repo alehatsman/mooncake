@@ -12,7 +12,7 @@ import (
 
 func TestPermissions_SudoAndNetwork(t *testing.T) {
 	h := Handler{}
-	ps := h.Permissions(&config.Step{PkgUpgrade: &config.PkgUpgrade{}})
+	ps := h.Permissions(&config.Step{PkgUpgrade: &config.PkgUpgrade{Manager: "apt"}})
 	if !ps.Sudo {
 		t.Errorf("Sudo must be true; got %+v", ps)
 	}
