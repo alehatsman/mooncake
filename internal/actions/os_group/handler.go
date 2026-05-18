@@ -217,7 +217,6 @@ type computedPlan struct {
 	reason    string
 
 	createArgs []string
-	modifyArgs []string
 	removeArgs []string
 	name       string
 }

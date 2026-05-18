@@ -108,10 +108,7 @@ func createGroupDarwin(runner actions.PrivilegedRunner, plan computedPlan) error
 	// RealName mirrors the group name. macOS tools (Workgroup Manager,
 	// System Settings → Users & Groups) display the RealName rather
 	// than the record key; setting it keeps the GUI in sync.
-	if err := dsclGroupRun(runner, "-create", base, "RealName", plan.name); err != nil {
-		return err
-	}
-	return nil
+	return dsclGroupRun(runner, "-create", base, "RealName", plan.name)
 }
 
 func removeGroupDarwin(runner actions.PrivilegedRunner, plan computedPlan) error {
