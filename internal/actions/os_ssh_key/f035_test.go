@@ -52,24 +52,27 @@ func TestRun_UserLookupFailureRefusesWrite(t *testing.T) {
 }
 
 // TestRun_ChownEPERMSurfacesAsError — F035 regression guard,
-// retired by the spec-72 Layer C redesign + the named-user
-// filesystem ownership follow-up. The chownFn-EPERM fallback path
-// in writeAuthorizedKeys is unreachable under the new model:
+// retired by spec-72 Layer C + the named-user filesystem ownership
+// follow-up + the chownFn-retry-path cleanup. The
+// ErrBecomeNoSudoPass branch in writeAuthorizedKeys (which the
+// original test exercised) was unreachable under the new model:
 //
-//   - When as_user is unset, ctx.Privileged().Run doesn't escalate;
-//     a stubbed chownFn EPERM still hits the unstubbed runner.Run
-//     which exec's a direct chown that succeeds or fails the same
-//     way chownFn did — never with ErrBecomeNoSudoPass.
-//   - When as_user is set, the ownership-aware Performer routes
-//     WriteFile through sudo before chownFn is even called; without
-//     SudoPass the write fails first and the chownFn branch is
-//     never reached.
+//   - When as_user is set on the step, the Performer routes
+//     WriteFile through sudo. Missing SudoPass surfaces as
+//     ErrBecomeNoSudoPass from WriteFile before chownFn is ever
+//     called, so the retry path that returned the same sentinel
+//     never fires.
+//   - When as_user is unset, the runner's bound AsUser is "",
+//     so its chown retry exec's directly (no sudo wrap). It can
+//     return EPERM or success — never ErrBecomeNoSudoPass.
 //
+// The hint code was deleted in the cleanup commit. The retry-via-
+// runner path remains and is exercised whenever chownFn EPERMs;
+// when the runner also can't fix the ownership (typical for
+// non-current sshUser without as_user:root), the wrapped error
+// includes the new "add as_user: root to the step" remediation.
 // The structural regression intent ("chown failures aren't silently
-// swallowed") is preserved by the WriteFile sudo path returning
-// ErrBecomeNoSudoPass when sudo isn't configured — covered by the
-// security package tests. The hint code in writeAuthorizedKeys is
-// now effectively dead; removing it is a follow-up cleanup.
+// swallowed") is preserved.
 
 func TestRun_TightensExistingSshDirMode(t *testing.T) {
 	// Pre-create the parent directory at 0o755 (a too-permissive mode

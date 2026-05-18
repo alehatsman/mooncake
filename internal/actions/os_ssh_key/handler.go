@@ -577,29 +577,29 @@ func writeAuthorizedKeys(performer actions.Performer, runner *security.Privilege
 			if !errors.Is(err, fs.ErrPermission) {
 				return fmt.Errorf("chown %s: %w", path, err)
 			}
-			// Cross-user case: direct chown denied. Retry via
-			// the supplied runner so installing keys for another user
-			// from a non-root mooncake works when sudo IS configured.
-			// When sudo isn't configured, fall back to the pre-spec-69
-			// fs.ErrPermission + "run with sudo" hint so existing
-			// downstream code (and the spec-22-era F035 test that
-			// asserts both behaviors) keeps working unchanged.
+			// Cross-user case: direct chown denied (mooncake's user
+			// doesn't have chown perms on the path's destination
+			// owner). Retry via the spec-72 Layer C primitive: the
+			// runner's bound AsUser decides whether to sudo. When
+			// AsUser is set, the sudo'd chown lands the correct
+			// owner. When AsUser is unset, the runner exec's a
+			// direct chown which will EPERM again — operator needs
+			// to declare as_user:root on the step. The original
+			// EPERM is preserved in the wrapped error so the
+			// remediation is visible alongside whatever the runner
+			// reported.
 			spec := strconv.Itoa(uid) + ":" + strconv.Itoa(gid)
 			out, sErr := runner.Run(context.TODO(), "chown", spec, path)
-			if sErr == nil {
-				// Sudo path succeeded — chown completed.
-			} else if errors.Is(sErr, security.ErrBecomeNoSudoPass) || errors.Is(sErr, security.ErrBecomeUnsupported) {
-				return fmt.Errorf(
-					"chown %s to uid=%d gid=%d: %w "+
-						"(run with sudo / become: true to install keys for another user)",
-					path, uid, gid, err,
-				)
-			} else {
+			if sErr != nil {
 				msg := strings.TrimSpace(string(out))
 				if msg != "" {
-					return fmt.Errorf("chown %s: %w: %s", path, sErr, msg)
+					return fmt.Errorf("chown %s to uid=%d gid=%d: %w: %s "+
+						"(add as_user: root to the step to install keys for another user)",
+						path, uid, gid, sErr, msg)
 				}
-				return fmt.Errorf("chown %s: %w", path, sErr)
+				return fmt.Errorf("chown %s to uid=%d gid=%d: %w "+
+					"(add as_user: root to the step to install keys for another user)",
+					path, uid, gid, sErr)
 			}
 		}
 		// Parent-dir chown is best-effort: non-fatal on any error so
