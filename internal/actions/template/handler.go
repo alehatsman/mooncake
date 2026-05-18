@@ -181,7 +181,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 
 	// Delegate to Performer.WriteFile — same site decides both
 	// "would change?" and "perform write" semantics for both modes.
-	eff := ctx.Effects().WriteFile(dest, rendered, mode, actions.PerformerOpts{Become: step.ShouldBecome()})
+	eff := ctx.Effects().WriteFile(dest, rendered, mode, actions.PerformerOpts{})
 
 	if eff.Err != nil {
 		result.Failed = true

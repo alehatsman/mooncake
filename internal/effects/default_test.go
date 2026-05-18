@@ -12,7 +12,7 @@ import (
 // newTestPerformer returns a Performer pinned to the given mode and with
 // no sudo password (sudo-aware paths return an error when exercised).
 func newTestPerformer(mode actions.Mode) actions.Performer {
-	return NewPerformer(func() actions.Mode { return mode }, "", false)
+	return NewPerformer(func() actions.Mode { return mode }, "", false, "")
 }
 
 // ----------------------------------------------------------------------

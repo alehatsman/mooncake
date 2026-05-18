@@ -247,10 +247,13 @@ func (ec *ExecutionContext) Mode() Mode {
 	return ec.Svc.Mode
 }
 
-// Effects returns a Performer that routes filesystem and command
-// primitives by the current Mode.
+// Effects returns a Performer pre-bound to the current step's
+// AsUser. Like ec.Privileged(), the per-step binding means handlers
+// don't have to thread step.AsUser through PerformerOpts — the
+// Performer consults its bound state to decide sudo wrap and
+// post-write chown.
 func (ec *ExecutionContext) Effects() actions.Performer {
-	return effects.NewPerformer(ec.Mode, ec.Svc.SudoPass, ec.Svc.PasswordlessSudo)
+	return effects.NewPerformer(ec.Mode, ec.Svc.SudoPass, ec.Svc.PasswordlessSudo, ec.CurrentAsUser)
 }
 
 // Privileged returns the spec-72 Layer C escalation primitive,

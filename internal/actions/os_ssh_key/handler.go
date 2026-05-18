@@ -551,7 +551,7 @@ var chownFn = os.Chown
 // own (existing tests already do via currentUsername).
 func writeAuthorizedKeys(performer actions.Performer, runner *security.Privileged, path string, lines []string, uid, gid int, createParentMode bool) error {
 	parent := filepath.Dir(path)
-	pOpts := actions.PerformerOpts{Become: true}
+	pOpts := actions.PerformerOpts{}
 	if e := performer.Mkdir(parent, sshDirMode, pOpts); e.Err != nil {
 		return fmt.Errorf("mkdir %s: %w", parent, e.Err)
 	}
@@ -569,7 +569,7 @@ func writeAuthorizedKeys(performer actions.Performer, runner *security.Privilege
 		content += "\n"
 	}
 
-	if e := performer.WriteFile(path, []byte(content), authorizedMode, actions.PerformerOpts{Become: true, ExplicitMode: true}); e.Err != nil {
+	if e := performer.WriteFile(path, []byte(content), authorizedMode, actions.PerformerOpts{ExplicitMode: true}); e.Err != nil {
 		return fmt.Errorf("write %s: %w", path, e.Err)
 	}
 	if uid >= 0 && gid >= 0 {

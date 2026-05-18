@@ -168,7 +168,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		if ctx.Mode() == actions.ModeApply {
 			result.ReverseData = filehandler.CaptureReverseInfo(dest, "")
 		}
-		eff := ctx.Effects().Symlink(target, dest, actions.PerformerOpts{Become: step.ShouldBecome()})
+		eff := ctx.Effects().Symlink(target, dest, actions.PerformerOpts{})
 		if eff.Err != nil {
 			result.Failed = true
 			return result, eff.Err
@@ -236,7 +236,6 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 	}
 
 	eff := ctx.Effects().CopyFile(src, dest, mode, actions.PerformerOpts{
-		Become:       step.ShouldBecome(),
 		ExplicitMode: cp.Mode != "",
 	})
 	if eff.Err != nil {
@@ -254,7 +253,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 
 	// Ownership after content is in place.
 	if cp.Owner != "" || cp.Group != "" {
-		own := ctx.Effects().Chown(dest, cp.Owner, cp.Group, actions.PerformerOpts{Become: step.ShouldBecome()})
+		own := ctx.Effects().Chown(dest, cp.Owner, cp.Group, actions.PerformerOpts{})
 		if own.Err != nil {
 			result.Failed = true
 			return result, fmt.Errorf("failed to set ownership: %w", own.Err)

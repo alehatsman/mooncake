@@ -369,7 +369,7 @@ func renderCronFile(r renderedCron) string {
 }
 
 func applyPlan(performer actions.Performer, plan cronPlan) error {
-	pOpts := actions.PerformerOpts{Become: true}
+	pOpts := actions.PerformerOpts{}
 	if plan.operation == "delete" {
 		if e := performer.Remove(plan.path, false, pOpts); e.Err != nil && !errors.Is(e.Err, fs.ErrNotExist) {
 			return fmt.Errorf("os.cron: remove %s: %w", plan.path, e.Err)
@@ -379,7 +379,7 @@ func applyPlan(performer actions.Performer, plan cronPlan) error {
 	if e := performer.Mkdir(cronPaths.dir, 0o755, pOpts); e.Err != nil {
 		return fmt.Errorf("os.cron: mkdir %s: %w", cronPaths.dir, e.Err)
 	}
-	if e := performer.WriteFile(plan.path, []byte(plan.wantContent), 0o644, actions.PerformerOpts{Become: true, ExplicitMode: true}); e.Err != nil {
+	if e := performer.WriteFile(plan.path, []byte(plan.wantContent), 0o644, actions.PerformerOpts{ExplicitMode: true}); e.Err != nil {
 		return fmt.Errorf("os.cron: write %s: %w", plan.path, e.Err)
 	}
 	return nil

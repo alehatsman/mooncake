@@ -394,9 +394,30 @@ user) now works universally across handlers, not just in
 `command` / `shell`. Previously most handlers interpreted
 `as_user: postgres` as "escalate to root" because the underlying
 escalator only knew about root. The Layer C primitive supports
-the named-user case via `sudo -u <name>`. Filesystem operations
-(write-as-named-user) still escalate to root and don't chown
-the resulting file — that's a follow-up if needed.
+the named-user case via `sudo -u <name>`.
+
+**Filesystem write-as-named-user** also works: `file.write` /
+`file.template` / `file.copy` / `os.cron` / `os.sysctl` /
+`os.ssh_key` with `as_user: postgres` produce files owned by
+postgres. The effects layer's `defaultPerformer` carries the
+bound `AsUser` and every sudo create-path (WriteFile, CopyFile,
+Mkdir, Touch, Symlink, Hardlink) appends a `chown <uid>:<gid>`
+clause to the same sudo invocation. The `Become` /
+`BecomeUser` fields on `PerformerOpts` (previously dead-and-
+vestigial) are removed; handler call sites that passed
+`Become: step.ShouldBecome()` collapse to just the remaining
+opts (Force, ExplicitMode).
+
+Caveat: if direct write succeeds (the non-sudo path), the file
+lands owned by whatever uid mooncake itself is running as — not
+by the named AsUser target. We don't post-chown in that case
+because the most common scenario (mooncake-as-the-target-user
+writing to its own paths) doesn't need it, and surfacing a
+permission error for cross-user direct writes would be more
+confusing than the silent "ownership matches writer" today.
+Operators wanting strict ownership for a named user should also
+declare a path under a directory they don't own, which forces
+the sudo path and chown fires.
 
 Backward compatibility: zero protocol changes (peers.toml, agentd
 HTTP, daemon config); the work is structural and inside the executor.

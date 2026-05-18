@@ -397,7 +397,7 @@ func renderPersistFile(lines []string) string {
 }
 
 func applyPlan(performer actions.Performer, runner *security.Privileged, plan sysctlPlan, r renderedSysctl) error {
-	pOpts := actions.PerformerOpts{Become: true}
+	pOpts := actions.PerformerOpts{}
 	if plan.touchesFile {
 		if plan.wantContent == "" || !hasContentLines(plan.wantContent) {
 			// All managed lines removed — drop the file rather than
@@ -409,7 +409,7 @@ func applyPlan(performer actions.Performer, runner *security.Privileged, plan sy
 			if e := performer.Mkdir(filepath.Dir(sysctlPaths.persistFile), 0o755, pOpts); e.Err != nil {
 				return fmt.Errorf("os.sysctl: mkdir %s: %w", filepath.Dir(sysctlPaths.persistFile), e.Err)
 			}
-			if e := performer.WriteFile(sysctlPaths.persistFile, []byte(plan.wantContent), 0o644, actions.PerformerOpts{Become: true, ExplicitMode: true}); e.Err != nil {
+			if e := performer.WriteFile(sysctlPaths.persistFile, []byte(plan.wantContent), 0o644, actions.PerformerOpts{ExplicitMode: true}); e.Err != nil {
 				return fmt.Errorf("os.sysctl: write %s: %w", sysctlPaths.persistFile, e.Err)
 			}
 		}

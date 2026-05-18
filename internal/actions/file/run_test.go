@@ -205,7 +205,7 @@ func TestEffects_RoundTrip(t *testing.T) {
 		t.Errorf("Plan ctx Effects() mode = %v, want ModePlan", planEc.Effects().Mode())
 	}
 	// Ensure NewPerformer returns the same concrete type
-	custom := effects.NewPerformer(ec.Mode, "", false)
+	custom := effects.NewPerformer(ec.Mode, "", false, "")
 	if custom.Mode() != actions.ModeApply {
 		t.Errorf("NewPerformer mode = %v, want ModeApply", custom.Mode())
 	}

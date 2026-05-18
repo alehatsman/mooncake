@@ -314,7 +314,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 
 	mode := h.parseFileMode(file.Mode, defaultModeFor(state))
 	p := ctx.Effects()
-	opts := actions.PerformerOpts{Become: step.ShouldBecome(), Force: file.Force}
+	opts := actions.PerformerOpts{Force: file.Force}
 
 	primary, err := h.runState(ctx, ec, file, step, state, renderedPath, mode, p, opts)
 	if err != nil {

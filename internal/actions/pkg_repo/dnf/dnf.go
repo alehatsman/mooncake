@@ -324,8 +324,8 @@ func apply(performer actions.Performer, p plan_, r rendered_) error {
 	// All file ops go through the supplied Performer — its spec-69
 	// phase 5b try-direct-then-fallback makes Become: true work
 	// equally for /etc/yum.repos.d and tempdir-overridden test paths.
-	pOpts := actions.PerformerOpts{Become: true}
-	pOptsWithMode := actions.PerformerOpts{Become: true, ExplicitMode: true}
+	pOpts := actions.PerformerOpts{}
+	pOptsWithMode := actions.PerformerOpts{ExplicitMode: true}
 
 	if p.operation == "delete" {
 		if e := performer.Remove(p.repoPath, false, pOpts); e.Err != nil && !errors.Is(e.Err, fs.ErrNotExist) {

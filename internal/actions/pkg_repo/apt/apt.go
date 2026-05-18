@@ -317,8 +317,8 @@ func apply(performer actions.Performer, p plan_, r rendered_) error {
 	// The Performer (spec-69 phase 5b) tries the direct os.* first and
 	// only sudos on EACCES, so this works equally well under sudo
 	// against /etc and against a user-owned tempdir in tests.
-	pOpts := actions.PerformerOpts{Become: true}
-	pOptsWithMode := actions.PerformerOpts{Become: true, ExplicitMode: true}
+	pOpts := actions.PerformerOpts{}
+	pOptsWithMode := actions.PerformerOpts{ExplicitMode: true}
 
 	if p.operation == "delete" {
 		if e := performer.Remove(p.sourcesPath, false, pOpts); e.Err != nil && !errors.Is(e.Err, fs.ErrNotExist) {

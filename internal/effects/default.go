@@ -36,24 +36,41 @@ type defaultPerformer struct {
 	modeFn           ModeFunc
 	sudoPass         string
 	passwordlessSudo bool
+	// asUser is the step's bound AsUser, threaded in by
+	// ec.Effects() before the handler sees the Performer. Empty
+	// means "do not escalate"; "root"/"0" means sudo; "<name>"
+	// means sudo + chown the resulting file to <name>'s uid:gid
+	// so the named-user file.write / template / copy works as
+	// the operator expects. Spec-72 Layer C.
+	asUser string
 }
 
 // NewPerformer constructs an actions.Performer that performs real
 // filesystem operations in ModeApply and inspects state in ModePlan.
-// modeFn is called once per primitive to decide the path; sudoPass is
-// consulted when opts.Become is true. passwordlessSudo lets a NOPASSWD
-// operator skip configuring a password — runSudo then uses `sudo -n`.
-func NewPerformer(modeFn ModeFunc, sudoPass string, passwordlessSudo bool) actions.Performer {
-	return &defaultPerformer{modeFn: modeFn, sudoPass: sudoPass, passwordlessSudo: passwordlessSudo}
+// modeFn is called once per primitive to decide the path; sudoPass
+// is consulted when escalation is needed; passwordlessSudo lets a
+// NOPASSWD operator skip configuring a password — runSudo then uses
+// `sudo -n`. asUser is the step's bound AsUser (spec-72 Layer C):
+// empty → no escalation, "root"/"0" → sudo to root, "<name>" → sudo
+// to root + post-write chown to <name>.
+func NewPerformer(modeFn ModeFunc, sudoPass string, passwordlessSudo bool, asUser string) actions.Performer {
+	return &defaultPerformer{
+		modeFn:           modeFn,
+		sudoPass:         sudoPass,
+		passwordlessSudo: passwordlessSudo,
+		asUser:           asUser,
+	}
 }
 
 func (p *defaultPerformer) Mode() actions.Mode { return p.modeFn() }
 
-// becomeFallback (spec-69 phase 5b) is the "try direct first, sudo on
-// EACCES" pattern that lets handlers declare PerformerOpts{Become:
-// true} without paying a useless sudo wrap when the operation
-// actually succeeded under the current user's privileges. The
-// existing always-sudo path penalized two real cases:
+// becomeFallback (spec-69 phase 5b, spec-72 Layer C) is the "try
+// direct first, sudo on EACCES" pattern. The gating shifted from
+// per-call opts.Become to the per-step bound AsUser: a step that
+// didn't declare as_user gets no fallback (direct error propagates),
+// matching the "step is the source of truth" invariant.
+//
+// The pattern still amortises two real cases:
 //
 //   - tests pointing /etc-shaped paths at a t.TempDir() and asking
 //     for a sudo password they don't have configured;
@@ -61,16 +78,14 @@ func (p *defaultPerformer) Mode() actions.Mode { return p.modeFn() }
 //     running under a unit with User=root) paying the cost of a
 //     sudo -S wrap for every primitive.
 //
-// Pattern mirrors service/handler.go:writeFileWithPrivileges, which
-// has shipped this shape across the service-action code path for a
-// year. directErr is the result of the bare os.* / direct call;
-// sudoCmd is the shell-quoted command to retry under sudo when
-// fallback is appropriate.
-func (p *defaultPerformer) becomeFallback(opts actions.PerformerOpts, directErr error, sudoCmd string) error {
+// directErr is the result of the bare os.* / direct call; sudoCmd
+// is the shell-quoted command to retry under sudo when fallback is
+// appropriate.
+func (p *defaultPerformer) becomeFallback(_ actions.PerformerOpts, directErr error, sudoCmd string) error {
 	if directErr == nil {
 		return nil
 	}
-	if !opts.Become || !os.IsPermission(directErr) {
+	if p.asUser == "" || !os.IsPermission(directErr) {
 		return directErr
 	}
 	// Already root: direct failed for a reason sudo can't help with.
@@ -78,6 +93,40 @@ func (p *defaultPerformer) becomeFallback(opts actions.PerformerOpts, directErr 
 		return directErr
 	}
 	return p.runSudo(sudoCmd)
+}
+
+// chownSpec returns the "uid:gid" string for the bound AsUser (or
+// empty when no chown is needed — empty AsUser or root/0). Used by
+// the sudo paths in WriteFile / CopyFile / Mkdir / Touch to chown
+// the resulting path to the named user after writing as root. Resolved
+// once per call (rare enough that caching isn't worth the complexity).
+func (p *defaultPerformer) chownSpec() string {
+	if p.asUser == "" || p.asUser == "root" || p.asUser == "0" {
+		return ""
+	}
+	u, err := user.Lookup(p.asUser)
+	if err != nil {
+		// Lookup failure surfaces as an empty spec; the sudo path
+		// completes without chown and the file lands owned by root.
+		// Operator will see the mis-ownership and can fix the user
+		// resolution before re-applying. We prefer this to failing
+		// the whole apply because the write itself succeeded.
+		return ""
+	}
+	return u.Uid + ":" + u.Gid
+}
+
+// withChown appends a `&& chown uid:gid <path>` clause to a sudo
+// command line when the bound AsUser is a named non-root user.
+// Returns the original sudoCmd untouched for AsUser="" / "root" / "0".
+// path is the destination the chown should target — the sudo command
+// is assumed to have already moved/created the file at that location.
+func (p *defaultPerformer) withChown(sudoCmd, path string) string {
+	spec := p.chownSpec()
+	if spec == "" {
+		return sudoCmd
+	}
+	return sudoCmd + " && chown " + spec + " " + shellQuote(path)
 }
 
 // ----------------------------------------------------------------------
@@ -111,14 +160,17 @@ func (p *defaultPerformer) Mkdir(path string, mode os.FileMode, opts actions.Per
 		return e
 	}
 
-	// Try direct first; fall back to sudo on EACCES when Become is
-	// set. The fallback combines mkdir + chmod in one shell so the
-	// inverse intent (idempotent dir at the requested mode) is
-	// atomic from sudo's perspective.
+	// Try direct first; fall back to sudo on EACCES when the bound
+	// AsUser indicates escalation is wanted (spec-72 Layer C). The
+	// fallback combines mkdir + chmod in one shell so the inverse
+	// intent (idempotent dir at the requested mode) is atomic from
+	// sudo's perspective. When AsUser is a named non-root user,
+	// withChown appends a chown clause so the new directory lands
+	// owned by that user — not by root.
 	mkdirErr := os.MkdirAll(path, mode)
 	if err := p.becomeFallback(opts, mkdirErr,
-		fmt.Sprintf("mkdir -p -m %s %s && chmod %s %s",
-			formatMode(mode), shellQuote(path), formatMode(mode), shellQuote(path)),
+		p.withChown(fmt.Sprintf("mkdir -p -m %s %s && chmod %s %s",
+			formatMode(mode), shellQuote(path), formatMode(mode), shellQuote(path)), path),
 	); err != nil {
 		e.Err = fmt.Errorf("mkdir %s: %w", path, err)
 		return e
@@ -143,7 +195,7 @@ func (p *defaultPerformer) Mkdir(path string, mode os.FileMode, opts actions.Per
 // WriteFile
 // ----------------------------------------------------------------------
 
-func (p *defaultPerformer) WriteFile(path string, content []byte, mode os.FileMode, opts actions.PerformerOpts) actions.Effect {
+func (p *defaultPerformer) WriteFile(path string, content []byte, mode os.FileMode, _ actions.PerformerOpts) actions.Effect {
 	e := actions.Effect{Action: actions.ActionWriteFile, Path: path}
 
 	info, err := os.Stat(path)
@@ -184,19 +236,21 @@ func (p *defaultPerformer) WriteFile(path string, content []byte, mode os.FileMo
 		}
 	}
 
-	// Try direct first; fall back to sudo on EACCES when Become is set.
-	// The sudo path stages content in a user-writable tempfile and
-	// then mv+chmod under sudo (the user's process can't write
-	// directly into /etc/foo, but it CAN write into /tmp and ask sudo
-	// to move it). This matches the historical Become path; only the
-	// gating changes.
+	// Try direct first; fall back to sudo on EACCES when the bound
+	// AsUser indicates escalation is wanted (spec-72 Layer C). The
+	// sudo path stages content in a user-writable tempfile and then
+	// mv+chmod under sudo (the user's process can't write directly
+	// into /etc/foo, but it CAN write into /tmp and ask sudo to move
+	// it). When AsUser is a named non-root user, the sudo command
+	// also chowns the destination to that user's uid:gid so the file
+	// lands owned by the operator's intended target — not by root.
 	// #nosec G306 — mode is caller-controlled; this is a provisioning tool.
 	directErr := os.WriteFile(path, content, mode)
 	if directErr == nil {
 		e.Performed = true
 		return e
 	}
-	if !opts.Become || !os.IsPermission(directErr) || os.Geteuid() == 0 {
+	if p.asUser == "" || !os.IsPermission(directErr) || os.Geteuid() == 0 {
 		e.Err = fmt.Errorf("write %s: %w", path, directErr)
 		return e
 	}
@@ -215,6 +269,7 @@ func (p *defaultPerformer) WriteFile(path string, content []byte, mode os.FileMo
 	}
 	cmd := fmt.Sprintf("mv %s %s && chmod %s %s",
 		shellQuote(tmpPath), shellQuote(path), formatMode(mode), shellQuote(path))
+	cmd = p.withChown(cmd, path)
 	if err := p.runSudo(cmd); err != nil {
 		e.Err = err
 		return e
@@ -339,11 +394,13 @@ func (p *defaultPerformer) CopyFile(src, dest string, mode os.FileMode, opts act
 		finalMode = destInfo.Mode().Perm()
 	}
 
-	if opts.Become {
-		// Stage the file under a path the unprivileged process can write,
-		// then sudo mv into place + chmod. Matches WriteFile's become path.
+	if p.asUser != "" {
+		// Stage the file under a path the unprivileged process can
+		// write, then sudo mv into place + chmod (+ chown for named
+		// users). Matches WriteFile's become path.
 		cmd := fmt.Sprintf("mv %s %s && chmod %s %s",
 			shellQuote(tmpFile), shellQuote(dest), formatMode(finalMode), shellQuote(dest))
+		cmd = p.withChown(cmd, dest)
 		if err := p.runSudo(cmd); err != nil {
 			e.Err = err
 			return e
@@ -453,7 +510,7 @@ func (p *defaultPerformer) Symlink(target, path string, opts actions.PerformerOp
 	}
 
 	if _, statErr := os.Lstat(path); statErr == nil {
-		if opts.Become {
+		if p.asUser != "" {
 			if err := p.runSudo("rm -f " + shellQuote(path)); err != nil {
 				e.Err = err
 				return e
@@ -464,8 +521,14 @@ func (p *defaultPerformer) Symlink(target, path string, opts actions.PerformerOp
 		}
 	}
 
-	if opts.Become {
+	if p.asUser != "" {
+		// `chown -h` (no-dereference) is the symlink-aware form so the
+		// link itself is chowned, not the target. Bundled into the same
+		// sudo invocation when AsUser is a named non-root user.
 		cmd := fmt.Sprintf("ln -s %s %s", shellQuote(target), shellQuote(path))
+		if spec := p.chownSpec(); spec != "" {
+			cmd += " && chown -h " + spec + " " + shellQuote(path)
+		}
 		if err := p.runSudo(cmd); err != nil {
 			e.Err = err
 			return e
@@ -478,7 +541,7 @@ func (p *defaultPerformer) Symlink(target, path string, opts actions.PerformerOp
 	return e
 }
 
-func (p *defaultPerformer) Hardlink(target, path string, opts actions.PerformerOpts) actions.Effect {
+func (p *defaultPerformer) Hardlink(target, path string, _ actions.PerformerOpts) actions.Effect {
 	e := actions.Effect{Action: actions.ActionHardlink, Path: path}
 
 	targetInfo, err := os.Stat(target)
@@ -508,7 +571,7 @@ func (p *defaultPerformer) Hardlink(target, path string, opts actions.PerformerO
 	}
 
 	if _, statErr := os.Lstat(path); statErr == nil {
-		if opts.Become {
+		if p.asUser != "" {
 			if err := p.runSudo("rm -f " + shellQuote(path)); err != nil {
 				e.Err = err
 				return e
@@ -519,8 +582,9 @@ func (p *defaultPerformer) Hardlink(target, path string, opts actions.PerformerO
 		}
 	}
 
-	if opts.Become {
+	if p.asUser != "" {
 		cmd := fmt.Sprintf("ln %s %s", shellQuote(target), shellQuote(path))
+		cmd = p.withChown(cmd, path)
 		if err := p.runSudo(cmd); err != nil {
 			e.Err = err
 			return e
@@ -537,7 +601,7 @@ func (p *defaultPerformer) Hardlink(target, path string, opts actions.PerformerO
 // Touch
 // ----------------------------------------------------------------------
 
-func (p *defaultPerformer) Touch(path string, mode os.FileMode, opts actions.PerformerOpts) actions.Effect {
+func (p *defaultPerformer) Touch(path string, mode os.FileMode, _ actions.PerformerOpts) actions.Effect {
 	e := actions.Effect{Action: actions.ActionTouch, Path: path}
 
 	_, statErr := os.Stat(path)
@@ -556,9 +620,10 @@ func (p *defaultPerformer) Touch(path string, mode os.FileMode, opts actions.Per
 		return e
 	}
 
-	if opts.Become {
+	if p.asUser != "" {
 		cmd := fmt.Sprintf("touch %s && chmod %s %s",
 			shellQuote(path), formatMode(mode), shellQuote(path))
+		cmd = p.withChown(cmd, path)
 		if err := p.runSudo(cmd); err != nil {
 			e.Err = err
 			return e

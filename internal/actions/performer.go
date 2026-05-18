@@ -54,26 +54,23 @@ func (e Effect) Changed() bool {
 	return e.Performed || e.WouldChange
 }
 
-// PerformerOpts carries optional flags that apply to most Performer calls.
-//
-// Become: when set, the underlying primitive runs via sudo (with the
-// password supplied to the Performer implementation). Handlers read
-// Step.Become and pass it through; they should not shell out to sudo
-// themselves.
+// PerformerOpts carries optional flags that apply to most Performer
+// calls. Become/BecomeUser were removed in spec-72 Layer C: the
+// step's AsUser is bound onto the Performer at ec.Effects() time and
+// drives escalation transparently, so handlers no longer pass a
+// per-call become flag.
 //
 // Force: when set, Symlink and Hardlink replace an existing path that
 // is not already of the correct link type (e.g. a directory). Without
 // Force, those primitives return an error in that case.
+//
+// ExplicitMode signals that the caller's `mode` was supplied directly
+// (e.g. `file.copy: mode: '0755'`) rather than derived from the source
+// file. WriteFile/CopyFile use this to decide whether to enforce the
+// requested mode on an existing dest or preserve the dest's current
+// mode (the WriteFile-compatible round-trip default).
 type PerformerOpts struct {
-	Become     bool
-	BecomeUser string
-	Force      bool
-	// ExplicitMode signals that the caller's `mode` was supplied
-	// directly (e.g. `file.copy: mode: '0755'`) rather than derived
-	// from the source file. WriteFile/CopyFile use this to decide
-	// whether to enforce the requested mode on an existing dest or
-	// preserve the dest's current mode (the WriteFile-compatible
-	// round-trip default).
+	Force        bool
 	ExplicitMode bool
 }
 

@@ -539,11 +539,11 @@ func writeFstab(performer actions.Performer, content string, backup bool) error 
 			return err
 		}
 	}
-	pOpts := actions.PerformerOpts{Become: true}
+	pOpts := actions.PerformerOpts{}
 	if e := performer.Mkdir(filepath.Dir(mountPaths.fstab), 0o755, pOpts); e.Err != nil {
 		return fmt.Errorf("os.mount: mkdir %s: %w", filepath.Dir(mountPaths.fstab), e.Err)
 	}
-	if e := performer.WriteFile(mountPaths.fstab, []byte(content), 0o644, actions.PerformerOpts{Become: true, ExplicitMode: true}); e.Err != nil {
+	if e := performer.WriteFile(mountPaths.fstab, []byte(content), 0o644, actions.PerformerOpts{ExplicitMode: true}); e.Err != nil {
 		return fmt.Errorf("os.mount: write %s: %w", mountPaths.fstab, e.Err)
 	}
 	return nil
@@ -562,7 +562,7 @@ func snapshotFstab(performer actions.Performer) error {
 	}
 	ts := clockNow().UTC().Format("20060102T150405Z")
 	dest := mountPaths.fstab + ".bak." + ts
-	if e := performer.WriteFile(dest, data, 0o644, actions.PerformerOpts{Become: true, ExplicitMode: true}); e.Err != nil {
+	if e := performer.WriteFile(dest, data, 0o644, actions.PerformerOpts{ExplicitMode: true}); e.Err != nil {
 		return fmt.Errorf("os.mount: snapshot write %s: %w", dest, e.Err)
 	}
 	return nil
