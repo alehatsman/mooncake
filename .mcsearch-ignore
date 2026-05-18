@@ -1,0 +1,12 @@
+docs-next/
+docs-working/
+testing-next/
+examples/
+*.json
+mooncake.d.ts
+GO_GUIDE.md
+LLM_GUIDE.md
+VISION.md
+BOTTLENECK.md
+llms.txt
+*.out
