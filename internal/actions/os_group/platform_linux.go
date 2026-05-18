@@ -53,8 +53,6 @@ func applyPlanLinux(runner actions.PrivilegedRunner, plan computedPlan) error {
 	switch plan.operation {
 	case "create":
 		return runLinuxCmd(runner, "groupadd", plan.createArgs...)
-	case "modify":
-		return runLinuxCmd(runner, "groupmod", plan.modifyArgs...)
 	case "remove":
 		return runLinuxCmd(runner, "groupdel", plan.removeArgs...)
 	}

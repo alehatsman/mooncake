@@ -77,9 +77,15 @@ tasks:
     desc: Build and install mooncake to /usr/local/bin
     cmds:
       - task: build
-      - sudo cp {{.BIN}} /usr/local/bin/mooncake
-      - sudo chmod +x /usr/local/bin/mooncake
+      # install(1) unlinks-then-creates atomically, so this works even
+      # when the target is in use by a running agentd ("Text file busy").
+      - sudo install -m 0755 {{.BIN}} /usr/local/bin/mooncake
       - echo "✓ Installed /usr/local/bin/mooncake"
+      - cmd: |
+          if command -v systemctl >/dev/null 2>&1 && systemctl is-active --quiet mooncake-agentd 2>/dev/null; then
+            sudo systemctl restart mooncake-agentd && echo "✓ Restarted mooncake-agentd"
+          fi
+        silent: true
 
   clean:
     desc: Remove build artifacts
