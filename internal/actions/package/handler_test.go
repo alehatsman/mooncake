@@ -491,7 +491,7 @@ func TestHandler_BuildInstallCommand(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cmd := h.buildInstallCommand(tt.manager, tt.pkg, tt.upgrade, tt.extra)
+			cmd := h.buildInstallCommand(tt.manager, tt.pkg, tt.upgrade, false, tt.extra)
 			if !tt.check(cmd) {
 				t.Errorf("buildInstallCommand() = %v, check failed", cmd)
 			}
@@ -560,7 +560,7 @@ func TestHandler_BuildRemoveCommand(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cmd := h.buildRemoveCommand(tt.manager, tt.pkg, tt.extra)
+			cmd := h.buildRemoveCommand(tt.manager, tt.pkg, false, tt.extra)
 			if !tt.check(cmd) {
 				t.Errorf("buildRemoveCommand() = %v, check failed", cmd)
 			}
@@ -1150,7 +1150,7 @@ func TestHandler_RemovePackages(t *testing.T) {
 	packages := []string{"test-package"}
 
 	// Test remove packages (will fail but tests code path)
-	result, err := h.removePackages(ctx, "apt", packages, nil, false)
+	result, err := h.removePackages(ctx, "apt", packages, false, nil, false)
 	if result != nil {
 		t.Logf("removePackages result: changed=%v, err=%v", result.(*executor.Result).Changed, err)
 	} else {
@@ -1180,7 +1180,7 @@ func TestHandler_IsPackageInstalled_NotInstalled(t *testing.T) {
 	ctx := newMockExecutionContext()
 
 	// Test with a package that definitely doesn't exist
-	installed, err := h.isPackageInstalled(ctx, "apt", "nonexistent-package-xyz-123")
+	installed, err := h.isPackageInstalled(ctx, "apt", "nonexistent-package-xyz-123", false)
 	if err != nil {
 		t.Logf("isPackageInstalled error (may be expected): %v", err)
 	}
@@ -1196,7 +1196,7 @@ func TestHandler_BuildInstallCommand_AllManagers(t *testing.T) {
 
 	for _, manager := range managers {
 		t.Run("install_with_"+manager, func(t *testing.T) {
-			cmd := h.buildInstallCommand(manager, "testpkg", false, nil)
+			cmd := h.buildInstallCommand(manager, "testpkg", false, false, nil)
 			if len(cmd) == 0 {
 				t.Errorf("buildInstallCommand(%s) returned empty command", manager)
 			}
@@ -1204,7 +1204,7 @@ func TestHandler_BuildInstallCommand_AllManagers(t *testing.T) {
 		})
 
 		t.Run("install_upgrade_with_"+manager, func(t *testing.T) {
-			cmd := h.buildInstallCommand(manager, "testpkg", true, nil)
+			cmd := h.buildInstallCommand(manager, "testpkg", true, false, nil)
 			if len(cmd) == 0 {
 				t.Errorf("buildInstallCommand(%s, upgrade) returned empty command", manager)
 			}
@@ -1220,7 +1220,7 @@ func TestHandler_BuildRemoveCommand_AllManagers(t *testing.T) {
 
 	for _, manager := range managers {
 		t.Run("remove_with_"+manager, func(t *testing.T) {
-			cmd := h.buildRemoveCommand(manager, "testpkg", nil)
+			cmd := h.buildRemoveCommand(manager, "testpkg", false, nil)
 			if len(cmd) == 0 {
 				t.Errorf("buildRemoveCommand(%s) returned empty command", manager)
 			}
@@ -1236,7 +1236,7 @@ func TestHandler_InstallPackages(t *testing.T) {
 	packages := []string{"test-package"}
 
 	// Test install packages (will fail but tests code path)
-	result, err := h.installPackages(ctx, "apt", packages, false, nil, false)
+	result, err := h.installPackages(ctx, "apt", packages, false, false, nil, false)
 	if result != nil {
 		t.Logf("installPackages result: changed=%v, err=%v", result.(*executor.Result).Changed, err)
 	} else {
@@ -1336,5 +1336,164 @@ func TestHandler_DetectWindowsPackageManager_Coverage(t *testing.T) {
 		t.Logf("detectWindowsPackageManager() error (may be expected): %v", err)
 	} else {
 		t.Logf("Detected Windows package manager: %s", manager)
+	}
+}
+
+// TestHandler_Validate_Cask verifies that cask: true is accepted with
+// manager: brew (or empty manager) and rejected with any other manager.
+func TestHandler_Validate_Cask(t *testing.T) {
+	h := &Handler{}
+
+	tests := []struct {
+		name    string
+		step    *config.Step
+		wantErr bool
+		errMsg  string
+	}{
+		{
+			name: "cask with manager brew",
+			step: &config.Step{
+				Pkg: &config.Package{Name: "docker", Manager: "brew", Cask: true},
+			},
+			wantErr: false,
+		},
+		{
+			name: "cask with empty manager (auto-detect)",
+			step: &config.Step{
+				Pkg: &config.Package{Name: "docker", Cask: true},
+			},
+			wantErr: false,
+		},
+		{
+			name: "cask with manager apt (invalid)",
+			step: &config.Step{
+				Pkg: &config.Package{Name: "docker", Manager: "apt", Cask: true},
+			},
+			wantErr: true,
+			errMsg:  "cask: true requires manager: brew",
+		},
+		{
+			name: "cask false with apt (fine)",
+			step: &config.Step{
+				Pkg: &config.Package{Name: "vim", Manager: "apt"},
+			},
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := h.Validate(tt.step)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Validate() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if tt.wantErr && tt.errMsg != "" {
+				if err == nil || !strings.Contains(err.Error(), tt.errMsg) {
+					t.Errorf("Validate() error = %v, want error containing %q", err, tt.errMsg)
+				}
+			}
+		})
+	}
+}
+
+// TestHandler_BuildInstallCommand_Cask verifies brew --cask flag is injected
+// for the install path and absent for formulae.
+func TestHandler_BuildInstallCommand_Cask(t *testing.T) {
+	h := &Handler{}
+
+	caskCmd := h.buildInstallCommand(pmBrew, "docker", false, true, nil)
+	if len(caskCmd) < 3 {
+		t.Fatalf("brew cask install command too short: %v", caskCmd)
+	}
+	if caskCmd[0] != "brew" || caskCmd[1] != "install" || caskCmd[2] != "--cask" {
+		t.Errorf("brew cask install = %v; want [brew install --cask docker]", caskCmd)
+	}
+	if caskCmd[len(caskCmd)-1] != "docker" {
+		t.Errorf("package name not last: %v", caskCmd)
+	}
+
+	formulaCmd := h.buildInstallCommand(pmBrew, "jq", false, false, nil)
+	for _, arg := range formulaCmd {
+		if arg == "--cask" {
+			t.Errorf("formula install should not contain --cask: %v", formulaCmd)
+		}
+	}
+}
+
+// TestHandler_BuildRemoveCommand_Cask verifies brew --cask flag is injected
+// for the uninstall path.
+func TestHandler_BuildRemoveCommand_Cask(t *testing.T) {
+	h := &Handler{}
+
+	caskCmd := h.buildRemoveCommand(pmBrew, "docker", true, nil)
+	if len(caskCmd) < 3 {
+		t.Fatalf("brew cask uninstall command too short: %v", caskCmd)
+	}
+	if caskCmd[0] != "brew" || caskCmd[1] != "uninstall" || caskCmd[2] != "--cask" {
+		t.Errorf("brew cask uninstall = %v; want [brew uninstall --cask docker]", caskCmd)
+	}
+	if caskCmd[len(caskCmd)-1] != "docker" {
+		t.Errorf("package name not last: %v", caskCmd)
+	}
+
+	formulaCmd := h.buildRemoveCommand(pmBrew, "jq", false, nil)
+	for _, arg := range formulaCmd {
+		if arg == "--cask" {
+			t.Errorf("formula uninstall should not contain --cask: %v", formulaCmd)
+		}
+	}
+}
+
+// TestHandler_IsPackageInstalled_BrewCask verifies the check command switches
+// to `brew list --cask` when cask=true.
+func TestHandler_IsPackageInstalled_BrewCask(t *testing.T) {
+	h := &Handler{}
+	ctx := newMockExecutionContext()
+
+	// nonexistent cask — brew list --cask will return non-zero
+	installed, err := h.isPackageInstalled(ctx, pmBrew, "definitely-not-a-cask-xyz", true)
+	if err != nil {
+		t.Logf("isPackageInstalled brew cask error (expected): %v", err)
+	}
+	if installed {
+		t.Error("nonexistent cask reported as installed")
+	}
+}
+
+// TestHandler_Reverse_Cask verifies that Reverse propagates Cask so the
+// undo step reinstates or removes through the same channel.
+func TestHandler_Reverse_Cask(t *testing.T) {
+	h := &Handler{}
+
+	step := &config.Step{
+		Pkg: &config.Package{
+			Names:   []string{"docker"},
+			Manager: pmBrew,
+			Cask:    true,
+			State:   statePresent,
+		},
+	}
+
+	result := executor.NewResult()
+	result.ReverseData = &PkgReverseInfo{
+		AppliedState: statePresent,
+		Manager:      pmBrew,
+		Cask:         true,
+		Mutated:      []string{"docker"},
+	}
+
+	rev, err := h.Reverse(nil, step, result)
+	if err != nil {
+		t.Fatalf("Reverse() error: %v", err)
+	}
+	if rev == nil || rev.Pkg == nil {
+		t.Fatal("Reverse() returned nil step")
+	}
+	if !rev.Pkg.Cask {
+		t.Error("Reverse step should have Cask=true")
+	}
+	if rev.Pkg.State != stateAbsent {
+		t.Errorf("Reverse step state = %q, want %q", rev.Pkg.State, stateAbsent)
 	}
 }

@@ -148,6 +148,11 @@ func (h *Handler) Validate(step *config.Step) error {
 		return fmt.Errorf("state must be one of: present, absent, latest (got %q)", pkg.State)
 	}
 
+	// cask: true is only meaningful for Homebrew
+	if pkg.Cask && pkg.Manager != "" && pkg.Manager != pmBrew {
+		return fmt.Errorf("cask: true requires manager: brew (got %q)", pkg.Manager)
+	}
+
 	return nil
 }
 
@@ -344,13 +349,13 @@ func (h *Handler) runCmd(ec *executor.ExecutionContext, become bool, cmdArgs []s
 //
 // Behavior: partition into existing vs. to-install via per-package check,
 // then issue a single batched manager invocation for the to-install set.
-func (h *Handler) installPackages(ec *executor.ExecutionContext, manager string, packages []string, upgrade bool, extra []string, become bool) (actions.Result, error) {
+func (h *Handler) installPackages(ec *executor.ExecutionContext, manager string, packages []string, upgrade bool, cask bool, extra []string, become bool) (actions.Result, error) {
 	result := executor.NewResult()
 
 	var toInstall, existingPkgs []string
 
 	for _, pkg := range packages {
-		installed, err := h.isPackageInstalled(ec, manager, pkg)
+		installed, err := h.isPackageInstalled(ec, manager, pkg, cask)
 		if err != nil {
 			return nil, fmt.Errorf("failed to check if package %q is installed: %w", pkg, err)
 		}
@@ -376,6 +381,7 @@ func (h *Handler) installPackages(ec *executor.ExecutionContext, manager string,
 	result.ReverseData = &PkgReverseInfo{
 		AppliedState: captured,
 		Manager:      manager,
+		Cask:         cask,
 		Mutated:      append([]string(nil), toInstall...),
 	}
 
@@ -413,7 +419,7 @@ func (h *Handler) installPackages(ec *executor.ExecutionContext, manager string,
 		return result, nil
 	}
 
-	cmdArgs := h.buildBatchInstallCommand(manager, toInstall, upgrade, extra)
+	cmdArgs := h.buildBatchInstallCommand(manager, toInstall, upgrade, cask, extra)
 	ec.Svc.Logger.Infof("  Installing packages: %s", strings.Join(toInstall, ", "))
 	ec.Svc.Logger.Debugf("    Command: %s", strings.Join(cmdArgs, " "))
 
@@ -438,13 +444,13 @@ func (h *Handler) installPackages(ec *executor.ExecutionContext, manager string,
 //
 // Behavior: filter out packages that aren't installed, then issue a single
 // batched manager invocation for the remaining set.
-func (h *Handler) removePackages(ec *executor.ExecutionContext, manager string, packages []string, extra []string, become bool) (actions.Result, error) {
+func (h *Handler) removePackages(ec *executor.ExecutionContext, manager string, packages []string, cask bool, extra []string, become bool) (actions.Result, error) {
 	result := executor.NewResult()
 
 	var toRemove []string
 
 	for _, pkg := range packages {
-		installed, err := h.isPackageInstalled(ec, manager, pkg)
+		installed, err := h.isPackageInstalled(ec, manager, pkg, cask)
 		if err != nil {
 			return nil, fmt.Errorf("failed to check if package %q is installed: %w", pkg, err)
 		}
@@ -464,6 +470,7 @@ func (h *Handler) removePackages(ec *executor.ExecutionContext, manager string, 
 	result.ReverseData = &PkgReverseInfo{
 		AppliedState: stateAbsent,
 		Manager:      manager,
+		Cask:         cask,
 		Mutated:      append([]string(nil), toRemove...),
 	}
 
@@ -495,7 +502,7 @@ func (h *Handler) removePackages(ec *executor.ExecutionContext, manager string, 
 		return result, nil
 	}
 
-	cmdArgs := h.buildBatchRemoveCommand(manager, toRemove, extra)
+	cmdArgs := h.buildBatchRemoveCommand(manager, toRemove, cask, extra)
 	ec.Svc.Logger.Infof("  Removing packages: %s", strings.Join(toRemove, ", "))
 	ec.Svc.Logger.Debugf("    Command: %s", strings.Join(cmdArgs, " "))
 
@@ -535,7 +542,7 @@ func (h *Handler) executeUpgrade(ec *executor.ExecutionContext, manager string, 
 }
 
 // isPackageInstalled checks if a package is installed.
-func (h *Handler) isPackageInstalled(ec *executor.ExecutionContext, manager, pkg string) (bool, error) {
+func (h *Handler) isPackageInstalled(ec *executor.ExecutionContext, manager, pkg string, cask bool) (bool, error) {
 	// Build check command based on package manager
 	var checkCmd []string
 
@@ -551,7 +558,11 @@ func (h *Handler) isPackageInstalled(ec *executor.ExecutionContext, manager, pkg
 	case pmApk:
 		checkCmd = []string{pmApk, "info", "-e", pkg}
 	case pmBrew:
-		checkCmd = []string{pmBrew, "list", pkg}
+		if cask {
+			checkCmd = []string{pmBrew, "list", "--cask", pkg}
+		} else {
+			checkCmd = []string{pmBrew, "list", pkg}
+		}
 	case pmPort:
 		checkCmd = []string{pmPort, "installed", pkg}
 	case pmChoco:
@@ -583,8 +594,8 @@ func (h *Handler) isPackageInstalled(ec *executor.ExecutionContext, manager, pkg
 // single-element slice — same arg ordering.
 //
 //nolint:dupl,unparam,unused // Test-only helper retained for backward compatibility
-func (h *Handler) buildInstallCommand(manager, pkg string, upgrade bool, extra []string) []string {
-	return h.buildBatchInstallCommand(manager, []string{pkg}, upgrade, extra)
+func (h *Handler) buildInstallCommand(manager, pkg string, upgrade bool, cask bool, extra []string) []string {
+	return h.buildBatchInstallCommand(manager, []string{pkg}, upgrade, cask, extra)
 }
 
 // buildBatchInstallCommand builds the install command for one or more packages.
@@ -596,9 +607,9 @@ func (h *Handler) buildInstallCommand(manager, pkg string, upgrade bool, extra [
 // the pre-check missed something concurrent.
 //
 //nolint:unparam // upgrade parameter preserved for future use (no-op today)
-func (h *Handler) buildBatchInstallCommand(manager string, pkgs []string, upgrade bool, extra []string) []string {
+func (h *Handler) buildBatchInstallCommand(manager string, pkgs []string, upgrade bool, cask bool, extra []string) []string {
 	_ = upgrade
-	base := installCommandBase(manager)
+	base := installCommandBase(manager, cask)
 	cmd := make([]string, 0, len(base)+len(extra)+len(pkgs))
 	cmd = append(cmd, base...)
 	cmd = append(cmd, extra...)
@@ -611,7 +622,7 @@ func (h *Handler) buildBatchInstallCommand(manager string, pkgs []string, upgrad
 // Note: winget is intentionally absent here. winget does not batch multiple
 // packages in a single invocation when using --id (the safe, exact-match
 // flag), so installPackages handles it per-package via buildWingetCommand.
-func installCommandBase(manager string) []string {
+func installCommandBase(manager string, cask bool) []string {
 	switch manager {
 	case pmApt:
 		return []string{"apt-get", "install", "-y"}
@@ -626,6 +637,9 @@ func installCommandBase(manager string) []string {
 	case pmApk:
 		return []string{pmApk, "add"}
 	case pmBrew:
+		if cask {
+			return []string{pmBrew, "install", "--cask"}
+		}
 		return []string{pmBrew, "install"}
 	case pmPort:
 		return []string{pmPort, "install"}
@@ -662,13 +676,13 @@ func buildWingetCommand(verb, pkg string, extra []string) []string {
 // buildBatchRemoveCommand.
 //
 //nolint:dupl,unused // Test-only helper retained for backward compatibility
-func (h *Handler) buildRemoveCommand(manager, pkg string, extra []string) []string {
-	return h.buildBatchRemoveCommand(manager, []string{pkg}, extra)
+func (h *Handler) buildRemoveCommand(manager, pkg string, cask bool, extra []string) []string {
+	return h.buildBatchRemoveCommand(manager, []string{pkg}, cask, extra)
 }
 
 // buildBatchRemoveCommand builds the remove command for one or more packages.
-func (h *Handler) buildBatchRemoveCommand(manager string, pkgs []string, extra []string) []string {
-	base := removeCommandBase(manager)
+func (h *Handler) buildBatchRemoveCommand(manager string, pkgs []string, cask bool, extra []string) []string {
+	base := removeCommandBase(manager, cask)
 	cmd := make([]string, 0, len(base)+len(extra)+len(pkgs))
 	cmd = append(cmd, base...)
 	cmd = append(cmd, extra...)
@@ -678,7 +692,7 @@ func (h *Handler) buildBatchRemoveCommand(manager string, pkgs []string, extra [
 
 // removeCommandBase returns the manager-specific remove command prefix.
 // winget is handled per-package via buildWingetCommand (see installCommandBase).
-func removeCommandBase(manager string) []string {
+func removeCommandBase(manager string, cask bool) []string {
 	switch manager {
 	case pmApt:
 		return []string{"apt-get", "remove", "-y"}
@@ -693,6 +707,9 @@ func removeCommandBase(manager string) []string {
 	case pmApk:
 		return []string{pmApk, "del"}
 	case pmBrew:
+		if cask {
+			return []string{pmBrew, "uninstall", "--cask"}
+		}
 		return []string{pmBrew, "uninstall"}
 	case pmPort:
 		return []string{pmPort, "uninstall"}
@@ -809,9 +826,9 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 
 	switch state {
 	case statePresent, stateLatest:
-		return h.installPackages(ec, manager, packages, state == stateLatest, pkg.Extra, step.ShouldBecome())
+		return h.installPackages(ec, manager, packages, state == stateLatest, pkg.Cask, pkg.Extra, step.ShouldBecome())
 	case stateAbsent:
-		return h.removePackages(ec, manager, packages, pkg.Extra, step.ShouldBecome())
+		return h.removePackages(ec, manager, packages, pkg.Cask, pkg.Extra, step.ShouldBecome())
 	default:
 		return nil, fmt.Errorf("unsupported state: %s", state)
 	}
@@ -837,7 +854,7 @@ func (h *Handler) runPlan(ec *executor.ExecutionContext, manager, state string, 
 	// inspection short-circuits as soon as a change is detected, which
 	// matches the legacy Check behavior.
 	for _, name := range packages {
-		installed, err := h.isPackageInstalled(ec, manager, name)
+		installed, err := h.isPackageInstalled(ec, manager, name, pkg.Cask)
 		if err != nil {
 			result.Reason = fmt.Sprintf("check error: %v", err)
 			return result, nil

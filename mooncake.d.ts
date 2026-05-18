@@ -762,6 +762,7 @@ export interface OsUserAction {
  * @category system
  */
 export interface PkgAction {
+  cask?: boolean;
   extra?: string[];
   /**
    * Package manager (auto-detected if empty: apt, dnf, yum, pacman,
