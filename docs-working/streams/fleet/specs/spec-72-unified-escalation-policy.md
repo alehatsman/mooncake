@@ -386,8 +386,14 @@ What this means for the originally-scoped Phase 3 / Phase 4 /
 Phase 5: the 13-site audit (Phase 3) disappeared — those sites
 were deleted along with `runnerOrDefault`. The CI-blocker flip
 (Phase 5) shipped as part of Phase γ. The unit-knob test matrix
-(Phase 4) is independent of the escalation-primitive redesign and
-remains open as a separate hardening task.
+(Phase 4) shipped separately as
+`internal/fleet/install/unit_security_test.go`: five tests assert
+the spec-72 §4 directive matrix against the rendered system and
+user templates, with each forbidden/required directive carrying
+the F051 sub-bug it guards (F051-b for NNP, F051-d for
+PATH=%h/.local/bin, etc.). A future "hardening tweak" that
+re-adds NoNewPrivileges=true to the user unit fails CI before
+the change can land.
 
 **Latent feature unlocked**: `as_user: <name>` (non-root named
 user) now works universally across handlers, not just in
