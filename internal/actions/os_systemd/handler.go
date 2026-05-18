@@ -199,7 +199,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 	// /etc/systemd/system. Tests that stub the systemctl* hooks never
 	// reach this code path.
 	if ec, ok := ctx.(*executor.ExecutionContext); ok {
-		becomeRunner = security.BecomeRunner{SudoPass: ec.Svc.SudoPass}
+		becomeRunner = security.BecomeRunner{SudoPass: ec.Svc.SudoPass, PasswordlessSudo: ec.Svc.PasswordlessSudo}
 	}
 
 	rendered, err := renderSystemd(ctx, s)

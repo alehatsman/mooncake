@@ -104,7 +104,7 @@ type OsServiceReverseInfo struct {
 // every service call through sudo. The same pattern recurs in
 // writeFileWithSudo below.
 func BecomeAwareCommand(step config.Step, ec *executor.ExecutionContext, program string, args ...string) (*exec.Cmd, error) {
-	runner := security.BecomeRunner{SudoPass: ec.Svc.SudoPass}
+	runner := security.BecomeRunner{SudoPass: ec.Svc.SudoPass, PasswordlessSudo: ec.Svc.PasswordlessSudo}
 	cmd, err := runner.Command(step.ShouldBecome(), program, args...)
 	if err != nil {
 		return nil, WrapBecomeErrorAsSetup(err)
@@ -227,7 +227,7 @@ func WriteFileWithPrivileges(path string, content []byte, mode string, step conf
 // collapses that distinction. See the os_systemd writeAtomic helper
 // for the same shape.
 func writeFileWithSudo(path string, content []byte, mode os.FileMode, ec *executor.ExecutionContext) error {
-	runner := security.BecomeRunner{SudoPass: ec.Svc.SudoPass}
+	runner := security.BecomeRunner{SudoPass: ec.Svc.SudoPass, PasswordlessSudo: ec.Svc.PasswordlessSudo}
 
 	tmpFile, err := os.CreateTemp("", "mooncake-unit-*")
 	if err != nil {

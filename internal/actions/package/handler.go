@@ -337,7 +337,7 @@ func (h *Handler) runCmd(ec *executor.ExecutionContext, become bool, cmdArgs []s
 	if len(cmdArgs) == 0 {
 		return nil, fmt.Errorf("pkg.runCmd: cmdArgs must not be empty")
 	}
-	runner := security.BecomeRunner{SudoPass: ec.Svc.SudoPass}
+	runner := security.BecomeRunner{SudoPass: ec.Svc.SudoPass, PasswordlessSudo: ec.Svc.PasswordlessSudo}
 	cmd, err := runner.Command(become, cmdArgs[0], cmdArgs[1:]...)
 	if err != nil {
 		return nil, err
