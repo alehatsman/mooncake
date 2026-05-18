@@ -75,6 +75,14 @@ func fleetBootstrapCommand() *cli.Command {
 				Usage: "Replace an already-installed mooncake of a different version. " +
 					"Without this, version mismatch on the target errors out.",
 			},
+			&cli.BoolFlag{
+				Name: "user",
+				Usage: "Linux only: install the agentd as a user-scope systemd unit " +
+					"running as the SSH user (binary in ~/.local/bin, unit in " +
+					"~/.config/systemd/user/, token in ~/.config/mooncake/). " +
+					"Default is a system-scope unit running as root. " +
+					"Implies `loginctl enable-linger` so the unit survives logout.",
+			},
 		},
 		Action: fleetBootstrapAction,
 	}
@@ -118,6 +126,7 @@ func fleetBootstrapAction(c *cli.Context) error {
 		LocalBinary:       binPath,
 		ControllerVersion: version,
 		Upgrade:           c.Bool("upgrade"),
+		AsUser:            c.Bool("user"),
 		Writer:            w,
 	})
 	if err != nil {

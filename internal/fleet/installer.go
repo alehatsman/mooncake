@@ -29,6 +29,9 @@ import (
 //go:embed init/mooncake-agentd.service
 var systemdUnitTemplate []byte
 
+//go:embed init/mooncake-agentd.user.service
+var systemdUserUnitTemplate []byte
+
 //go:embed init/com.mooncake.agentd.plist
 var launchdPlistTemplate []byte
 
@@ -48,6 +51,13 @@ var launchdPlistTemplate []byte
 type Installer struct {
 	OS   string // "linux" / "darwin" / "windows" (from Session.DetectPlatform)
 	Port int    // agentd bind port; substituted into the unit body / task XML
+
+	// AsUser flips the Linux branch into user-scope mode:
+	// ~/.config/systemd/user/mooncake-agentd.service running as the SSH
+	// user, binary at ~/.local/bin/mooncake, token at
+	// ~/.config/mooncake/agentd.token, all `systemctl --user ...`
+	// invocations, no sudo. Ignored on macOS / Windows.
+	AsUser bool
 
 	// BinaryPath is the absolute path of mooncake.exe on the remote.
 	// Windows-only — Linux/macOS bake the binary path into the unit
@@ -73,11 +83,19 @@ type Installer struct {
 // UnitPath returns the absolute path of the service-unit file on the
 // remote for this platform.
 //
-//	linux:  /etc/systemd/system/mooncake-agentd.service
-//	darwin: /Library/LaunchDaemons/com.mooncake.agentd.plist
+//	linux:           /etc/systemd/system/mooncake-agentd.service
+//	linux (--user):  ~/.config/systemd/user/mooncake-agentd.service
+//	darwin:          /Library/LaunchDaemons/com.mooncake.agentd.plist
+//
+// The Linux user path is returned as a tilde-prefixed string; callers
+// resolve $HOME on the remote (sftp dest, sudo-less mv) — installer.go
+// never sees the remote home directory directly.
 func (i Installer) UnitPath() string {
 	switch i.OS {
 	case "linux":
+		if i.AsUser {
+			return "~/.config/systemd/user/mooncake-agentd.service"
+		}
 		return "/etc/systemd/system/mooncake-agentd.service"
 	case "darwin":
 		return "/Library/LaunchDaemons/com.mooncake.agentd.plist"
@@ -89,6 +107,45 @@ func (i Installer) UnitPath() string {
 			return i.StagingPath
 		}
 		return `agentd-task.xml` // relative — set explicitly in production
+	}
+	return ""
+}
+
+// BinaryInstallPath returns the absolute path the mooncake binary should
+// be installed at on the remote. Linux system mode: /usr/local/bin (root
+// owned, sudo-required mv). Linux user mode: ~/.local/bin (user owned,
+// no sudo). macOS: matches Linux system (root). Windows: see BinaryPath
+// field (per-user %LOCALAPPDATA% path, populated by the Windows branch).
+//
+// Tilde-prefixed paths are interpreted by the SSH remote shell during
+// install — installer.go itself never expands them.
+func (i Installer) BinaryInstallPath() string {
+	switch i.OS {
+	case "linux":
+		if i.AsUser {
+			return "~/.local/bin/mooncake"
+		}
+		return "/usr/local/bin/mooncake"
+	case "darwin":
+		return "/usr/local/bin/mooncake"
+	}
+	return ""
+}
+
+// TokenFilePath returns the absolute path of the bearer-token file on
+// the remote. Linux system mode and macOS: /etc/mooncake/agentd.token
+// (mode 600 owned by root, sudo to cat). Linux user mode:
+// ~/.config/mooncake/agentd.token (user-readable, no sudo). Windows
+// uses TokenPath field.
+func (i Installer) TokenFilePath() string {
+	switch i.OS {
+	case "linux":
+		if i.AsUser {
+			return "~/.config/mooncake/agentd.token"
+		}
+		return "/etc/mooncake/agentd.token"
+	case "darwin":
+		return "/etc/mooncake/agentd.token"
 	}
 	return ""
 }
@@ -123,7 +180,11 @@ func (i Installer) Render() ([]byte, error) {
 	}
 	switch i.OS {
 	case "linux":
-		return []byte(strings.ReplaceAll(string(systemdUnitTemplate), "{{PORT}}", strconv.Itoa(i.Port))), nil
+		tpl := systemdUnitTemplate
+		if i.AsUser {
+			tpl = systemdUserUnitTemplate
+		}
+		return []byte(strings.ReplaceAll(string(tpl), "{{PORT}}", strconv.Itoa(i.Port))), nil
 	case "darwin":
 		return []byte(strings.ReplaceAll(string(launchdPlistTemplate), "{{PORT}}", strconv.Itoa(i.Port))), nil
 	case "windows":
@@ -170,15 +231,21 @@ func (i Installer) Render() ([]byte, error) {
 	}
 }
 
-// EnableStartCmd is the sudo'd shell command that loads + enables + starts
-// the unit. Returned as a single string so the orchestrator's `sess.Run`
+// EnableStartCmd is the shell command that loads + enables + starts the
+// unit. Returned as a single string so the orchestrator's `sess.Run`
 // can pipe it through one SSH exec request rather than three round-trips.
 // Each platform's tool already supports "do all three" in one invocation.
+// On Linux: sudo'd in system mode, plain `systemctl --user` in user mode.
 func (i Installer) EnableStartCmd() string {
 	switch i.OS {
 	case "linux":
 		// daemon-reload picks up the new unit; enable --now both enables on
-		// boot AND starts immediately.
+		// boot AND starts immediately. --user variant uses the per-user
+		// systemd instance; loginctl enable-linger (called separately in
+		// bootstrap.go) keeps it alive across logout.
+		if i.AsUser {
+			return "systemctl --user daemon-reload && systemctl --user enable --now " + i.UnitName()
+		}
 		return "systemctl daemon-reload && systemctl enable --now " + i.UnitName()
 	case "darwin":
 		// bootstrap loads + starts; the plist's RunAtLoad=true makes the
@@ -202,6 +269,9 @@ func (i Installer) EnableStartCmd() string {
 func (i Installer) StopDisableCmd() string {
 	switch i.OS {
 	case "linux":
+		if i.AsUser {
+			return "systemctl --user disable --now " + i.UnitName() + " 2>/dev/null || true"
+		}
 		return "systemctl disable --now " + i.UnitName() + " 2>/dev/null || true"
 	case "darwin":
 		return "launchctl bootout system " + i.UnitPath() + " 2>/dev/null || true"
@@ -223,6 +293,9 @@ func (i Installer) IsActiveCmd() string {
 	case "linux":
 		// `is-active` exits 0 for active, 3 otherwise; we use the stdout
 		// string so a single match suffices.
+		if i.AsUser {
+			return "systemctl --user is-active " + i.UnitName() + " 2>/dev/null || true"
+		}
 		return "systemctl is-active " + i.UnitName() + " 2>/dev/null || true"
 	case "darwin":
 		// `launchctl print` is verbose but reliable; the absence of the

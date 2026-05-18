@@ -226,6 +226,68 @@ func TestInstaller_StopDisableCmd(t *testing.T) {
 	}
 }
 
+// TestInstaller_LinuxUserMode pins the user-scope branches added when
+// `mooncake fleet bootstrap --user` lands: unit lives under
+// ~/.config/systemd/user/, every systemctl call gets --user, the binary
+// goes to ~/.local/bin, and the token file is the per-user XDG path.
+// Each is a single line that's easy to "tidy" in a refactor and silently
+// regress the asymmetric-install bug this mode was added to fix.
+func TestInstaller_LinuxUserMode(t *testing.T) {
+	i := Installer{OS: "linux", Port: 7878, AsUser: true}
+
+	if got, want := i.UnitPath(), "~/.config/systemd/user/mooncake-agentd.service"; got != want {
+		t.Errorf("UnitPath = %q, want %q", got, want)
+	}
+	if got, want := i.BinaryInstallPath(), "~/.local/bin/mooncake"; got != want {
+		t.Errorf("BinaryInstallPath = %q, want %q", got, want)
+	}
+	if got, want := i.TokenFilePath(), "~/.config/mooncake/agentd.token"; got != want {
+		t.Errorf("TokenFilePath = %q, want %q", got, want)
+	}
+	for name, got := range map[string]string{
+		"EnableStartCmd": i.EnableStartCmd(),
+		"StopDisableCmd": i.StopDisableCmd(),
+		"IsActiveCmd":    i.IsActiveCmd(),
+	} {
+		if !strings.Contains(got, "systemctl --user") {
+			t.Errorf("%s missing 'systemctl --user': %q", name, got)
+		}
+	}
+}
+
+// TestInstaller_Render_LinuxUser pins the user-mode unit body: no
+// User=root (user units already run as the owning user; a stray User=
+// would either be ignored or rejected depending on systemd version),
+// no `--system` in ExecStart (would force /etc + /var paths the user
+// can't write), and %h-relative binary path so the unit renders
+// identically across machines.
+func TestInstaller_Render_LinuxUser(t *testing.T) {
+	body, err := Installer{OS: "linux", Port: 7878, AsUser: true}.Render()
+	if err != nil {
+		t.Fatalf("Render: %v", err)
+	}
+	s := string(body)
+	for _, want := range []string{
+		"ExecStart=%h/.local/bin/mooncake agentd --bind 0.0.0.0:7878",
+		"WantedBy=default.target",
+	} {
+		if !strings.Contains(s, want) {
+			t.Errorf("user unit missing %q:\n%s", want, s)
+		}
+	}
+	for _, unwanted := range []string{
+		"User=root",
+		"Group=root",
+		"--system",
+		"ReadWritePaths=",
+		"WantedBy=multi-user.target",
+	} {
+		if strings.Contains(s, unwanted) {
+			t.Errorf("user unit contains unexpected %q:\n%s", unwanted, s)
+		}
+	}
+}
+
 // TestParseVersion guards the version-string extraction at the heart of
 // the existing-install check. uname-style and cli-style outputs both have
 // the version as the last whitespace-separated token.

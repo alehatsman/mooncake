@@ -1,0 +1,27 @@
+[Unit]
+Description=Mooncake host daemon (agentd, user-scope)
+Documentation=https://github.com/alehatsman/mooncake
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+# %h expands to $HOME of the owning user — works under `systemctl --user`
+# and avoids baking an absolute /home/<user>/... path into the unit so
+# the same template renders identically across machines.
+ExecStart=%h/.local/bin/mooncake agentd --bind 0.0.0.0:{{PORT}}
+# Restart=always parity with the system unit: clean exits (self-upgrade
+# exec, SIGTERM during deploy, controller-side race) still get the daemon
+# back. RestartSec=5 + default StartLimitInterval bound any boot loop.
+Restart=always
+RestartSec=5
+# No User=/Group= — user units run as the owning user automatically.
+# No ProtectSystem/ReadWritePaths hardening — the user already owns
+# their ~/.local/bin (where `fleet upgrade` swaps the binary) and
+# can't write system paths anyway, so the system-unit's ReadWritePaths
+# hole isn't needed. NoNewPrivileges stays useful as a belt-and-suspenders
+# guard against any future sudo-via-setuid path the daemon might invoke.
+NoNewPrivileges=true
+
+[Install]
+WantedBy=default.target
