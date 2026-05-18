@@ -102,3 +102,6 @@ func (reverseNoopPrivileged) Run(context.Context, string, ...string) ([]byte, er
 func (reverseNoopPrivileged) RunWithInput(context.Context, []byte, string, ...string) ([]byte, error) {
 	return nil, nil
 }
+func (reverseNoopPrivileged) RunWithBecome(context.Context, bool, string, ...string) ([]byte, error) {
+	return nil, nil
+}

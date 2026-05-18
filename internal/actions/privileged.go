@@ -34,4 +34,18 @@ type PrivilegedRunner interface {
 	// `apt-key add -` and similar. The sudo password is consumed
 	// before the caller's stdin (matching security.BecomeRunner).
 	RunWithInput(ctx context.Context, stdin []byte, program string, args ...string) ([]byte, error)
+
+	// RunWithBecome is the per-call-conditional-escalation variant of
+	// Run, added by spec-72 phase 2 to resolve Open Question §1.
+	// `become=true` produces the same effect as Run (escalate if not
+	// already root); `become=false` runs the command directly without
+	// any sudo wrap. The pkg handler's brew-vs-apt branch is the
+	// canonical caller: brew installs run as the operator's user
+	// (Homebrew refuses sudo), apt installs need root.
+	//
+	// Chose an additive method over a breaking-change to Run because
+	// the always-escalate caller pool is large (~20 handlers) and the
+	// per-call-become pool is small (1–3 sites). Existing Run callers
+	// stay unchanged; new opt-ins call RunWithBecome.
+	RunWithBecome(ctx context.Context, become bool, program string, args ...string) ([]byte, error)
 }

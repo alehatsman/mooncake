@@ -224,3 +224,6 @@ func (noopPrivilegedRunner) Run(context.Context, string, ...string) ([]byte, err
 func (noopPrivilegedRunner) RunWithInput(context.Context, []byte, string, ...string) ([]byte, error) {
 	return nil, nil
 }
+func (noopPrivilegedRunner) RunWithBecome(context.Context, bool, string, ...string) ([]byte, error) {
+	return nil, nil
+}

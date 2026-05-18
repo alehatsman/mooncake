@@ -83,6 +83,9 @@ func (printNoopPrivilegedRunner) Run(context.Context, string, ...string) ([]byte
 func (printNoopPrivilegedRunner) RunWithInput(context.Context, []byte, string, ...string) ([]byte, error) {
 	return nil, nil
 }
+func (printNoopPrivilegedRunner) RunWithBecome(context.Context, bool, string, ...string) ([]byte, error) {
+	return nil, nil
+}
 
 func (m *mockContext) MergeUserVars(vars map[string]interface{}) {
 	if m.variables == nil {

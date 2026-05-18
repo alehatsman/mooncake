@@ -49,6 +49,27 @@ func (p PrivilegedRunner) Run(ctx context.Context, program string, args ...strin
 	return cmd.CombinedOutput()
 }
 
+// RunWithBecome is the per-call-conditional-escalation variant of
+// Run (spec-72 phase 2). `become=true` matches Run exactly; with
+// `become=false` we skip the sudo wrap and exec the program
+// directly. Callers in mixed always/never escalation contexts
+// (notably pkg.runCmd's brew-vs-apt branch) use this in place of
+// constructing BecomeRunner directly so the spec-72 lint rule's
+// goal — ctx.Privileged() as the only escalation constructor —
+// holds.
+func (p PrivilegedRunner) RunWithBecome(ctx context.Context, become bool, program string, args ...string) ([]byte, error) {
+	if !become {
+		var cmd *exec.Cmd
+		if ctx != nil {
+			cmd = exec.CommandContext(ctx, program, args...) //nolint:gosec // provisioning tool runs user-defined programs
+		} else {
+			cmd = exec.Command(program, args...) //nolint:gosec // provisioning tool runs user-defined programs
+		}
+		return cmd.CombinedOutput()
+	}
+	return p.Run(ctx, program, args...)
+}
+
 // RunWithInput runs the command with stdin piped through. When sudo
 // escalation is needed, the password is prefixed onto stdin (matches
 // BecomeRunner's exec stdin wiring).

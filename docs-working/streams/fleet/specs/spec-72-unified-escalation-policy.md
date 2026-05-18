@@ -336,21 +336,51 @@ function arg) — but the migration target is the same.
 Phased so each phase is independently shippable and reverts cleanly:
 
 1. **Phase 1** — Land `EscalationReport`, `ProbeEscalation`, and
-   `RunServices.Escalation`. Preflight + `BecomeRunner.Command`
-   accept either the new report OR the old `PasswordlessSudo bool`
-   for one release. No behavior change for callers.
-2. **Phase 2** — Migrate the four hand-rolled sites to
-   `ctx.Privileged()`. The lint rule's regex is added but only as a
-   warning, not a CI-blocker.
-3. **Phase 3** — Audit the 12 nil-guard sites. Each commit either
-   deletes the empty literal (test-only) or migrates to the runner-
-   from-`RunServices` constructor.
-4. **Phase 4** — Pin the systemd-unit knobs (§4 test matrix).
-5. **Phase 5** — Flip the lint rule to a CI-blocker. Drop the
-   `PasswordlessSudo bool` shim from Phase 1. Direct
-   `BecomeRunner` / `PrivilegedRunner` construction outside
-   `internal/security/` and `internal/executor/context.go` no
-   longer compiles (or rather, fails lint at commit time).
+   `RunServices.Escalation`. The old `PasswordlessSudo bool` on
+   `RunServices` is preserved but now *derived* from the new report
+   (`Escalation.Reason == EscalationAvailablePasswordless`), so
+   the four call sites that read the bool see no behavior change.
+   **Status: shipped (worktree-spec-72).** `detectPasswordlessSudo`
+   removed in favor of `ProbeEscalation`; the nil-context regression
+   test moved to assert the same guarantee on the new entry point.
+2. **Phase 2a** — Add the lint rule as warning-only
+   (`scripts/escalation-lint.sh`, wired into `task ci` as step
+   `[9/9]`). Add `RunWithBecome(ctx, become, program, args...)`
+   to the `actions.PrivilegedRunner` interface (resolves
+   Open Question §1 — chose the additive-method route over
+   breaking `Run`'s signature). Migrate the single cleanest
+   hand-rolled site — `pkg.runCmd` — to consume it via
+   `ec.Privileged().RunWithBecome(...)`. **Status: shipped
+   (worktree-spec-72).** Lint baseline: 16 production sites
+   (13 nil-guard literals + 3 deferred hand-rolled).
+3. **Phase 2b** — Migrate the three remaining hand-rolled sites:
+   - `service/shared.BecomeAwareCommand` (line 107) +
+     `writeFileWithSudo` (line 230)
+   - `os_systemd.becomeRunner` (line 202; used by `writeAtomic`
+     and `runSystemctl`/`runSystemctlOut`)
+   These all build `*exec.Cmd` directly because callers inspect
+   `cmd.ProcessState` for per-subcommand exit codes and wire
+   `cmd.Stderr` to private buffers — patterns that don't fit
+   `RunWithBecome`'s `([]byte, error)` shape. Two viable
+   resolutions: (a) add a `Command(become, program, args...)
+   (*exec.Cmd, error)` method on `PrivilegedRunner` re-exporting
+   `*exec.Cmd`, accepting the leak of an implementation detail
+   for the centralisation win; (b) per-call-site refactor that
+   collapses the multi-command sequences into a single
+   `RunWithBecome` invocation (probably stitching stderr into a
+   wrapping error). Pick during 2b.
+4. **Phase 3** — Audit the 13 nil-guard sites (the lint reports
+   13; F051's "12" miscounted `os_user/platform_darwin.go`, which
+   has two such literals). Each commit either deletes the empty
+   literal (test-only) or migrates to the runner-from-
+   `RunServices` constructor.
+5. **Phase 4** — Pin the systemd-unit knobs (§4 test matrix).
+6. **Phase 5** — Flip the lint rule to a CI-blocker (`bash
+   scripts/escalation-lint.sh --fail` in the `task ci` step).
+   Drop the `PasswordlessSudo bool` shim from Phase 1. Direct
+   `BecomeRunner` / `PrivilegedRunner` construction outside the
+   allowlist (`internal/security/`, `internal/executor/context.go`,
+   `internal/effects/default.go`) no longer passes CI.
 
 Backward compatibility: zero protocol changes (peers.toml, agentd
 HTTP, daemon config); the work is structural and inside the executor.
@@ -359,12 +389,16 @@ HTTP, daemon config); the work is structural and inside the executor.
 
 ## Open questions
 
-1. **`PrivilegedRunner.Run` signature.** Today it's
-   `Run(ctx, program, args...) ([]byte, error)`; escalation is
-   implicit (always-escalate). `pkg.runCmd`'s "per-call become bool"
-   semantics needs an explicit `become bool` arg. Adding it to
-   `Run` is a breaking change; adding `RunWithBecome(ctx, become,
-   ...)` is uglier but additive. Pick during phase 2.
+1. ~~**`PrivilegedRunner.Run` signature.**~~ **Resolved (Phase 2a):**
+   added `RunWithBecome(ctx, become, program, args...) ([]byte, error)`
+   alongside the existing `Run` / `RunWithInput`. Reasoning:
+   `Run`-callers outnumber per-call-become callers ~20:1, so an
+   additive method keeps the common case zero-touch. `Run` stays
+   the implicit-always-escalate primitive; `RunWithBecome` carries
+   the explicit flag for the brew-vs-apt class of caller. Mock
+   `PrivilegedRunner` implementations in `testutil`, `apply`,
+   `actions_test`, and `print/handler_test` updated to satisfy the
+   new method.
 2. **Cached `EscalationReport` vs re-probe under controller
    instructions.** If the operator passes `--sudo-pass` mid-run-life
    (a future feature?), should the cached report invalidate? v1

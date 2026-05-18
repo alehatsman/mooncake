@@ -328,6 +328,11 @@ tasks:
     cmds:
       - bash ./scripts/ai-lint.sh --all
 
+  escalation-lint:
+    desc: 'spec-72 §G1: report direct security.BecomeRunner/PrivilegedRunner constructs outside the allowlist (warning-only in Phase 2)'
+    cmds:
+      - bash ./scripts/escalation-lint.sh
+
   # ---------------------------------------------------------------------------
   # gopls-backed structural lookups — collapse grep+Read cycles
   # Usage: task sym Q=Runner | task refs LOC=internal/apply/runner.go:12:6
@@ -531,7 +536,7 @@ tasks:
   # Full CI gate — pre-push. First failure stops the pipeline.
   # ---------------------------------------------------------------------------
   ci:
-    desc: 'Full pre-push gate: build + test-race + lint + scan + docs/schema + arch + budget + dupl'
+    desc: 'Full pre-push gate: build + test-race + lint + scan + docs/schema + arch + budget + dupl + escalation-lint'
     cmds:
       - task: ci:build
       - task: ci:test
@@ -542,25 +547,26 @@ tasks:
       - task: ci:arch
       - task: ci:budget
       - task: ci:dupl
+      - task: ci:escalation
       - echo ""
       - echo "✓ All checks green — safe to commit."
 
   ci:build:
     internal: true
     cmds:
-      - 'echo "[1/8] build"'
+      - 'echo "[1/9] build"'
       - go build -o {{.BIN}} ./cmd
 
   ci:test:
     internal: true
     cmds:
-      - 'echo "[2/8] test"'
+      - 'echo "[2/9] test"'
       - go test {{.PKG}}
 
   ci:test-race:
     internal: true
     cmds:
-      - 'echo "[2/8] test -race"'
+      - 'echo "[2/9] test -race"'
       - go test -race {{.PKG}}
 
   ci:lint:
@@ -568,20 +574,20 @@ tasks:
     cmds:
       # Cache leaks across sibling worktrees and surfaces phantom findings from
       # ../mooncake-*/ paths. Clean before each run so results reflect this tree.
-      - 'echo "[3/8] golangci-lint (clean cache first)"'
+      - 'echo "[3/9] golangci-lint (clean cache first)"'
       - golangci-lint cache clean
       - golangci-lint run {{.PKG}}
 
   ci:vuln:
     internal: true
     cmds:
-      - 'echo "[4/8] govulncheck"'
+      - 'echo "[4/9] govulncheck"'
       - govulncheck {{.PKG}}
 
   ci:regen-and-check:
     internal: true
     cmds:
-      - 'echo "[5/8] regen docs + schema, then verify clean"'
+      - 'echo "[5/9] regen docs + schema, then verify clean"'
       - '{{.BIN}} docs generate --section all --output docs-next/generated/actions.md >/dev/null'
       - '{{.BIN}} docs generate --section schema --output docs-next/generated/schema.md >/dev/null'
       - '{{.BIN}} docs generate --section action-properties --output docs-next/generated/properties.md >/dev/null'
@@ -594,7 +600,7 @@ tasks:
   ci:arch:
     internal: true
     cmds:
-      - 'echo "[6/8] arch-snapshot (regenerated; file is gitignored)"'
+      - 'echo "[6/9] arch-snapshot (regenerated; file is gitignored)"'
       - bash ./scripts/arch-snapshot.sh >/dev/null
       - |
         f=docs-working/ARCH_SNAPSHOT.md
@@ -609,14 +615,14 @@ tasks:
   ci:budget:
     internal: true
     cmds:
-      - 'echo "[7/8] CLAUDE.md soft-cap budget"'
+      - 'echo "[7/9] CLAUDE.md soft-cap budget"'
       - bash ./scripts/budget-status.sh | sed 's/^/  /'
 
   ci:dupl:
     internal: true
     silent: true
     cmds:
-      - 'echo "[8/8] dupl (production-code duplication report)"'
+      - 'echo "[8/9] dupl (production-code duplication report)"'
       - |
         if ! command -v dupl >/dev/null 2>&1 && ! [ -x "$(go env GOPATH)/bin/dupl" ]; then
           echo "  dupl not installed — run 'task install-tools'. Skipping."
@@ -639,3 +645,9 @@ tasks:
             for a, b in ranked:
                 print(f"    {n(a):>3}L  {a}  <-->  {b}")
         '
+
+  ci:escalation:
+    internal: true
+    cmds:
+      - 'echo "[9/9] escalation-lint (spec-72 §G1, warning-only)"'
+      - bash ./scripts/escalation-lint.sh

@@ -19,7 +19,6 @@ import (
 	"github.com/alehatsman/mooncake/internal/config"
 	"github.com/alehatsman/mooncake/internal/events"
 	"github.com/alehatsman/mooncake/internal/executor"
-	"github.com/alehatsman/mooncake/internal/security"
 	"github.com/alehatsman/mooncake/internal/template"
 )
 
@@ -326,23 +325,20 @@ func (h *Handler) updateCache(ec *executor.ExecutionContext, manager string, bec
 // ErrBecomeUnsupported; an empty SudoPass produced an unprintable
 // `"\n"` on sudo's stdin and let sudo hang on its TTY prompt.
 //
-// Spec-69 phase-5 audit (NOT migrated to ctx.Privileged): pkg's
-// install / check / remove paths take per-call `become bool` decided
-// by the step's `become:` field — a `pkg.install` on Homebrew runs
-// AS the operator's user, while the same step on apt runs under
-// sudo. PrivilegedRunner's unconditional-root contract would force
-// every brew install through sudo (which Homebrew explicitly
-// refuses), so this helper keeps the conditional shape.
+// Spec-72 phase 2 (resolves spec-69's deferred phase-5 audit):
+// migrated from direct security.BecomeRunner{} construction to
+// ctx.Privileged().RunWithBecome(...). The per-call `become bool`
+// decided by the step's `become:` field (brew=false, apt=true) flows
+// through the new RunWithBecome method added on actions.PrivilegedRunner.
+// ctx.Privileged() reads SudoPass + Escalation from RunServices in
+// one place, so the constructor can't drift from the rest of the
+// codebase the way it did during the 2026-05-18 sudo-fragmentation
+// incident (F051).
 func (h *Handler) runCmd(ec *executor.ExecutionContext, become bool, cmdArgs []string) ([]byte, error) {
 	if len(cmdArgs) == 0 {
 		return nil, fmt.Errorf("pkg.runCmd: cmdArgs must not be empty")
 	}
-	runner := security.BecomeRunner{SudoPass: ec.Svc.SudoPass, PasswordlessSudo: ec.Svc.PasswordlessSudo}
-	cmd, err := runner.Command(become, cmdArgs[0], cmdArgs[1:]...)
-	if err != nil {
-		return nil, err
-	}
-	return cmd.CombinedOutput()
+	return ec.Privileged().RunWithBecome(ec.Svc.Ctx, become, cmdArgs[0], cmdArgs[1:]...)
 }
 
 // installPackages installs or upgrades packages.

@@ -169,6 +169,9 @@ func (testNoopPrivilegedRunner) Run(context.Context, string, ...string) ([]byte,
 func (testNoopPrivilegedRunner) RunWithInput(context.Context, []byte, string, ...string) ([]byte, error) {
 	return nil, nil
 }
+func (testNoopPrivilegedRunner) RunWithBecome(context.Context, bool, string, ...string) ([]byte, error) {
+	return nil, nil
+}
 
 // mockPublisher implements events.Publisher for testing
 type mockPublisher struct {
