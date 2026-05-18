@@ -1461,6 +1461,81 @@ func TestHandler_IsPackageInstalled_BrewCask(t *testing.T) {
 	}
 }
 
+// TestHandler_FetchBrewInstalledSet_ParsesOutput verifies that
+// fetchBrewInstalledSet correctly parses multi-line brew list output into a
+// set. This is a unit test of the parsing logic via a real brew call on macOS
+// (skipped on other platforms if brew is absent).
+func TestHandler_FetchBrewInstalledSet_ParsesOutput(t *testing.T) {
+	if runtime.GOOS != "darwin" {
+		t.Skip("brew only available on macOS")
+	}
+	h := &Handler{}
+	ctx := newMockExecutionContext()
+
+	set, err := h.fetchBrewInstalledSet(ctx, false)
+	if err != nil {
+		t.Skipf("brew not available: %v", err)
+	}
+	// The set must be a map (possibly empty on a fresh install).
+	if set == nil {
+		t.Fatal("fetchBrewInstalledSet returned nil map")
+	}
+	// All keys must be non-empty strings.
+	for k := range set {
+		if strings.TrimSpace(k) == "" {
+			t.Error("fetchBrewInstalledSet returned an empty key")
+		}
+	}
+}
+
+// TestHandler_FetchBrewInstalledSet_CaskParsesOutput is the cask variant.
+func TestHandler_FetchBrewInstalledSet_CaskParsesOutput(t *testing.T) {
+	if runtime.GOOS != "darwin" {
+		t.Skip("brew only available on macOS")
+	}
+	h := &Handler{}
+	ctx := newMockExecutionContext()
+
+	set, err := h.fetchBrewInstalledSet(ctx, true)
+	if err != nil {
+		t.Skipf("brew not available: %v", err)
+	}
+	if set == nil {
+		t.Fatal("fetchBrewInstalledSet (cask) returned nil map")
+	}
+}
+
+// TestHandler_InstallPackages_BrewBulkCheck verifies that installPackages for
+// brew calls fetchBrewInstalledSet (two bulk calls) rather than one subprocess
+// per package. We verify the observable result: all packages already present →
+// no change, no error.
+func TestHandler_InstallPackages_BrewBulkCheck(t *testing.T) {
+	if runtime.GOOS != "darwin" {
+		t.Skip("brew only available on macOS")
+	}
+	h := &Handler{}
+	ctx := newMockExecutionContext()
+
+	// Fetch the real installed set so we can pick a package we know exists.
+	set, err := h.fetchBrewInstalledSet(ctx, false)
+	if err != nil || len(set) == 0 {
+		t.Skip("brew not available or no formulae installed")
+	}
+	var existing string
+	for k := range set {
+		existing = k
+		break
+	}
+
+	result, err := h.installPackages(ctx, pmBrew, []string{existing}, false, false, nil, false)
+	if err != nil {
+		t.Fatalf("installPackages() error: %v", err)
+	}
+	if result.(*executor.Result).Changed {
+		t.Errorf("installPackages() changed=true for already-installed package %q", existing)
+	}
+}
+
 // TestHandler_Reverse_Cask verifies that Reverse propagates Cask so the
 // undo step reinstates or removes through the same channel.
 func TestHandler_Reverse_Cask(t *testing.T) {
