@@ -175,10 +175,41 @@ func ProbeEscalation(ctx context.Context, sudoPass string) EscalationReport {
 	if err == nil {
 		return EscalationReport{Available: true, Reason: EscalationAvailablePasswordless, Detail: sudoPath}
 	}
-	if strings.Contains(stderr, "owned by uid") {
+	if isSudoersInsecureStderr(stderr) {
 		return EscalationReport{Reason: EscalationBlockedSudoersInsecure, Detail: strings.TrimSpace(stderr)}
 	}
 	return EscalationReport{Reason: EscalationBlockedProbeFailed, Detail: strings.TrimSpace(stderr)}
+}
+
+// isSudoersInsecureStderr matches the substring fingerprints sudo
+// emits when refusing to read /etc/sudoers* because of bad
+// ownership, mode, or writability. The exact wording varies across
+// distros + sudo versions (Debian/Ubuntu, Fedora, Alpine's
+// sudo-rs, etc.); we match on the load-bearing fragments rather
+// than the full sentence so a distro that re-phrases "owned by uid
+// X, should be 0" to "owner is not root" still trips the typed
+// reason.
+//
+// Resolved spec-72 §Open-Questions §3: keeping the typed reason
+// (BlockedSudoersInsecure → "fix file ownership/mode under
+// /etc/sudoers.d/") is more useful to operators than collapsing
+// into the generic BlockedProbeFailed bucket. Match heuristics
+// are best-effort; novel distro wordings fall through to
+// BlockedProbeFailed with the raw stderr in Detail, where the
+// operator reads it directly.
+func isSudoersInsecureStderr(stderr string) bool {
+	for _, fingerprint := range []string{
+		"owned by uid",      // Debian/Ubuntu/Fedora classic — "is owned by uid 1000, should be 0"
+		"bad permissions",   // sudo's wording for mode mismatch — "/etc/sudoers.d/foo: bad permissions, should be mode 0440"
+		"should be mode",    // alternate phrasing for the same mode-mismatch error
+		"is world writable", // sudo refuses world-writable sudoers files outright
+		"is not a regular",  // sudoers file is a symlink / device / directory
+	} {
+		if strings.Contains(stderr, fingerprint) {
+			return true
+		}
+	}
+	return false
 }
 
 // readSelfStatus parses /proc/self/status for the NoNewPrivs line.

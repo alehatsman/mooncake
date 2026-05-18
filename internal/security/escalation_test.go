@@ -114,22 +114,51 @@ func TestProbeEscalation_BlockedSudoMissing(t *testing.T) {
 }
 
 // TestProbeEscalation_BlockedSudoersInsecure — sudo exits non-zero
-// with stderr matching the "owned by uid" hint, which sudo emits
-// when /etc/sudoers.d/<file> has the wrong ownership. The hint is
-// loose-match (sudo's wording varies by distro/version) so the test
-// pins the substring rather than the full line.
+// with stderr matching any of the sudoers-misconfiguration
+// fingerprints (owned-by-uid, bad-permissions, world-writable,
+// etc.). The exact wording varies across sudo versions and distros
+// so the table here covers the main shapes we know about. Resolved
+// spec-72 §Open-Questions §3.
 func TestProbeEscalation_BlockedSudoersInsecure(t *testing.T) {
-	stderr := "sudo: /etc/sudoers.d/alehnopasswd is owned by uid 1000, should be 0\n"
-	withProbeHooks(t, 1000, false, "", "/usr/bin/sudo", nil, stderr, errors.New("exit status 1"))
-	got := ProbeEscalation(context.Background(), "")
-	if got.Available {
-		t.Fatalf("Available = true, want false (insecure sudoers)")
+	cases := []struct {
+		name   string
+		stderr string
+	}{
+		{
+			name:   "owned by uid (Debian/Ubuntu/Fedora classic)",
+			stderr: "sudo: /etc/sudoers.d/alehnopasswd is owned by uid 1000, should be 0\n",
+		},
+		{
+			name:   "bad permissions (mode mismatch)",
+			stderr: "sudo: /etc/sudoers.d/foo: bad permissions, should be mode 0440\n",
+		},
+		{
+			name:   "should be mode (alternate phrasing)",
+			stderr: "sudo: /etc/sudoers: parse error near line 5: should be mode 0440\n",
+		},
+		{
+			name:   "is world writable",
+			stderr: "sudo: /etc/sudoers.d/foo is world writable\n",
+		},
+		{
+			name:   "is not a regular file (symlink / device)",
+			stderr: "sudo: /etc/sudoers.d/foo is not a regular file\n",
+		},
 	}
-	if got.Reason != EscalationBlockedSudoersInsecure {
-		t.Errorf("Reason = %s, want blocked_sudoers_insecure", got.Reason)
-	}
-	if !strings.Contains(got.Detail, "owned by uid") {
-		t.Errorf("Detail = %q, want stderr substring 'owned by uid'", got.Detail)
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			withProbeHooks(t, 1000, false, "", "/usr/bin/sudo", nil, c.stderr, errors.New("exit status 1"))
+			got := ProbeEscalation(context.Background(), "")
+			if got.Available {
+				t.Fatalf("Available = true, want false (insecure sudoers)")
+			}
+			if got.Reason != EscalationBlockedSudoersInsecure {
+				t.Errorf("Reason = %s, want blocked_sudoers_insecure", got.Reason)
+			}
+			if got.Detail == "" {
+				t.Errorf("Detail empty; want stderr passthrough so operator sees the specific sudo message")
+			}
+		})
 	}
 }
 

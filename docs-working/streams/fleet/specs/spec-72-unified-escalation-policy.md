@@ -414,16 +414,16 @@ vestigial) are removed; handler call sites that passed
 `Become: step.ShouldBecome()` collapse to just the remaining
 opts (Force, ExplicitMode).
 
-Caveat: if direct write succeeds (the non-sudo path), the file
-lands owned by whatever uid mooncake itself is running as — not
-by the named AsUser target. We don't post-chown in that case
-because the most common scenario (mooncake-as-the-target-user
-writing to its own paths) doesn't need it, and surfacing a
-permission error for cross-user direct writes would be more
-confusing than the silent "ownership matches writer" today.
-Operators wanting strict ownership for a named user should also
-declare a path under a directory they don't own, which forces
-the sudo path and chown fires.
+**Direct-write ownership** (previously documented as a caveat,
+now resolved): when AsUser is set and doesn't match the current
+process's user, the Performer skips the direct path entirely and
+goes through sudo so the bundled chown clause produces the
+correct owner. `defaultPerformer.needSudoForOwnership()` is the
+gate — it returns true for any AsUser that wouldn't be satisfied
+by a direct write, including AsUser=root from a non-root process
+and AsUser=named-non-current. WriteFile, CopyFile, Mkdir, Touch,
+Symlink, and Hardlink all consult it. The "AsUser=current"
+fast path stays for matching cases (no unnecessary sudo wrap).
 
 Backward compatibility: zero protocol changes (peers.toml, agentd
 HTTP, daemon config); the work is structural and inside the executor.
@@ -450,13 +450,18 @@ HTTP, daemon config); the work is structural and inside the executor.
    (a future feature?), should the cached report invalidate? v1
    says "no, immutable per run" — same shape as the
    `PasswordlessSudo` cache today.
-3. **`Sudoers` ownership probe wording.** The `BlockedSudoersInsecure`
-   reason currently keys off "owned by uid" in sudo's stderr. That
-   string is sudo's, not ours, and could change across distros.
-   Consider falling back to "exit non-zero with non-empty stderr"
-   as `BlockedProbeFailed` with the stderr in `Detail` — the
-   sudoers-insecure case becomes a soft hint via stderr content rather
-   than a typed reason. Decide once we see real-world stderrs.
+3. ~~**`Sudoers` ownership probe wording.**~~ **Resolved
+   (spec-72 follow-up):** kept the typed `BlockedSudoersInsecure`
+   reason and expanded the match heuristic to cover the common
+   distro variants — "owned by uid" (Debian/Ubuntu/Fedora classic),
+   "bad permissions", "should be mode" (mode-mismatch variants),
+   "is world writable", "is not a regular file". The typed
+   remediation ("fix file ownership/mode under /etc/sudoers.d/")
+   is more useful than collapsing into the generic ProbeFailed
+   bucket; novel distro wordings still fall through to
+   `BlockedProbeFailed` with the raw stderr in `Detail`. Match
+   logic lives in `isSudoersInsecureStderr` so adding a new
+   fingerprint when an operator hits one is a one-line PR.
 4. **Polkit-managed actions** (loginctl enable-linger, etc.) live
    outside sudo entirely. F051 noted them as adjacent. Out of scope
    for this spec, but worth a follow-up: a parallel
