@@ -275,17 +275,45 @@ func TestInstaller_Render_LinuxUser(t *testing.T) {
 			t.Errorf("user unit missing %q:\n%s", want, s)
 		}
 	}
+	// Directive check: look at non-comment lines only so the rationale
+	// comments in the template can mention the directives they're
+	// explaining without tripping the regression guard.
+	directives := nonCommentLines(s)
 	for _, unwanted := range []string{
 		"User=root",
 		"Group=root",
 		"--system",
 		"ReadWritePaths=",
 		"WantedBy=multi-user.target",
+		// NoNewPrivileges=true blocks setuid execution, so sudo
+		// (which the user-mode agentd needs for `as_user: root`
+		// steps) refuses with "The 'no new privileges' flag is set,
+		// which prevents sudo from running as root" — even when
+		// NOPASSWD is configured. The system unit can keep NNP
+		// because root never needs to escalate; user-mode must
+		// drop it. Regression guard: a future "hardening tweak"
+		// silently re-adding the line would reintroduce this.
+		"NoNewPrivileges=",
 	} {
-		if strings.Contains(s, unwanted) {
-			t.Errorf("user unit contains unexpected %q:\n%s", unwanted, s)
+		if strings.Contains(directives, unwanted) {
+			t.Errorf("user unit contains unexpected directive %q:\n%s", unwanted, s)
 		}
 	}
+}
+
+// nonCommentLines returns the input with `#`-prefixed lines removed so
+// substring-based directive checks don't false-match against comment
+// prose that explains why a directive is absent.
+func nonCommentLines(s string) string {
+	var b strings.Builder
+	for _, line := range strings.Split(s, "\n") {
+		if trimmed := strings.TrimSpace(line); strings.HasPrefix(trimmed, "#") {
+			continue
+		}
+		b.WriteString(line)
+		b.WriteByte('\n')
+	}
+	return b.String()
 }
 
 // TestParseVersion guards the version-string extraction at the heart of

@@ -19,9 +19,14 @@ RestartSec=5
 # No ProtectSystem/ReadWritePaths hardening — the user already owns
 # their ~/.local/bin (where `fleet upgrade` swaps the binary) and
 # can't write system paths anyway, so the system-unit's ReadWritePaths
-# hole isn't needed. NoNewPrivileges stays useful as a belt-and-suspenders
-# guard against any future sudo-via-setuid path the daemon might invoke.
-NoNewPrivileges=true
+# hole isn't needed.
+#
+# No NoNewPrivileges= either: the user-mode agentd's whole purpose for
+# `as_user: root` steps is to escalate via sudo (a setuid binary), and
+# NoNewPrivileges=true blocks setuid execution outright — sudo refuses
+# with "The 'no new privileges' flag is set, which prevents sudo from
+# running as root" regardless of NOPASSWD. The system unit can keep
+# NNP because root never needs to escalate; user-mode must drop it.
 
 [Install]
 WantedBy=default.target
