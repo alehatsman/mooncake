@@ -9,7 +9,7 @@ Type=simple
 # %h expands to $HOME of the owning user — works under `systemctl --user`
 # and avoids baking an absolute /home/<user>/... path into the unit so
 # the same template renders identically across machines.
-ExecStart=%h/.local/bin/mooncake agentd --bind 0.0.0.0:{{PORT}}
+ExecStart=%h/.local/bin/mooncake agentd run --bind 0.0.0.0:{{PORT}}
 # Restart=always parity with the system unit: clean exits (self-upgrade
 # exec, SIGTERM during deploy, controller-side race) still get the daemon
 # back. RestartSec=5 + default StartLimitInterval bound any boot loop.

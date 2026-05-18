@@ -6,7 +6,7 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-ExecStart=/usr/local/bin/mooncake agentd --system --bind 0.0.0.0:{{PORT}}
+ExecStart=/usr/local/bin/mooncake agentd run --system --bind 0.0.0.0:{{PORT}}
 # Restart=always (not on-failure) so a clean exit — e.g. a self-upgrade
 # that exec()s into a new binary, a stop racing with controller traffic,
 # or SIGTERM during a deploy window — still gets the daemon back. The

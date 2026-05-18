@@ -4,7 +4,7 @@
 user-mode install added in the `--user` patch (cmd/fleet.go,
 internal/fleet/bootstrap.go, internal/fleet/installer.go, and the
 embedded `init/mooncake-agentd.user.service` template).
-**Status:** Draft
+**Status:** Implemented on `worktree-spec-70` (2026-05-18)
 **Effort:** M (~3–5 days)
 **Value:** Medium-high — removes the SSH-to-self awkwardness when
 bootstrapping the box you're sitting on, and folds two-mode install

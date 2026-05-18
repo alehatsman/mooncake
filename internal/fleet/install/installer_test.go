@@ -62,7 +62,7 @@ func TestInstaller_Render_Windows(t *testing.T) {
 		`<UserId>DESKTOP-X\aleh</UserId>`,
 		`<LogonType>S4U</LogonType>`,
 		`<Command>C:\Users\aleh\AppData\Local\Mooncake\bin\mooncake.exe</Command>`,
-		`agentd --bind 0.0.0.0:7879`,
+		`agentd run --bind 0.0.0.0:7879`,
 		`agentd.token`,
 	} {
 		if !strings.Contains(string(body), want) {
@@ -268,7 +268,7 @@ func TestInstaller_Render_LinuxUser(t *testing.T) {
 	}
 	s := string(body)
 	for _, want := range []string{
-		"ExecStart=%h/.local/bin/mooncake agentd --bind 0.0.0.0:7878",
+		"ExecStart=%h/.local/bin/mooncake agentd run --bind 0.0.0.0:7878",
 		"WantedBy=default.target",
 	} {
 		if !strings.Contains(s, want) {

@@ -209,7 +209,7 @@ func (i Installer) Render() ([]byte, error) {
 			Triggers:    []winutil.Trigger{{Type: winutil.TrigBoot}},
 			Actions: []winutil.ExecAction{{
 				Command:   i.BinaryPath,
-				Arguments: fmt.Sprintf(`agentd --bind 0.0.0.0:%d --token-file "%s"`, i.Port, i.TokenPath),
+				Arguments: fmt.Sprintf(`agentd run --bind 0.0.0.0:%d --token-file "%s"`, i.Port, i.TokenPath),
 			}},
 			Principal: winutil.Principal{
 				UserID:    i.UserID,

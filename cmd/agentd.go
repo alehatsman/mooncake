@@ -2,20 +2,54 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"log/slog"
 	"os"
 	"os/signal"
+	"os/user"
 	"runtime"
+	"strings"
 	"syscall"
 
-	"github.com/alehatsman/mooncake/internal/agentd"
 	"github.com/urfave/cli/v2"
+
+	"github.com/alehatsman/mooncake/internal/agentd"
+	"github.com/alehatsman/mooncake/internal/fleet/install"
 )
 
+// agentdCommand is the parent for the daemon-side verbs.
+//
+// Spec-70 split the leaf `mooncake agentd` into two subcommands:
+//
+//   - `mooncake agentd run` — the daemon (was the old leaf Action).
+//   - `mooncake agentd bootstrap` — install agentd locally without
+//     the SSH-to-self detour.
+//
+// Pre-spec-70 unit files that say `ExecStart=...mooncake agentd ...`
+// will fail to start on a post-split binary — re-bootstrap them
+// (`mooncake fleet bootstrap` or `mooncake agentd bootstrap`) to
+// re-render the unit with the new `agentd run` form.
 func agentdCommand() *cli.Command {
 	return &cli.Command{
 		Name:  "agentd",
-		Usage: "Run the mooncake host daemon (experimental)",
+		Usage: "Mooncake host daemon (run / install) (experimental)",
+		Description: "Subcommands:\n" +
+			" run        — run the daemon (foreground; what systemd / launchd execs).\n" +
+			" bootstrap  — install agentd on this machine and print the bearer token.",
+		Subcommands: []*cli.Command{
+			agentdRunCommand(),
+			agentdBootstrapCommand(),
+		},
+	}
+}
+
+func agentdRunCommand() *cli.Command {
+	return &cli.Command{
+		Name:  "run",
+		Usage: "Run the agentd daemon in the foreground",
+		Description: "Started by the systemd unit / launchd plist / Task Scheduler entry " +
+			"that `agentd bootstrap` or `fleet bootstrap` installs. Operators rarely " +
+			"invoke this directly outside of debugging.",
 		Flags: []cli.Flag{
 			&cli.BoolFlag{
 				Name:  "system",
@@ -125,6 +159,139 @@ func agentdRun(c *cli.Context) error {
 	defer stop()
 
 	return srv.Serve(ctx)
+}
+
+// agentdBootstrapCommand drives the local-install path added in
+// spec-70: install the systemd unit / launchd plist for the running
+// mooncake binary, enable + start it, and print the bearer token + a
+// `fleet pair` one-liner. Reuses internal/fleet/install.Bootstrap
+// against a LocalExecutor — same orchestration the SSH path uses,
+// just without the SSH-to-self detour.
+func agentdBootstrapCommand() *cli.Command {
+	return &cli.Command{
+		Name:  "bootstrap",
+		Usage: "Install agentd on this machine (no SSH detour)",
+		Description: "Install the systemd unit (Linux) or launchd plist (macOS) for " +
+			"the running mooncake binary, enable + start it, and print the bearer " +
+			"token + a `fleet pair` one-liner for the controller. Use " +
+			"`mooncake fleet bootstrap user@host` when the target is a different machine.\n\n" +
+			"Idempotent: rerun with the same version + active service is a no-op. " +
+			"Different version requires --upgrade.",
+		Flags: []cli.Flag{
+			&cli.BoolFlag{
+				Name:  "user",
+				Usage: "Linux only: install as user-scope systemd unit (default: system-scope).",
+			},
+			&cli.IntFlag{
+				Name:  "port",
+				Value: 7878,
+				Usage: "agentd TCP bind port",
+			},
+			&cli.StringFlag{
+				Name:  "binary",
+				Usage: "mooncake binary to install (default: this process)",
+			},
+			&cli.BoolFlag{
+				Name:  "upgrade",
+				Usage: "Replace mismatched-version install",
+			},
+		},
+		Action: agentdBootstrapAction,
+	}
+}
+
+func agentdBootstrapAction(c *cli.Context) error {
+	osName := runtime.GOOS
+	if osName == "windows" {
+		// Out of scope for v1 (spec-70 §Non-goals). The Linux user/
+		// system split this command untangles doesn't have an analog
+		// on Windows yet — Task Scheduler S4U principal lookup is
+		// the bit that needs design.
+		return cli.Exit("agentd bootstrap: not supported on Windows; use `mooncake fleet bootstrap` from a Linux/macOS controller", 2)
+	}
+	if osName != "linux" && osName != "darwin" {
+		return cli.Exit(fmt.Sprintf("agentd bootstrap: unsupported os %q", osName), 2)
+	}
+	asUser := c.Bool("user")
+	if asUser && osName != "linux" {
+		return cli.Exit("agentd bootstrap: --user is Linux-only (macOS LaunchAgents are a follow-up)", 2)
+	}
+
+	binPath := c.String("binary")
+	if binPath == "" {
+		exe, err := os.Executable()
+		if err != nil {
+			return fmt.Errorf("locate own binary: %w", err)
+		}
+		binPath = exe
+	}
+	if _, err := os.Stat(binPath); err != nil {
+		return fmt.Errorf("stat binary at %s: %w", binPath, err)
+	}
+
+	port := c.Int("port")
+
+	w := c.App.Writer
+	exec := install.NewLocalExecutor()
+	res, err := install.Bootstrap(c.Context, exec, install.BootstrapOptions{
+		OS:                osName,
+		Arch:              runtime.GOARCH,
+		Port:              port,
+		AsUser:            asUser,
+		LocalBinary:       binPath,
+		ControllerVersion: version,
+		Upgrade:           c.Bool("upgrade"),
+		ReachableHost:     "127.0.0.1",
+		Writer:            w,
+	})
+	if err != nil {
+		return err
+	}
+
+	printAgentdBootstrapResult(w, osName, asUser, port, res)
+	return nil
+}
+
+// printAgentdBootstrapResult is the spec-70 §Design 3 output shape:
+// a few lines of facts about what's installed, the bearer token, and
+// a copy-pasteable `fleet pair` one-liner for the controller.
+//
+// The pair hint uses `--token-via stdin` (heredoc) so the copy-paste
+// doesn't leave the token in shell history.
+func printAgentdBootstrapResult(w io.Writer, osName string, asUser bool, port int, res install.BootstrapResult) {
+	inst := install.Installer{OS: osName, Port: port, AsUser: asUser && osName == "linux"}
+
+	mode := "system"
+	if inst.AsUser {
+		mode = "user"
+	}
+
+	if res.AlreadyOK {
+		fmt.Fprintf(w, "\n✓ agentd already installed at %s (%s-mode), same version — refreshed token only\n",
+			inst.BinaryInstallPath(), mode)
+	} else {
+		fmt.Fprintf(w, "\n✓ agentd installed at %s (%s-mode)\n", inst.BinaryInstallPath(), mode)
+		fmt.Fprintf(w, "✓ unit at %s\n", inst.UnitPath())
+		if inst.AsUser {
+			if u, err := user.Current(); err == nil {
+				fmt.Fprintf(w, "✓ linger enabled for %s\n", u.Username)
+			}
+		}
+		fmt.Fprintf(w, "✓ agentd reachable at 0.0.0.0:%d\n", port)
+	}
+
+	host, _ := os.Hostname()
+	if host == "" {
+		host = "<this-host>"
+	}
+	// Strip trailing `.local` for the pair-hint — `.local` is just
+	// the mDNS advertise zone; the controller can resolve the
+	// shorter form via mDNS or its hosts file.
+	host = strings.TrimSuffix(host, ".local")
+
+	fmt.Fprintf(w, "\nbearer token:\n  %s\n", res.Token)
+	fmt.Fprintf(w, "\npair from the controller:\n")
+	fmt.Fprintf(w, "  mooncake fleet pair %s:%d --token-via stdin <<<'%s'\n", host, port, res.Token)
 }
 
 func newDaemonLogger(level string) (*slog.Logger, error) {

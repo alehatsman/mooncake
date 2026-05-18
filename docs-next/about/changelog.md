@@ -2,6 +2,25 @@
 
 ## Unreleased
 
+### Fleet bootstrap
+
+- **`mooncake agentd bootstrap` (new)** — install agentd on the local
+  machine without the SSH-to-self detour. Same orchestration as
+  `mooncake fleet bootstrap <user@host>` (steps 3–7 of spec-44 §88),
+  driven against a local executor instead of an SSH session. Flags:
+  `--user` (Linux only, user-scope systemd unit), `--port`,
+  `--binary`, `--upgrade`. On success, prints the bearer token and a
+  copy-pasteable `mooncake fleet pair … --token-via stdin <<<…`
+  one-liner for the controller. Spec 70.
+- **`mooncake agentd` → subcommand split (BREAKING)** — the bare
+  `agentd` verb is now a parent with two subcommands: `run` (the
+  daemon, what systemd/launchd execs) and `bootstrap`. Pre-spec-70
+  unit files with `ExecStart=… mooncake agentd …` will fail to start
+  after upgrading the binary — re-bootstrap each peer with
+  `mooncake fleet bootstrap` (or `mooncake agentd bootstrap`
+  locally) so the unit is re-rendered with the new `agentd run` form.
+  The embedded templates in this repo already use the new form.
+
 ### Package action
 
 - **Batched installs/removes** - The `package` action now issues a single

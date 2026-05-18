@@ -9,6 +9,7 @@
   <array>
     <string>/usr/local/bin/mooncake</string>
     <string>agentd</string>
+    <string>run</string>
     <string>--system</string>
     <string>--bind</string>
     <string>0.0.0.0:{{PORT}}</string>
