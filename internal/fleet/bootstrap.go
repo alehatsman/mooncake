@@ -27,6 +27,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/alehatsman/mooncake/internal/fleet/install"
 	"github.com/alehatsman/mooncake/internal/fleet/transport"
 )
 
@@ -135,12 +136,13 @@ func Bootstrap(ctx context.Context, opts BootstrapOptions) (BootstrapResult, err
 	// Probe root state once; informs the sudo wrapper for the next 4 steps.
 	// User-mode installs (Linux only) skip sudo entirely regardless of
 	// remote uid — every step writes to paths the SSH user already owns.
-	isRoot, err := detectIsRoot(ctx, sess)
+	exec := install.NewSSHExecutor(sess)
+	isRoot, err := detectIsRoot(ctx, exec)
 	if err != nil {
 		return BootstrapResult{}, fmt.Errorf("detect root: %w", err)
 	}
 	noSudo := opts.AsUser && osName == "linux"
-	sudoer := newSudoer(sess, isRoot, noSudo)
+	sudoer := install.NewSudoer(exec, isRoot, noSudo)
 
 	inst := Installer{OS: osName, Port: opts.Port, AsUser: opts.AsUser && osName == "linux"}
 	peer := Peer{
@@ -151,7 +153,7 @@ func Bootstrap(ctx context.Context, opts BootstrapOptions) (BootstrapResult, err
 	}
 
 	// === Step 3: Check existing install ===
-	existingVer, serviceActive, err := existingInstall(ctx, sess, sudoer, inst)
+	existingVer, serviceActive, err := existingInstall(ctx, exec, inst)
 	if err != nil {
 		return BootstrapResult{}, fmt.Errorf("step 3 (check existing): %w", err)
 	}
@@ -176,13 +178,13 @@ func Bootstrap(ctx context.Context, opts BootstrapOptions) (BootstrapResult, err
 
 	// === Step 4: Upload binary ===
 	report("uploading binary → %s", inst.BinaryInstallPath())
-	if err := installBinary(ctx, sess, sudoer, inst, opts.LocalBinary); err != nil {
+	if err := installBinary(ctx, exec, sudoer, inst, opts.LocalBinary); err != nil {
 		return BootstrapResult{}, fmt.Errorf("step 4 (binary): %w", err)
 	}
 
 	// === Step 5: Install service unit ===
 	report("installing %s", inst.UnitPath())
-	if err := installService(ctx, sess, sudoer, inst); err != nil {
+	if err := installService(ctx, exec, sudoer, inst); err != nil {
 		return BootstrapResult{}, fmt.Errorf("step 5 (service unit): %w", err)
 	}
 
@@ -192,7 +194,7 @@ func Bootstrap(ctx context.Context, opts BootstrapOptions) (BootstrapResult, err
 	// self-linger without sudo; on older boxes the user is expected
 	// to have arranged it ahead of time (the error message says so).
 	if inst.AsUser {
-		if err := enableLinger(ctx, sess); err != nil {
+		if err := enableLinger(ctx, exec); err != nil {
 			return BootstrapResult{}, fmt.Errorf("step 5b (enable-linger): %w", err)
 		}
 	}
@@ -217,10 +219,11 @@ func Bootstrap(ctx context.Context, opts BootstrapOptions) (BootstrapResult, err
 
 // ===== Step helpers =====
 
-// detectIsRoot returns true if the SSH-authenticated user is uid 0.
-// `id -u` is POSIX and portable across Linux + macOS.
-func detectIsRoot(ctx context.Context, sess *transport.Session) (bool, error) {
-	out, _, code, err := sess.Run(ctx, "id -u")
+// detectIsRoot returns true if the target's shell runs as uid 0.
+// `id -u` is POSIX and portable across Linux + macOS. Used to decide
+// whether the install commands need to be wrapped in sudo.
+func detectIsRoot(ctx context.Context, exec install.Executor) (bool, error) {
+	out, _, code, err := exec.Run(ctx, "id -u")
 	if err != nil {
 		return false, err
 	}
@@ -231,20 +234,20 @@ func detectIsRoot(ctx context.Context, sess *transport.Session) (bool, error) {
 }
 
 // existingInstall implements step 3 of the spec-44 §88 sequence. Returns
-// the remote's `mooncake --version` (empty if not installed) and whether
+// the target's `mooncake --version` (empty if not installed) and whether
 // the service unit is active.
 //
 // The version probe is run *without* sudo — `mooncake --version` doesn't
 // need it, and avoiding sudo here keeps the error path cleaner if the
 // user can't sudo (we'll discover that at step 4 with a clear message).
-func existingInstall(ctx context.Context, sess *transport.Session, _ *sudoer, inst Installer) (version string, active bool, err error) {
+func existingInstall(ctx context.Context, exec install.Executor, inst Installer) (version string, active bool, err error) {
 	// Check binary presence + version via the canonical install path for
 	// this mode. /usr/local/bin should be on PATH for an interactive shell
 	// in system mode; ~/.local/bin may or may not be (depends on the user's
 	// .profile). Probing the canonical path explicitly side-steps PATH
-	// issues either way. The tilde in user mode is expanded by the remote
-	// shell since `sess.Run` runs through `sh -c`.
-	out, _, code, runErr := sess.Run(ctx, inst.BinaryInstallPath()+" --version 2>/dev/null || true")
+	// issues either way. The tilde in user mode is expanded by the target
+	// shell since Executor.Run runs through `sh -c`.
+	out, _, code, runErr := exec.Run(ctx, inst.BinaryInstallPath()+" --version 2>/dev/null || true")
 	if runErr != nil {
 		return "", false, runErr
 	}
@@ -261,7 +264,7 @@ func existingInstall(ctx context.Context, sess *transport.Session, _ *sudoer, in
 	// binary was present but the unit had never been installed: bootstrap
 	// short-circuited steps 4-6 and then failed at step 7 reading a token
 	// path that didn't exist.
-	stateOut, _, _, _ := sess.Run(ctx, inst.IsActiveCmd())
+	stateOut, _, _, _ := exec.Run(ctx, inst.IsActiveCmd())
 	active = strings.TrimSpace(stateOut) == "active"
 	return version, active, nil
 }
@@ -279,16 +282,16 @@ func parseVersion(out string) string {
 	return parts[len(parts)-1]
 }
 
-// installBinary handles step 4: SFTP the local binary to /tmp/mooncake.<rand>,
+// installBinary handles step 4: stage the local binary at /tmp/mooncake.<rand>,
 // then mv it into place. Two-stage is what makes the install race-safe —
 // interrupted upload doesn't leave a partial binary at the final path.
 // In system mode the mv is sudo'd into /usr/local/bin; in user mode it's
 // a plain mv into ~/.local/bin (with mkdir -p for the bin dir, which may
 // not exist on a fresh user account).
-func installBinary(ctx context.Context, sess *transport.Session, sudoer *sudoer, inst Installer, localPath string) error {
+func installBinary(ctx context.Context, exec install.Executor, sudoer *install.Sudoer, inst Installer, localPath string) error {
 	tmp := fmt.Sprintf("/tmp/mooncake.%s", randomSuffix())
-	if err := sess.Upload(ctx, localPath, tmp, 0o755); err != nil {
-		return fmt.Errorf("sftp upload: %w", err)
+	if err := exec.CopyLocalFile(ctx, localPath, tmp, 0o755); err != nil {
+		return fmt.Errorf("stage binary: %w", err)
 	}
 	dest := inst.BinaryInstallPath()
 	// mkdir -p the bin dir's parent before mv — necessary in user mode
@@ -296,7 +299,7 @@ func installBinary(ctx context.Context, sess *transport.Session, sudoer *sudoer,
 	// -f on mv overwrites silently if a prior binary exists.
 	cmd := fmt.Sprintf("mkdir -p %s && mv -f %s %s", filepathDir(dest), tmp, dest)
 	if _, stderr, code, err := sudoer.Run(ctx, cmd); err != nil || code != 0 {
-		_, _, _, _ = sess.Run(ctx, fmt.Sprintf("rm -f %s", tmp))
+		_, _, _, _ = exec.Run(ctx, fmt.Sprintf("rm -f %s", tmp))
 		return fmt.Errorf("install %s → %s (code=%d): %w (stderr: %s)",
 			tmp, dest, code, err, strings.TrimSpace(stderr))
 	}
@@ -304,24 +307,26 @@ func installBinary(ctx context.Context, sess *transport.Session, sudoer *sudoer,
 }
 
 // installService handles step 5: render the platform-appropriate unit
-// template, SFTP to /tmp, sudo-mv to the canonical location. Same
-// two-stage idiom as installBinary so a half-uploaded file never lands
+// template, stage to /tmp, sudo-mv to the canonical location. Same
+// two-stage idiom as installBinary so a half-written file never lands
 // where the service manager will read it.
-func installService(ctx context.Context, sess *transport.Session, sudoer *sudoer, inst Installer) error {
+func installService(ctx context.Context, exec install.Executor, sudoer *install.Sudoer, inst Installer) error {
 	body, err := inst.Render()
 	if err != nil {
 		return err
 	}
 	tmp := fmt.Sprintf("/tmp/%s.%s", filepathBase(inst.UnitPath()), randomSuffix())
-	if err := sess.WriteFile(ctx, tmp, body, 0o644); err != nil {
-		return fmt.Errorf("sftp write %s: %w", tmp, err)
+	if err := exec.WriteFile(ctx, tmp, body, 0o644); err != nil {
+		return fmt.Errorf("stage unit %s: %w", tmp, err)
 	}
 	// sudo mkdir -p for the unit dir, then mv. /etc/systemd/system exists
 	// by default; /Library/LaunchDaemons might not on minimal macOS images.
+	// User-mode ~/.config/systemd/user/ also needs the mkdir on a fresh
+	// account where systemd has never been touched.
 	dir := filepathDir(inst.UnitPath())
 	cmd := fmt.Sprintf("mkdir -p %s && mv -f %s %s", dir, tmp, inst.UnitPath())
 	if _, stderr, code, err := sudoer.Run(ctx, cmd); err != nil || code != 0 {
-		_, _, _, _ = sess.Run(ctx, fmt.Sprintf("rm -f %s", tmp))
+		_, _, _, _ = exec.Run(ctx, fmt.Sprintf("rm -f %s", tmp))
 		return fmt.Errorf("install service unit (code=%d): %w (stderr: %s)",
 			code, err, strings.TrimSpace(stderr))
 	}
@@ -332,7 +337,7 @@ func installService(ctx context.Context, sess *transport.Session, sudoer *sudoer
 // poll /v1/version (with a short connect timeout) until reachable or the
 // 10-second budget runs out. On timeout, capture the service status for
 // a useful error message.
-func startAndVerify(ctx context.Context, sudoer *sudoer, inst Installer, host string, port int) error {
+func startAndVerify(ctx context.Context, sudoer *install.Sudoer, inst Installer, host string, port int) error {
 	if _, stderr, code, err := sudoer.Run(ctx, inst.EnableStartCmd()); err != nil || code != 0 {
 		return fmt.Errorf("enable+start service (code=%d): %w (stderr: %s)",
 			code, err, strings.TrimSpace(stderr))
@@ -354,10 +359,11 @@ func startAndVerify(ctx context.Context, sudoer *sudoer, inst Installer, host st
 
 // readToken handles step 7. System-mode path /etc/mooncake/agentd.token
 // is mode 600 owned by root, so sudo is required even for cat. User-mode
-// path ~/.config/mooncake/agentd.token is owned by the SSH user; sudoer
-// bypasses sudo in that mode so the cat runs as the user directly.
-// The token is the only piece of state the controller needs from the remote.
-func readToken(ctx context.Context, sudoer *sudoer, inst Installer) (string, error) {
+// path ~/.config/mooncake/agentd.token is owned by the install user;
+// sudoer bypasses sudo in that mode so the cat runs as the user directly.
+// The token is the only piece of state the controller needs from the
+// target.
+func readToken(ctx context.Context, sudoer *install.Sudoer, inst Installer) (string, error) {
 	out, stderr, code, err := sudoer.Run(ctx, "cat "+inst.TokenFilePath())
 	if err != nil {
 		return "", err
@@ -372,23 +378,24 @@ func readToken(ctx context.Context, sudoer *sudoer, inst Installer) (string, err
 	return token, nil
 }
 
-// enableLinger turns on systemd user lingering for the SSH user so the
-// user-systemd instance (and the agentd user unit) survives logout. The
-// command is idempotent — a probe via `loginctl show-user` short-circuits
-// when linger is already on, so re-bootstraps don't trip on it.
+// enableLinger turns on systemd user lingering for the install user so
+// the user-systemd instance (and the agentd user unit) survives logout.
+// The command is idempotent — a probe via `loginctl show-user`
+// short-circuits when linger is already on, so re-bootstraps don't
+// trip on it.
 //
-// On systemd >= 248 polkit allows self-linger without sudo (the SSH user
+// On systemd >= 248 polkit allows self-linger without sudo (the user
 // owns the action). On older systems the user needs to have run
-// `sudo loginctl enable-linger $USER` themselves once; the error message
-// surfaces that requirement rather than silently failing.
-func enableLinger(ctx context.Context, sess *transport.Session) error {
+// `sudo loginctl enable-linger $USER` themselves once; the error
+// message surfaces that requirement rather than silently failing.
+func enableLinger(ctx context.Context, exec install.Executor) error {
 	probe := `loginctl show-user "$(id -un)" --property=Linger --value 2>/dev/null`
-	out, _, _, err := sess.Run(ctx, probe)
+	out, _, _, err := exec.Run(ctx, probe)
 	if err == nil && strings.TrimSpace(out) == "yes" {
 		return nil
 	}
 	enable := `loginctl enable-linger "$(id -un)"`
-	_, stderr, code, err := sess.Run(ctx, enable)
+	_, stderr, code, err := exec.Run(ctx, enable)
 	if err != nil {
 		return fmt.Errorf("loginctl enable-linger: %w", err)
 	}
@@ -400,34 +407,6 @@ func enableLinger(ctx context.Context, sess *transport.Session) error {
 			code, strings.TrimSpace(stderr))
 	}
 	return nil
-}
-
-// ===== Sudo wrapper =====
-
-// sudoer wraps a Session with the right command prefix. When the user is
-// root, sudo is skipped entirely; otherwise commands route through
-// `sudo -n sh -c '<cmd>'` so a missing passwordless sudo fails fast
-// rather than hanging.
-type sudoer struct {
-	sess   *transport.Session
-	isRoot bool
-	noSudo bool // unconditional bypass (user-mode install)
-}
-
-func newSudoer(sess *transport.Session, isRoot, noSudo bool) *sudoer {
-	return &sudoer{sess: sess, isRoot: isRoot, noSudo: noSudo}
-}
-
-// Run executes cmd with sudo when needed. Returns the same shape as
-// Session.Run.
-func (s *sudoer) Run(ctx context.Context, cmd string) (stdout, stderr string, exitCode int, err error) {
-	if s.isRoot || s.noSudo {
-		return s.sess.Run(ctx, cmd)
-	}
-	// Single-quote the command for sh -c, escaping any embedded single quotes.
-	escaped := strings.ReplaceAll(cmd, "'", `'"'"'`)
-	full := "sudo -n sh -c '" + escaped + "'"
-	return s.sess.Run(ctx, full)
 }
 
 // ===== Small helpers =====
