@@ -1,31 +1,25 @@
 package fleet
 
-// bootstrap.go drives `mooncake fleet bootstrap user@host` end-to-end.
-// Eight steps per spec-44 §88:
+// bootstrap.go is the controller-side SSH entry point for
+// `mooncake fleet bootstrap user@host`. It owns the SSH-shaped
+// concerns:
 //
-//	1. Connect + auth                 (transport.Connect)
-//	2. Detect platform                (Session.DetectPlatform)
-//	3. Check existing install         (existingInstall)
-//	4. Upload binary to /usr/local    (installBinary, sudo)
-//	5. Install service unit           (installService, sudo)
-//	6. Start service + verify         (startAndVerify, sudo + reachability poll)
-//	7. Read bearer token              (readToken, sudo)
-//	8. Update peers.toml              (caller's responsibility — cmd/fleet.go)
+//	1. transport.Connect + auth
+//	2. Session.DetectPlatform (Linux/macOS/Windows fan-out)
+//	8. peers.toml upsert (caller's responsibility — cmd/fleet.go)
 //
-// All sudo-needing commands route through sudoer. Idempotency is enforced
-// at step 3: a matching prior install short-circuits steps 4-6.
+// Steps 3-7 (existing-install probe through token read) live in
+// internal/fleet/install, called via install.Bootstrap. Spec-70
+// extracted that orchestration so `mooncake agentd bootstrap`
+// (cmd/agentd.go) reuses it against a LocalExecutor.
 
 import (
 	"context"
-	"crypto/rand"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
-	"net"
 	"os"
 	"strings"
-	"time"
 
 	"github.com/alehatsman/mooncake/internal/fleet/install"
 	"github.com/alehatsman/mooncake/internal/fleet/transport"
@@ -133,343 +127,46 @@ func Bootstrap(ctx context.Context, opts BootstrapOptions) (BootstrapResult, err
 		return bootstrapWindows(ctx, sess, opts, arch, report)
 	}
 
-	// Probe root state once; informs the sudo wrapper for the next 4 steps.
-	// User-mode installs (Linux only) skip sudo entirely regardless of
-	// remote uid — every step writes to paths the SSH user already owns.
+	// Linux/macOS path: delegate steps 3-7 to install.Bootstrap.
 	exec := install.NewSSHExecutor(sess)
-	isRoot, err := detectIsRoot(ctx, exec)
+	res, err := install.Bootstrap(ctx, exec, install.BootstrapOptions{
+		OS:                osName,
+		Arch:              arch,
+		Port:              opts.Port,
+		AsUser:            opts.AsUser,
+		LocalBinary:       opts.LocalBinary,
+		ControllerVersion: opts.ControllerVersion,
+		Upgrade:           opts.Upgrade,
+		ReachableHost:     opts.Target.Host,
+		Writer:            w,
+		LogPrefix:         opts.Name,
+	})
 	if err != nil {
-		return BootstrapResult{}, fmt.Errorf("detect root: %w", err)
+		return BootstrapResult{}, err
 	}
-	noSudo := opts.AsUser && osName == "linux"
-	sudoer := install.NewSudoer(exec, isRoot, noSudo)
 
-	inst := Installer{OS: osName, Port: opts.Port, AsUser: opts.AsUser && osName == "linux"}
+	// === Step 8 lite: build the Peer entry the caller writes to
+	// peers.toml. install.Bootstrap intentionally doesn't know about
+	// peers — this is the controller-side concern.
 	peer := Peer{
 		Name:      opts.Name,
 		Addr:      fmt.Sprintf("%s:%d", opts.Target.Host, opts.Port),
 		Transport: TransportAgentd,
 		Tags:      opts.Tags,
+		Token:     res.Token,
 	}
-
-	// === Step 3: Check existing install ===
-	existingVer, serviceActive, err := existingInstall(ctx, exec, inst)
-	if err != nil {
-		return BootstrapResult{}, fmt.Errorf("step 3 (check existing): %w", err)
-	}
-	if existingVer != "" {
-		report("existing install: version %s, service %s", existingVer, activeWord(serviceActive))
-		if opts.ControllerVersion != "" && existingVer == opts.ControllerVersion && serviceActive {
-			// Idempotent rerun: same version, service running. Read token + return.
-			report("already bootstrapped at same version — refreshing peers.toml only")
-			token, err := readToken(ctx, sudoer, inst)
-			if err != nil {
-				return BootstrapResult{}, fmt.Errorf("step 7 (token, idempotent path): %w", err)
-			}
-			peer.Token = token
-			return BootstrapResult{Peer: peer, OS: osName, Arch: arch, AlreadyOK: true}, nil
-		}
-		if opts.ControllerVersion != "" && existingVer != opts.ControllerVersion && !opts.Upgrade {
-			return BootstrapResult{}, fmt.Errorf(
-				"different version installed (remote=%s, controller=%s); pass --upgrade to replace",
-				existingVer, opts.ControllerVersion)
-		}
-	}
-
-	// === Step 4: Upload binary ===
-	report("uploading binary → %s", inst.BinaryInstallPath())
-	if err := installBinary(ctx, exec, sudoer, inst, opts.LocalBinary); err != nil {
-		return BootstrapResult{}, fmt.Errorf("step 4 (binary): %w", err)
-	}
-
-	// === Step 5: Install service unit ===
-	report("installing %s", inst.UnitPath())
-	if err := installService(ctx, exec, sudoer, inst); err != nil {
-		return BootstrapResult{}, fmt.Errorf("step 5 (service unit): %w", err)
-	}
-
-	// === Step 5b (user mode only): enable linger ===
-	// Without linger the user-systemd instance dies on SSH logout and
-	// takes agentd with it. Polkit on systemd >= 248 lets the user
-	// self-linger without sudo; on older boxes the user is expected
-	// to have arranged it ahead of time (the error message says so).
-	if inst.AsUser {
-		if err := enableLinger(ctx, exec); err != nil {
-			return BootstrapResult{}, fmt.Errorf("step 5b (enable-linger): %w", err)
-		}
-	}
-
-	// === Step 6: Start + verify ===
-	report("starting service + waiting for /v1/version")
-	if err := startAndVerify(ctx, sudoer, inst, opts.Target.Host, opts.Port); err != nil {
-		return BootstrapResult{}, fmt.Errorf("step 6 (start+verify): %w", err)
-	}
-
-	// === Step 7: Read bearer token ===
-	token, err := readToken(ctx, sudoer, inst)
-	if err != nil {
-		return BootstrapResult{}, fmt.Errorf("step 7 (token): %w", err)
-	}
-	report("read bearer token (%d chars)", len(token))
-	peer.Token = token
-
-	report("✓ bootstrap complete")
-	return BootstrapResult{Peer: peer, OS: osName, Arch: arch}, nil
+	return BootstrapResult{
+		Peer:      peer,
+		OS:        res.OS,
+		Arch:      res.Arch,
+		AlreadyOK: res.AlreadyOK,
+	}, nil
 }
 
-// ===== Step helpers =====
-
-// detectIsRoot returns true if the target's shell runs as uid 0.
-// `id -u` is POSIX and portable across Linux + macOS. Used to decide
-// whether the install commands need to be wrapped in sudo.
-func detectIsRoot(ctx context.Context, exec install.Executor) (bool, error) {
-	out, _, code, err := exec.Run(ctx, "id -u")
-	if err != nil {
-		return false, err
-	}
-	if code != 0 {
-		return false, fmt.Errorf("id -u exited %d", code)
-	}
-	return strings.TrimSpace(out) == "0", nil
-}
-
-// existingInstall implements step 3 of the spec-44 §88 sequence. Returns
-// the target's `mooncake --version` (empty if not installed) and whether
-// the service unit is active.
-//
-// The version probe is run *without* sudo — `mooncake --version` doesn't
-// need it, and avoiding sudo here keeps the error path cleaner if the
-// user can't sudo (we'll discover that at step 4 with a clear message).
-func existingInstall(ctx context.Context, exec install.Executor, inst Installer) (version string, active bool, err error) {
-	// Check binary presence + version via the canonical install path for
-	// this mode. /usr/local/bin should be on PATH for an interactive shell
-	// in system mode; ~/.local/bin may or may not be (depends on the user's
-	// .profile). Probing the canonical path explicitly side-steps PATH
-	// issues either way. The tilde in user mode is expanded by the target
-	// shell since Executor.Run runs through `sh -c`.
-	out, _, code, runErr := exec.Run(ctx, inst.BinaryInstallPath()+" --version 2>/dev/null || true")
-	if runErr != nil {
-		return "", false, runErr
-	}
-	if code == 0 && strings.TrimSpace(out) != "" {
-		version = parseVersion(out)
-	}
-	if version == "" {
-		return "", false, nil
-	}
-	// Service-state probe. Output captured for caller comparison; exit code
-	// is unreliable across systemctl/launchctl, so we look at stdout. Use
-	// an exact whole-string match — `strings.Contains` matches "active"
-	// inside "inactive", which previously caused a false-positive when the
-	// binary was present but the unit had never been installed: bootstrap
-	// short-circuited steps 4-6 and then failed at step 7 reading a token
-	// path that didn't exist.
-	stateOut, _, _, _ := exec.Run(ctx, inst.IsActiveCmd())
-	active = strings.TrimSpace(stateOut) == "active"
-	return version, active, nil
-}
-
-// parseVersion peels the version number out of a `mooncake --version`
-// output line. The binary prints something like `mooncake version 0.9.0`
-// or `mooncake 0.9.0` depending on the cli framework's mood; either form
-// reduces to the last whitespace-separated token.
-func parseVersion(out string) string {
-	line := strings.TrimSpace(out)
-	if line == "" {
-		return ""
-	}
-	parts := strings.Fields(line)
-	return parts[len(parts)-1]
-}
-
-// installBinary handles step 4: stage the local binary at /tmp/mooncake.<rand>,
-// then mv it into place. Two-stage is what makes the install race-safe —
-// interrupted upload doesn't leave a partial binary at the final path.
-// In system mode the mv is sudo'd into /usr/local/bin; in user mode it's
-// a plain mv into ~/.local/bin (with mkdir -p for the bin dir, which may
-// not exist on a fresh user account).
-func installBinary(ctx context.Context, exec install.Executor, sudoer *install.Sudoer, inst Installer, localPath string) error {
-	tmp := fmt.Sprintf("/tmp/mooncake.%s", randomSuffix())
-	if err := exec.CopyLocalFile(ctx, localPath, tmp, 0o755); err != nil {
-		return fmt.Errorf("stage binary: %w", err)
-	}
-	dest := inst.BinaryInstallPath()
-	// mkdir -p the bin dir's parent before mv — necessary in user mode
-	// where ~/.local/bin/ might not exist yet. Cheap no-op in system mode.
-	// -f on mv overwrites silently if a prior binary exists.
-	cmd := fmt.Sprintf("mkdir -p %s && mv -f %s %s", filepathDir(dest), tmp, dest)
-	if _, stderr, code, err := sudoer.Run(ctx, cmd); err != nil || code != 0 {
-		_, _, _, _ = exec.Run(ctx, fmt.Sprintf("rm -f %s", tmp))
-		return fmt.Errorf("install %s → %s (code=%d): %w (stderr: %s)",
-			tmp, dest, code, err, strings.TrimSpace(stderr))
-	}
-	return nil
-}
-
-// installService handles step 5: render the platform-appropriate unit
-// template, stage to /tmp, sudo-mv to the canonical location. Same
-// two-stage idiom as installBinary so a half-written file never lands
-// where the service manager will read it.
-func installService(ctx context.Context, exec install.Executor, sudoer *install.Sudoer, inst Installer) error {
-	body, err := inst.Render()
-	if err != nil {
-		return err
-	}
-	tmp := fmt.Sprintf("/tmp/%s.%s", filepathBase(inst.UnitPath()), randomSuffix())
-	if err := exec.WriteFile(ctx, tmp, body, 0o644); err != nil {
-		return fmt.Errorf("stage unit %s: %w", tmp, err)
-	}
-	// sudo mkdir -p for the unit dir, then mv. /etc/systemd/system exists
-	// by default; /Library/LaunchDaemons might not on minimal macOS images.
-	// User-mode ~/.config/systemd/user/ also needs the mkdir on a fresh
-	// account where systemd has never been touched.
-	dir := filepathDir(inst.UnitPath())
-	cmd := fmt.Sprintf("mkdir -p %s && mv -f %s %s", dir, tmp, inst.UnitPath())
-	if _, stderr, code, err := sudoer.Run(ctx, cmd); err != nil || code != 0 {
-		_, _, _, _ = exec.Run(ctx, fmt.Sprintf("rm -f %s", tmp))
-		return fmt.Errorf("install service unit (code=%d): %w (stderr: %s)",
-			code, err, strings.TrimSpace(stderr))
-	}
-	return nil
-}
-
-// startAndVerify handles step 6: enable+start via the platform tool, then
-// poll /v1/version (with a short connect timeout) until reachable or the
-// 10-second budget runs out. On timeout, capture the service status for
-// a useful error message.
-func startAndVerify(ctx context.Context, sudoer *install.Sudoer, inst Installer, host string, port int) error {
-	if _, stderr, code, err := sudoer.Run(ctx, inst.EnableStartCmd()); err != nil || code != 0 {
-		return fmt.Errorf("enable+start service (code=%d): %w (stderr: %s)",
-			code, err, strings.TrimSpace(stderr))
-	}
-	addr := fmt.Sprintf("%s:%d", host, port)
-	deadline := time.Now().Add(10 * time.Second)
-	for time.Now().Before(deadline) {
-		if err := dialTCP(ctx, addr, 500*time.Millisecond); err == nil {
-			return nil
-		}
-		time.Sleep(300 * time.Millisecond)
-	}
-	// Last-ditch: pull status output for the user. Don't fail on this —
-	// the wrap is purely informational.
-	status, _, _, _ := sudoer.Run(ctx, inst.IsActiveCmd()+"; "+inst.statusCmd())
-	return fmt.Errorf("agentd never reachable at %s after 10s; status:\n%s",
-		addr, strings.TrimSpace(status))
-}
-
-// readToken handles step 7. System-mode path /etc/mooncake/agentd.token
-// is mode 600 owned by root, so sudo is required even for cat. User-mode
-// path ~/.config/mooncake/agentd.token is owned by the install user;
-// sudoer bypasses sudo in that mode so the cat runs as the user directly.
-// The token is the only piece of state the controller needs from the
-// target.
-func readToken(ctx context.Context, sudoer *install.Sudoer, inst Installer) (string, error) {
-	out, stderr, code, err := sudoer.Run(ctx, "cat "+inst.TokenFilePath())
-	if err != nil {
-		return "", err
-	}
-	if code != 0 {
-		return "", fmt.Errorf("cat token (code=%d, stderr: %s)", code, strings.TrimSpace(stderr))
-	}
-	token := strings.TrimSpace(out)
-	if token == "" {
-		return "", errors.New("token file is empty (agentd may not have finished startup)")
-	}
-	return token, nil
-}
-
-// enableLinger turns on systemd user lingering for the install user so
-// the user-systemd instance (and the agentd user unit) survives logout.
-// The command is idempotent — a probe via `loginctl show-user`
-// short-circuits when linger is already on, so re-bootstraps don't
-// trip on it.
-//
-// On systemd >= 248 polkit allows self-linger without sudo (the user
-// owns the action). On older systems the user needs to have run
-// `sudo loginctl enable-linger $USER` themselves once; the error
-// message surfaces that requirement rather than silently failing.
-func enableLinger(ctx context.Context, exec install.Executor) error {
-	probe := `loginctl show-user "$(id -un)" --property=Linger --value 2>/dev/null`
-	out, _, _, err := exec.Run(ctx, probe)
-	if err == nil && strings.TrimSpace(out) == "yes" {
-		return nil
-	}
-	enable := `loginctl enable-linger "$(id -un)"`
-	_, stderr, code, err := exec.Run(ctx, enable)
-	if err != nil {
-		return fmt.Errorf("loginctl enable-linger: %w", err)
-	}
-	if code != 0 {
-		return fmt.Errorf(
-			"loginctl enable-linger exited %d (stderr: %s) — on older systemd "+
-				"versions self-linger needs sudo; run `sudo loginctl enable-linger $USER` "+
-				"on the target once and retry",
-			code, strings.TrimSpace(stderr))
-	}
-	return nil
-}
-
-// ===== Small helpers =====
-
-// statusCmd returns a per-platform "status detail" command — used only
-// inside error messages for failed start.
-func (i Installer) statusCmd() string {
-	switch i.OS {
-	case "linux":
-		if i.AsUser {
-			return "systemctl --user status " + i.UnitName() + " --no-pager -n 30 2>&1 || true"
-		}
-		return "systemctl status " + i.UnitName() + " --no-pager -n 30 2>&1 || true"
-	case "darwin":
-		return "launchctl print system/" + i.UnitName() + " 2>&1 | head -n 50 || true"
-	}
-	return ""
-}
-
-func dialTCP(ctx context.Context, addr string, timeout time.Duration) error {
-	dctx, cancel := context.WithTimeout(ctx, timeout)
-	defer cancel()
-	d := net.Dialer{}
-	c, err := d.DialContext(dctx, "tcp", addr)
-	if err != nil {
-		return err
-	}
-	_ = c.Close()
-	return nil
-}
-
-func filepathBase(p string) string {
-	i := strings.LastIndexByte(p, '/')
-	if i < 0 {
-		return p
-	}
-	return p[i+1:]
-}
-
-func filepathDir(p string) string {
-	i := strings.LastIndexByte(p, '/')
-	if i <= 0 {
-		return "."
-	}
-	return p[:i]
-}
-
-func randomSuffix() string {
-	var b [8]byte
-	_, _ = rand.Read(b[:])
-	return hex.EncodeToString(b[:])
-}
-
-func activeWord(b bool) string {
-	if b {
-		return "active"
-	}
-	return "inactive"
-}
-
-// EnsureLocalBinaryPath returns the absolute path of the mooncake binary
-// that's currently running, suitable as BootstrapOptions.LocalBinary.
-// Falls back to a clearer error than os.Executable's defaults.
+// EnsureLocalBinaryPath returns the absolute path of the mooncake
+// binary that's currently running, suitable as
+// BootstrapOptions.LocalBinary. Falls back to a clearer error than
+// os.Executable's defaults.
 func EnsureLocalBinaryPath() (string, error) {
 	exe, err := os.Executable()
 	if err != nil {

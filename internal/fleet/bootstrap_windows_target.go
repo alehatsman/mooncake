@@ -27,12 +27,16 @@ package fleet
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"fmt"
 	"io"
+	"net"
 	"os"
 	"strings"
 	"time"
 
+	"github.com/alehatsman/mooncake/internal/fleet/install"
 	"github.com/alehatsman/mooncake/internal/fleet/transport"
 	"github.com/alehatsman/mooncake/internal/winutil"
 )
@@ -82,7 +86,7 @@ func bootstrapWindows(ctx context.Context, sess *transport.Session, opts Bootstr
 	}
 	report("user %s, profile %s", wc.FullUserID(), wc.LocalAppData)
 
-	inst := Installer{
+	inst := install.Installer{
 		OS:          "windows",
 		Port:        opts.Port,
 		BinaryPath:  wc.BinaryPath(),
@@ -373,3 +377,45 @@ func psQuote(s string) string {
 // Ensure io is used (avoid unused-import lint if the function set
 // shrinks during follow-ups).
 var _ = io.Discard
+
+// ===== Helpers local to the Windows path =====
+//
+// Mirror copies of the small helpers that the Linux/macOS bootstrap
+// path moved into internal/fleet/install during spec-70's refactor.
+// Kept private here so the Windows path stays self-contained (spec-70
+// §Non-goals: "Windows in v1" — orthogonal to the user/system Linux
+// split being untangled).
+
+func parseVersion(out string) string {
+	line := strings.TrimSpace(out)
+	if line == "" {
+		return ""
+	}
+	parts := strings.Fields(line)
+	return parts[len(parts)-1]
+}
+
+func randomSuffix() string {
+	var b [8]byte
+	_, _ = rand.Read(b[:])
+	return hex.EncodeToString(b[:])
+}
+
+func activeWord(b bool) string {
+	if b {
+		return "active"
+	}
+	return "inactive"
+}
+
+func dialTCP(ctx context.Context, addr string, timeout time.Duration) error {
+	dctx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+	d := net.Dialer{}
+	c, err := d.DialContext(dctx, "tcp", addr)
+	if err != nil {
+		return err
+	}
+	_ = c.Close()
+	return nil
+}

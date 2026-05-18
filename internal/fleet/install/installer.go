@@ -1,9 +1,9 @@
-package fleet
+package install
 
 // installer.go embeds the per-platform service-unit templates that
-// `mooncake fleet bootstrap` writes to the remote during step 5 of the
-// spec-44 §88 sequence. The templates live under `init/` at the repo
-// root so they're discoverable for review without crawling the Go code.
+// the install orchestrator writes to the target during step 5 of the
+// spec-44 §88 sequence. The templates live under `init/` next to this
+// file so they're discoverable for review without crawling the Go code.
 //
 // Substitution is intentionally minimal — just `{{PORT}}` for the bind
 // port on the embedded templates. text/template would be overkill for
