@@ -169,7 +169,7 @@ jobs:
           cache: true
 
       - name: Check documentation is up to date
-        run: make docs-check
+        run: task docs-check
 
       - name: Upload generated docs as artifact
         if: failure()
@@ -194,7 +194,7 @@ jobs:
           cache: true
 
       - name: Check schema is up to date
-        run: make schema-check
+        run: task schema-check
 
   release-check:
     name: Release Build Check

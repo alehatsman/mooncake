@@ -8,16 +8,16 @@ Docker-based testing framework for Mooncake presets with full multi-architecture
 cd testing-next
 
 # Setup (first time only)
-make setup-buildx
+task setup-buildx
 
 # Test on your native architecture
-make test-ubuntu
+task test-ubuntu
 
 # Test specific preset
-make test-preset PRESET=docker
+task test-preset PRESET=docker
 
 # Clean up
-make clean-all
+task clean-all
 ```
 
 ## Architecture
@@ -49,47 +49,47 @@ testing-next/
 
 ```bash
 # Setup Docker buildx for multi-platform builds (one-time)
-make setup-buildx
+task setup-buildx
 ```
 
 ### Building Binaries
 
 ```bash
 # Build for specific architecture
-make binary-amd64        # Linux x86_64
-make binary-arm64        # Linux ARM64
+task binary-amd64        # Linux x86_64
+task binary-arm64        # Linux ARM64
 
 # Build both
-make binaries
+task binaries
 ```
 
 ### Building Images
 
 ```bash
 # Build for specific architecture
-make build-ubuntu-amd64
-make build-ubuntu-arm64
+task build-ubuntu-amd64
+task build-ubuntu-arm64
 
 # Build both
-make build-ubuntu
+task build-ubuntu
 ```
 
 ### Running Tests
 
 ```bash
 # Test on native architecture (auto-detects)
-make test-ubuntu
+task test-ubuntu
 
 # Test on specific architecture
-make test-ubuntu-amd64
-make test-ubuntu-arm64
+task test-ubuntu-amd64
+task test-ubuntu-arm64
 
 # Test specific preset
-make test-preset PRESET=nginx
+task test-preset PRESET=nginx
 
 # Test specific preset on specific arch
-make test-preset-amd64 PRESET=docker
-make test-preset-arm64 PRESET=kubernetes
+task test-preset-amd64 PRESET=docker
+task test-preset-arm64 PRESET=kubernetes
 ```
 
 ### Results
@@ -113,21 +113,21 @@ cat ../artifacts/ubuntu-amd64/docker.log
 
 ```bash
 # Remove compiled binaries only
-make clean-binaries
+task clean-binaries
 
 # Remove Docker images only
-make clean-docker
+task clean-docker
 
 # Remove everything (artifacts, binaries, images)
-make clean-all
+task clean-all
 ```
 
 ### Debugging
 
 ```bash
 # Start interactive shell in container
-make shell-ubuntu-amd64
-make shell-ubuntu-arm64
+task shell-ubuntu-amd64
+task shell-ubuntu-arm64
 
 # Inside container:
 mooncake presets list
@@ -155,17 +155,17 @@ mooncake presets install docker
 ### Architecture Detection
 
 The Makefile auto-detects your native architecture:
-- `make test-ubuntu` automatically runs the right version
+- `task test-ubuntu` automatically runs the right version
 - `uname -m` values: `x86_64` → amd64, `arm64`/`aarch64` → arm64
 
 ### Cross-Architecture Testing
 
 ```bash
 # Test amd64 on ARM Mac (uses emulation)
-make test-ubuntu-amd64
+task test-ubuntu-amd64
 
 # Test arm64 on x86 machine (uses emulation)
-make test-ubuntu-arm64
+task test-ubuntu-arm64
 ```
 
 **Note**: Cross-architecture testing is slower due to QEMU emulation.
@@ -197,14 +197,14 @@ Adding more distros is straightforward - just create a new Dockerfile in `images
 The Dockerfile includes a verification step. If this fails:
 1. Check binary was built for correct architecture: `file mooncake-linux-amd64`
 2. Verify platform matches: `docker image inspect mooncake-test:ubuntu-amd64`
-3. Try rebuilding: `make clean-all && make build-ubuntu-amd64`
+3. Try rebuilding: `task clean-all && task build-ubuntu-amd64`
 
 ### "buildx: command not found"
 
 Docker buildx isn't installed. Update Docker Desktop or install buildx manually:
 ```bash
 docker buildx install
-make setup-buildx
+task setup-buildx
 ```
 
 ### Platform mismatch warnings
@@ -219,7 +219,7 @@ This is expected when testing cross-architecture. Tests will run via emulation.
 ### Slow cross-architecture tests
 
 Cross-architecture tests use QEMU emulation which is slower. For faster tests:
-- Use native architecture: `make test-ubuntu` (auto-detects)
+- Use native architecture: `task test-ubuntu` (auto-detects)
 - Or test on matching hardware (amd64 on x86, arm64 on ARM)
 
 ## CI/CD Integration
@@ -244,7 +244,7 @@ jobs:
       - name: Run tests
         run: |
           cd testing-next
-          make test-${{ matrix.distro }}-${{ matrix.arch }}
+          task test-${{ matrix.distro }}-${{ matrix.arch }}
       - name: Upload results
         uses: actions/upload-artifact@v3
         with:

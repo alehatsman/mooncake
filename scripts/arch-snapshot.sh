@@ -137,7 +137,7 @@ EOF
 
 ## Cyclomatic hotspots
 
-_gocyclo not installed — run `make arch-tools`._
+_gocyclo not installed — run `task install-tools`._
 EOF
   fi
 
@@ -162,7 +162,7 @@ EOF
 
 ## goda summary
 
-_goda not installed — run `make arch-tools`._
+_goda not installed — run `task install-tools`._
 EOF
   fi
 } > "$OUT"

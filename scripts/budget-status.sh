@@ -60,7 +60,7 @@ if command -v gocyclo >/dev/null 2>&1; then
     printf '   %s✓ all functions under %d%s\n' "$green" "$CAP_GOCYCLO" "$reset"
   fi
 else
-  echo "   gocyclo not installed — run 'make arch-tools'"
+  echo "   gocyclo not installed — run 'task install-tools'"
 fi
 echo
 

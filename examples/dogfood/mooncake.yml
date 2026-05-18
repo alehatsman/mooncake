@@ -1,4 +1,4 @@
-# Dogfood: this project's `make build`, `make test-race`, and `make ci`,
+# Dogfood: this project's `task build`, `task test-race`, and `task ci`,
 # expressed as a mooncake config — every step typed, observable, replayable.
 #
 # This is a credibility artifact, NOT a Makefile replacement. The Makefile
@@ -22,26 +22,26 @@ vars:
 
 steps:
   # ---------------------------------------------------------------------------
-  # `make build` — `go build -v -o out/mooncake ./cmd`
+  # `task build` — `go build -v -o out/mooncake ./cmd`
   # ---------------------------------------------------------------------------
   - name: build mooncake binary
     shell: go build -v -o {{ binary }} ./cmd
 
   # ---------------------------------------------------------------------------
-  # `make test-race` — `go test -race ./...`
+  # `task test-race` — `go test -race ./...`
   # ---------------------------------------------------------------------------
   - name: run go test with race detector
     shell: go test -race {{ pkg }}
 
   # ---------------------------------------------------------------------------
-  # `make ci` — lint + test-race + scan + docs-check + schema-check.
+  # `task ci` — lint + test-race + scan + docs-check + schema-check.
   # test-race already ran above; the remaining steps mirror the rest of CI.
   # ---------------------------------------------------------------------------
 
   - name: lint with golangci-lint
     shell: golangci-lint run {{ pkg }}
 
-  - name: govulncheck (part of `make scan`)
+  - name: govulncheck (part of `task scan`)
     shell: govulncheck {{ pkg }}
 
   - name: schema-check (regenerate JSON schema, refuse drift)

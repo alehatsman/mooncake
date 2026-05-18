@@ -39,7 +39,7 @@ site once is trivial. Always pay the trivial cost.
 | **Preset standards** | `docs/presets/definitive-style-guide.md` (1390 lines) | Gold standard for preset authoring |
 | **Development setup** | `docs/development/contributing.md` | Dev environment, testing, workflow |
 | **Release process** | `docs/development/releasing.md` | Complete release guide with GoReleaser |
-| **Build commands** | `Makefile` (lines 17-170) | All make targets (build, test, lint, release) |
+| **Build commands** | `Taskfile.yml` | All task targets (build, test, lint, release) |
 | **Adding actions** | `docs/development/adding-actions.md` | How to add new actions |
 | **Schema validation** | `internal/config/schema.json` | JSON Schema (source of truth) |
 | **Examples** | `examples/*.yml` | Working examples for all features |
@@ -49,21 +49,21 @@ site once is trivial. Always pay the trivial cost.
 
 ```bash
 # Build
-make build              # → out/mooncake
-make install            # → /usr/local/bin/mooncake (sudo)
+task build              # → out/mooncake
+task install            # → /usr/local/bin/mooncake (sudo)
 
 # Test
-make test-race          # CRITICAL: run before commit
-make ci                 # Full CI suite (lint + test + scan)
+task test-race          # CRITICAL: run before commit
+task ci                 # Full CI suite (lint + test + scan)
 
 # Release
 git tag -a v1.0.0 -m "Release v1.0.0" && git push origin v1.0.0
 
 # Docs
-make help               # Show all Makefile targets
+task                    # Show all task targets
 ```
 
-**See `Makefile` for complete list of targets.**
+**See `Taskfile.yml` for complete list of targets.**
 
 ## Architecture (Core Understanding)
 
@@ -267,7 +267,7 @@ steps:
 
 ### Testing
 
-- **Before commit**: `make test-race` or `make ci`
+- **Before commit**: `task test-race` or `task ci`
 - **Test artifacts**: ALL to `./testing-output/`
 - **Idempotency**: Run twice, second should report no changes
 
@@ -297,8 +297,8 @@ steps:
 |------|-----------------|
 | Add action | Create `internal/actions/<name>/handler.go` → Implement interface → Register in `internal/register/register.go` |
 | Add preset | Create `presets/<name>.yml` or `presets/<name>/preset.yml` → Follow `docs/presets/definitive-style-guide.md` |
-| Build | `make build` or `go build -o mooncake cmd/mooncake.go` |
-| Test | `make test-race` (critical before commit) |
+| Build | `task build` or `go build -o mooncake cmd/mooncake.go` |
+| Test | `task test-race` (critical before commit) |
 | Release | Tag version, push tag → GitHub Actions auto-builds (see `docs/development/releasing.md`) |
 | Facts | Cached, available as `{{ os }}`, `{{ cpu_cores }}`, etc. |
 | Templates | Jinja2-like: `{{ variable }}`, `{% if condition %}`, `{% for item in list %}` |

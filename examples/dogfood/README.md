@@ -22,13 +22,13 @@ below.)
 
 | Make target  | Step(s) in this YAML                           |
 |---           |---                                             |
-| `make build` | `build mooncake binary`                        |
-| `make test-race` | `run go test with race detector`           |
-| `make lint`  | `lint with golangci-lint`                      |
-| `make scan`  | `lint with golangci-lint` + `govulncheck`      |
-| `make schema-check` | `schema-check (regenerate JSON schema)` |
-| `make docs-check` | `docs-check (regenerate generated docs)`  |
-| `make ci`    | every step above runs in sequence              |
+| `task build` | `build mooncake binary`                        |
+| `task test-race` | `run go test with race detector`           |
+| `task lint`  | `lint with golangci-lint`                      |
+| `task scan`  | `lint with golangci-lint` + `govulncheck`      |
+| `task schema-check` | `schema-check (regenerate JSON schema)` |
+| `task docs-check` | `docs-check (regenerate generated docs)`  |
+| `task ci`    | every step above runs in sequence              |
 
 Run it:
 
@@ -63,12 +63,12 @@ and the action set that ships today, so they stay in the Makefile:
   *probes*, not mutators; expressing them as `shell:` steps here is
   honest about that — the step "succeeds when `go test` exits 0,"
   not "converges to a passing state."
-- **`make install` / `make release`**. Both shell sudo / external
+- **`task install` / `task release`**. Both shell sudo / external
   side effects (`/usr/local/bin`, `goreleaser` publishing). They
   could be expressed, but their idempotency semantics aren't
   obvious enough to commit a credibility artifact to.
-- **The `*-pkg` agent-DX shortcuts** (`make build-pkg`,
-  `make test-pkg`, etc.) take a `PKG=` argument. Mooncake doesn't
+- **The `*-pkg` agent-DX shortcuts** (`task build-pkg`,
+  `task test-pkg`, etc.) take a `PKG=` argument. Mooncake doesn't
   parameterize step bodies at apply time from CLI flags; runtime
   vars come from `vars:` and `--set`, which is fine for static
   pipelines but awkward for "give me a fast loop on one package."

@@ -1,0 +1,156 @@
+version: '3'
+
+vars:
+  PROJECT_ROOT: ".."
+  ARTIFACTS_DIR: "../artifacts"
+  IMAGE_PREFIX: mooncake-test
+  BINARY_AMD64: "../mooncake-linux-amd64"
+  BINARY_ARM64: "../mooncake-linux-arm64"
+
+tasks:
+  default:
+    desc: Show available tasks
+    silent: true
+    cmds:
+      - task --list
+
+  setup-buildx:
+    desc: Setup Docker buildx for multi-platform builds
+    cmds:
+      - echo "Setting up Docker buildx..."
+      - docker buildx create --name mooncake-builder --use --bootstrap 2>/dev/null || docker buildx use mooncake-builder 2>/dev/null || echo "Buildx already configured"
+      - docker buildx inspect --bootstrap
+
+  binary-amd64:
+    desc: Build mooncake for linux/amd64
+    cmds:
+      - echo "Building mooncake for linux/amd64..."
+      - cd {{.PROJECT_ROOT}} && GOOS=linux GOARCH=amd64 go build -o mooncake-linux-amd64 ./cmd
+      - echo "Binary{{":"}} {{.BINARY_AMD64}}"
+      - ls -lh {{.BINARY_AMD64}}
+
+  binary-arm64:
+    desc: Build mooncake for linux/arm64
+    cmds:
+      - echo "Building mooncake for linux/arm64..."
+      - cd {{.PROJECT_ROOT}} && GOOS=linux GOARCH=arm64 go build -o mooncake-linux-arm64 ./cmd
+      - echo "Binary{{":"}} {{.BINARY_ARM64}}"
+      - ls -lh {{.BINARY_ARM64}}
+
+  binaries:
+    desc: Build both architectures
+    deps: [binary-amd64, binary-arm64]
+
+  build-ubuntu-amd64:
+    desc: Build Ubuntu amd64 test image
+    deps: [binary-amd64]
+    cmds:
+      - echo "Building Ubuntu amd64 test image..."
+      - docker buildx build --platform linux/amd64 --load --build-arg ARCH=amd64 -f images/Dockerfile.ubuntu -t {{.IMAGE_PREFIX}}:ubuntu-amd64 {{.PROJECT_ROOT}}
+
+  build-ubuntu-arm64:
+    desc: Build Ubuntu arm64 test image
+    deps: [binary-arm64]
+    cmds:
+      - echo "Building Ubuntu arm64 test image..."
+      - docker buildx build --platform linux/arm64 --load --build-arg ARCH=arm64 -f images/Dockerfile.ubuntu -t {{.IMAGE_PREFIX}}:ubuntu-arm64 {{.PROJECT_ROOT}}
+
+  build-ubuntu:
+    desc: Build Ubuntu for both architectures
+    deps: [build-ubuntu-amd64, build-ubuntu-arm64]
+
+  test-ubuntu-amd64:
+    desc: Run tests on Ubuntu amd64
+    deps: [build-ubuntu-amd64]
+    cmds:
+      - echo "Running preset tests on Ubuntu amd64..."
+      - mkdir -p {{.ARTIFACTS_DIR}}/ubuntu-amd64
+      - docker run --rm --platform linux/amd64 --entrypoint /bin/sh -v {{.ARTIFACTS_DIR}}/ubuntu-amd64:/artifacts -v {{.TASKFILE_DIR}}:/testing {{.IMAGE_PREFIX}}:ubuntu-amd64 -c "/bin/bash /testing/test-presets.sh --os ubuntu --artifacts /artifacts"
+
+  test-ubuntu-arm64:
+    desc: Run tests on Ubuntu arm64
+    deps: [build-ubuntu-arm64]
+    cmds:
+      - echo "Running preset tests on Ubuntu arm64..."
+      - mkdir -p {{.ARTIFACTS_DIR}}/ubuntu-arm64
+      - docker run --rm --platform linux/arm64 --entrypoint /bin/sh -v {{.ARTIFACTS_DIR}}/ubuntu-arm64:/artifacts -v {{.TASKFILE_DIR}}:/testing {{.IMAGE_PREFIX}}:ubuntu-arm64 -c "/bin/bash /testing/test-presets.sh --os ubuntu --artifacts /artifacts"
+
+  test-ubuntu:
+    desc: Run tests on Ubuntu (native architecture — auto-detects amd64/arm64)
+    cmds:
+      - |
+        arch=$(uname -m)
+        case "$arch" in
+          x86_64)  task test-ubuntu-amd64 ;;
+          arm64|aarch64) task test-ubuntu-arm64 ;;
+          *) task test-ubuntu-amd64 ;;
+        esac
+
+  test-preset-amd64:
+    desc: "Test specific preset on amd64 — usage: task test-preset-amd64 PRESET=nginx"
+    deps: [build-ubuntu-amd64]
+    vars:
+      PRESET: '{{.PRESET | default "jq"}}'
+    cmds:
+      - echo "Testing preset '{{.PRESET}}' on Ubuntu amd64..."
+      - mkdir -p {{.ARTIFACTS_DIR}}/ubuntu-amd64
+      - docker run --rm --platform linux/amd64 --entrypoint /bin/sh -v {{.ARTIFACTS_DIR}}/ubuntu-amd64:/artifacts -v {{.TASKFILE_DIR}}:/testing {{.IMAGE_PREFIX}}:ubuntu-amd64 -c "/bin/bash /testing/test-presets.sh --os ubuntu --preset {{.PRESET}} --artifacts /artifacts"
+
+  test-preset-arm64:
+    desc: "Test specific preset on arm64 — usage: task test-preset-arm64 PRESET=nginx"
+    deps: [build-ubuntu-arm64]
+    vars:
+      PRESET: '{{.PRESET | default "jq"}}'
+    cmds:
+      - echo "Testing preset '{{.PRESET}}' on Ubuntu arm64..."
+      - mkdir -p {{.ARTIFACTS_DIR}}/ubuntu-arm64
+      - docker run --rm --platform linux/arm64 --entrypoint /bin/sh -v {{.ARTIFACTS_DIR}}/ubuntu-arm64:/artifacts -v {{.TASKFILE_DIR}}:/testing {{.IMAGE_PREFIX}}:ubuntu-arm64 -c "/bin/bash /testing/test-presets.sh --os ubuntu --preset {{.PRESET}} --artifacts /artifacts"
+
+  test-preset:
+    desc: "Test specific preset (native arch) — usage: task test-preset PRESET=nginx"
+    vars:
+      PRESET: '{{.PRESET | default "jq"}}'
+    cmds:
+      - |
+        arch=$(uname -m)
+        case "$arch" in
+          x86_64)  task test-preset-amd64 PRESET={{.PRESET}} ;;
+          arm64|aarch64) task test-preset-arm64 PRESET={{.PRESET}} ;;
+          *) task test-preset-amd64 PRESET={{.PRESET}} ;;
+        esac
+
+  clean-binaries:
+    desc: Remove compiled binaries
+    cmds:
+      - echo "Cleaning binaries..."
+      - rm -f {{.BINARY_AMD64}} {{.BINARY_ARM64}}
+      - echo "Binaries removed"
+
+  clean-docker:
+    desc: Remove Docker images
+    cmds:
+      - echo "Cleaning Docker images..."
+      - docker rmi -f {{.IMAGE_PREFIX}}:ubuntu-amd64 2>/dev/null || true
+      - docker rmi -f {{.IMAGE_PREFIX}}:ubuntu-arm64 2>/dev/null || true
+      - docker builder prune -f
+      - echo "Docker images removed"
+
+  clean-all:
+    desc: Remove everything (artifacts, binaries, images)
+    deps: [clean-binaries, clean-docker]
+    cmds:
+      - echo "Cleaning all artifacts..."
+      - rm -rf {{.ARTIFACTS_DIR}}
+      - echo "All cleaned!"
+
+  shell-ubuntu-amd64:
+    desc: Interactive shell in Ubuntu amd64 container
+    deps: [build-ubuntu-amd64]
+    cmds:
+      - docker run --rm -it --platform linux/amd64 -v {{.ARTIFACTS_DIR}}/ubuntu-amd64:/artifacts -v {{.TASKFILE_DIR}}:/testing {{.IMAGE_PREFIX}}:ubuntu-amd64
+
+  shell-ubuntu-arm64:
+    desc: Interactive shell in Ubuntu arm64 container
+    deps: [build-ubuntu-arm64]
+    cmds:
+      - docker run --rm -it --platform linux/arm64 -v {{.ARTIFACTS_DIR}}/ubuntu-arm64:/artifacts -v {{.TASKFILE_DIR}}:/testing {{.IMAGE_PREFIX}}:ubuntu-arm64
