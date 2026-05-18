@@ -42,7 +42,7 @@ var becomeNeededFn = func() bool { return os.Geteuid() != 0 }
 // callers see sudo's error text without having to plumb a second
 // pipe.
 func (p PrivilegedRunner) Run(ctx context.Context, program string, args ...string) ([]byte, error) {
-	cmd, err := p.command(ctx, program, args...)
+	cmd, err := p.commandWith(ctx, becomeNeededFn(), program, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -58,23 +58,18 @@ func (p PrivilegedRunner) Run(ctx context.Context, program string, args ...strin
 // goal — ctx.Privileged() as the only escalation constructor —
 // holds.
 func (p PrivilegedRunner) RunWithBecome(ctx context.Context, become bool, program string, args ...string) ([]byte, error) {
-	if !become {
-		var cmd *exec.Cmd
-		if ctx != nil {
-			cmd = exec.CommandContext(ctx, program, args...) //nolint:gosec // provisioning tool runs user-defined programs
-		} else {
-			cmd = exec.Command(program, args...) //nolint:gosec // provisioning tool runs user-defined programs
-		}
-		return cmd.CombinedOutput()
+	cmd, err := p.commandWith(ctx, become && becomeNeededFn(), program, args...)
+	if err != nil {
+		return nil, err
 	}
-	return p.Run(ctx, program, args...)
+	return cmd.CombinedOutput()
 }
 
 // RunWithInput runs the command with stdin piped through. When sudo
 // escalation is needed, the password is prefixed onto stdin (matches
 // BecomeRunner's exec stdin wiring).
 func (p PrivilegedRunner) RunWithInput(ctx context.Context, stdin []byte, program string, args ...string) ([]byte, error) {
-	cmd, err := p.command(ctx, program, args...)
+	cmd, err := p.commandWith(ctx, becomeNeededFn(), program, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -96,11 +91,31 @@ func (p PrivilegedRunner) RunWithInput(ctx context.Context, stdin []byte, progra
 	return cmd.CombinedOutput()
 }
 
-// command builds the *exec.Cmd, honoring the existing BecomeRunner
-// validation (unsupported platform, missing password) so callers get
-// a single error class.
-func (p PrivilegedRunner) command(ctx context.Context, program string, args ...string) (*exec.Cmd, error) {
-	become := becomeNeededFn()
+// Command returns a configured *exec.Cmd for callers that need
+// access to per-subcommand exit codes (cmd.ProcessState), private
+// stderr buffers (cmd.Stderr = &buf), or other exec.Cmd state the
+// Run* methods hide. Returns the same sentinel error class as the
+// Run* methods when become is requested on an unsupported platform
+// or with no sudo password configured.
+//
+// Spec-72 phase 2b: the three remaining hand-rolled
+// security.BecomeRunner constructs (service/shared, os_systemd) use
+// this to centralize escalation under ctx.Privileged() while keeping
+// their per-subcommand diagnostic shape.
+func (p PrivilegedRunner) Command(ctx context.Context, become bool, program string, args ...string) (*exec.Cmd, error) {
+	// becomeNeededFn() gates the actual sudo wrap: callers may
+	// request become=true unconditionally (write-with-sudo helpers)
+	// but if mooncake is already root, no wrap is needed. This
+	// matches Run's behavior so a caller switching between
+	// Run / Command / RunWithBecome doesn't get different sudo
+	// semantics for the same input.
+	return p.commandWith(ctx, become && becomeNeededFn(), program, args...)
+}
+
+// commandWith builds the *exec.Cmd, honoring the existing
+// BecomeRunner validation (unsupported platform, missing password)
+// so callers get a single error class.
+func (p PrivilegedRunner) commandWith(ctx context.Context, become bool, program string, args ...string) (*exec.Cmd, error) {
 	runner := BecomeRunner(p)
 	cmd, err := runner.Command(become, program, args...)
 	if err != nil {

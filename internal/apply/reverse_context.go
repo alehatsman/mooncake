@@ -3,6 +3,7 @@ package apply
 import (
 	"context"
 	"os"
+	"os/exec"
 
 	"github.com/alehatsman/mooncake/internal/actions"
 	"github.com/alehatsman/mooncake/internal/events"
@@ -104,4 +105,7 @@ func (reverseNoopPrivileged) RunWithInput(context.Context, []byte, string, ...st
 }
 func (reverseNoopPrivileged) RunWithBecome(context.Context, bool, string, ...string) ([]byte, error) {
 	return nil, nil
+}
+func (reverseNoopPrivileged) Command(_ context.Context, _ bool, program string, args ...string) (*exec.Cmd, error) {
+	return exec.Command(program, args...), nil //nolint:gosec // test-only noop runner
 }

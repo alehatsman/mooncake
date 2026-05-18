@@ -1,6 +1,9 @@
 package actions
 
-import "context"
+import (
+	"context"
+	"os/exec"
+)
 
 // PrivilegedRunner runs a command under root via sudo when mooncake is
 // not already running as root. It is the command-exec sibling of
@@ -48,4 +51,22 @@ type PrivilegedRunner interface {
 	// per-call-become pool is small (1–3 sites). Existing Run callers
 	// stay unchanged; new opt-ins call RunWithBecome.
 	RunWithBecome(ctx context.Context, become bool, program string, args ...string) ([]byte, error)
+
+	// Command returns a configured *exec.Cmd for callers that need
+	// access to per-subcommand exit codes (cmd.ProcessState), private
+	// stderr buffers (cmd.Stderr = &buf), or other exec.Cmd state
+	// the Run* methods hide. Returns a clean error when become=true
+	// is requested on an unsupported platform or with no sudo password
+	// configured — same sentinel-error class as the Run* methods.
+	//
+	// Added by spec-72 phase 2b to migrate the three remaining
+	// hand-rolled BecomeRunner constructs (service/shared.{Become-
+	// AwareCommand, writeFileWithSudo}, os_systemd.becomeRunner)
+	// onto ctx.Privileged(). The interface stops being a pure "shell
+	// out and read bytes" abstraction; that cost was deliberate —
+	// preserving per-cp-vs-per-chmod diagnostics for operators reading
+	// service install errors was judged more important than interface
+	// purity. Callers that don't need *exec.Cmd state should prefer
+	// Run / RunWithInput / RunWithBecome.
+	Command(ctx context.Context, become bool, program string, args ...string) (*exec.Cmd, error)
 }

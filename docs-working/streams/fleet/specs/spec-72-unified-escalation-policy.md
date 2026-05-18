@@ -353,22 +353,22 @@ Phased so each phase is independently shippable and reverts cleanly:
    `ec.Privileged().RunWithBecome(...)`. **Status: shipped
    (worktree-spec-72).** Lint baseline: 16 production sites
    (13 nil-guard literals + 3 deferred hand-rolled).
-3. **Phase 2b** — Migrate the three remaining hand-rolled sites:
-   - `service/shared.BecomeAwareCommand` (line 107) +
-     `writeFileWithSudo` (line 230)
-   - `os_systemd.becomeRunner` (line 202; used by `writeAtomic`
-     and `runSystemctl`/`runSystemctlOut`)
-   These all build `*exec.Cmd` directly because callers inspect
-   `cmd.ProcessState` for per-subcommand exit codes and wire
-   `cmd.Stderr` to private buffers — patterns that don't fit
-   `RunWithBecome`'s `([]byte, error)` shape. Two viable
-   resolutions: (a) add a `Command(become, program, args...)
-   (*exec.Cmd, error)` method on `PrivilegedRunner` re-exporting
-   `*exec.Cmd`, accepting the leak of an implementation detail
-   for the centralisation win; (b) per-call-site refactor that
-   collapses the multi-command sequences into a single
-   `RunWithBecome` invocation (probably stitching stderr into a
-   wrapping error). Pick during 2b.
+3. **Phase 2b** — Migrate the three remaining hand-rolled sites
+   (`service/shared.BecomeAwareCommand` + `writeFileWithSudo`,
+   `os_systemd.becomeRunner`) onto `ctx.Privileged()`. Resolution
+   picked: option (a) — added `Command(ctx, become, program,
+   args...) (*exec.Cmd, error)` to `actions.PrivilegedRunner`,
+   accepting the leak of `*exec.Cmd` through the interface in
+   exchange for preserving per-cp-vs-per-chmod diagnostics that
+   operators read in service-install errors. `os_systemd` keeps
+   its package-level escalation state but the type changes from
+   `security.BecomeRunner` to `actions.PrivilegedRunner` +
+   `context.Context`, accessed via a new `becomeCommand` helper
+   that nil-guards loudly so test paths bypassing `Run()` fail
+   with a clear "not initialized" error instead of NPE. **Status:
+   shipped (worktree-spec-72).** Lint baseline drops from 16 → 13;
+   all remaining violations are nil-guard `PrivilegedRunner{}`
+   literals — exactly the Phase 3 audit target.
 4. **Phase 3** — Audit the 13 nil-guard sites (the lint reports
    13; F051's "12" miscounted `os_user/platform_darwin.go`, which
    has two such literals). Each commit either deletes the empty

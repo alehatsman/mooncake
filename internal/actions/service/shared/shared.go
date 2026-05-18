@@ -94,18 +94,15 @@ type OsServiceReverseInfo struct {
 // Centralizes the validate-then-construct policy that previously
 // lived in 6 hand-rolled copies across handler.go (F004 / F005).
 //
-// Spec-69 phase-5 audit (NOT migrated to ctx.Privileged): this helper
-// is the service action's per-step-conditional-become primitive. The
-// step's `become:` field decides per invocation whether to escalate
-// (a service-status check on a per-user systemd --user instance does
-// NOT need sudo even when an adjacent service-start does), so we
-// need BecomeRunner.Command(step.ShouldBecome(), ...) — the
-// PrivilegedRunner contract is unconditional root and would force
-// every service call through sudo. The same pattern recurs in
-// writeFileWithSudo below.
+// Spec-72 phase 2b: migrated from direct security.BecomeRunner{}
+// construction to ec.Privileged().Command(...), which routes the
+// SudoPass+Escalation read through the single ctx.Privileged()
+// factory. The per-step-conditional-become semantics is preserved
+// via the explicit `become` arg on PrivilegedRunner.Command —
+// a service-status check on a per-user systemd --user instance still
+// runs without sudo when step.ShouldBecome() is false.
 func BecomeAwareCommand(step config.Step, ec *executor.ExecutionContext, program string, args ...string) (*exec.Cmd, error) {
-	runner := security.BecomeRunner{SudoPass: ec.Svc.SudoPass, PasswordlessSudo: ec.Svc.PasswordlessSudo}
-	cmd, err := runner.Command(step.ShouldBecome(), program, args...)
+	cmd, err := ec.Privileged().Command(ec.Svc.Ctx, step.ShouldBecome(), program, args...)
 	if err != nil {
 		return nil, WrapBecomeErrorAsSetup(err)
 	}
@@ -219,15 +216,15 @@ func WriteFileWithPrivileges(path string, content []byte, mode string, step conf
 // validates both become-supported and sudo-pass-present (F005
 // final-mile centralized those preflight checks in BecomeRunner).
 //
-// Spec-69 phase-5 audit (NOT migrated to ctx.Privileged): this site
-// needs BecomeRunner.Command directly because each sub-step (cp,
-// chmod) constructs an *exec.Cmd whose CombinedOutput + ProcessState
-// are inspected separately so we can report distinct exit codes per
-// failure mode. PrivilegedRunner.Run returns ([]byte, error) and
-// collapses that distinction. See the os_systemd writeAtomic helper
-// for the same shape.
+// Spec-72 phase 2b: migrated from direct security.BecomeRunner{}
+// construction to ec.Privileged().Command(...). Each sub-step (cp,
+// chmod) still constructs its own *exec.Cmd so per-step
+// CombinedOutput + ProcessState inspection yields a distinct exit
+// code per failure mode ("sudo cp failed" vs "sudo chmod failed") —
+// that diagnostic shape is the reason this site uses Command
+// instead of RunWithBecome.
 func writeFileWithSudo(path string, content []byte, mode os.FileMode, ec *executor.ExecutionContext) error {
-	runner := security.BecomeRunner{SudoPass: ec.Svc.SudoPass, PasswordlessSudo: ec.Svc.PasswordlessSudo}
+	runner := ec.Privileged()
 
 	tmpFile, err := os.CreateTemp("", "mooncake-unit-*")
 	if err != nil {
@@ -244,7 +241,7 @@ func writeFileWithSudo(path string, content []byte, mode os.FileMode, ec *execut
 		return &executor.FileOperationError{Operation: "close temp", Path: tmpPath, Cause: err}
 	}
 
-	cmd, err := runner.Command(true, "cp", tmpPath, path)
+	cmd, err := runner.Command(ec.Svc.Ctx, true, "cp", tmpPath, path)
 	if err != nil {
 		return WrapBecomeErrorAsSetup(err)
 	}
@@ -259,7 +256,7 @@ func writeFileWithSudo(path string, content []byte, mode os.FileMode, ec *execut
 		}
 	}
 
-	cmd, err = runner.Command(true, "chmod", fmt.Sprintf("%o", mode), path)
+	cmd, err = runner.Command(ec.Svc.Ctx, true, "chmod", fmt.Sprintf("%o", mode), path)
 	if err != nil {
 		return WrapBecomeErrorAsSetup(err)
 	}

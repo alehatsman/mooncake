@@ -10,10 +10,12 @@ package os_systemd
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"io/fs"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
 	"runtime"
@@ -24,25 +26,41 @@ import (
 	"github.com/alehatsman/mooncake/internal/config"
 	"github.com/alehatsman/mooncake/internal/events"
 	"github.com/alehatsman/mooncake/internal/executor"
-	"github.com/alehatsman/mooncake/internal/security"
 )
 
-// becomeRunner is the sudo runner used by writeAtomic + runSystemctl
-// helpers. Run() sets it from ec.Svc.SudoPass before applyPlan; tests
-// that stub the systemctl* hooks bypass this entirely. Package-level
-// state because the existing systemctl* hook plumbing already lives at
-// package scope and mooncake executes actions serially.
+// privilegedRunner + privilegedCtx are the escalation primitives used
+// by writeAtomic + runSystemctl helpers. Run() sets both from the
+// ExecutionContext before applyPlan; tests that stub the systemctl*
+// hooks bypass this entirely. Package-level state because the
+// existing systemctl* hook plumbing already lives at package scope
+// and mooncake executes actions serially.
 //
-// Spec-69 phase-5 audit (NOT migrated to ctx.Privileged): this handler
-// keeps BecomeRunner directly because it needs the broader Command()
-// API in two places — writeAtomic captures sudo cp + sudo chmod
-// separately (each with its own combined-output capture so a chmod
-// failure surfaces distinctly from a cp failure), and runSystemctl
-// uses the conditional `systemctlBecome()` predicate to skip sudo
-// when mooncake is already root. PrivilegedRunner.Run is the "I need
-// root, unconditionally" common path and doesn't expose either knob.
-// See internal/actions/privileged.go for the design rationale.
-var becomeRunner security.BecomeRunner
+// Spec-72 phase 2b: migrated from a directly-constructed
+// security.BecomeRunner value. The handler still needs the broader
+// Command() API in two places — writeAtomic captures sudo cp + sudo
+// chmod separately (each with its own combined-output capture so a
+// chmod failure surfaces distinctly from a cp failure), and
+// runSystemctl uses the conditional `systemctlBecome()` predicate to
+// skip sudo when mooncake is already root. PrivilegedRunner.Command
+// exposes both knobs while keeping the SudoPass+Escalation read
+// centralized at ctx.Privileged().
+var (
+	privilegedRunner actions.PrivilegedRunner
+	privilegedCtx    context.Context
+)
+
+// becomeCommand is the package-internal escalation entry point used
+// by writeAtomic + runSystemctl helpers. Routes to
+// privilegedRunner.Command if Run() set it; returns a clear "not
+// initialized" error otherwise so test paths that wire the
+// systemctl* hooks but accidentally fall through to a sudo'd helper
+// fail loudly instead of nil-pointer-panicking.
+func becomeCommand(become bool, program string, args ...string) (*exec.Cmd, error) {
+	if privilegedRunner == nil {
+		return nil, errors.New("os_systemd: privilegedRunner not initialized — Run() must be invoked through ExecutionContext before writeAtomic/runSystemctl")
+	}
+	return privilegedRunner.Command(privilegedCtx, become, program, args...)
+}
 
 const (
 	actionName       = "os.systemd"
@@ -192,14 +210,15 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		return result, fmt.Errorf("os.systemd: only Linux is supported; got %s", runtime.GOOS)
 	}
 
-	// Pick up the operator-supplied sudo password so writeAtomic +
-	// runSystemctl can escalate when mooncake is invoked as a regular
-	// user. Empty SudoPass surfaces as a clean ErrBecomeNoSudoPass at
-	// the first sudo'd call rather than a "permission denied" on
-	// /etc/systemd/system. Tests that stub the systemctl* hooks never
-	// reach this code path.
+	// Pick up the escalation runner + run-level context so
+	// writeAtomic + runSystemctl can escalate when mooncake is
+	// invoked as a regular user. Empty SudoPass surfaces as a clean
+	// ErrBecomeNoSudoPass at the first sudo'd call rather than a
+	// "permission denied" on /etc/systemd/system. Tests that stub
+	// the systemctl* hooks never reach this code path.
 	if ec, ok := ctx.(*executor.ExecutionContext); ok {
-		becomeRunner = security.BecomeRunner{SudoPass: ec.Svc.SudoPass, PasswordlessSudo: ec.Svc.PasswordlessSudo}
+		privilegedRunner = ec.Privileged()
+		privilegedCtx = ec.Svc.Ctx
 	}
 
 	rendered, err := renderSystemd(ctx, s)
@@ -715,7 +734,7 @@ func writeAtomic(path string, content []byte, mode os.FileMode) error {
 		return fmt.Errorf("close temp %s: %w", tmpPath, err)
 	}
 
-	cmd, err := becomeRunner.Command(true, "cp", tmpPath, path)
+	cmd, err := becomeCommand(true, "cp", tmpPath, path)
 	if err != nil {
 		return fmt.Errorf("sudo cp setup: %w", err)
 	}
@@ -723,7 +742,7 @@ func writeAtomic(path string, content []byte, mode os.FileMode) error {
 		return fmt.Errorf("sudo cp %s -> %s: %w (%s)", tmpPath, path, err, strings.TrimSpace(string(out)))
 	}
 
-	cmd, err = becomeRunner.Command(true, "chmod", fmt.Sprintf("%o", mode), path)
+	cmd, err = becomeCommand(true, "chmod", fmt.Sprintf("%o", mode), path)
 	if err != nil {
 		return fmt.Errorf("sudo chmod setup: %w", err)
 	}
@@ -806,7 +825,7 @@ func realStop(name string) error  { return runSystemctl("stop", name) }
 func systemctlBecome() bool { return os.Geteuid() != 0 }
 
 func runSystemctl(args ...string) error {
-	cmd, err := becomeRunner.Command(systemctlBecome(), "systemctl", args...)
+	cmd, err := becomeCommand(systemctlBecome(), "systemctl", args...)
 	if err != nil {
 		return fmt.Errorf("systemctl %s: %w", strings.Join(args, " "), err)
 	}
@@ -823,7 +842,7 @@ func runSystemctl(args ...string) error {
 }
 
 func runSystemctlOut(args ...string) (string, error) {
-	cmd, err := becomeRunner.Command(systemctlBecome(), "systemctl", args...)
+	cmd, err := becomeCommand(systemctlBecome(), "systemctl", args...)
 	if err != nil {
 		return "", fmt.Errorf("systemctl %s: %w", strings.Join(args, " "), err)
 	}

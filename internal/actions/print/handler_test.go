@@ -3,6 +3,7 @@ package print
 import (
 	"context"
 	"os"
+	"os/exec"
 	"strings"
 	"testing"
 	"time"
@@ -85,6 +86,9 @@ func (printNoopPrivilegedRunner) RunWithInput(context.Context, []byte, string, .
 }
 func (printNoopPrivilegedRunner) RunWithBecome(context.Context, bool, string, ...string) ([]byte, error) {
 	return nil, nil
+}
+func (printNoopPrivilegedRunner) Command(_ context.Context, _ bool, program string, args ...string) (*exec.Cmd, error) {
+	return exec.Command(program, args...), nil //nolint:gosec // test-only noop runner
 }
 
 func (m *mockContext) MergeUserVars(vars map[string]interface{}) {

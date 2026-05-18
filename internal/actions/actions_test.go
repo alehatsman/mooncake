@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"os/exec"
 	"sync"
 	"testing"
 
@@ -171,6 +172,9 @@ func (testNoopPrivilegedRunner) RunWithInput(context.Context, []byte, string, ..
 }
 func (testNoopPrivilegedRunner) RunWithBecome(context.Context, bool, string, ...string) ([]byte, error) {
 	return nil, nil
+}
+func (testNoopPrivilegedRunner) Command(_ context.Context, _ bool, program string, args ...string) (*exec.Cmd, error) {
+	return exec.Command(program, args...), nil //nolint:gosec // test-only noop runner
 }
 
 // mockPublisher implements events.Publisher for testing
