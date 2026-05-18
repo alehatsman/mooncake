@@ -129,6 +129,41 @@ func (p *defaultPerformer) withChown(sudoCmd, path string) string {
 	return sudoCmd + " && chown " + spec + " " + shellQuote(path)
 }
 
+// needSudoForOwnership reports whether a create-style operation must
+// skip the direct path and go through sudo to land the resulting
+// file owned by the bound AsUser. Direct write/mkdir/touch produces a
+// file owned by the current process's uid; if the operator declared
+// `as_user: postgres` but mooncake runs as alice, the direct path
+// would silently mis-own the file. This check forces sudo (which
+// runs as root and bundles a chown clause via withChown) whenever
+// the asUser target doesn't match the current process identity.
+//
+// The check returns false for the no-op cases:
+//   - AsUser empty → no escalation, no ownership constraint.
+//   - AsUser is "root"/"0" AND mooncake is already root → direct
+//     write produces a root-owned file (correct).
+//   - AsUser is a name AND the current process's username matches
+//     → direct write produces a matching-owned file (correct).
+//
+// Spec-72 follow-up: closes the documented caveat that direct
+// writes silently mis-owned files for named non-current AsUser.
+func (p *defaultPerformer) needSudoForOwnership() bool {
+	if p.asUser == "" {
+		return false
+	}
+	if p.asUser == "root" || p.asUser == "0" {
+		return os.Geteuid() != 0
+	}
+	current, err := user.Current()
+	if err != nil {
+		// user.Current shouldn't fail on any supported platform —
+		// /etc/passwd would have to be unreadable. Err on the safe
+		// side: force sudo so the chown happens via root.
+		return true
+	}
+	return current.Username != p.asUser
+}
+
 // ----------------------------------------------------------------------
 // Mkdir
 // ----------------------------------------------------------------------
@@ -160,18 +195,34 @@ func (p *defaultPerformer) Mkdir(path string, mode os.FileMode, opts actions.Per
 		return e
 	}
 
-	// Try direct first; fall back to sudo on EACCES when the bound
-	// AsUser indicates escalation is wanted (spec-72 Layer C). The
-	// fallback combines mkdir + chmod in one shell so the inverse
-	// intent (idempotent dir at the requested mode) is atomic from
-	// sudo's perspective. When AsUser is a named non-root user,
-	// withChown appends a chown clause so the new directory lands
-	// owned by that user — not by root.
+	// Spec-72 follow-up: skip direct mkdir when ownership wouldn't
+	// match the bound AsUser AND we're actually creating the dir
+	// (not adjusting mode on a pre-existing one). Direct mkdir of
+	// a NEW dir produces a directory owned by the current uid; for
+	// named non-current AsUser, that silently lands the wrong owner.
+	// Force sudo so the bundled chown in the sudo command fixes
+	// ownership. When the dir already exists, we're just chmod-ing
+	// it — ownership is the operator's existing choice and we
+	// don't reassign it without explicit intent.
+	//
+	// Otherwise try direct first; fall back to sudo on EACCES when
+	// the bound AsUser indicates escalation is wanted (spec-72 Layer
+	// C). The sudo command combines mkdir + chmod + (optionally) chown
+	// in one shell so the resulting state is atomic from sudo's
+	// perspective.
+	sudoCmd := p.withChown(fmt.Sprintf("mkdir -p -m %s %s && chmod %s %s",
+		formatMode(mode), shellQuote(path), formatMode(mode), shellQuote(path)), path)
+	dirAlreadyExists := info != nil && info.IsDir()
+	if !dirAlreadyExists && p.needSudoForOwnership() {
+		if err := p.runSudo(sudoCmd); err != nil {
+			e.Err = fmt.Errorf("mkdir %s: %w", path, err)
+			return e
+		}
+		e.Performed = true
+		return e
+	}
 	mkdirErr := os.MkdirAll(path, mode)
-	if err := p.becomeFallback(opts, mkdirErr,
-		p.withChown(fmt.Sprintf("mkdir -p -m %s %s && chmod %s %s",
-			formatMode(mode), shellQuote(path), formatMode(mode), shellQuote(path)), path),
-	); err != nil {
+	if err := p.becomeFallback(opts, mkdirErr, sudoCmd); err != nil {
 		e.Err = fmt.Errorf("mkdir %s: %w", path, err)
 		return e
 	}
@@ -236,46 +287,58 @@ func (p *defaultPerformer) WriteFile(path string, content []byte, mode os.FileMo
 		}
 	}
 
-	// Try direct first; fall back to sudo on EACCES when the bound
-	// AsUser indicates escalation is wanted (spec-72 Layer C). The
-	// sudo path stages content in a user-writable tempfile and then
-	// mv+chmod under sudo (the user's process can't write directly
-	// into /etc/foo, but it CAN write into /tmp and ask sudo to move
-	// it). When AsUser is a named non-root user, the sudo command
-	// also chowns the destination to that user's uid:gid so the file
-	// lands owned by the operator's intended target — not by root.
-	// #nosec G306 — mode is caller-controlled; this is a provisioning tool.
-	directErr := os.WriteFile(path, content, mode)
-	if directErr == nil {
-		e.Performed = true
-		return e
+	// Spec-72 follow-up: skip the direct path when ownership wouldn't
+	// match the bound AsUser. Direct write produces a file owned by
+	// the current process's uid; for `as_user: postgres` on a host
+	// where mooncake runs as alice, that's silently wrong. Force
+	// sudo so the bundled chown clause lands the correct owner.
+	//
+	// Otherwise: try direct first; fall back to sudo on EACCES when
+	// the bound AsUser indicates escalation is wanted (spec-72 Layer
+	// C). The sudo path stages content in a user-writable tempfile
+	// and then mv+chmod under sudo (the user's process can't write
+	// directly into /etc/foo, but it CAN write into /tmp and ask sudo
+	// to move it).
+	if !p.needSudoForOwnership() {
+		// #nosec G306 — mode is caller-controlled; this is a provisioning tool.
+		directErr := os.WriteFile(path, content, mode)
+		if directErr == nil {
+			e.Performed = true
+			return e
+		}
+		if p.asUser == "" || !os.IsPermission(directErr) || os.Geteuid() == 0 {
+			e.Err = fmt.Errorf("write %s: %w", path, directErr)
+			return e
+		}
+		// Direct EPERM with escalation available → fall through.
 	}
-	if p.asUser == "" || !os.IsPermission(directErr) || os.Geteuid() == 0 {
-		e.Err = fmt.Errorf("write %s: %w", path, directErr)
-		return e
-	}
-	// Sudo fallback.
-	tmp, terr := os.CreateTemp("", "mooncake-effect-*")
-	if terr != nil {
-		e.Err = fmt.Errorf("create temp file: %w", terr)
-		return e
-	}
-	tmpPath := tmp.Name()
-	_ = tmp.Close()
-	defer func() { _ = os.Remove(tmpPath) }()
-	if err := os.WriteFile(tmpPath, content, 0o600); err != nil {
-		e.Err = fmt.Errorf("write temp file: %w", err)
-		return e
-	}
-	cmd := fmt.Sprintf("mv %s %s && chmod %s %s",
-		shellQuote(tmpPath), shellQuote(path), formatMode(mode), shellQuote(path))
-	cmd = p.withChown(cmd, path)
-	if err := p.runSudo(cmd); err != nil {
+	if err := p.sudoWriteFile(path, content, mode); err != nil {
 		e.Err = err
 		return e
 	}
 	e.Performed = true
 	return e
+}
+
+// sudoWriteFile stages content in a user-writable temp file then
+// invokes sudo to mv + chmod (+ chown when the bound AsUser is named
+// non-root). Extracted from WriteFile so the ownership-forced and
+// EACCES-fallback paths share the same implementation.
+func (p *defaultPerformer) sudoWriteFile(path string, content []byte, mode os.FileMode) error {
+	tmp, terr := os.CreateTemp("", "mooncake-effect-*")
+	if terr != nil {
+		return fmt.Errorf("create temp file: %w", terr)
+	}
+	tmpPath := tmp.Name()
+	_ = tmp.Close()
+	defer func() { _ = os.Remove(tmpPath) }()
+	if err := os.WriteFile(tmpPath, content, 0o600); err != nil {
+		return fmt.Errorf("write temp file: %w", err)
+	}
+	cmd := fmt.Sprintf("mv %s %s && chmod %s %s",
+		shellQuote(tmpPath), shellQuote(path), formatMode(mode), shellQuote(path))
+	cmd = p.withChown(cmd, path)
+	return p.runSudo(cmd)
 }
 
 // ContentDiff is a small structured summary attached to Effect.Detail
@@ -394,10 +457,12 @@ func (p *defaultPerformer) CopyFile(src, dest string, mode os.FileMode, opts act
 		finalMode = destInfo.Mode().Perm()
 	}
 
-	if p.asUser != "" {
+	if p.needSudoForOwnership() {
 		// Stage the file under a path the unprivileged process can
 		// write, then sudo mv into place + chmod (+ chown for named
-		// users). Matches WriteFile's become path.
+		// users). Matches WriteFile's become path. Spec-72 follow-up:
+		// gate on needSudoForOwnership so AsUser="" and AsUser=current
+		// both skip the unnecessary sudo wrap.
 		cmd := fmt.Sprintf("mv %s %s && chmod %s %s",
 			shellQuote(tmpFile), shellQuote(dest), formatMode(finalMode), shellQuote(dest))
 		cmd = p.withChown(cmd, dest)
@@ -510,7 +575,7 @@ func (p *defaultPerformer) Symlink(target, path string, opts actions.PerformerOp
 	}
 
 	if _, statErr := os.Lstat(path); statErr == nil {
-		if p.asUser != "" {
+		if p.needSudoForOwnership() {
 			if err := p.runSudo("rm -f " + shellQuote(path)); err != nil {
 				e.Err = err
 				return e
@@ -521,7 +586,7 @@ func (p *defaultPerformer) Symlink(target, path string, opts actions.PerformerOp
 		}
 	}
 
-	if p.asUser != "" {
+	if p.needSudoForOwnership() {
 		// `chown -h` (no-dereference) is the symlink-aware form so the
 		// link itself is chowned, not the target. Bundled into the same
 		// sudo invocation when AsUser is a named non-root user.
@@ -571,7 +636,7 @@ func (p *defaultPerformer) Hardlink(target, path string, _ actions.PerformerOpts
 	}
 
 	if _, statErr := os.Lstat(path); statErr == nil {
-		if p.asUser != "" {
+		if p.needSudoForOwnership() {
 			if err := p.runSudo("rm -f " + shellQuote(path)); err != nil {
 				e.Err = err
 				return e
@@ -582,7 +647,7 @@ func (p *defaultPerformer) Hardlink(target, path string, _ actions.PerformerOpts
 		}
 	}
 
-	if p.asUser != "" {
+	if p.needSudoForOwnership() {
 		cmd := fmt.Sprintf("ln %s %s", shellQuote(target), shellQuote(path))
 		cmd = p.withChown(cmd, path)
 		if err := p.runSudo(cmd); err != nil {
@@ -620,7 +685,7 @@ func (p *defaultPerformer) Touch(path string, mode os.FileMode, _ actions.Perfor
 		return e
 	}
 
-	if p.asUser != "" {
+	if p.needSudoForOwnership() {
 		cmd := fmt.Sprintf("touch %s && chmod %s %s",
 			shellQuote(path), formatMode(mode), shellQuote(path))
 		cmd = p.withChown(cmd, path)

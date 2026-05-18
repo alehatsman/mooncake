@@ -89,3 +89,55 @@ func TestChownSpec_KnownUser_ResolvesToUidGid(t *testing.T) {
 		t.Errorf("chownSpec(%q) = %q, want %q", username, got, want)
 	}
 }
+
+// TestNeedSudoForOwnership_NoAsUser — empty AsUser means "no
+// ownership constraint." Direct path is always fine.
+func TestNeedSudoForOwnership_NoAsUser(t *testing.T) {
+	p := NewPerformer(func() actions.Mode { return actions.ModeApply }, "", false, "").(*defaultPerformer)
+	if p.needSudoForOwnership() {
+		t.Error("needSudoForOwnership = true for empty AsUser; want false")
+	}
+}
+
+// TestNeedSudoForOwnership_CurrentUser — AsUser matching the
+// current process user means direct write produces correct
+// ownership; no sudo needed.
+func TestNeedSudoForOwnership_CurrentUser(t *testing.T) {
+	username := currentUserName(t)
+	p := NewPerformer(func() actions.Mode { return actions.ModeApply }, "", false, username).(*defaultPerformer)
+	if p.needSudoForOwnership() {
+		t.Errorf("needSudoForOwnership = true for AsUser=%q (current user); want false", username)
+	}
+}
+
+// TestNeedSudoForOwnership_NamedNonCurrent — AsUser matching a
+// different named user means direct write would land owned by the
+// current uid (wrong); needSudoForOwnership must report true so
+// the caller forces the sudo+chown path. This is the regression
+// guard for the spec-72 "direct-write doesn't post-chown" caveat
+// fix.
+func TestNeedSudoForOwnership_NamedNonCurrent(t *testing.T) {
+	// "nobody" is a POSIX-conventional account present on every
+	// supported test host and very unlikely to match the test
+	// runner's current user.
+	p := NewPerformer(func() actions.Mode { return actions.ModeApply }, "", false, "nobody").(*defaultPerformer)
+	if currentUserName(t) == "nobody" {
+		t.Skip("test runs as 'nobody'; can't drive the cross-user branch")
+	}
+	if !p.needSudoForOwnership() {
+		t.Error("needSudoForOwnership = false for AsUser=nobody (cross-user); want true")
+	}
+}
+
+// TestNeedSudoForOwnership_RootWhenNonRoot — AsUser=root from a
+// non-root process: direct write would produce a file owned by
+// the current (non-root) uid, not by root. Must force sudo.
+func TestNeedSudoForOwnership_RootWhenNonRoot(t *testing.T) {
+	if currentUserName(t) == "root" {
+		t.Skip("test runs as root; can't drive the non-root branch")
+	}
+	p := NewPerformer(func() actions.Mode { return actions.ModeApply }, "", false, "root").(*defaultPerformer)
+	if !p.needSudoForOwnership() {
+		t.Error("needSudoForOwnership = false for AsUser=root from non-root process; want true")
+	}
+}

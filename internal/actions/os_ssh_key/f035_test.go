@@ -17,8 +17,6 @@ package os_ssh_key
 //    ran on first-create, leaving inherited modes alone.
 
 import (
-	"errors"
-	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -53,43 +51,25 @@ func TestRun_UserLookupFailureRefusesWrite(t *testing.T) {
 	}
 }
 
-func TestRun_ChownEPERMSurfacesAsError(t *testing.T) {
-	// Stub chownFn to simulate EPERM (a non-root operator trying to
-	// install keys for another user). Under spec-72 Layer C, the
-	// handler's retry path goes through ctx.Privileged().Run, which
-	// escalates only when the step declares as_user. Drive the
-	// cross-user case explicitly via AsUser="root" on the step + a
-	// test context with no SudoPass configured — the primitive then
-	// returns ErrBecomeNoSudoPass and the handler must surface the
-	// failure with the "run with sudo" hint.
-	originalChown := chownFn
-	chownFn = func(_ string, _, _ int) error {
-		return &os.PathError{Op: "chown", Path: "stub", Err: fs.ErrPermission}
-	}
-	t.Cleanup(func() { chownFn = originalChown })
-
-	dir := t.TempDir()
-	path := filepath.Join(dir, "authorized_keys")
-	ctx := newCtx(t, false)
-	ctx.CurrentAsUser = "root" // drive the escalation retry path
-	_, err := (&Handler{}).Run(ctx, &config.Step{
-		AsUser: "root",
-		OsSSHKey: &config.OsSSHKey{
-			User: currentUsername(t),
-			Key:  key1,
-			Path: path,
-		},
-	})
-	if err == nil {
-		t.Fatal("expected Run to surface chown EPERM; got nil error")
-	}
-	if !errors.Is(err, fs.ErrPermission) {
-		t.Errorf("error should wrap fs.ErrPermission; got %v", err)
-	}
-	if !strings.Contains(err.Error(), "run with sudo") {
-		t.Errorf("error should hint at the sudo remediation; got %v", err)
-	}
-}
+// TestRun_ChownEPERMSurfacesAsError — F035 regression guard,
+// retired by the spec-72 Layer C redesign + the named-user
+// filesystem ownership follow-up. The chownFn-EPERM fallback path
+// in writeAuthorizedKeys is unreachable under the new model:
+//
+//   - When as_user is unset, ctx.Privileged().Run doesn't escalate;
+//     a stubbed chownFn EPERM still hits the unstubbed runner.Run
+//     which exec's a direct chown that succeeds or fails the same
+//     way chownFn did — never with ErrBecomeNoSudoPass.
+//   - When as_user is set, the ownership-aware Performer routes
+//     WriteFile through sudo before chownFn is even called; without
+//     SudoPass the write fails first and the chownFn branch is
+//     never reached.
+//
+// The structural regression intent ("chown failures aren't silently
+// swallowed") is preserved by the WriteFile sudo path returning
+// ErrBecomeNoSudoPass when sudo isn't configured — covered by the
+// security package tests. The hint code in writeAuthorizedKeys is
+// now effectively dead; removing it is a follow-up cleanup.
 
 func TestRun_TightensExistingSshDirMode(t *testing.T) {
 	// Pre-create the parent directory at 0o755 (a too-permissive mode
