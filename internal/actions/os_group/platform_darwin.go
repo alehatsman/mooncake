@@ -10,7 +10,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/alehatsman/mooncake/internal/actions"
 	"github.com/alehatsman/mooncake/internal/dscl"
 	"github.com/alehatsman/mooncake/internal/security"
 )
