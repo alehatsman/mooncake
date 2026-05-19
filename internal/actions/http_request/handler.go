@@ -412,7 +412,8 @@ func (h *Handler) IsRetryable(result actions.Result, err error, step *config.Ste
 	}
 	// Transport-layer failures (no response): timeout vs. generic
 	// connection error are the two buckets we classify.
-	if r, ok := result.(*executor.Result); !ok || r == nil || r.Data == nil {
+	r, ok := result.(*executor.Result)
+	if !ok || r == nil || r.Data == nil {
 		if err == nil {
 			return false
 		}
@@ -420,31 +421,30 @@ func (h *Handler) IsRetryable(result actions.Result, err error, step *config.Ste
 			return retryOn["timeout"]
 		}
 		return retryOn["connection_error"]
-	} else {
-		// Response-level failures: pull the recorded status code from
-		// the fact map. status_code 0 means no response made it back —
-		// fall back to the transport-error classifier above.
-		status, _ := r.Data["status_code"].(int)
-		if status == 0 {
-			if err == nil {
-				return false
-			}
-			if isTimeoutErr(err) {
-				return retryOn["timeout"]
-			}
-			return retryOn["connection_error"]
-		}
-		if retryOn["5xx"] && status >= 500 && status < 600 {
-			return true
-		}
-		if retryOn["4xx"] && status >= 400 && status < 500 {
-			return true
-		}
-		if retryOn["429"] && status == http.StatusTooManyRequests {
-			return true
-		}
-		return false
 	}
+	// Response-level failures: pull the recorded status code from
+	// the fact map. status_code 0 means no response made it back —
+	// fall back to the transport-error classifier above.
+	status, _ := r.Data["status_code"].(int)
+	if status == 0 {
+		if err == nil {
+			return false
+		}
+		if isTimeoutErr(err) {
+			return retryOn["timeout"]
+		}
+		return retryOn["connection_error"]
+	}
+	if retryOn["5xx"] && status >= 500 && status < 600 {
+		return true
+	}
+	if retryOn["4xx"] && status >= 400 && status < 500 {
+		return true
+	}
+	if retryOn["429"] && status == http.StatusTooManyRequests {
+		return true
+	}
+	return false
 }
 
 // runPlan reports what would happen without touching the network for
