@@ -194,10 +194,6 @@ func buildExec(r *config.HTTPRequest, fieldPrefix string) (*renderedRequest, err
 	if r.Timeout != "" {
 		timeout, _ = time.ParseDuration(r.Timeout)
 	}
-	retryDelay := defaultRetryDelay
-	if r.RetryDelay != "" {
-		retryDelay, _ = time.ParseDuration(r.RetryDelay)
-	}
 
 	retryOn := make(map[string]bool, len(r.RetryOn))
 	for _, t := range r.RetryOn {
@@ -223,8 +219,6 @@ func buildExec(r *config.HTTPRequest, fieldPrefix string) (*renderedRequest, err
 		bodyBytes:        bodyBytes,
 		contentType:      defaultCT,
 		timeout:          timeout,
-		retryDelay:       retryDelay,
-		retries:          r.Retries,
 		retryOn:          retryOn,
 		expectStatus:     r.ExpectStatus,
 		skipTLSVerify:    r.SkipTLSVerify,

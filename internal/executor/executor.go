@@ -1349,9 +1349,22 @@ func dispatchRunner(step config.Step, ec *ExecutionContext, runner actions.Runne
 		if rd, ok := runner.(actions.Retryable); ok {
 			isRetryable = func(res actions.Result, e error) bool { return rd.IsRetryable(res, e, &step) }
 		}
-		result, err = runWithRetry(&step, ec.GetLogger(), func(_ int) (actions.Result, error) {
+		// Track the final attempt count so handlers that surface
+		// attempts as a registered fact (http.request's response.attempts)
+		// see the cross-attempt count rather than a per-RunRaw "1".
+		// Single-attempt RunRaw can't observe its own retries.
+		lastAttempt := 0
+		result, err = runWithRetry(&step, ec.GetLogger(), func(attempt int) (actions.Result, error) {
+			lastAttempt = attempt
 			return rr.RunRaw(ec, &step)
 		}, isRetryable)
+		// Only overwrite when the handler already populated Data["attempts"];
+		// we don't invent the key for handlers that didn't ask for it.
+		if r, rok := result.(*Result); rok && r != nil && r.Data != nil {
+			if _, has := r.Data["attempts"]; has {
+				r.Data["attempts"] = lastAttempt
+			}
+		}
 		// Override application: applies once post-retry. MT-48 holds
 		// because the retry loop above branched on raw err, not the
 		// post-override verdict. failed_when:false may mask the final

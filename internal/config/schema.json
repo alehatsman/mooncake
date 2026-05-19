@@ -492,9 +492,6 @@
           "type": "string",
           "pattern": "^[0-7]{3,4}$"
         },
-        "retries": {
-          "type": "integer"
-        },
         "timeout": {
           "type": "string",
           "pattern": "^[0-9]+(ns|us|µs|ms|s|m|h)$"
@@ -995,12 +992,6 @@
             "redact_body": {
               "type": "boolean"
             },
-            "retries": {
-              "type": "integer"
-            },
-            "retry_delay": {
-              "type": "string"
-            },
             "retry_on": {
               "type": "array",
               "items": {
@@ -1036,12 +1027,6 @@
         },
         "redact_body": {
           "type": "boolean"
-        },
-        "retries": {
-          "type": "integer"
-        },
-        "retry_delay": {
-          "type": "string"
         },
         "retry_on": {
           "type": "array",
@@ -1145,12 +1130,6 @@
             },
             "redact_body": {
               "type": "boolean"
-            },
-            "retries": {
-              "type": "integer"
-            },
-            "retry_delay": {
-              "type": "string"
             },
             "retry_on": {
               "type": "array",

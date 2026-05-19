@@ -1,7 +1,9 @@
 package http_request
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -11,8 +13,8 @@ import (
 	"strings"
 	"sync/atomic"
 	"testing"
-	"time"
 
+	"github.com/alehatsman/mooncake/internal/actions"
 	"github.com/alehatsman/mooncake/internal/actions/testutil"
 	"github.com/alehatsman/mooncake/internal/config"
 	"github.com/alehatsman/mooncake/internal/events"
@@ -361,117 +363,93 @@ func TestRun_Apply_ExpectStatus_DefaultIs2xx(t *testing.T) {
 	}
 }
 
-// TestRun_Apply_Retries_5xx — first two calls return 503, third 200,
-// step succeeds after two retries.
-func TestRun_Apply_Retries_5xx(t *testing.T) {
-	var n int32
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		if atomic.AddInt32(&n, 1) < 3 {
-			w.WriteHeader(503)
-			return
-		}
-		w.WriteHeader(200)
-	}))
-	defer srv.Close()
+// Multi-attempt retry behavior is owned by the executor's runWithRetry;
+// the in-handler retry loop was deleted along with HTTPRequest.Retries
+// and HTTPRequest.RetryDelay. The four end-to-end retry tests
+// (TestRun_Apply_Retries_5xx / _Exhausted / _429 / _Timeout) used to
+// live here. Their generic loop invariants are covered by
+// internal/executor/retry_test.go (TestRunWithRetry_HonorsMaxAttempts /
+// _WrapsAfterNAttempts / _BackoffHonored). The HTTP-specific
+// classifier semantics live in TestIsRetryable below.
 
-	step := &config.Step{HTTPRequest: &config.HTTPRequest{
-		URL:        srv.URL,
-		Retries:    2,
-		RetryOn:    []string{"5xx"},
-		RetryDelay: "10ms",
-	}}
-	res, err := (&Handler{}).Run(newCtx(t, false), step)
-	if err != nil {
-		t.Fatalf("Run: %v", err)
+// TestIsRetryable_TransportErrors — a transport-level failure with no
+// response is classified via the timeout/connection_error tokens.
+func TestIsRetryable_TransportErrors(t *testing.T) {
+	h := &Handler{}
+	stepWith := func(tokens ...string) *config.Step {
+		return &config.Step{HTTPRequest: &config.HTTPRequest{RetryOn: tokens}}
 	}
-	r := res.(*executor.Result)
-	if r.Data["attempts"].(int) != 3 {
-		t.Errorf("attempts = %v, want 3", r.Data["attempts"])
+	noResult := func() actions.Result {
+		r := executor.NewResult()
+		r.Data = map[string]interface{}{"status_code": 0, "success": false}
+		return r
 	}
-	if r.Data["success"] != true {
-		t.Errorf("success != true; %v", r.Data)
+	timeoutErr := context.DeadlineExceeded
+
+	if !h.IsRetryable(noResult(), timeoutErr, stepWith("timeout")) {
+		t.Error("timeout in retry_on should retry")
+	}
+	if h.IsRetryable(noResult(), timeoutErr, stepWith("5xx")) {
+		t.Error("timeout NOT in retry_on should not retry")
+	}
+	connErr := errors.New("connection refused")
+	if !h.IsRetryable(noResult(), connErr, stepWith("connection_error")) {
+		t.Error("connection_error in retry_on should retry")
+	}
+	if h.IsRetryable(noResult(), connErr, stepWith("timeout")) {
+		t.Error("connection_error NOT in retry_on should not retry")
 	}
 }
 
-// TestRun_Apply_Retries_Exhausted — 5xx every time, retries=1 ⇒ fails
-// after 2 total attempts.
-func TestRun_Apply_Retries_Exhausted(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		w.WriteHeader(503)
-	}))
-	defer srv.Close()
-
-	step := &config.Step{HTTPRequest: &config.HTTPRequest{
-		URL:        srv.URL,
-		Retries:    1,
-		RetryOn:    []string{"5xx"},
-		RetryDelay: "5ms",
-	}}
-	res, err := (&Handler{}).Run(newCtx(t, false), step)
-	if err == nil {
-		t.Fatal("expected exhausted-retries error")
+// TestIsRetryable_StatusClassification — response-level failures are
+// classified by status code against the 5xx/4xx/429 tokens.
+func TestIsRetryable_StatusClassification(t *testing.T) {
+	h := &Handler{}
+	stepWith := func(tokens ...string) *config.Step {
+		return &config.Step{HTTPRequest: &config.HTTPRequest{RetryOn: tokens}}
 	}
-	r := res.(*executor.Result)
-	if r.Data["attempts"].(int) != 2 {
-		t.Errorf("attempts = %v, want 2", r.Data["attempts"])
+	withStatus := func(code int) actions.Result {
+		r := executor.NewResult()
+		r.Data = map[string]interface{}{"status_code": code, "success": false}
+		return r
 	}
-}
+	statusErr := errors.New("returned 503")
 
-// TestRun_Apply_Retries_429 — Too Many Requests retried when included.
-func TestRun_Apply_Retries_429(t *testing.T) {
-	var n int32
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		if atomic.AddInt32(&n, 1) < 2 {
-			w.WriteHeader(429)
-			return
-		}
-		w.WriteHeader(200)
-	}))
-	defer srv.Close()
-
-	step := &config.Step{HTTPRequest: &config.HTTPRequest{
-		URL:        srv.URL,
-		Retries:    2,
-		RetryOn:    []string{"429"},
-		RetryDelay: "5ms",
-	}}
-	res, err := (&Handler{}).Run(newCtx(t, false), step)
-	if err != nil {
-		t.Fatalf("Run: %v", err)
+	cases := []struct {
+		name   string
+		status int
+		tokens []string
+		want   bool
+	}{
+		{"503 + 5xx", 503, []string{"5xx"}, true},
+		{"404 + 5xx", 404, []string{"5xx"}, false},
+		{"429 + 429", 429, []string{"429"}, true},
+		{"429 + 5xx (no 429 token)", 429, []string{"5xx"}, false},
+		{"404 + 4xx", 404, []string{"4xx"}, true},
+		{"200 + 5xx (success status — caller passes nil err)", 200, []string{"5xx"}, false},
 	}
-	r := res.(*executor.Result)
-	if r.Data["attempts"].(int) != 2 {
-		t.Errorf("attempts = %v, want 2", r.Data["attempts"])
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := h.IsRetryable(withStatus(tc.status), statusErr, stepWith(tc.tokens...))
+			if got != tc.want {
+				t.Errorf("IsRetryable status=%d tokens=%v = %v, want %v",
+					tc.status, tc.tokens, got, tc.want)
+			}
+		})
 	}
 }
 
-// TestRun_Apply_Retries_Timeout — slow server triggers per-request
-// timeout; retry classification picks it up.
-func TestRun_Apply_Retries_Timeout(t *testing.T) {
-	var n int32
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		if atomic.AddInt32(&n, 1) < 2 {
-			time.Sleep(300 * time.Millisecond)
-			return
-		}
-		w.WriteHeader(200)
-	}))
-	defer srv.Close()
-
-	step := &config.Step{HTTPRequest: &config.HTTPRequest{
-		URL:        srv.URL,
-		Timeout:    "100ms",
-		Retries:    2,
-		RetryOn:    []string{"timeout"},
-		RetryDelay: "10ms",
-	}}
-	res, err := (&Handler{}).Run(newCtx(t, false), step)
-	if err != nil {
-		t.Fatalf("Run after retries: %v", err)
-	}
-	r := res.(*executor.Result)
-	if r.Data["attempts"].(int) < 2 {
-		t.Errorf("attempts = %v; want >=2", r.Data["attempts"])
+// TestIsRetryable_EmptyRetryOn — no retry_on tokens means no retry at
+// the handler's discretion. The executor's default behavior (retry on
+// any err) does NOT apply here because http_request implements
+// Retryable explicitly.
+func TestIsRetryable_EmptyRetryOn(t *testing.T) {
+	h := &Handler{}
+	step := &config.Step{HTTPRequest: &config.HTTPRequest{}}
+	r := executor.NewResult()
+	r.Data = map[string]interface{}{"status_code": 503}
+	if h.IsRetryable(r, errors.New("503"), step) {
+		t.Error("empty retry_on should not retry")
 	}
 }
 

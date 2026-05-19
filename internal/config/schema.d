@@ -210,7 +210,6 @@ export interface FileDownloadAction {
   force?: boolean;
   headers?: Record<string, any>;
   mode?: string;
-  retries?: number;
   timeout?: string;
   url: string;
 }
@@ -371,8 +370,6 @@ export interface HttpRequestAction {
     method: string;
     probe: Record<string, any>;
     redact_body: boolean;
-    retries: number;
-    retry_delay: string;
     retry_on: string[];
     reverse: Record<string, any>;
     risk: string;
@@ -382,8 +379,6 @@ export interface HttpRequestAction {
     url: string;
   };
   redact_body?: boolean;
-  retries?: number;
-  retry_delay?: string;
   retry_on?: string[];
   reverse?: {
     auth: {
@@ -411,8 +406,6 @@ export interface HttpRequestAction {
     method: string;
     probe: Record<string, any>;
     redact_body: boolean;
-    retries: number;
-    retry_delay: string;
     retry_on: string[];
     reverse: Record<string, any>;
     risk: string;

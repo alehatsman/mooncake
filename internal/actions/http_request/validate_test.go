@@ -172,15 +172,6 @@ func TestValidate_TableDriven(t *testing.T) {
 			errSubstr: "invalid timeout",
 		},
 		{
-			name: "negative retries",
-			step: &config.Step{HTTPRequest: &config.HTTPRequest{
-				URL:     "http://x",
-				Retries: -1,
-			}},
-			wantErr:   true,
-			errSubstr: "retries must be >= 0",
-		},
-		{
 			name: "bad expect_status",
 			step: &config.Step{HTTPRequest: &config.HTTPRequest{
 				URL:          "http://x",

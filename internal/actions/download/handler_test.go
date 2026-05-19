@@ -643,88 +643,14 @@ func TestHandler_Run_WithTimeout(t *testing.T) {
 	}
 }
 
-func TestHandler_Run_WithRetry(t *testing.T) {
-	h := &Handler{}
-
-	attemptCount := 0
-	testContent := "retry content"
-
-	// Create server that fails first attempt, succeeds second
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		attemptCount++
-		if attemptCount == 1 {
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(testContent))
-	}))
-	defer server.Close()
-
-	tmpDir := t.TempDir()
-	destPath := filepath.Join(tmpDir, "retry.txt")
-
-	ec := mockExecutionContext()
-	step := &config.Step{
-		FileDownload: &config.Download{
-			URL:     server.URL,
-			Dest:    destPath,
-			Retries: 2,
-		},
-	}
-
-	result, err := h.Run(ec, step)
-	if err != nil {
-		t.Fatalf("Run() should succeed on retry, got error: %v", err)
-	}
-
-	if attemptCount != 2 {
-		t.Errorf("Expected 2 attempts, got %d", attemptCount)
-	}
-
-	execResult := result.(*executor.Result)
-	if !execResult.Changed {
-		t.Error("Result.Changed should be true")
-	}
-
-	// Verify file exists
-	if _, err := os.Stat(destPath); os.IsNotExist(err) {
-		t.Error("Downloaded file does not exist")
-	}
-}
-
-func TestHandler_Run_RetryExhausted(t *testing.T) {
-	h := &Handler{}
-
-	// Create server that always fails
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusInternalServerError)
-	}))
-	defer server.Close()
-
-	tmpDir := t.TempDir()
-	destPath := filepath.Join(tmpDir, "failed.txt")
-
-	ec := mockExecutionContext()
-	step := &config.Step{
-		FileDownload: &config.Download{
-			URL:     server.URL,
-			Dest:    destPath,
-			Retries: 2,
-		},
-		Retry: &config.RetryPolicy{Delay: "10ms"},
-	}
-
-	result, err := h.Run(ec, step)
-	if err == nil {
-		t.Error("Run() should error after retries exhausted")
-	}
-
-	execResult := result.(*executor.Result)
-	if !execResult.Failed {
-		t.Error("Result.Failed should be true")
-	}
-}
+// Retry behavior is owned by the executor's runWithRetry; the
+// in-handler retry loop was deleted along with the action-local
+// Download.Retries field. TestHandler_Run_WithRetry +
+// TestHandler_Run_RetryExhausted used to live here; their
+// invariants are covered by internal/executor/retry_test.go's
+// TestRunWithRetry_HonorsMaxAttempts and _WrapsAfterNAttempts.
+// Single-attempt h.Run() is exercised by the TestHandler_Run_* cases
+// in this file that don't set step.Retry.
 
 func TestHandler_Run_WithMode(t *testing.T) {
 	h := &Handler{}

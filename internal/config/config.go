@@ -348,7 +348,6 @@ type Download struct {
 	Force    bool              `yaml:"force" json:"force,omitempty"`       // Force re-download if destination exists
 	Backup   bool              `yaml:"backup" json:"backup,omitempty"`     // Create .bak backup before overwriting
 	Headers  map[string]string `yaml:"headers" json:"headers,omitempty"`   // Custom HTTP headers
-	Retries  int               `yaml:"retries" json:"retries,omitempty"`   // Number of retry attempts
 }
 
 // GitClone represents a git clone-or-update operation in a configuration step.
@@ -1324,13 +1323,12 @@ type HTTPRequest struct {
 	// step (after retries are exhausted).
 	ExpectStatus []int `yaml:"expect_status,omitempty" json:"expect_status,omitempty"`
 
-	// Retries: 0 = one attempt (no retry). RetryOn lists conditions
-	// that trigger a retry. Accepted: "5xx", "4xx", "429", "timeout",
-	// "connection_error". RetryDelay is a duration string ("1s", "500ms"),
-	// default "1s".
-	Retries    int      `yaml:"retries,omitempty" json:"retries,omitempty"`
-	RetryOn    []string `yaml:"retry_on,omitempty" json:"retry_on,omitempty"`
-	RetryDelay string   `yaml:"retry_delay,omitempty" json:"retry_delay,omitempty"`
+	// RetryOn lists HTTP-specific conditions that classify a response
+	// as retryable. Attempts and delay come from the step-level
+	// retry: { attempts, delay, backoff } block — the executor owns
+	// the loop and the backoff curve. Accepted tokens: "5xx", "4xx",
+	// "429", "timeout", "connection_error".
+	RetryOn []string `yaml:"retry_on,omitempty" json:"retry_on,omitempty"`
 
 	// Timeout bounds the per-request transfer (default "30s"). The
 	// httputil DefaultTransport's dial / TLS / response-headers

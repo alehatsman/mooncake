@@ -175,40 +175,12 @@ func (h *Handler) runApply(ctx actions.Context, step *config.Step) (actions.Resu
 		ctx.GetLogger().Debugf("  Backup created: %s", backupPath)
 	}
 
-	// Download file with retries
+	// Single attempt — retry is owned by the executor's runWithRetry
+	// when the user sets a step-level `retry:` block. Every error is
+	// retryable by default (no Retryable impl); the action-local
+	// `retries:` / `retry_delay:` fields were removed.
 	ctx.GetLogger().Debugf("  Downloading: %s -> %s", renderedURL, renderedDest)
-	maxRetries := downloadAction.Retries
-	if maxRetries == 0 {
-		maxRetries = 1 // At least one attempt
-	}
-
-	var downloadedSize int64
-	var downloadErr error
-
-	for attempt := 1; attempt <= maxRetries; attempt++ {
-		if attempt > 1 {
-			ctx.GetLogger().Debugf("  Retry attempt %d/%d", attempt, maxRetries)
-		}
-
-		downloadedSize, downloadErr = h.downloadFile(renderedURL, renderedDest, downloadAction, mode, step, ctx)
-		if downloadErr == nil {
-			break // Success
-		}
-
-		if attempt < maxRetries {
-			// Wait before retry (using step-level retry delay if available)
-			if step.RetryDelayDuration() != "" {
-				if delay, parseErr := time.ParseDuration(step.RetryDelayDuration()); parseErr == nil {
-					time.Sleep(delay)
-				} else {
-					time.Sleep(1 * time.Second) // Default 1s delay
-				}
-			} else {
-				time.Sleep(1 * time.Second) // Default 1s delay
-			}
-		}
-	}
-
+	downloadedSize, downloadErr := h.downloadFile(renderedURL, renderedDest, downloadAction, mode, step, ctx)
 	if downloadErr != nil {
 		result.Failed = true
 		return result, downloadErr
@@ -443,11 +415,9 @@ func (h *Handler) executeSudoCommand(ctx actions.Context, command string) error 
 // Run is the Spec 16 unified entry point. Plan mode inspects the
 // destination file: if it exists with a matching checksum (or
 // force=false and no checksum specified), reports already-ok;
-// otherwise reports would-download. Execute mode delegates to the
-// legacy Execute path which performs the HTTP fetch.
-// RunRaw signals spec-69 RawRunner participation so user-declared
-// `retry:` actually retries this idempotent action via the
-// centralized executor loop instead of being silently no-op'd.
+// otherwise reports would-download. Apply mode delegates to runApply
+// which performs the HTTP fetch as a single attempt — retry, if any,
+// is owned by the executor's runWithRetry via the RawRunner hook.
 func (h *Handler) RunRaw(ctx actions.Context, step *config.Step) (actions.Result, error) {
 	return h.Run(ctx, step)
 }

@@ -54,7 +54,6 @@ const (
 	actionName = "http.request"
 
 	defaultTimeout          = 30 * time.Second
-	defaultRetryDelay       = time.Second
 	defaultMaxResponseBytes = 1 << 20 // 1 MiB
 	defaultFollowRedirects  = 10
 )
@@ -215,12 +214,6 @@ func validateStructural(r *config.HTTPRequest, fieldPrefix string) error {
 	if err := validateDuration(at("timeout"), r.Timeout); err != nil {
 		return err
 	}
-	if err := validateDuration(at("retry_delay"), r.RetryDelay); err != nil {
-		return err
-	}
-	if r.Retries < 0 {
-		return fmt.Errorf("%s: %s must be >= 0", actionName, at("retries"))
-	}
 	for _, code := range r.ExpectStatus {
 		if code < 100 || code > 599 {
 			return fmt.Errorf("%s: invalid %s %d", actionName, at("expect_status"), code)
@@ -355,6 +348,10 @@ func validateDuration(field, val string) error {
 // renderedRequest is the fully-rendered, template-resolved view of an
 // HTTPRequest. All template strings have been resolved against the
 // step's variables; bytes are ready to send.
+//
+// Retry attempts + delay live on the step (RetryPolicy) so the
+// executor's runWithRetry can drive the loop uniformly; only the
+// HTTP-specific retry-on classifier travels with the request.
 type renderedRequest struct {
 	method        string
 	url           string
@@ -362,8 +359,6 @@ type renderedRequest struct {
 	bodyBytes     []byte
 	contentType   string // derived from body form unless overridden by user header
 	timeout       time.Duration
-	retryDelay    time.Duration
-	retries       int
 	retryOn       map[string]bool
 	expectStatus  []int
 	skipTLSVerify bool
@@ -378,8 +373,9 @@ type renderedRequest struct {
 
 // Run is the unified Spec-16 entry point. Plan mode optionally
 // executes a `probe:` read-request to evaluate `creates_when:` against
-// current state (Wave 2); apply mode renders, sends with retries, and
-// captures the response as a registered fact.
+// current state (Wave 2); apply mode renders, sends a single request,
+// and captures the response as a registered fact. Retry is owned by
+// the executor's runWithRetry — see RunRaw + IsRetryable below.
 func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, error) {
 	rr, err := h.render(ctx, step.HTTPRequest, ctx.GetVariables(), "")
 	if err != nil {
@@ -390,6 +386,65 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		return h.runPlan(ctx, step, rr)
 	}
 	return h.runApply(ctx, step, rr)
+}
+
+// RunRaw is the spec-69 RawRunner entry point: a single send attempt,
+// no retry loop. The executor wraps this in runWithRetry when the
+// user sets a step-level retry policy; IsRetryable below classifies
+// each attempt's outcome against the RetryOn tokens.
+func (h *Handler) RunRaw(ctx actions.Context, step *config.Step) (actions.Result, error) {
+	return h.Run(ctx, step)
+}
+
+// IsRetryable classifies a failed attempt against the step's RetryOn
+// tokens. Called by the executor's retry loop only when err != nil —
+// runApply returns a non-nil err for transport failures AND for
+// status codes outside expectStatus, so this method sees every
+// retryable signal. RetryOn is HTTP-specific and stays on the action
+// config; attempts + delay live on step.Retry.
+func (h *Handler) IsRetryable(result actions.Result, err error, step *config.Step) bool {
+	if step == nil || step.HTTPRequest == nil || len(step.HTTPRequest.RetryOn) == 0 {
+		return false
+	}
+	retryOn := make(map[string]bool, len(step.HTTPRequest.RetryOn))
+	for _, t := range step.HTTPRequest.RetryOn {
+		retryOn[strings.ToLower(t)] = true
+	}
+	// Transport-layer failures (no response): timeout vs. generic
+	// connection error are the two buckets we classify.
+	if r, ok := result.(*executor.Result); !ok || r == nil || r.Data == nil {
+		if err == nil {
+			return false
+		}
+		if isTimeoutErr(err) {
+			return retryOn["timeout"]
+		}
+		return retryOn["connection_error"]
+	} else {
+		// Response-level failures: pull the recorded status code from
+		// the fact map. status_code 0 means no response made it back —
+		// fall back to the transport-error classifier above.
+		status, _ := r.Data["status_code"].(int)
+		if status == 0 {
+			if err == nil {
+				return false
+			}
+			if isTimeoutErr(err) {
+				return retryOn["timeout"]
+			}
+			return retryOn["connection_error"]
+		}
+		if retryOn["5xx"] && status >= 500 && status < 600 {
+			return true
+		}
+		if retryOn["4xx"] && status >= 400 && status < 500 {
+			return true
+		}
+		if retryOn["429"] && status == http.StatusTooManyRequests {
+			return true
+		}
+		return false
+	}
 }
 
 // runPlan reports what would happen without touching the network for
@@ -539,9 +594,11 @@ func evalCreatesWhen(ctx actions.Context, expr string, probeFact map[string]inte
 	return b, nil
 }
 
-// runApply sends the request with retry classification, captures the
-// response into the result.Data, populates ReverseData if reverse: is
-// declared, and emits the audit event.
+// runApply sends ONE request, captures the response, and emits the
+// audit event. Retry is the executor's job — when the user sets a
+// step-level retry: block, runWithRetry calls this multiple times and
+// IsRetryable classifies each failure. data["attempts"] is fixed up
+// by the executor post-loop with the cross-attempt count.
 func (h *Handler) runApply(ctx actions.Context, step *config.Step, rr *renderedRequest) (actions.Result, error) {
 	res := executor.NewResult()
 	res.StartTime = time.Now()
@@ -551,27 +608,7 @@ func (h *Handler) runApply(ctx actions.Context, step *config.Step, rr *renderedR
 	}()
 
 	client := buildClient(rr)
-
-	var (
-		got     *httpAttempt
-		attempt int
-		lastErr error
-	)
-	maxAttempts := rr.retries + 1
-	for attempt = 1; attempt <= maxAttempts; attempt++ {
-		if attempt > 1 {
-			ctx.GetLogger().Debugf("  retry %d/%d after %s", attempt-1, rr.retries, rr.retryDelay)
-			time.Sleep(rr.retryDelay)
-		}
-		got, lastErr = h.sendOnce(client, rr)
-		if !shouldRetry(got, lastErr, rr) {
-			break
-		}
-		got = nil
-		if attempt == maxAttempts {
-			break
-		}
-	}
+	got, transportErr := h.sendOnce(client, rr)
 
 	statusCode := 0
 	if got != nil {
@@ -579,16 +616,19 @@ func (h *Handler) runApply(ctx actions.Context, step *config.Step, rr *renderedR
 	}
 
 	// Build the fact regardless of success/failure so the user can
-	// inspect what happened on partial failures. buildFact does the
-	// body/redaction/json-parse legwork shared with the probe path.
+	// inspect what happened on partial failures.
 	data := buildFact(got, rr)
 	data["method"] = rr.method
 	data["url"] = rr.url
-	data["attempts"] = attempt
+	// Per-attempt count; the executor overwrites this with the final
+	// cross-attempt count when retries are configured.
+	data["attempts"] = 1
 	data["duration_ms"] = time.Since(res.StartTime).Milliseconds()
 	data["success"] = false
 
-	// Publish event (host + path only; no query, no body).
+	// Publish event (host + path only; no query, no body). Emitted
+	// per-attempt — if retries fire, you'll see multiple events with
+	// the same step ID, each carrying its own status_code.
 	if pub := ctx.GetEventPublisher(); pub != nil {
 		pub.Publish(events.Event{
 			Type: events.EventHTTPRequested,
@@ -597,16 +637,16 @@ func (h *Handler) runApply(ctx actions.Context, step *config.Step, rr *renderedR
 				URL:        sanitizeURLForEvent(rr.url),
 				StatusCode: statusCode,
 				DurationMs: time.Since(res.StartTime).Milliseconds(),
-				Attempts:   attempt,
+				Attempts:   1,
 				DryRun:     false,
 			},
 		})
 	}
 
-	if lastErr != nil {
+	if transportErr != nil {
 		res.Failed = true
 		res.Data = data
-		return res, fmt.Errorf("%s: %s %s: %w", actionName, rr.method, rr.url, lastErr)
+		return res, fmt.Errorf("%s: %s %s: %w", actionName, rr.method, rr.url, transportErr)
 	}
 
 	if !statusAccepted(statusCode, rr.expectStatus) {
@@ -669,8 +709,12 @@ func (h *Handler) runApply(ctx actions.Context, step *config.Step, rr *renderedR
 		}
 	}
 
-	ctx.GetLogger().Infof("  HTTP %s %s -> %d (%dms, %d attempt(s))",
-		rr.method, rr.url, statusCode, data["duration_ms"], attempt)
+	// One log line per RunRaw call. The executor's retry loop logs its
+	// own "retry N/M" line between attempts; consumers tracking total
+	// trips should read response.attempts from the registered fact,
+	// which the executor fixes up post-loop with the cross-attempt count.
+	ctx.GetLogger().Infof("  HTTP %s %s -> %d (%dms)",
+		rr.method, rr.url, statusCode, data["duration_ms"])
 	return res, nil
 }
 
@@ -753,34 +797,9 @@ func (h *Handler) sendOnce(client *http.Client, rr *renderedRequest) (*httpAttem
 	return out, nil
 }
 
-// shouldRetry inspects an attempt + error and decides whether to retry.
-func shouldRetry(got *httpAttempt, err error, rr *renderedRequest) bool {
-	if len(rr.retryOn) == 0 {
-		return false
-	}
-	if err != nil {
-		if isTimeoutErr(err) && rr.retryOn["timeout"] {
-			return true
-		}
-		if rr.retryOn["connection_error"] {
-			return true
-		}
-		return false
-	}
-	if got == nil {
-		return false
-	}
-	if rr.retryOn["5xx"] && got.statusCode >= 500 && got.statusCode < 600 {
-		return true
-	}
-	if rr.retryOn["4xx"] && got.statusCode >= 400 && got.statusCode < 500 {
-		return true
-	}
-	if rr.retryOn["429"] && got.statusCode == http.StatusTooManyRequests {
-		return true
-	}
-	return false
-}
+// shouldRetry was deleted with the in-handler retry loop; the
+// equivalent classifier now lives on *Handler.IsRetryable above and
+// is called by the executor's runWithRetry between attempts.
 
 func isTimeoutErr(err error) bool {
 	if errors.Is(err, context.DeadlineExceeded) {
