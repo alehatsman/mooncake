@@ -49,7 +49,10 @@ steps:
 
 func runGitCmd(t *testing.T, dir string, args ...string) {
 	t.Helper()
-	cmd := exec.Command("git", args...)
+	// Disable hooks so the parent project's pre-commit (which assumes a
+	// Taskfile-rooted checkout) does not fire inside fixture repos.
+	full := append([]string{"-c", "core.hooksPath=/dev/null"}, args...)
+	cmd := exec.Command("git", full...)
 	if dir != "" {
 		cmd.Dir = dir
 	}
