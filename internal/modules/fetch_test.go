@@ -9,6 +9,22 @@ import (
 	"testing"
 )
 
+// gitFreshEnv returns a copy of the parent environment with all GIT_* vars
+// stripped. Without this, tests run via the project's pre-push hook inherit
+// GIT_DIR / GIT_WORK_TREE etc. and `git init` in a temp dir silently operates
+// against the parent repo, scribbling user config and tags into it.
+func gitFreshEnv() []string {
+	in := os.Environ()
+	out := make([]string, 0, len(in))
+	for _, e := range in {
+		if strings.HasPrefix(e, "GIT_") {
+			continue
+		}
+		out = append(out, e)
+	}
+	return out
+}
+
 // makeFixtureRepo builds a small git repo with an index.yml + component file
 // and tags it. Returns the path to the bare clone-source repo.
 func makeFixtureRepo(t *testing.T, tag string) string {
@@ -47,6 +63,7 @@ func runGit(t *testing.T, dir string, args ...string) {
 	// Taskfile-rooted checkout) does not fire inside fixture repos.
 	full := append([]string{"-c", "core.hooksPath=/dev/null"}, args...)
 	cmd := exec.Command("git", full...)
+	cmd.Env = gitFreshEnv()
 	if dir != "" {
 		cmd.Dir = dir
 	}

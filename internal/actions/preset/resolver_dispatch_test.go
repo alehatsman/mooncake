@@ -53,6 +53,9 @@ func runGitCmd(t *testing.T, dir string, args ...string) {
 	// Taskfile-rooted checkout) does not fire inside fixture repos.
 	full := append([]string{"-c", "core.hooksPath=/dev/null"}, args...)
 	cmd := exec.Command("git", full...)
+	// Strip GIT_* env vars so tests don't pick up GIT_DIR/GIT_WORK_TREE when
+	// invoked from the parent project's pre-push hook.
+	cmd.Env = filterGitEnv(os.Environ())
 	if dir != "" {
 		cmd.Dir = dir
 	}
@@ -60,6 +63,17 @@ func runGitCmd(t *testing.T, dir string, args ...string) {
 	if err != nil {
 		t.Fatalf("git %v: %v\n%s", args, err, out)
 	}
+}
+
+func filterGitEnv(env []string) []string {
+	out := make([]string, 0, len(env))
+	for _, e := range env {
+		if strings.HasPrefix(e, "GIT_") {
+			continue
+		}
+		out = append(out, e)
+	}
+	return out
 }
 
 func writeFixtureFile(t *testing.T, path, content string) {

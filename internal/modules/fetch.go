@@ -7,7 +7,23 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 )
+
+// scrubGitEnv returns env with all GIT_* vars removed. Needed when shelling
+// out to `git` from a process that may itself have been launched by a git
+// hook — in which case GIT_DIR / GIT_WORK_TREE would otherwise redirect the
+// subprocess at the parent repo.
+func scrubGitEnv(env []string) []string {
+	out := make([]string, 0, len(env))
+	for _, e := range env {
+		if strings.HasPrefix(e, "GIT_") {
+			continue
+		}
+		out = append(out, e)
+	}
+	return out
+}
 
 // DefaultCacheRoot is ~/.cache/mooncake/modules.
 //
@@ -115,8 +131,13 @@ func (f *Fetcher) cloneAndCheckout(ctx context.Context, ref Reference, dst strin
 	}
 
 	// Shallow-clone the single ref to keep the cache small and network IO low.
-	out, err := exec.CommandContext(ctx, git, //nolint:gosec // git binary + args are controlled
-		"clone", "--depth", "1", "--branch", ref.Version, cloneURL, dst).CombinedOutput()
+	// Scrub GIT_* env vars so a parent invocation that already has GIT_DIR set
+	// (e.g. mooncake invoked from a git hook) doesn't redirect the clone into
+	// the caller's repo.
+	cmd := exec.CommandContext(ctx, git, //nolint:gosec // git binary + args are controlled
+		"clone", "--depth", "1", "--branch", ref.Version, cloneURL, dst)
+	cmd.Env = scrubGitEnv(os.Environ())
+	out, err := cmd.CombinedOutput()
 	if err != nil {
 		// Disambiguate "tag missing" from "network/auth failure" using the
 		// git error text. The exact phrasing varies between Git versions, so
