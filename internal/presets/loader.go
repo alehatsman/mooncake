@@ -146,7 +146,7 @@ func warnDeprecatedParameters(path string) {
 		return
 	}
 	deprecationWarned[path] = true
-	fmt.Fprintf(deprecationWriter, "warning: %s uses `parameters:` which is deprecated — rename to `props:`\n", path)
+	_, _ = fmt.Fprintf(deprecationWriter, "warning: %s uses `parameters:` which is deprecated — rename to `props:`\n", path)
 }
 
 // LoadPresetFromPath loads a component/preset definition from an explicit
