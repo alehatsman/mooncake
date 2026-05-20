@@ -182,6 +182,7 @@ func (p *Planner) BuildPlan(cfg PlannerConfig) (*Plan, error) {
 		Steps:       make([]config.Step, 0),
 		InitialVars: cfg.Variables,
 		Tags:        cfg.Tags,
+		Modules:     runConfig.Modules,
 	}
 
 	// Merge global vars from config with provided vars (provided vars take precedence)
@@ -293,6 +294,7 @@ func (p *Planner) readRunConfig(path string) (*config.RunConfig, error) {
 	runConfig := &config.RunConfig{
 		Version: parsedConfig.Version,
 		Vars:    parsedConfig.GlobalVars,
+		Modules: parsedConfig.Modules,
 		Steps:   parsedConfig.Steps,
 	}
 

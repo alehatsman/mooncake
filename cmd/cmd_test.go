@@ -229,7 +229,7 @@ func TestCreateApp(t *testing.T) {
 	}
 
 	// Test commands exist
-	expectedCommands := []string{"init", "doctor", "presets", "docs", "schema", "snapshot", "history", "mcp", "step", "tool", "apply", "plan", "facts", "explain", "metrics", "actions", "validate", "pilot", "agentd", "fleet", "runs", "query"}
+	expectedCommands := []string{"init", "doctor", "presets", "mod", "docs", "schema", "snapshot", "history", "mcp", "step", "tool", "apply", "plan", "facts", "explain", "metrics", "actions", "validate", "pilot", "agentd", "fleet", "runs", "query"}
 	if len(app.Commands) != len(expectedCommands) {
 		t.Errorf("app.Commands length = %d, expected %d", len(app.Commands), len(expectedCommands))
 	}

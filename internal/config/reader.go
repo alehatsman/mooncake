@@ -132,6 +132,7 @@ func (r *YAMLConfigReader) ReadConfigWithValidation(path string) (*ParsedConfig,
 		parsedConfig = &ParsedConfig{
 			Steps:      runConfig.Steps,
 			GlobalVars: globalVars,
+			Modules:    runConfig.Modules,
 			Version:    runConfig.Version,
 		}
 	}

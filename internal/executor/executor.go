@@ -1196,6 +1196,7 @@ func executePlanWithCapture(ctx context.Context, p *plan.Plan, sudoPass string, 
 		EventPublisher: publisher,
 		Capture:        capture,
 		Ctx:            ctx,
+		Modules:        p.Modules,
 	}
 	// R1.1b: Capture.Plan was already set by Start; for the direct
 	// ExecutePlan entry point (where capture is nil) this is a no-op.

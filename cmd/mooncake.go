@@ -1606,6 +1606,7 @@ func createApp() *cli.App {
 			initCommand(),
 			doctorCommand(),
 			presetsCommand(),
+			modCommand(),
 			docsCommand(),
 			schemaCommand(),
 			snapshotCommand(),

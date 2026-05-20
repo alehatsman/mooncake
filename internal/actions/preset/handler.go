@@ -3,13 +3,16 @@
 package preset
 
 import (
+	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/alehatsman/mooncake/internal/actions"
 	"github.com/alehatsman/mooncake/internal/config"
 	"github.com/alehatsman/mooncake/internal/events"
 	"github.com/alehatsman/mooncake/internal/executor"
+	"github.com/alehatsman/mooncake/internal/modules"
 	"github.com/alehatsman/mooncake/internal/plan"
 	"github.com/alehatsman/mooncake/internal/presets"
 )
@@ -123,10 +126,44 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 
 	invocation := step.Use
 
-	// Expand preset into steps
-	expandedSteps, parametersNamespace, presetBaseDir, err := presets.ExpandPreset(invocation)
-	if err != nil {
-		return nil, fmt.Errorf("failed to expand preset '%s': %w", invocation.Name, err)
+	// spec-67 dispatch:
+	//   local path  → LoadPresetFromPath against ec.CurrentDir
+	//   remote ref  → resolver fetches + reads index.yml
+	//   alias hit   → resolver via Svc.Modules
+	//   else        → legacy preset (search paths)
+	var expandedSteps []config.Step
+	var parametersNamespace map[string]interface{}
+	var presetBaseDir string
+	var err error
+	switch invocation.Kind() {
+	case config.ComponentRefLocalPath:
+		absPath := invocation.Name
+		if !filepath.IsAbs(absPath) {
+			absPath = filepath.Join(ec.CurrentDir, invocation.Name)
+		}
+		expandedSteps, parametersNamespace, presetBaseDir, err = presets.ExpandPresetFromPath(invocation, absPath)
+		if err != nil {
+			return nil, fmt.Errorf("failed to expand component '%s': %w", invocation.Name, err)
+		}
+	case config.ComponentRefRemote:
+		expandedSteps, parametersNamespace, presetBaseDir, err = resolveAndExpand(ec, invocation)
+		if err != nil {
+			return nil, err
+		}
+	default:
+		// Alias hit when the bare name appears in the playbook's modules: block.
+		// Otherwise fall through to the legacy preset search-path loader.
+		if _, isAlias := ec.Svc.Modules[firstSegment(invocation.Name)]; isAlias && ec.Svc.Modules != nil {
+			expandedSteps, parametersNamespace, presetBaseDir, err = resolveAndExpand(ec, invocation)
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			expandedSteps, parametersNamespace, presetBaseDir, err = presets.ExpandPreset(invocation)
+			if err != nil {
+				return nil, fmt.Errorf("failed to expand preset '%s': %w", invocation.Name, err)
+			}
+		}
 	}
 
 	// Emit preset expanded event
@@ -208,4 +245,46 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 	}
 
 	return result, nil
+}
+
+// resolverFor builds a Resolver wired to the run's Modules map. Overridable
+// for tests so they can inject a Fetcher with a fixture CloneURL.
+var resolverFor = func(ec *executor.ExecutionContext) *modules.Resolver {
+	return &modules.Resolver{
+		Fetcher: &modules.Fetcher{},
+		Modules: ec.Svc.Modules,
+	}
+}
+
+// resolveAndExpand resolves a remote or alias `use:` reference, then expands
+// the component file. Shared by the remote and alias branches of Run.
+func resolveAndExpand(ec *executor.ExecutionContext, invocation *config.PresetInvocation) ([]config.Step, map[string]interface{}, string, error) {
+	resolver := resolverFor(ec)
+	bgCtx := ec.Svc.Ctx
+	if bgCtx == nil {
+		bgCtx = context.Background()
+	}
+	resolved, err := resolver.Resolve(bgCtx, invocation.Name)
+	if err != nil {
+		return nil, nil, "", fmt.Errorf("resolve module %q: %w", invocation.Name, err)
+	}
+	return presets.ExpandPresetFromPath(invocation, resolved.ComponentPath)
+}
+
+// firstSegment returns the portion of s before the first '/' (or all of s).
+// Used to peel "alias/export" → "alias" for the modules map lookup.
+func firstSegment(s string) string {
+	if i := indexByte(s, '/'); i >= 0 {
+		return s[:i]
+	}
+	return s
+}
+
+func indexByte(s string, b byte) int {
+	for i := 0; i < len(s); i++ {
+		if s[i] == b {
+			return i
+		}
+	}
+	return -1
 }

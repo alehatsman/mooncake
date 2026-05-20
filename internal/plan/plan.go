@@ -26,6 +26,9 @@ type Plan struct {
 	Inspections    []StepInspection       `json:"inspections,omitempty" yaml:"inspections,omitempty"`
 	InitialVars    map[string]interface{} `json:"initial_vars,omitempty" yaml:"initial_vars,omitempty"`
 	Tags           []string               `json:"tags,omitempty" yaml:"tags,omitempty"`
+	// Modules carries the playbook's `modules:` alias map (spec-67) so the
+	// executor can resolve `use: <alias>` references at apply time.
+	Modules map[string]string `json:"modules,omitempty" yaml:"modules,omitempty"`
 }
 
 // StepInspection is the result of running a handler in ModePlan against

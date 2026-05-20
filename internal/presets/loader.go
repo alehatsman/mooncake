@@ -3,10 +3,12 @@ package presets
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"sort"
 	"strings"
+	"sync"
 
 	"gopkg.in/yaml.v3"
 
@@ -119,6 +121,66 @@ func LoadPreset(name string) (*config.PresetDefinition, error) {
 	// Store the base directory in the preset for relative path resolution
 	preset.BaseDir = baseDir
 
+	if preset.UsedParametersKey {
+		warnDeprecatedParameters(presetPath)
+	}
+
+	return &preset, nil
+}
+
+// warnDeprecatedParameters emits a one-time-per-path deprecation message when
+// a preset file uses the legacy `parameters:` key instead of `props:`.
+//
+// The map keys by path so re-loading the same preset (DiscoverAllPresets walks
+// it twice) doesn't spam the console.
+var (
+	deprecationMu     sync.Mutex
+	deprecationWarned           = make(map[string]bool)
+	deprecationWriter io.Writer = os.Stderr // overridable in tests
+)
+
+func warnDeprecatedParameters(path string) {
+	deprecationMu.Lock()
+	defer deprecationMu.Unlock()
+	if deprecationWarned[path] {
+		return
+	}
+	deprecationWarned[path] = true
+	fmt.Fprintf(deprecationWriter, "warning: %s uses `parameters:` which is deprecated — rename to `props:`\n", path)
+}
+
+// LoadPresetFromPath loads a component/preset definition from an explicit
+// filesystem path. Used by spec-67 local-component (`use: ./foo.yml`) and
+// remote-module dispatch, where the loader has already resolved the file
+// without going through search paths.
+//
+// If the file omits `name:`, the filename stem is used so downstream code that
+// expects a non-empty Name still works.
+func LoadPresetFromPath(path string) (*config.PresetDefinition, error) {
+	if path == "" {
+		return nil, fmt.Errorf("component path is empty")
+	}
+	data, err := os.ReadFile(path) // #nosec G304 -- path is validated by caller (executor resolves relative paths against the playbook dir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, fmt.Errorf("component not found: %s", path)
+		}
+		return nil, fmt.Errorf("read component %s: %w", path, err)
+	}
+	var preset config.PresetDefinition
+	if err := yaml.Unmarshal(data, &preset); err != nil {
+		return nil, fmt.Errorf("parse component %s: %w", path, err)
+	}
+	if preset.Name == "" {
+		preset.Name = strings.TrimSuffix(filepath.Base(path), filepath.Ext(path))
+	}
+	if len(preset.Steps) == 0 {
+		return nil, fmt.Errorf("component %s has no steps defined", path)
+	}
+	preset.BaseDir = filepath.Dir(path)
+	if preset.UsedParametersKey {
+		warnDeprecatedParameters(path)
+	}
 	return &preset, nil
 }
 

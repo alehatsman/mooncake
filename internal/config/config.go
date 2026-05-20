@@ -133,6 +133,7 @@ import (
 	"fmt"
 	"os"
 	"reflect"
+	"strings"
 )
 
 // RunConfig represents the root configuration structure.
@@ -146,6 +147,11 @@ type RunConfig struct {
 	// Vars defines global variables available to all steps
 	Vars map[string]interface{} `yaml:"vars" json:"vars,omitempty"`
 
+	// Modules maps alias names to module references of the form
+	// "<host>/<owner>/<repo>[/<subpath>]@<version>". Populated by `mooncake mod add`
+	// and consumed by the resolver when a step's `use:` field names an alias.
+	Modules map[string]string `yaml:"modules" json:"modules,omitempty"`
+
 	// Steps contains the configuration steps to execute
 	Steps []Step `yaml:"steps" json:"steps"`
 }
@@ -158,6 +164,9 @@ type ParsedConfig struct {
 
 	// GlobalVars are variables defined at the config level, available to all steps
 	GlobalVars map[string]interface{}
+
+	// Modules carries the parsed `modules:` alias map from the playbook.
+	Modules map[string]string
 
 	// Version is the config schema version (e.g., "1.0")
 	Version string
@@ -870,13 +879,53 @@ type AssertGitDiff struct {
 
 // PresetDefinition represents a reusable preset loaded from a YAML file.
 // Presets are parameterized collections of steps that can be invoked as a single action.
+//
+// Either `props:` (preferred, spec-67) or `parameters:` (deprecated) may declare the
+// inputs. Both unmarshal into the Parameters field; UsedParametersKey records which
+// form the source file used so the loader can emit a deprecation warning.
 type PresetDefinition struct {
 	Name        string                     `yaml:"name" json:"name"`                         // Preset name (required)
 	Description string                     `yaml:"description" json:"description,omitempty"` // Human-readable description
 	Version     string                     `yaml:"version" json:"version,omitempty"`         // Semantic version
-	Parameters  map[string]PresetParameter `yaml:"parameters" json:"parameters,omitempty"`   // Parameter definitions
+	Parameters  map[string]PresetParameter `yaml:"-" json:"parameters,omitempty"`            // Parameter/prop definitions (parsed from `props:` or `parameters:`)
 	Steps       []Step                     `yaml:"steps" json:"steps"`                       // Steps to execute
 	BaseDir     string                     `yaml:"-" json:"-"`                               // Base directory for relative paths (set by loader)
+	// UsedParametersKey is true when the source file declared inputs under
+	// `parameters:` rather than `props:`. Set by UnmarshalYAML; the loader
+	// uses it to emit a one-time deprecation warning.
+	UsedParametersKey bool `yaml:"-" json:"-"`
+}
+
+// UnmarshalYAML accepts both `props:` (preferred) and `parameters:` (deprecated)
+// keys for the parameter map. If both are present, `props:` wins and the conflict
+// is reported as an error.
+func (p *PresetDefinition) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	type raw struct {
+		Name        string                     `yaml:"name"`
+		Description string                     `yaml:"description"`
+		Version     string                     `yaml:"version"`
+		Props       map[string]PresetParameter `yaml:"props"`
+		Parameters  map[string]PresetParameter `yaml:"parameters"`
+		Steps       []Step                     `yaml:"steps"`
+	}
+	var r raw
+	if err := unmarshal(&r); err != nil {
+		return err
+	}
+	p.Name = r.Name
+	p.Description = r.Description
+	p.Version = r.Version
+	p.Steps = r.Steps
+	switch {
+	case r.Props != nil && r.Parameters != nil:
+		return fmt.Errorf("preset declares both `props:` and `parameters:` — use `props:` only (`parameters:` is deprecated)")
+	case r.Props != nil:
+		p.Parameters = r.Props
+	case r.Parameters != nil:
+		p.Parameters = r.Parameters
+		p.UsedParametersKey = true
+	}
+	return nil
 }
 
 // PresetParameter defines a parameter that can be passed to a preset.
@@ -888,10 +937,74 @@ type PresetParameter struct {
 	Description string        `yaml:"description" json:"description,omitempty"` // Human-readable description
 }
 
-// PresetInvocation represents a user's invocation of a preset in their playbook.
+// PresetInvocation represents a user's invocation of a reusable component via
+// `use:` in their playbook. Originally only handled `use: <preset-name>`; spec-67
+// generalises it so Name may also be a local path (`./foo.yml`), an alias from
+// the playbook's `modules:` block (`postgres` or `postgres/backup`), or an inline
+// remote module reference (`github.com/owner/repo@v1.0.0`).
+//
+// ComponentRef is the spec-67 name for this type and is kept as an alias.
 type PresetInvocation struct {
-	Name string                 `yaml:"name" json:"name"`           // Preset name (required)
-	With map[string]interface{} `yaml:"with" json:"with,omitempty"` // Parameter values
+	Name string                 `yaml:"name" json:"name"`           // Preset/component reference (required)
+	With map[string]interface{} `yaml:"with" json:"with,omitempty"` // Parameter / prop values
+}
+
+// ComponentRef is the spec-67 name for PresetInvocation. New code should
+// prefer this alias; the old name is kept to avoid a wide rename.
+type ComponentRef = PresetInvocation
+
+// ComponentRefKind identifies which dispatch path a use: reference takes.
+type ComponentRefKind int
+
+const (
+	// ComponentRefPreset is a bare name with no slash and no scheme — looked up
+	// in the preset search paths (legacy behavior).
+	ComponentRefPreset ComponentRefKind = iota
+	// ComponentRefLocalPath is a filesystem path: starts with "./", "../", or "/".
+	ComponentRefLocalPath
+	// ComponentRefRemote is a fully qualified module reference: contains "@".
+	ComponentRefRemote
+	// ComponentRefAlias is a module alias from the modules: block, optionally
+	// with an export name after a slash: "postgres" or "postgres/backup".
+	ComponentRefAlias
+)
+
+// Kind classifies the reference form. The classification is purely syntactic;
+// alias-vs-preset disambiguation requires the playbook's modules: map and is
+// done by the executor, not here.
+func (p *PresetInvocation) Kind() ComponentRefKind {
+	if p == nil || p.Name == "" {
+		return ComponentRefPreset
+	}
+	if strings.Contains(p.Name, "@") {
+		return ComponentRefRemote
+	}
+	if strings.HasPrefix(p.Name, "./") || strings.HasPrefix(p.Name, "../") || strings.HasPrefix(p.Name, "/") {
+		return ComponentRefLocalPath
+	}
+	if strings.Contains(p.Name, "/") {
+		return ComponentRefAlias
+	}
+	return ComponentRefPreset
+}
+
+// SplitAlias decomposes an alias-form reference into (alias, export).
+// "postgres" → ("postgres", "default"); "postgres/backup" → ("postgres", "backup").
+// Returns ("", "") if the reference is empty or not in alias form
+// (local paths and remote refs are excluded).
+func (p *PresetInvocation) SplitAlias() (alias, export string) {
+	if p == nil || p.Name == "" {
+		return "", ""
+	}
+	k := p.Kind()
+	if k != ComponentRefAlias && k != ComponentRefPreset {
+		return "", ""
+	}
+	name := p.Name
+	if i := strings.Index(name, "/"); i >= 0 {
+		return name[:i], name[i+1:]
+	}
+	return name, "default"
 }
 
 // UnmarshalYAML implements custom YAML unmarshaling to support string form.

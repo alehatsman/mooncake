@@ -105,6 +105,11 @@ type RunServices struct {
 	// callers that want cancellation set this to a context that the
 	// embedding shell (daemon Shutdown / CLI signal handler) cancels.
 	Ctx context.Context
+
+	// Modules is the playbook's `modules:` alias map (spec-67). Read by the
+	// `use:` action handler so alias references like `use: postgres` resolve
+	// to a cached module. Empty when the playbook declares no modules.
+	Modules map[string]string
 }
 
 // LoopContext holds the current loop iteration state for a step executing
