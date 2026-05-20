@@ -1,6 +1,6 @@
 # Spec 66: Typed plan diffs (`plan --diff` for every action category)
 
-**Status:** Draft
+**Status:** In progress — waves 1–5 shipped (`cc6042d0`→`9c94e315`); waves 6–8 pending
 **Stream:** core
 **Promotes:** [`streams/core/proposals/proposal-04-typed-plan-diff.md`](../proposals/proposal-04-typed-plan-diff.md)
 **Effort:** M (~5–7 days, rolled out incrementally — `core/diff` plumbing,
@@ -207,11 +207,11 @@ work the same way the refactor plan did.
 
 | Wave | PR | What | Effort |
 |---|---|---|---|
-| 1 | spec-66-1 | `internal/diff` package skeleton + `render_file.go` (lifts current unified-diff path) + registry + JSON marshal tags on existing `actions.Diff`. cmd/mooncake.go switches to the renderer. Zero behavior change for file diffs. | S |
-| 2 | spec-66-2 | `render_package.go` + `PackageDiff` payload in actions/. Wire 1 handler (`package`). | S |
-| 3 | spec-66-3 | `render_user.go` + `render_group.go` for `os.user` / `os.group`. | S |
-| 4 | spec-66-4 | `render_firewall.go` + `render_service.go` (`os.firewall` + `os.systemd`). | M |
-| 5 | spec-66-5 | `render_cron.go` + `render_mount.go` (`os.cron` + `os.mount`). | S |
+| ✅ 1 | `cc6042d0` | `internal/diff` package skeleton + `render_file.go` (lifts current unified-diff path) + registry + JSON marshal tags on existing `actions.Diff`. cmd/mooncake.go switches to the renderer. Zero behavior change for file diffs. | S |
+| ✅ 2 | `910cd770` | `render_package.go` + `PackageDiff` payload in actions/. Wire 1 handler (`package`). | S |
+| ✅ 3 | `e4ba7a55` | `render_user.go` + `render_group.go` for `os.user` / `os.group`. | S |
+| ✅ 4 | `70459e5e` | `render_firewall.go` + `render_service.go` (`os.firewall` + `os.systemd`). | M |
+| ✅ 5 | `9c94e315` | `render_cron.go` + `render_mount.go` (`os.cron` + `os.mount`). | S |
 | 6 | spec-66-6 | `render_git.go` + `render_repo.go` (`git.checkout` + `git.config` + `pkg.repo`). | S |
 | 7 | spec-66-7 | `render_transaction.go` — compound diffs recursing into children. Same renderer for `try:` compounds. | M |
 | 8 | spec-66-8 | Handler audit: any remaining `Differ` implementer not yet wired produces a typed payload + has a renderer kind. | M |

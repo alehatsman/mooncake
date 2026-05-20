@@ -38,6 +38,8 @@ Recent shipped specs (see commit history for the full receipts):
 - spec-64 — cross-peer `fleet observe`
 - R2.1c phase 1 — `apply.KernelResult` round-trips over the agentd wire; `FleetKernelResult.Reverse()` now composes against typed Steps from each peer (was `ErrPerPeerKernelResultNotWired`).
 - R2.1c phase 2 — `Result.ReverseData` round-trips over the agentd wire via a discriminator envelope + per-handler `executor.RegisterReverseDataType`; 16 handler `init()` registrations alongside `actions.Register`. Closes the per-peer `Reverse()` gap end-to-end (`5dd81b95`, 2026-05-17).
+- spec-70 — `agentd bootstrap` subcommand; extract install primitives + user-mode (`--user`) no-SSH path (phases 1–3, `0d41e058`–`bbb80b74`).
+- spec-72 — Unified escalation policy: one `EscalationReport` + `ProbeEscalation`, one `BecomeRunner`, one decision point. Phases α/β/γ + phase 4 + cleanup all shipped.
 
 Plus three operational features delivered outside the original plan:
 `fleet apply <machine>` (ordered phases), `fleet upgrade` (Linux +
@@ -50,8 +52,9 @@ Windows), and the `fleet doctor` per-peer probe ladder.
 
 | Spec | Topic | Why drafted |
 |---|---|---|
-| [spec-55](./specs/spec-55-fleet-doctor.md) | Fleet doctor fan-out | Single-host probe ladder shipped; the multi-peer wrapper that aggregates ~16 checks across the fleet is still drafted. |
-| [spec-58](./specs/spec-58-fleet-drift.md) | Fleet drift | Periodic `InspectPlan` loop + `/v1/drift` + per-machine `drift:` policy. The single feature that would turn Mooncake from "config management tool" into "fleet operating system." Highest-leverage candidate from GitHub issue #11. |
+| [spec-55](./specs/spec-55-fleet-doctor.md) | Fleet doctor fan-out | Draft, not started. Single-host probe ladder shipped; the multi-peer wrapper that aggregates ~16 checks across the fleet is still drafted. |
+| [spec-58](./specs/spec-58-fleet-drift.md) | Fleet drift | Draft, not started. Periodic `InspectPlan` loop + `/v1/drift` + per-machine `drift:` policy. The single feature that would turn Mooncake from "config management tool" into "fleet operating system." |
+| [spec-71](./specs/spec-71-fleet-init-auto-pair.md) | `fleet init` auto-pair via SSH | Draft, not started. Eliminates the manual token-paste step — SSH-fetch the bearer token and optionally bootstrap the daemon in one command. |
 
 ## Open gaps
 

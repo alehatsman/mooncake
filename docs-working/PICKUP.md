@@ -1,6 +1,6 @@
 # Pickup — what to work on, right now
 
-**Last curated:** 2026-05-18 (refresh when the table goes stale).
+**Last curated:** 2026-05-20 (refresh when the table goes stale).
 
 If you have **<5 minutes**, take **item 1** (small code-review reads).
 If you have **more**, scan the table and pick the highest-rank
@@ -20,10 +20,12 @@ entry that isn't already claimed.
 
 | # | Task | Stream | Effort | Where to read | Claim slug |
 |---|---|---|---:|---|---|
-| 1 | **Continue the code-review cold-read** — 10 packages still unread (item-3 in `TODO.md`). Recently merged candidates: `internal/agentd/{handlers,jsonl_sink,respond,config*}.go`, `internal/presets/registry/{loader,validator,expander}.go`, `internal/actions/text_*`. Read cold, file `findings/F<NNN>` if a smell appears. | any | S each | [`code-review/TODO.md`](./code-review/TODO.md) "Still to review" | `review-<pkg>` |
-| 2 | **proposal-16 `expect_json_schema`** — closes the last open piece of the http.request proposal. Adds full-JSON-schema response validation (the broader sibling of `expect_json_keys`, which shipped 2026-05-17). Note: deferred pending validator-library + schema-loading design conversation; pick this up only if you want to drive that decision. | core | S | [`streams/core/proposals/proposal-16-http-request-action.md`](./streams/core/proposals/proposal-16-http-request-action.md), `internal/actions/http_request/` | `http-expect-schema` |
-| 3 | **spec-58 fleet drift** — drafted, nobody's touching it. README calls it "the single feature that would turn Mooncake from config management tool into fleet operating system." Start with the `InspectPlan` periodic loop. | fleet | L | [`streams/fleet/specs/spec-58-fleet-drift.md`](./streams/fleet/specs/spec-58-fleet-drift.md) | `spec-58-w1` |
-| 4 | **Draft an agent-safety spec** — agent stream has zero un-specced safety primitives. Pick one: policy DSL, plan signing, per-action quotas, sandbox mode, or deterministic replay. Replay has the highest "demoable win" return. | agent | M (draft only) | [`streams/agent/README.md`](./streams/agent/README.md) §"Open gaps", [`VISION.md`](../VISION.md) | `agent-spec-<topic>` |
+| 1 | **Continue the code-review cold-read** — 10 package areas still unread. Top candidates: `internal/agentd/{handlers,jsonl_sink,respond,config*,self_mac,self_shutdown*}`, `internal/presets/registry/{loader,validator,expander}`, `internal/actions/text_*`, `internal/actions/os_*` (darwin parity just landed). Read cold, file `archive/code-review/findings/F<NNN>` if a smell appears. | any | S each | [`code-review/TODO.md`](./code-review/TODO.md) "Still to review" | `review-<pkg>` |
+| 2 | **spec-66 waves 6–8** — typed plan diff is 5/8 waves done. Remaining: `render_git` + `render_repo` (wave 6, S), `render_transaction` (wave 7, M), handler audit (wave 8, M). Wave 6 is the smallest entry point. | core | S–M | [`streams/core/specs/spec-66-typed-plan-diff.md`](./streams/core/specs/spec-66-typed-plan-diff.md), `internal/diff/` | `spec-66-w6` |
+| 3 | **spec-67 pilot — next story: OpenAI-shape provider** — rename/confirm-gate/transaction-wrap/schema-injection/eval-harness all shipped. The next unblocked story adds `OpenAIShapeClient` so local Ollama/vLLM/llama.cpp can drive pilot. Independent of prompt-cache and multi-turn. | agent | S | [`streams/agent/specs/spec-67-mooncake-pilot.md`](./streams/agent/specs/spec-67-mooncake-pilot.md) §`S-pilot-openai-shape-provider` | `pilot-openai-provider` |
+| 4 | **spec-58 fleet drift** — highest-leverage unstarted fleet feature. Turns Mooncake from "config management tool" into "fleet operating system." Start with the `InspectPlan` periodic loop; the typed-diff and transport primitives it needs are all in master. | fleet | L | [`streams/fleet/specs/spec-58-fleet-drift.md`](./streams/fleet/specs/spec-58-fleet-drift.md) | `spec-58-w1` |
+| 5 | **proposal-16 `expect_json_schema`** — the one open piece of http.request (waves 1–3 + `expect_json_keys` shipped). Full draft-07 file-path schema validation. Deferred pending validator-library design decision; pick this up only if you want to drive that conversation. | core | S | [`streams/core/proposals/proposal-16-http-request-action.md`](./streams/core/proposals/proposal-16-http-request-action.md) | `http-expect-schema` |
+| 6 | **Draft an agent-safety spec** — policy DSL, plan signing, per-action quotas, sandbox mode, or deterministic replay. Replay has the highest "demoable win" return and is the last open piece of the unfair-advantage statement. | agent | M (draft only) | [`streams/agent/README.md`](./streams/agent/README.md) §"Open gaps" | `agent-spec-<topic>` |
 
 ---
 
@@ -31,10 +33,8 @@ entry that isn't already claimed.
 
 Check live: `tail -50 ~/.mooncake/claims.jsonl`.
 
-Items above marked claimed in the last 24 hours include
-`spec-66 wave 5` (typed-diff renderers for cron + mount) and the
-darwin-parity wave for `pkg.*` and `os.*`. The list shifts fast —
-8–12 merges/work-day cadence as of 2026-05-17.
+No items in the table above were claimed in the last 48 hours.
+The list shifts fast — check the live file before starting.
 
 ---
 
@@ -62,7 +62,7 @@ bottom rows — they belong in the deeper sources.
 | Stream feature-state + open gaps | `docs-working/streams/<stream>/README.md` (4 streams: core, fleet, dx, agent) |
 | Drafted but unstarted specs | `docs-working/streams/<stream>/specs/` |
 | Smaller "not-yet-spec" ideas | `docs-working/streams/<stream>/proposals/` |
-| Open code-review findings | `docs-working/code-review/TODO.md` + `findings/F*.md` |
+| Open code-review findings | `docs-working/code-review/TODO.md` + `archive/code-review/findings/F*.md` |
 | Architecture pressure points | `docs-working/arch-report/` (latest dated report) |
 | Strategic positioning | `VISION.md`, `docs-working/positioning.md` |
 | In-flight work + claims | `~/.mooncake/claims.jsonl` (off-tree, shared across worktrees) |

@@ -1,6 +1,6 @@
 # Spec 67 — Mooncake Pilot
 
-> **Status:** drafted 2026-05-16. Targets the agent stream.
+> **Status:** In progress — v1 core stories shipped; OpenAI-shape provider, prompt cache, multi-turn, styles pending.
 
 ## 1. Summary
 
@@ -632,15 +632,12 @@ config file editing / repo search-and-replace.
 Stories in dependency order. Each is self-contained; pick the
 next one whose dependencies are all `done`.
 
-### S-pilot-rename
+### ✅ S-pilot-rename (`ec02c71f`)
 
 - **Goal.** Rename `internal/agent/` → `internal/pilot/` + all
   import sites; rename CLI verb `mooncake agent` → `mooncake
   pilot`; move `.mooncake/iterations/` writes to
   `.mooncake/pilot/iterations/`.
-- **DoD.** `make test-race` and `make ci` green. No remaining
-  references to `internal/agent` import path. CLI subcommand
-  removed without backwards-compat shim.
 - **Deps.** None. **Land first.**
 
 ### S-pilot-openai-shape-provider
@@ -655,34 +652,25 @@ next one whose dependencies are all `done`.
   `httptest.Server` to assert request shape.
 - **Deps.** `S-pilot-rename`.
 
-### S-pilot-confirm-gate
+### ✅ S-pilot-confirm-gate (`24f059fc`)
 
 - **Goal.** Implement the plan-confirm gate (§10) with full
   response set (y/N/edit/explain N/abort). Default behavior:
   prompt. `--auto-apply` flag preserves current always-apply.
-- **DoD.** Manual test of each response. Unit test on the response
-  parser. `--auto-apply` warning emitted at thread start.
 - **Deps.** `S-pilot-rename`.
 
-### S-pilot-transaction-wrap
+### ✅ S-pilot-transaction-wrap (`ce63d13c`)
 
 - **Goal.** Wrap each iteration's plan in an implicit
   `transaction:` block before sending to the executor (§11).
-- **DoD.** Regression test: a plan whose step 3 fails leaves the
-  system byte-identical to its pre-pilot state. Confirm-gate
-  recap line shows irreversible-step count when any step is
-  irreversible.
 - **Deps.** `S-pilot-rename`. Independent of confirm-gate.
 
-### S-pilot-schema-injection
+### ✅ S-pilot-schema-injection (`4c608ba8`)
 
 - **Goal.** Drop the hand-written schema/action list in
   `prompt.go`; generate a prompt-fit chunk from
   `internal/config/schema.json` at build time (§12.2). Snapshot
   test pins the rendered chunk shape.
-- **DoD.** Adding a new in-tree action shows up in pilot's prompt
-  vocabulary the same release. No source edit needed in
-  `internal/pilot/prompt*.go` to surface new actions.
 - **Deps.** `S-pilot-rename`.
 
 ### S-pilot-prompt-cache
@@ -720,14 +708,10 @@ next one whose dependencies are all `done`.
   prompt. Demo on a real local model (Ollama).
 - **Deps.** `S-pilot-rename`, `S-pilot-confirm-gate`.
 
-### S-pilot-eval-harness
+### ✅ S-pilot-eval-harness (`8bfe0fc4`)
 
 - **Goal.** Stand up `testing-next/pilot-evals/` (§14) with 5
   starter goals + a CI hook (env-gated).
-- **DoD.** `make pilot-evals` runs locally with a valid provider
-  configured. CI runs the harness on PRs labeled
-  `needs-pilot-eval`. Five (goal, snapshot, assertions) tuples
-  shipped.
 - **Deps.** `S-pilot-rename`. Independent of the rest; can start
   in parallel.
 

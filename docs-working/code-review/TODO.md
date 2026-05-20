@@ -3,6 +3,10 @@
 Living queue. Each iteration consumes one entry from **In progress /
 Queue**, produces a finding (or several), and the queue updates.
 
+> **Findings archive:** All resolved findings (F001–F051) have been
+> moved to `docs-working/archive/code-review/findings/`. New findings
+> go in that same folder; add a row to the index below.
+
 ## At-a-glance status (2026-05-18)
 
 | | Count |
@@ -23,51 +27,51 @@ also closed — see that folder's README.
 
 | ID | Title | Severity | Status | Location |
 |---|---|---|---|---|
-| F001 | observe_disk Bsize cross-platform cast | risk | **done** | [findings/F001](./findings/F001-observe-disk-bsize-cast.md) |
-| F002 | CLAUDE.md soft-cap list stale | doc | **done** | [findings/F002](./findings/F002-claude-md-soft-cap-list-stale.md) |
-| F003 | service: legacy Execute/DryRun | smell | **done** | [findings/F003](./findings/F003-service-execute-dryrun-legacy-paths.md) |
-| F004 | service: sudo/exec duplication in-package | smell | **done** | [findings/F004](./findings/F004-service-systemd-sudo-shell-duplication.md) |
-| F005 | sudo -S shell-out helper cross-package | smell | **done** | [findings/F005](./findings/F005-sudo-shell-helper-cross-package.md) |
-| F006 | tool handler legacy Execute/DryRun | smell | **done** | [findings/F006](./findings/F006-tool-handler-execute-dryrun-legacy.md) |
-| F007 | tool: http no timeout / context | risk | **done** | [findings/F007](./findings/F007-tool-fetch-no-timeout-no-context.md) |
-| F008 | tool.renderToolTemplates manual repetition | readability | **done** | [findings/F008](./findings/F008-tool-renderToolTemplates-manual-repetition.md) |
-| F009 | explain.DisplayFacts section split | smell | **done** | [findings/F009](./findings/F009-explain-DisplayFacts-section-split.md) |
-| F010 | explain TestDisplayFacts_NilFacts is dead | smell | **done** | [findings/F010](./findings/F010-explain-test-dead-nil-test.md) |
-| F011 | cross-cutting: Execute/DryRun migration — all 21 handlers Run-only | smell | **done** | [findings/F011](./findings/F011-cross-cutting-execute-dryrun-spec16-incomplete.md) |
-| F012 | cross-cutting: http no timeout (9 pkgs) | risk | **done** | [findings/F012](./findings/F012-cross-cutting-http-no-timeout.md) |
-| F013 | config.Step stale "74" comment + Creates/Unless aliases | doc | **done** | [findings/F013](./findings/F013-config-step-stale-74-comment-and-alias-redundancy.md) |
-| F014 | fleet.Apply WithoutCancel hangs Ctrl-C | risk | **done** | [findings/F014](./findings/F014-fleet-apply-context-withoutcancel-no-timeout.md) |
-| F015 | agentd.Worker hub-close cleanup asymmetry | smell | **done** | [findings/F015](./findings/F015-agentd-worker-chdir-error-hub-leak.md) |
-| F016 | agentd.Worker no-cancel context | risk | **done** | [findings/F016](./findings/F016-agentd-worker-context-background-no-cancel.md) |
-| F017 | executor continue_on_error double emit | bug | **done** | [findings/F017](./findings/F017-executor-continue-on-error-double-emit.md) |
-| F018 | shell scanner 64KB line cap | bug | **done** | [findings/F018](./findings/F018-shell-bufio-scanner-line-overflow.md) |
-| F019 | secrets.Resolve misses step.Vars | bug | **done** | [findings/F019](./findings/F019-secrets-resolver-missing-vars-and-interface-maps.md) |
-| F020 | apply.Runner os.Exit hostile to embedded callers | risk | **done** | [findings/F020](./findings/F020-apply-runner-os-exit-hostile-to-embedded-callers.md) |
-| F021 | apply.Config.ExtraSubscribers doc-drift | doc | **done** | [findings/F021](./findings/F021-apply-config-extrasubscribers-doc-drift.md) |
-| F022 | mcp uses NewTestLogger in production | smell | **done** | [findings/F022](./findings/F022-mcp-uses-NewTestLogger-in-production.md) |
-| F023 | package handler swallows template-render errors | bug | **done** | [findings/F023](./findings/F023-package-handler-template-render-error-swallow.md) |
-| F024 | planner walkAndRender misses map[string]interface{} | bug | **done** | [findings/F024](./findings/F024-planner-walkAndRender-missing-map-string-interface.md) |
-| F025 | fleet.peerDiff misses Roles + SSH | bug | **done** | [findings/F025](./findings/F025-fleet-peerDiff-missing-roles-ssh-fields.md) |
-| F026 | file/copy unbounded os.ReadFile in handler | risk | **done** | [findings/F026](./findings/F026-file-copy-unbounded-os-ReadFile-loads-entire-file-in-memory.md) |
-| F027 | agentd self_upgrade sanityCheckBinary no-timeout | risk | **done** | [findings/F027](./findings/F027-agentd-self-upgrade-sanityCheckBinary-no-timeout.md) |
-| F028 | git_clone askpass returns password for username prompt | bug | **done** | [findings/F028](./findings/F028-git-clone-askpass-returns-password-for-username-prompt.md) |
-| F029 | agentd bearer-auth length side-channel | risk | **done** | [findings/F029](./findings/F029-agentd-bearerAuthMiddleware-length-side-channel.md) |
-| F030 | security.FilePasswordProvider mode exact-equality | smell | **done** | [findings/F030](./findings/F030-security-FilePasswordProvider-rejects-more-restrictive-modes.md) |
-| F031 | cmd/fleet.readToken no perms/insecure-flag check | smell | **done** | [findings/F031](./findings/F031-fleet-readToken-no-perms-check-no-insecure-flag-for-literal.md) |
-| F032 | template/download legacy Execute shell injection | risk | **done** | [findings/F032](./findings/F032-template-download-legacy-shell-injection.md) |
-| F033 | path-traversal validation silently ignored (11 sites) | bug | **done** | [findings/F033](./findings/F033-path-traversal-validation-silently-ignored.md) |
-| F034 | pkg.repo gpg_key_fingerprint silently not verified | bug | **done** | [findings/F034](./findings/F034-pkg-repo-gpg-fingerprint-never-verified.md) |
-| F035 | os.ssh_key silent chown failure | bug | **done** | [findings/F035](./findings/F035-os-ssh-key-silent-chown-failure.md) |
-| F037 | vars action bypasses secrets resolver | bug | **done** | [findings/F037](./findings/F037-vars-action-bypasses-secrets-resolver.md) |
-| F038 | shell line-overflow structured stream silent | bug | **done** | [findings/F038](./findings/F038-shell-line-overflow-structured-stream-silent.md) |
-| F039 | pilot.RunLoop defer-in-loop + plan perms + silent save | smell | **done** | [findings/F039](./findings/F039-agent-loop-defer-in-for-loop-and-plan-perms.md) |
-| F040 | llm.ClaudeClient timeout/model/body | smell | **done** | [findings/F040](./findings/F040-llm-claude-client-tight-timeout-stale-model-unbounded-body.md) |
-| F041 | artifact_capture.readFileContent unbounded read | smell | **done** | [findings/F041](./findings/F041-artifact-capture-readFileContent-unbounded-read.md) |
-| F042 | facts.Collect no ctx / per-cmd timeout | risk | **done** | [findings/F042](./findings/F042-facts-collect-no-context-no-per-cmd-timeout.md) |
-| F043 | fleet init bearer-token prompt echoes to terminal | bug | **done** | [findings/F043](./findings/F043-fleet-init-token-prompt-echoes-to-terminal.md) |
-| F048 | fleet machine manifest YAML non-strict | bug | **done** | [findings/F048](./findings/F048-fleet-machine-manifest-non-strict-yaml.md) |
-| F049 | pkg.Permissions not manager-aware | bug | **done** | [findings/F049](./findings/F049-pkg-handler-permissions-not-manager-aware.md) |
-| F050 | preset fetch unbounded body | risk | **done** | [findings/F050](./findings/F050-preset-fetch-unbounded-body.md) |
+| F001 | observe_disk Bsize cross-platform cast | risk | **done** | [findings/F001](../archive/code-review/findings/F001-observe-disk-bsize-cast.md) |
+| F002 | CLAUDE.md soft-cap list stale | doc | **done** | [findings/F002](../archive/code-review/findings/F002-claude-md-soft-cap-list-stale.md) |
+| F003 | service: legacy Execute/DryRun | smell | **done** | [findings/F003](../archive/code-review/findings/F003-service-execute-dryrun-legacy-paths.md) |
+| F004 | service: sudo/exec duplication in-package | smell | **done** | [findings/F004](../archive/code-review/findings/F004-service-systemd-sudo-shell-duplication.md) |
+| F005 | sudo -S shell-out helper cross-package | smell | **done** | [findings/F005](../archive/code-review/findings/F005-sudo-shell-helper-cross-package.md) |
+| F006 | tool handler legacy Execute/DryRun | smell | **done** | [findings/F006](../archive/code-review/findings/F006-tool-handler-execute-dryrun-legacy.md) |
+| F007 | tool: http no timeout / context | risk | **done** | [findings/F007](../archive/code-review/findings/F007-tool-fetch-no-timeout-no-context.md) |
+| F008 | tool.renderToolTemplates manual repetition | readability | **done** | [findings/F008](../archive/code-review/findings/F008-tool-renderToolTemplates-manual-repetition.md) |
+| F009 | explain.DisplayFacts section split | smell | **done** | [findings/F009](../archive/code-review/findings/F009-explain-DisplayFacts-section-split.md) |
+| F010 | explain TestDisplayFacts_NilFacts is dead | smell | **done** | [findings/F010](../archive/code-review/findings/F010-explain-test-dead-nil-test.md) |
+| F011 | cross-cutting: Execute/DryRun migration — all 21 handlers Run-only | smell | **done** | [findings/F011](../archive/code-review/findings/F011-cross-cutting-execute-dryrun-spec16-incomplete.md) |
+| F012 | cross-cutting: http no timeout (9 pkgs) | risk | **done** | [findings/F012](../archive/code-review/findings/F012-cross-cutting-http-no-timeout.md) |
+| F013 | config.Step stale "74" comment + Creates/Unless aliases | doc | **done** | [findings/F013](../archive/code-review/findings/F013-config-step-stale-74-comment-and-alias-redundancy.md) |
+| F014 | fleet.Apply WithoutCancel hangs Ctrl-C | risk | **done** | [findings/F014](../archive/code-review/findings/F014-fleet-apply-context-withoutcancel-no-timeout.md) |
+| F015 | agentd.Worker hub-close cleanup asymmetry | smell | **done** | [findings/F015](../archive/code-review/findings/F015-agentd-worker-chdir-error-hub-leak.md) |
+| F016 | agentd.Worker no-cancel context | risk | **done** | [findings/F016](../archive/code-review/findings/F016-agentd-worker-context-background-no-cancel.md) |
+| F017 | executor continue_on_error double emit | bug | **done** | [findings/F017](../archive/code-review/findings/F017-executor-continue-on-error-double-emit.md) |
+| F018 | shell scanner 64KB line cap | bug | **done** | [findings/F018](../archive/code-review/findings/F018-shell-bufio-scanner-line-overflow.md) |
+| F019 | secrets.Resolve misses step.Vars | bug | **done** | [findings/F019](../archive/code-review/findings/F019-secrets-resolver-missing-vars-and-interface-maps.md) |
+| F020 | apply.Runner os.Exit hostile to embedded callers | risk | **done** | [findings/F020](../archive/code-review/findings/F020-apply-runner-os-exit-hostile-to-embedded-callers.md) |
+| F021 | apply.Config.ExtraSubscribers doc-drift | doc | **done** | [findings/F021](../archive/code-review/findings/F021-apply-config-extrasubscribers-doc-drift.md) |
+| F022 | mcp uses NewTestLogger in production | smell | **done** | [findings/F022](../archive/code-review/findings/F022-mcp-uses-NewTestLogger-in-production.md) |
+| F023 | package handler swallows template-render errors | bug | **done** | [findings/F023](../archive/code-review/findings/F023-package-handler-template-render-error-swallow.md) |
+| F024 | planner walkAndRender misses map[string]interface{} | bug | **done** | [findings/F024](../archive/code-review/findings/F024-planner-walkAndRender-missing-map-string-interface.md) |
+| F025 | fleet.peerDiff misses Roles + SSH | bug | **done** | [findings/F025](../archive/code-review/findings/F025-fleet-peerDiff-missing-roles-ssh-fields.md) |
+| F026 | file/copy unbounded os.ReadFile in handler | risk | **done** | [findings/F026](../archive/code-review/findings/F026-file-copy-unbounded-os-ReadFile-loads-entire-file-in-memory.md) |
+| F027 | agentd self_upgrade sanityCheckBinary no-timeout | risk | **done** | [findings/F027](../archive/code-review/findings/F027-agentd-self-upgrade-sanityCheckBinary-no-timeout.md) |
+| F028 | git_clone askpass returns password for username prompt | bug | **done** | [findings/F028](../archive/code-review/findings/F028-git-clone-askpass-returns-password-for-username-prompt.md) |
+| F029 | agentd bearer-auth length side-channel | risk | **done** | [findings/F029](../archive/code-review/findings/F029-agentd-bearerAuthMiddleware-length-side-channel.md) |
+| F030 | security.FilePasswordProvider mode exact-equality | smell | **done** | [findings/F030](../archive/code-review/findings/F030-security-FilePasswordProvider-rejects-more-restrictive-modes.md) |
+| F031 | cmd/fleet.readToken no perms/insecure-flag check | smell | **done** | [findings/F031](../archive/code-review/findings/F031-fleet-readToken-no-perms-check-no-insecure-flag-for-literal.md) |
+| F032 | template/download legacy Execute shell injection | risk | **done** | [findings/F032](../archive/code-review/findings/F032-template-download-legacy-shell-injection.md) |
+| F033 | path-traversal validation silently ignored (11 sites) | bug | **done** | [findings/F033](../archive/code-review/findings/F033-path-traversal-validation-silently-ignored.md) |
+| F034 | pkg.repo gpg_key_fingerprint silently not verified | bug | **done** | [findings/F034](../archive/code-review/findings/F034-pkg-repo-gpg-fingerprint-never-verified.md) |
+| F035 | os.ssh_key silent chown failure | bug | **done** | [findings/F035](../archive/code-review/findings/F035-os-ssh-key-silent-chown-failure.md) |
+| F037 | vars action bypasses secrets resolver | bug | **done** | [findings/F037](../archive/code-review/findings/F037-vars-action-bypasses-secrets-resolver.md) |
+| F038 | shell line-overflow structured stream silent | bug | **done** | [findings/F038](../archive/code-review/findings/F038-shell-line-overflow-structured-stream-silent.md) |
+| F039 | pilot.RunLoop defer-in-loop + plan perms + silent save | smell | **done** | [findings/F039](../archive/code-review/findings/F039-agent-loop-defer-in-for-loop-and-plan-perms.md) |
+| F040 | llm.ClaudeClient timeout/model/body | smell | **done** | [findings/F040](../archive/code-review/findings/F040-llm-claude-client-tight-timeout-stale-model-unbounded-body.md) |
+| F041 | artifact_capture.readFileContent unbounded read | smell | **done** | [findings/F041](../archive/code-review/findings/F041-artifact-capture-readFileContent-unbounded-read.md) |
+| F042 | facts.Collect no ctx / per-cmd timeout | risk | **done** | [findings/F042](../archive/code-review/findings/F042-facts-collect-no-context-no-per-cmd-timeout.md) |
+| F043 | fleet init bearer-token prompt echoes to terminal | bug | **done** | [findings/F043](../archive/code-review/findings/F043-fleet-init-token-prompt-echoes-to-terminal.md) |
+| F048 | fleet machine manifest YAML non-strict | bug | **done** | [findings/F048](../archive/code-review/findings/F048-fleet-machine-manifest-non-strict-yaml.md) |
+| F049 | pkg.Permissions not manager-aware | bug | **done** | [findings/F049](../archive/code-review/findings/F049-pkg-handler-permissions-not-manager-aware.md) |
+| F050 | preset fetch unbounded body | risk | **done** | [findings/F050](../archive/code-review/findings/F050-preset-fetch-unbounded-body.md) |
 
 ## Still to review
 

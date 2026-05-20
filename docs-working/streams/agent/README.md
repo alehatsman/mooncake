@@ -38,12 +38,14 @@ Recent shipped specs (see commit history for the full receipts):
 - spec-22 (phases 3–7) — four-method ABI declared + MCP-wired
 - spec-23 — framework primitives (all three sections)
 - spec-30 — `transaction:` + LIFO rollback
+- spec-67 (partial) — Mooncake Pilot: rename + confirm-gate + transaction-wrap + schema-injection + eval-harness shipped; OpenAI provider / prompt cache / multi-turn / styles pending
 
 ## Active specs
 
 | Spec | Topic | Why drafted |
 |---|---|---|
-| [spec-31](./specs/spec-31-tier2-plugin-model.md) | Tier-2 plugin model | Tier-1 caps at ~30 actions deliberately. The next tier (`notify.*`, `container.compose`, `k8s.apply`, `db.postgres.*`) needs an extension shape that doesn't grow the main binary. Proof-of-concept domain: `notify.slack`/`webhook`/`email`/`pagerduty`. |
+| [spec-31](./specs/spec-31-tier2-plugin-model.md) | Tier-2 plugin model | Draft, not started. Tier-1 caps at ~30 actions deliberately. The next tier (`notify.*`, `container.compose`, `k8s.apply`, `db.postgres.*`) needs an extension shape that doesn't grow the main binary. Proof-of-concept domain: `notify.slack`/`webhook`/`email`/`pagerduty`. |
+| [spec-67](./specs/spec-67-mooncake-pilot.md) | Mooncake Pilot (in-binary LLM copilot) | In progress. v1 core stories shipped: rename, confirm-gate, transaction-wrap, schema-injection, eval-harness. Pending: OpenAI-shape provider, prompt cache, multi-turn, styles. |
 
 ## Open gaps (un-specced)
 

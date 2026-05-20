@@ -1,6 +1,6 @@
 # Spec 68: `mooncake explain <noun>` + MCP `explain` tool
 
-**Status:** Draft
+**Status:** Complete — waves 1–3 shipped (`e72a70ac`, `7ad59faa`, `3f8ddf5b`); wave 2.5 bonus (`986fdb2d`); wave 4 (on-disk index) deferred as optional
 **Stream:** core
 **Promotes:** Brainstorm 2026-05-16, "Prompt 2" reframe; story
 [`S-explain-spec`](../../../vision/brainstorm/2026-05-16-stories.md#s-explain-spec).
@@ -475,10 +475,11 @@ specifies the contract.
 
 | Wave | PR | What | Effort |
 |---|---|---|---|
-| 1 | spec-68-1 | New `internal/explain` resolver: `kind: action` only. Reads `SchemaJSON()` + `actions.List()` + `examples/`. CLI verb `mooncake explain <action>`. Existing `internal/explain` (facts display) renamed to `internal/factsfmt`; `mooncake facts` keeps working. | S |
-| 2 | spec-68-2 | `ops.jsonl` schema added; `runlog.Entry` gains `RunID`, `OpID`; per-step typed Diff/Reverse arrays appended. Existing readers ignore unknown fields. Resolver covers `kind: run` + `kind: resource` + `kind: op`. | M |
-| 3 | spec-68-3 | MCP tool `explain` registered. JSON Schema for input + output as above. Output examples wired into the MCP server test suite. | S |
-| 4 | spec-68-4 | (Optional, deferred to first user ask) An on-disk index over `runs.jsonl` keyed by `resource`. Linear scan remains the fallback. | M |
+| ✅ 1 | `e72a70ac` | New `internal/explain` resolver: `kind: action` only. Reads `SchemaJSON()` + `actions.List()` + `examples/`. CLI verb `mooncake explain <action>`. Existing `internal/explain` (facts display) renamed to `internal/factsfmt`; `mooncake facts` keeps working. | S |
+| ✅ 2 | `7ad59faa` | `ops.jsonl` schema added; `runlog.Entry` gains `RunID`, `OpID`; per-step typed Diff/Reverse arrays appended. Existing readers ignore unknown fields. Resolver covers `kind: run` + `kind: resource` + `kind: op`. | M |
+| ✅ 2.5 | `986fdb2d` | Bonus: capture typed Diff + per-step TS at apply time. | S |
+| ✅ 3 | `3f8ddf5b` | MCP tool `explain` registered. JSON Schema for input + output as above. Output examples wired into the MCP server test suite. | S |
+| ⏸ 4 | deferred | (Optional) An on-disk index over `runs.jsonl` keyed by `resource`. Linear scan remains the fallback. | M |
 
 The renames in wave 1 are mechanical: the existing
 `internal/explain` package has one exported function (`DisplayFacts`)

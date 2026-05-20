@@ -42,14 +42,14 @@ Recent shipped specs (see commit history for the full receipts):
 - spec-36 — Windows support (shell/pkg/file)
 - spec-37/38 — step output capture + `read.json`/`read.yaml`
 - spec-59–64 — typed observability (`observe.*` family)
+- spec-68 — `mooncake explain <noun>` + MCP `explain` tool (waves 1–3 + 2.5; wave 4 deferred as optional)
 
 ## Active specs
 
 | Spec | Topic | Why drafted |
 |---|---|---|
-| [spec-65](./specs/spec-65-module-system-phase-1.md) | Module system — Phase 1 (loader + cache + `use:`) | Replaces dropped in-tree presets dir with Git-native versioned modules. Foundation for `mooncake share`, agent-authored modules, future curated module org. Source brief: GitHub issue #24. |
-| [spec-66](./specs/spec-66-typed-plan-diff.md) | Typed plan diffs for every action category | Promotes proposal-04. 26 handlers already produce typed `Diff` payloads that are computed but not rendered; `plan --diff` is opaque for everything except file content. Rolled out incrementally — waves 2/3/4 merged; wave 5 (cron+mount) in-flight. |
-| [spec-68](./specs/spec-68-explain.md) | `mooncake explain <noun>` + MCP `explain` tool | First concrete spec from the 2026-05-16 brainstorm. Surfaces typed handler metadata (schema, Diff/Reverse shape, runlog) by noun. Wave 2.5 (per-step typed Diff at apply time) merged 2026-05-17. |
+| [spec-65](./specs/spec-65-module-system-phase-1.md) | Module system — Phase 1 (loader + cache + `use:`) | Replaces dropped in-tree presets dir with Git-native versioned modules. Foundation for `mooncake share`, agent-authored modules, future curated module org. Source brief: GitHub issue #24. Not started. |
+| [spec-66](./specs/spec-66-typed-plan-diff.md) | Typed plan diffs for every action category | Waves 1–5 shipped (file/package/user/group/firewall/service/cron/mount). Waves 6–8 pending: `render_git`, `render_repo`, `render_transaction`, handler audit. |
 
 ## Open gaps
 
