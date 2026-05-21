@@ -90,9 +90,18 @@ tasks:
             echo "⚠ $HOME/.local/bin is not on PATH — add it to your shell rc."
           fi
         silent: true
+      # Reload whichever agentd is live. User-scope is the path
+      # `fleet bootstrap --user` installs; system-scope is the default.
+      # A machine can have either (or, transiently, both); restart each
+      # that is_active so the freshly-installed binary actually runs.
       - cmd: |
-          if command -v systemctl >/dev/null 2>&1 && systemctl is-active --quiet mooncake-agentd 2>/dev/null; then
-            sudo systemctl restart mooncake-agentd && echo "✓ Restarted mooncake-agentd"
+          if command -v systemctl >/dev/null 2>&1; then
+            if systemctl --user is-active --quiet mooncake-agentd 2>/dev/null; then
+              systemctl --user restart mooncake-agentd && echo "✓ Restarted mooncake-agentd (user)"
+            fi
+            if systemctl is-active --quiet mooncake-agentd 2>/dev/null; then
+              sudo systemctl restart mooncake-agentd && echo "✓ Restarted mooncake-agentd (system)"
+            fi
           fi
         silent: true
 
