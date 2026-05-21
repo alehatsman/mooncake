@@ -74,13 +74,22 @@ tasks:
       - go build -v -o {{.BIN}} ./cmd
 
   install:
-    desc: Build and install mooncake to /usr/local/bin
+    desc: Build and install mooncake to ~/.local/bin (XDG per-user bindir)
     cmds:
       - task: build
-      # install(1) unlinks-then-creates atomically, so this works even
-      # when the target is in use by a running agentd ("Text file busy").
-      - sudo install -m 0755 {{.BIN}} /usr/local/bin/mooncake
-      - echo "✓ Installed /usr/local/bin/mooncake"
+      # Per-user install — no sudo. ~/.local/bin is the XDG-conformant
+      # spot most distros put first on PATH and that pyenv / cargo /
+      # pipx / uv all use. install(1) unlinks-then-creates atomically,
+      # so this works even when the target is in use by a running
+      # agentd ("Text file busy").
+      - mkdir -p "$HOME/.local/bin"
+      - install -m 0755 {{.BIN}} "$HOME/.local/bin/mooncake"
+      - echo "✓ Installed $HOME/.local/bin/mooncake"
+      - cmd: |
+          if ! echo ":$PATH:" | grep -q ":$HOME/.local/bin:"; then
+            echo "⚠ $HOME/.local/bin is not on PATH — add it to your shell rc."
+          fi
+        silent: true
       - cmd: |
           if command -v systemctl >/dev/null 2>&1 && systemctl is-active --quiet mooncake-agentd 2>/dev/null; then
             sudo systemctl restart mooncake-agentd && echo "✓ Restarted mooncake-agentd"
