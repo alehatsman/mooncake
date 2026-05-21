@@ -3,6 +3,7 @@ package containerruntime
 import (
 	"context"
 	"fmt"
+	"os"
 	"os/exec"
 	"strings"
 )
@@ -12,9 +13,47 @@ import (
 // a single driver to cover them; the binary name is the only difference.
 type podman struct {
 	bin string
+	// env carries extra environment variables for engine subprocesses.
+	// Populated via WithEnv; nil means "inherit os.Environ unchanged".
+	// Used to plumb DOCKER_CONFIG (WSL/Docker-Desktop credsStore
+	// workaround), DOCKER_HOST (remote engine), and similar knobs that
+	// must not leak into the whole mooncake process.
+	env map[string]string
 }
 
 func (p *podman) Name() string { return p.bin }
+
+// WithEnv returns a copy of the driver with env layered on top of any
+// previously-set env. Keys in env override matching keys; passing nil
+// or an empty map is a no-op (returns the receiver as-is to avoid an
+// unnecessary allocation on the hot path).
+func (p *podman) WithEnv(env map[string]string) Runtime {
+	if len(env) == 0 {
+		return p
+	}
+	merged := make(map[string]string, len(p.env)+len(env))
+	for k, v := range p.env {
+		merged[k] = v
+	}
+	for k, v := range env {
+		merged[k] = v
+	}
+	return &podman{bin: p.bin, env: merged}
+}
+
+// applyEnv populates cmd.Env from os.Environ() + p.env when p.env is
+// set. With p.env unset, cmd.Env stays nil so the subprocess inherits
+// os.Environ() implicitly (preserving prior behavior).
+func (p *podman) applyEnv(cmd *exec.Cmd) {
+	if len(p.env) == 0 {
+		return
+	}
+	extra := make([]string, 0, len(p.env))
+	for k, v := range p.env {
+		extra = append(extra, k+"="+v)
+	}
+	cmd.Env = append(os.Environ(), extra...)
+}
 
 // inspectFormat encodes the three fields we read off a container in a
 // single line; "|" is safe because none of the captured values contain
@@ -30,6 +69,7 @@ const inspectFormat = "{{.State.Status}}|{{.Config.Image}}|{{.Id}}"
 
 func (p *podman) ImageExists(ctx context.Context, ref string) (bool, error) {
 	cmd := exec.CommandContext(ctx, p.bin, "image", "inspect", "--format", "{{.Id}}", ref) // #nosec G204 -- bin is fixed, ref is config input
+	p.applyEnv(cmd)
 	out, err := cmd.CombinedOutput()
 	if err == nil {
 		return true, nil
@@ -43,6 +83,7 @@ func (p *podman) ImageExists(ctx context.Context, ref string) (bool, error) {
 
 func (p *podman) ImagePull(ctx context.Context, ref string) error {
 	cmd := exec.CommandContext(ctx, p.bin, "pull", ref) // #nosec G204
+	p.applyEnv(cmd)
 	if out, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("%s pull %s failed: %w (output: %s)", p.bin, ref, err, strings.TrimSpace(string(out)))
 	}
@@ -51,6 +92,7 @@ func (p *podman) ImagePull(ctx context.Context, ref string) error {
 
 func (p *podman) ImageRemove(ctx context.Context, ref string) error {
 	cmd := exec.CommandContext(ctx, p.bin, "rmi", ref) // #nosec G204
+	p.applyEnv(cmd)
 	out, err := cmd.CombinedOutput()
 	if err == nil {
 		return nil
@@ -64,6 +106,7 @@ func (p *podman) ImageRemove(ctx context.Context, ref string) error {
 
 func (p *podman) ContainerInspect(ctx context.Context, name string) (ContainerState, error) {
 	cmd := exec.CommandContext(ctx, p.bin, "container", "inspect", "--format", inspectFormat, name) // #nosec G204
+	p.applyEnv(cmd)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		low := strings.ToLower(string(out))
@@ -112,6 +155,7 @@ func (p *podman) ContainerCreate(ctx context.Context, spec ContainerSpec) error 
 	args = append(args, spec.Command...)
 
 	cmd := exec.CommandContext(ctx, p.bin, args...) // #nosec G204
+	p.applyEnv(cmd)
 	if out, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("%s run %s failed: %w (output: %s)", p.bin, spec.Name, err, strings.TrimSpace(string(out)))
 	}
@@ -120,6 +164,7 @@ func (p *podman) ContainerCreate(ctx context.Context, spec ContainerSpec) error 
 
 func (p *podman) ContainerStart(ctx context.Context, name string) error {
 	cmd := exec.CommandContext(ctx, p.bin, "start", name) // #nosec G204
+	p.applyEnv(cmd)
 	if out, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("%s start %s failed: %w (output: %s)", p.bin, name, err, strings.TrimSpace(string(out)))
 	}
@@ -128,6 +173,7 @@ func (p *podman) ContainerStart(ctx context.Context, name string) error {
 
 func (p *podman) ContainerStop(ctx context.Context, name string) error {
 	cmd := exec.CommandContext(ctx, p.bin, "stop", name) // #nosec G204
+	p.applyEnv(cmd)
 	if out, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("%s stop %s failed: %w (output: %s)", p.bin, name, err, strings.TrimSpace(string(out)))
 	}
@@ -141,6 +187,7 @@ func (p *podman) ContainerRemove(ctx context.Context, name string, force bool) e
 	}
 	args = append(args, name)
 	cmd := exec.CommandContext(ctx, p.bin, args...) // #nosec G204
+	p.applyEnv(cmd)
 	out, err := cmd.CombinedOutput()
 	if err == nil {
 		return nil

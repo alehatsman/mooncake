@@ -20,6 +20,11 @@ type Fake struct {
 	Specs      map[string]ContainerSpec
 	Calls      []string
 
+	// Env records the merged engine env from the latest WithEnv call,
+	// so tests can assert that handlers plumb step.Env through to the
+	// runtime. Nil until WithEnv is called.
+	Env map[string]string
+
 	// FailOn lets a test simulate engine failures. The key is the call
 	// name (e.g. "ImagePull"); when set, the next call of that kind
 	// returns the stored error and is NOT recorded in Calls.
@@ -37,6 +42,25 @@ func NewFake() *Fake {
 }
 
 func (f *Fake) Name() string { return "fake" }
+
+// WithEnv records the env on the receiver and returns it. Returning
+// the receiver (rather than a copy) keeps existing test code working:
+// handlers can call rt = rt.WithEnv(env) without losing the reference
+// the test holds for post-call assertions.
+func (f *Fake) WithEnv(env map[string]string) Runtime {
+	if len(env) == 0 {
+		return f
+	}
+	merged := make(map[string]string, len(f.Env)+len(env))
+	for k, v := range f.Env {
+		merged[k] = v
+	}
+	for k, v := range env {
+		merged[k] = v
+	}
+	f.Env = merged
+	return f
+}
 
 func (f *Fake) record(op string) error {
 	if err, ok := f.FailOn[op]; ok && err != nil {

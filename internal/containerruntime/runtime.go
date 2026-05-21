@@ -13,6 +13,13 @@ type Runtime interface {
 	// Name returns the runtime identifier ("podman", "docker").
 	Name() string
 
+	// WithEnv returns a Runtime whose engine subprocesses run with the
+	// given env merged onto os.Environ. Used to plumb per-action knobs
+	// like DOCKER_CONFIG / DOCKER_HOST without leaking them into the
+	// whole mooncake process. The receiver is not mutated; callers
+	// should use the returned value.
+	WithEnv(env map[string]string) Runtime
+
 	// ImageExists reports whether ref is present in local storage.
 	ImageExists(ctx context.Context, ref string) (bool, error)
 

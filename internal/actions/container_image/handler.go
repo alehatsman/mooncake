@@ -87,6 +87,15 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 	if err != nil {
 		return nil, fmt.Errorf("container.image: %w", err)
 	}
+	// Plumb step-level env into the engine subprocess so users can set
+	// DOCKER_CONFIG / DOCKER_HOST / etc. per action without touching
+	// the mooncake process env. Mirrors how the shell and command
+	// actions consume step.Env.
+	engineEnv, err := renderStepEnv(ctx, step.Env)
+	if err != nil {
+		return nil, err
+	}
+	rt = rt.WithEnv(engineEnv)
 
 	bg := context.Background()
 	exists, err := rt.ImageExists(bg, renderedName)
@@ -139,4 +148,22 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 	}
 
 	return nil, fmt.Errorf("container.image: unreachable state %q", state)
+}
+
+// renderStepEnv evaluates the values of step.Env through the template
+// engine so {{ env.HOME }} / {{ var_name }} expand before being passed
+// to the container runtime. Keys are passed through verbatim.
+func renderStepEnv(ctx actions.Context, env map[string]string) (map[string]string, error) {
+	if len(env) == 0 {
+		return nil, nil
+	}
+	out := make(map[string]string, len(env))
+	for k, v := range env {
+		rendered, err := ctx.GetTemplate().Render(v, ctx.GetVariables())
+		if err != nil {
+			return nil, fmt.Errorf("render env %s: %w", k, err)
+		}
+		out[k] = rendered
+	}
+	return out, nil
 }
