@@ -7,8 +7,6 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
-
-	"github.com/alehatsman/mooncake/internal/config"
 )
 
 // TestLoadPreset_PropsKey verifies the spec-67 `props:` form parses identically
@@ -143,10 +141,7 @@ steps:
 		t.Fatal(err)
 	}
 
-	_, namespace, _, err := ExpandPreset(&config.PresetInvocation{
-		Name: "ns",
-		With: map[string]interface{}{"msg": "hi"},
-	})
+	_, namespace, _, err := ExpandPreset("ns", map[string]interface{}{"msg": "hi"})
 	if err != nil {
 		t.Fatalf("ExpandPreset: %v", err)
 	}

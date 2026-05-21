@@ -240,10 +240,6 @@ func TestGenerateSchemaDoc(t *testing.T) {
 		t.Error("missing PresetParameter section")
 	}
 
-	if !strings.Contains(output, "### PresetInvocation") {
-		t.Error("missing PresetInvocation section")
-	}
-
 	// Check for fields table
 	if !strings.Contains(output, "| Field | Type | Required | Description |") {
 		t.Error("missing fields table")

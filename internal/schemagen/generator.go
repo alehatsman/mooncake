@@ -197,6 +197,12 @@ func (g *Generator) generateStepDefinition() (*Definition, error) {
 			Type:        "string",
 			Description: "Path to YAML file with steps to import",
 		},
+		"props": {
+			Type:            "object",
+			Properties:      map[string]*Property{},
+			AdditionalProps: &trueVal,
+			Description:     "Parameter values passed to the component invoked by `use:`.",
+		},
 		"continue_on_error": {
 			Type:        "boolean",
 			Description: "Continue execution even if this step fails (universal)",
@@ -289,8 +295,9 @@ func (g *Generator) generateStepDefinition() (*Definition, error) {
 			Description: meta.Description,
 		}
 
-		// Handle special cases where actions support multiple forms
-		if meta.Name == "shell" || meta.Name == "use" {
+		// shell still supports both string and object form. use is a pure
+		// string reference now (params live on the step's `props:` sibling).
+		if meta.Name == "shell" {
 			actionProp.OneOf = []*Property{
 				{
 					Type:        "string",
@@ -369,18 +376,19 @@ func (g *Generator) generateOneOfConstraints(actionNames []string) []*OneOfConst
 
 	for i, actionName := range actionNames {
 		// Build the property constraint for this action. Most actions are a
-		// strict object reference. shell and use accept both string and
-		// object forms — preserve that here, otherwise the oneOf branch
-		// rejects valid `shell: echo hello` (scalar) input.
+		// strict object reference. shell accepts both string and object
+		// forms — preserve that here. use is a pure string reference.
 		var actionProp *Property
 		switch actionName {
-		case "shell", "use":
+		case "shell":
 			actionProp = &Property{
 				OneOf: []*Property{
 					{Type: "string"},
 					{Ref: fmt.Sprintf("#/definitions/%s", actionName)},
 				},
 			}
+		case "use":
+			actionProp = &Property{Type: "string"}
 		case "transaction":
 			// spec-30: transaction: is a top-level compound-step shape,
 			// not an action. The property's full shape is declared in
@@ -485,6 +493,14 @@ func (g *Generator) generateActionDefinition(meta actions.ActionMetadata) (*Defi
 		return def, nil
 	}
 
+	if meta.Name == "use" {
+		// use is a string component reference. Params are passed via the
+		// sibling `props:` step field — there is no nested object form.
+		def.Type = "string" //nolint:goconst // JSON Schema type
+		def.Description = "Invoke a component by path, alias, or remote ref."
+		return def, nil
+	}
+
 	// Handle artifact_capture specially (has circular reference via Steps)
 	if meta.Name == "artifact.capture" {
 		def.Properties = map[string]*Property{
@@ -585,7 +601,6 @@ var actionStructByName = map[string]any{
 	"container.image":   &config.ContainerImage{},
 	"container":         &config.Container{},
 	"assert":            &config.Assert{},
-	"use":               &config.PresetInvocation{},
 	"log":               &config.PrintAction{},
 	"text.line":         &config.TextLine{},
 	"text.replace":      &config.FileReplace{},
@@ -652,6 +667,8 @@ func getActionStruct(actionName string) (reflect.Type, error) {
 		return nil, fmt.Errorf("vars.load action uses inline string definition")
 	case "import":
 		return nil, fmt.Errorf("import action uses inline string definition")
+	case "use":
+		return nil, fmt.Errorf("use action uses inline string definition")
 	default:
 		return nil, fmt.Errorf("unknown action: %s", actionName)
 	}

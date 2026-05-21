@@ -12,221 +12,170 @@
 # =============================================================================
 
 - name: "Example 1: Install Ollama (binary only)"
-  preset:
-    name: ollama
-    with:
-      state: present
-  become: true
-
+  use: ollama
+  props:
+    state: present
+  as_user: root
 - name: "Example 2: Install with service"
-  preset:
-    name: ollama
-    with:
-      state: present
-      service: true
-  become: true
-
+  use: ollama
+  props:
+    state: present
+    service: true
+  as_user: root
 - name: "Example 3: Install via specific method (package manager)"
-  preset:
-    name: ollama
-    with:
-      state: present
-      method: package  # Use apt, brew, etc. (no fallback)
-  become: true
-
+  use: ollama
+  props:
+    state: present
+    method: package  # Use apt, brew, etc. (no fallback)
+  as_user: root
 - name: "Example 4: Install via official script"
-  preset:
-    name: ollama
-    with:
-      state: present
-      method: script
-  become: true
-
-# =============================================================================
-# Model Management
-# =============================================================================
-
+  use: ollama
+  props:
+    state: present
+    method: script
+  as_user: root
 - name: "Example 5: Install and pull single model"
-  preset:
-    name: ollama
-    with:
-      state: present
-      service: true
-      pull:
-        - "llama3.1:8b"
-  become: true
-
+  use: ollama
+  props:
+    state: present
+    service: true
+    pull:
+    - "llama3.1:8b"
+  as_user: root
 - name: "Example 6: Install and pull multiple models"
-  preset:
-    name: ollama
-    with:
-      state: present
-      service: true
-      pull:
-        - "llama3.1:8b"
-        - "mistral:latest"
-        - "codellama:7b"
-  become: true
-
+  use: ollama
+  props:
+    state: present
+    service: true
+    pull:
+    - "llama3.1:8b"
+    - "mistral:latest"
+    - "codellama:7b"
+  as_user: root
 - name: "Example 7: Force re-pull models"
-  preset:
-    name: ollama
-    with:
-      state: present
-      pull:
-        - "llama3.1:8b"
-      force: true  # Re-download even if exists
-  become: true
-
-# =============================================================================
-# Service Configuration
-# =============================================================================
-
+  use: ollama
+  props:
+    state: present
+    pull:
+    - "llama3.1:8b"
+    force: true  # Re-download even if exists
+  as_user: root
 - name: "Example 8: Custom bind address (network access)"
-  preset:
-    name: ollama
-    with:
-      state: present
-      service: true
-      host: "0.0.0.0:11434"
-  become: true
-
+  use: ollama
+  props:
+    state: present
+    service: true
+    host: "0.0.0.0:11434"
+  as_user: root
 - name: "Example 9: Custom models directory"
-  preset:
-    name: ollama
-    with:
-      state: present
-      service: true
-      models_dir: "/data/ollama/models"
-  become: true
-
+  use: ollama
+  props:
+    state: present
+    service: true
+    models_dir: "/data/ollama/models"
+  as_user: root
 - name: "Example 10: Service with environment variables"
-  preset:
-    name: ollama
-    with:
-      state: present
-      service: true
-      env:
-        OLLAMA_DEBUG: "1"
-        OLLAMA_ORIGINS: "*"
-        OLLAMA_MAX_LOADED_MODELS: "2"
-  become: true
-
+  use: ollama
+  props:
+    state: present
+    service: true
+    env:
+      OLLAMA_DEBUG: "1"
+      OLLAMA_ORIGINS: "*"
+      OLLAMA_MAX_LOADED_MODELS: "2"
+  as_user: root
 - name: "Example 11: Complete configuration"
-  preset:
-    name: ollama
-    with:
-      state: present
-      service: true
-      method: auto
-      host: "0.0.0.0:11434"
-      models_dir: "/data/ollama"
-      pull:
-        - "llama3.1:8b"
-        - "mistral"
-      env:
-        OLLAMA_DEBUG: "1"
-  become: true
-  register: ollama_result
-
-# =============================================================================
-# Uninstallation
-# =============================================================================
-
+  use: ollama
+  props:
+    state: present
+    service: true
+    method: auto
+    host: "0.0.0.0:11434"
+    models_dir: "/data/ollama"
+    pull:
+    - "llama3.1:8b"
+    - "mistral"
+    env:
+      OLLAMA_DEBUG: "1"
+  as_user: root
+  as: ollama_result
 - name: "Example 12: Uninstall (keep models)"
-  preset:
-    name: ollama
-    with:
-      state: absent
-  become: true
-
+  use: ollama
+  props:
+    state: absent
+  as_user: root
 - name: "Example 13: Complete removal (including models)"
-  preset:
-    name: ollama
-    with:
-      state: absent
-      force: true  # Also remove ~/.ollama/models
-  become: true
-
-# =============================================================================
-# Practical Use Cases
-# =============================================================================
-
-# Use Case 1: Development Environment Setup
+  use: ollama
+  props:
+    state: absent
+    force: true  # Also remove ~/.ollama/models
+  as_user: root
 - name: Setup local LLM development environment
-  preset:
-    name: ollama
-    with:
-      state: present
-      service: true
-      host: "localhost:11434"
-      pull:
-        - "llama3.1:8b"      # General purpose
-        - "codellama:7b"     # Code generation
-        - "mistral:latest"   # Alternative model
-      env:
-        OLLAMA_DEBUG: "0"
-        OLLAMA_MAX_LOADED_MODELS: "1"
-  become: true
-  register: ollama_setup
-
+  use: ollama
+  props:
+    state: present
+    service: true
+    host: "localhost:11434"
+    pull:
+    - "llama3.1:8b"        # General purpose
+    - "codellama:7b"       # Code generation
+    - "mistral:latest"     # Alternative model
+    env:
+      OLLAMA_DEBUG: "0"
+      OLLAMA_MAX_LOADED_MODELS: "1"
+  as_user: root
+  as: ollama_setup
 - name: Verify Ollama API is responding
   assert:
     http:
       url: "http://localhost:11434/api/tags"
       status: 200
       timeout: "10s"
-  retries: 5
-  retry_delay: "5s"
-
+  retry:
+    attempts: 5
+    delay: "5s"
 - name: Test model execution
   shell: ollama run llama3.1:8b 'Say hello'
-  register: test_result
-
+  as: test_result
 - name: Display test result
   shell: echo "{{ test_result.stdout }}"
 
 # Use Case 2: Production Server Deployment
 - name: Install Ollama for API service
-  preset:
-    name: ollama
-    with:
-      state: present
-      service: true
-      method: package  # Prefer package manager for updates
-      host: "0.0.0.0:11434"
-      models_dir: "/opt/ollama/models"
-      pull:
-        - "llama3.1:70b"  # Larger model for production
-      env:
-        OLLAMA_ORIGINS: "https://api.example.com"
-        OLLAMA_MAX_LOADED_MODELS: "2"
-        OLLAMA_NUM_PARALLEL: "4"
-  become: true
-
+  use: ollama
+  props:
+    state: present
+    service: true
+    method: package  # Prefer package manager for updates
+    host: "0.0.0.0:11434"
+    models_dir: "/opt/ollama/models"
+    pull:
+    - "llama3.1:70b"    # Larger model for production
+    env:
+      OLLAMA_ORIGINS: "https://api.example.com"
+      OLLAMA_MAX_LOADED_MODELS: "2"
+      OLLAMA_NUM_PARALLEL: "4"
+  as_user: root
 - name: Verify service is running (systemd)
   shell: systemctl is-active ollama
-  register: service_status
+  as: service_status
   when: "{{ os == 'linux' }}"
 
 - name: Check models are available
   shell: ollama list
-  register: models_list
-
-# Use Case 3: Conditional Installation
+  as: models_list
 - name: Check if Ollama already installed
   shell: which ollama
-  register: ollama_check
+  as: ollama_check
   failed_when: false
 
 - name: Install Ollama only if not present
-  preset:
-    name: ollama
-    with:
-      state: present
-      service: true
-      pull: ["llama3.1:8b"]
-  become: true
+  use: ollama
+  props:
+    state: present
+    service: true
+    pull: ["llama3.1:8b"]
+  as_user: root
   when: "{{ ollama_check.rc != 0 }}"
 
 # Use Case 4: Using System Facts
@@ -239,14 +188,13 @@
 
 # Use Case 5: Multi-stage Deployment with Error Handling
 - name: Install Ollama with error handling
-  preset:
-    name: ollama
-    with:
-      state: present
-      service: true
-      pull: ["llama3.1:8b"]
-  become: true
-  register: ollama_result
+  use: ollama
+  props:
+    state: present
+    service: true
+    pull: ["llama3.1:8b"]
+  as_user: root
+  as: ollama_result
   failed_when: false
 
 - name: Handle installation success
@@ -263,68 +211,53 @@
       url: "http://localhost:11434/api/tags"
       status: 200
       timeout: "5s"
-  retries: 10
-  retry_delay: "3s"
+  retry:
+    attempts: 10
+    delay: "3s"
   when: "{{ !ollama_result.failed }}"
 
 # Use Case 6: Template Integration
 - name: Install Ollama with templated configuration
-  preset:
-    name: ollama
-    with:
-      state: present
-      service: true
-      host: "{{ ollama_bind_address }}"
-      models_dir: "{{ ollama_models_path }}"
-      pull: "{{ ollama_models_list }}"
-      env:
-        OLLAMA_DEBUG: "{{ ollama_debug_mode }}"
-  become: true
-
-# Use Case 7: Update Existing Installation
+  use: ollama
+  props:
+    state: present
+    service: true
+    host: "{{ ollama_bind_address }}"
+    models_dir: "{{ ollama_models_path }}"
+    pull: "{{ ollama_models_list }}"
+    env:
+      OLLAMA_DEBUG: "{{ ollama_debug_mode }}"
+  as_user: root
 - name: Update Ollama and refresh models
-  preset:
-    name: ollama
-    with:
-      state: present
-      service: true
-      pull:
-        - "llama3.1:8b"
-        - "mistral:latest"
-      force: true  # Re-pull to get latest versions
-  become: true
-
-# Use Case 8: Cleanup and Reinstall
+  use: ollama
+  props:
+    state: present
+    service: true
+    pull:
+    - "llama3.1:8b"
+    - "mistral:latest"
+    force: true  # Re-pull to get latest versions
+  as_user: root
 - name: Remove old Ollama installation
-  preset:
-    name: ollama
-    with:
-      state: absent
-      force: true  # Remove everything
-  become: true
-
+  use: ollama
+  props:
+    state: absent
+    force: true  # Remove everything
+  as_user: root
 - name: Fresh Ollama installation
-  preset:
-    name: ollama
-    with:
-      state: present
-      service: true
-      pull: ["llama3.1:8b"]
-  become: true
-
-# =============================================================================
-# Platform-Specific Examples
-# =============================================================================
-
-# Linux (systemd) specific
+  use: ollama
+  props:
+    state: present
+    service: true
+    pull: ["llama3.1:8b"]
+  as_user: root
 - name: Linux - Install with systemd service
-  preset:
-    name: ollama
-    with:
-      state: present
-      service: true
-      host: "0.0.0.0:11434"
-  become: true
+  use: ollama
+  props:
+    state: present
+    service: true
+    host: "0.0.0.0:11434"
+  as_user: root
   when: "{{ os == 'linux' }}"
 
 - name: Linux - Check systemd service status
@@ -333,13 +266,11 @@
 
 # macOS (launchd) specific
 - name: macOS - Install via Homebrew
-  preset:
-    name: ollama
-    with:
-      state: present
-      service: true
-      method: package
-  become: false  # Homebrew doesn't need sudo for user services
+  use: ollama
+  props:
+    state: present
+    service: true
+    method: package
   when: "{{ os == 'darwin' }}"
 
 - name: macOS - Check launchd service status
@@ -352,16 +283,14 @@
 
 # Create API wrapper script
 - name: Install Ollama
-  preset:
-    name: ollama
-    with:
-      state: present
-      service: true
-      pull: ["llama3.1:8b"]
-  become: true
-
+  use: ollama
+  props:
+    state: present
+    service: true
+    pull: ["llama3.1:8b"]
+  as_user: root
 - name: Create convenience script
-  file:
+  file.write:
     path: ~/bin/ask-llm
     state: file
     mode: "0755"
@@ -371,7 +300,7 @@
 
 # Configure application to use Ollama
 - name: Deploy app configuration with Ollama endpoint
-  template:
+  file.template:
     src: ./templates/app-config.yml.j2
     dest: /etc/myapp/config.yml
     vars:
@@ -379,9 +308,9 @@
 
 # Monitor Ollama health
 - name: Setup healthcheck cron job
-  file:
+  file.write:
     path: /etc/cron.d/ollama-healthcheck
     state: file
     content: |
       */5 * * * * root curl -f http://localhost:11434/api/tags || systemctl restart ollama
-  become: true
+  as_user: root

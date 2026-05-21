@@ -23,17 +23,17 @@ modules:
 steps:
   # Remote module via alias (default export)
   - use: postgres
-    with:
+    props:
       tls: true
 
   # Named export from the same module
   - use: postgres/backup
-    with:
+    props:
       schedule: "0 2 * * *"
 
   # Local component, no modules: entry needed
   - use: ./components/setup-user.yml
-    with:
+    props:
       username: alice
 ```
 
@@ -65,7 +65,7 @@ steps:
   - pkg.install:
       name: postgresql
 
-  - include: tasks/configure.yml
+  - import: tasks/configure.yml
     when: "props.tls"
 ```
 
@@ -81,7 +81,7 @@ Inside steps, reference props via `{{ props.<name> }}` (or `{{ parameters.<name>
 the legacy spelling still resolves, see *Migration* below).
 
 Components can include other YAML files relative to the component's directory
-(`include: tasks/configure.yml`), but cannot themselves invoke other components
+(`import: tasks/configure.yml`), but cannot themselves invoke other components
 yet (no `use:` inside a component).
 
 ---
@@ -116,7 +116,7 @@ github.com/mooncake-modules/postgres/
 
 Only `index.yml` is required. Files not listed under `exports:` are
 internal — helpers, templates, task includes. They are reachable from
-exported components via `include:`/`template:` but not via `use:`.
+exported components via `import:`/`template:` but not via `use:`.
 
 Tag each release: `git tag v1.3.0 && git push --tags`. Mooncake fetches by
 tag; the tag and the cache directory are the integrity boundary.
@@ -135,7 +135,7 @@ dispatches accordingly:
 | `alias`                                  | Look up `alias` in `modules:` → fetch + `default` export             |
 | `alias/exportname`                       | Same as above but use the named export                               |
 
-`with:` is always a sibling key on the step that supplies prop values.
+`props:` is always a sibling key on the step that supplies prop values.
 
 ### Resolution flow for a remote/alias use:
 
@@ -152,7 +152,7 @@ use: postgres
  │
  ├─ read index.yml → resolve "default" → components/install.yml
  │
- └─ load component, validate props against with:, expand steps
+ └─ load component, validate props against props:, expand steps
 ```
 
 The cache is content-immutable at `(host, owner, repo, version)`. A second

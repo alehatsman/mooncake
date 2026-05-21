@@ -786,9 +786,31 @@ func (p *Planner) renderActionTemplates(step *config.Step, ctx *ExpansionContext
 		return p.template.RenderPreserving(s, ctx.Variables)
 	}
 
+	// spec-67: `use:` is a string action; `props:` is its sibling map (not an
+	// action field). Render both at plan time so downstream consumers — the
+	// preset handler's prop validation, vars.load expansions inside the
+	// component, etc. — see resolved values instead of raw {{ }} expressions.
+	if step.Use != "" {
+		rendered, err := render(step.Use)
+		if err != nil {
+			return fmt.Errorf("step %q: %w", step.Name, err)
+		}
+		step.Use = rendered
+		if err := renderPropsValue(step.Props, render); err != nil {
+			return fmt.Errorf("step %q: %w", step.Name, err)
+		}
+		return nil
+	}
+
 	rv := reflect.ValueOf(step).Elem()
 	for _, i := range config.ActionFieldIndices() {
 		fv := rv.Field(i)
+		// Only pointer-to-struct action fields are eligible for template
+		// rendering via walkAndRender. Non-pointer action fields (e.g.
+		// spec-67 Use) are handled above.
+		if fv.Kind() != reflect.Pointer {
+			continue
+		}
 		if fv.IsNil() {
 			continue
 		}
@@ -805,6 +827,46 @@ func (p *Planner) renderActionTemplates(step *config.Step, ctx *ExpansionContext
 			return fmt.Errorf("step %q: %w", step.Name, err)
 		}
 		break
+	}
+	return nil
+}
+
+// renderPropsValue walks a props map/slice/string value and renders every
+// string leaf through the planner's template engine. Nested structures
+// (map-of-map, list-of-map, etc.) are traversed in place; non-string scalars
+// pass through unchanged.
+func renderPropsValue(v interface{}, render func(string) (string, error)) error {
+	switch x := v.(type) {
+	case nil:
+		return nil
+	case map[string]interface{}:
+		for k, sub := range x {
+			if s, ok := sub.(string); ok {
+				r, err := render(s)
+				if err != nil {
+					return err
+				}
+				x[k] = r
+				continue
+			}
+			if err := renderPropsValue(sub, render); err != nil {
+				return err
+			}
+		}
+	case []interface{}:
+		for i, sub := range x {
+			if s, ok := sub.(string); ok {
+				r, err := render(s)
+				if err != nil {
+					return err
+				}
+				x[i] = r
+				continue
+			}
+			if err := renderPropsValue(sub, render); err != nil {
+				return err
+			}
+		}
 	}
 	return nil
 }

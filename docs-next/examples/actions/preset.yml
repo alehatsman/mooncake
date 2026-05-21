@@ -14,29 +14,28 @@
 # =============================================================================
 
 - name: "Example 1: Simple preset invocation (string form)"
-  print: |
+  log: |
     Using preset with string form:
-    - preset: ollama
+    - use: ollama
   tags: [basics]
 
 - name: "Example 2: Preset with parameters"
-  print: |
+  log: |
     Using preset with parameters:
-    - preset: ollama
-      with:
+    - use: ollama
+      props:
         state: present
         service: true
   tags: [basics]
 
-- name: "Example 3: Preset with full object form"
-  print: |
-    Using full preset object:
-    - preset:
-        name: ollama
-        with:
-          state: present
-          service: true
-          pull: [llama3.1:8b]
+- name: "Example 3: Preset with list parameter"
+  log: |
+    Using a list-typed prop:
+    - use: ollama
+      props:
+        state: present
+        service: true
+        pull: [llama3.1:8b]
   tags: [basics]
 
 # =============================================================================
@@ -44,32 +43,32 @@
 # =============================================================================
 
 - name: "Example 4: Install Ollama (demo)"
-  print: |
+  log: |
     Install Ollama:
     - name: Install Ollama
-      preset: ollama
-      with:
+      use: ollama
+      props:
         state: present
       become: true
   tags: [ollama]
 
 - name: "Example 5: Install with service"
-  print: |
+  log: |
     Install with service:
     - name: Install Ollama with service
-      preset: ollama
-      with:
+      use: ollama
+      props:
         state: present
         service: true
       become: true
   tags: [ollama]
 
 - name: "Example 6: Install and pull models"
-  print: |
+  log: |
     Install and pull models:
     - name: Setup Ollama with models
-      preset: ollama
-      with:
+      use: ollama
+      props:
         state: present
         service: true
         pull:
@@ -80,11 +79,11 @@
   tags: [ollama]
 
 - name: "Example 7: Full Ollama configuration"
-  print: |
+  log: |
     Complete Ollama setup:
     - name: Deploy Ollama
-      preset: ollama
-      with:
+      use: ollama
+      props:
         state: present
         service: true
         method: auto
@@ -105,21 +104,21 @@
   tags: [ollama]
 
 - name: "Example 8: Uninstall Ollama"
-  print: |
+  log: |
     Uninstall Ollama:
     - name: Remove Ollama
-      preset: ollama
-      with:
+      use: ollama
+      props:
         state: absent
       become: true
   tags: [ollama]
 
 - name: "Example 9: Complete removal with models"
-  print: |
+  log: |
     Complete Ollama removal:
     - name: Remove Ollama and models
-      preset: ollama
-      with:
+      use: ollama
+      props:
         state: absent
         force: true  # Also removes models directory
       become: true
@@ -131,16 +130,16 @@
 
 - vars:
     ollama_models:
-      - "llama3.1:8b"
-      - "mistral:latest"
+    - "llama3.1:8b"
+    - "mistral:latest"
     ollama_host: "localhost:11434"
     environment: "development"
 
 - name: "Example 10: Preset with template variables"
-  print: |
+  log: |
     Using variables:
-    - preset: ollama
-      with:
+    - use: ollama
+      props:
         state: present
         service: true
         host: "{{ ollama_host }}"
@@ -153,11 +152,11 @@
 # =============================================================================
 
 - name: "Example 11: Conditional on OS"
-  print: |
+  log: |
     Run on Linux only:
     - name: Install Ollama on Linux
-      preset: ollama
-      with:
+      use: ollama
+      props:
         state: present
         service: true
       when: os == "linux"
@@ -165,11 +164,11 @@
   tags: [conditional]
 
 - name: "Example 12: Conditional on environment"
-  print: |
+  log: |
     Development environment only:
     - name: Install dev tools
-      preset: ollama
-      with:
+      use: ollama
+      props:
         state: present
         service: true
         pull: ["codellama:7b"]
@@ -182,11 +181,11 @@
 # =============================================================================
 
 - name: "Example 13: Register preset result"
-  print: |
+  log: |
     Register and use result:
     - name: Install Ollama
-      preset: ollama
-      with:
+      use: ollama
+      props:
         state: present
         service: true
       become: true
@@ -204,11 +203,11 @@
 # =============================================================================
 
 - name: "Example 14: Preset with tags"
-  print: |
+  log: |
     Using tags:
     - name: Setup ML environment
-      preset: ollama
-      with:
+      use: ollama
+      props:
         state: present
         service: true
         pull: ["llama3.1:8b"]
@@ -223,13 +222,13 @@
 # =============================================================================
 
 - name: "Example 15: Integration workflow"
-  print: |
+  log: |
     Complete deployment workflow:
 
     # Step 1: Install Ollama
     - name: Install Ollama
-      preset: ollama
-      with:
+      use: ollama
+      props:
         state: present
         service: true
         pull: ["llama3.1:8b"]
@@ -271,12 +270,12 @@
 # =============================================================================
 
 - name: "Example 16: LLM development environment"
-  print: |
+  log: |
     Setup dev environment:
 
     - name: Install Ollama with dev models
-      preset: ollama
-      with:
+      use: ollama
+      props:
         state: present
         service: true
         host: "localhost:11434"
@@ -319,12 +318,12 @@
 # =============================================================================
 
 - name: "Example 17: Production deployment"
-  print: |
+  log: |
     Production setup:
 
     - name: Deploy Ollama for production
-      preset: ollama
-      with:
+      use: ollama
+      props:
         state: present
         service: true
         method: package  # Prefer package manager
@@ -368,12 +367,12 @@
 # =============================================================================
 
 - name: "Example 18: Preset with error handling"
-  print: |
+  log: |
     Handle preset errors:
 
     - name: Try to install Ollama
-      preset: ollama
-      with:
+      use: ollama
+      props:
         state: present
         service: true
       become: true
@@ -394,11 +393,11 @@
 # =============================================================================
 
 - name: "Example 19: All ollama preset parameters"
-  print: |
+  log: |
     Complete parameter reference:
 
-    preset: ollama
-    with:
+    use: ollama
+    props:
       # Required
       state: present | absent
 
@@ -420,7 +419,7 @@
 # =============================================================================
 
 - name: "Example 20: Creating custom presets"
-  print: |
+  log: |
     Create your own presets in:
       • ./presets/          (playbook directory)
       • ~/.mooncake/presets/  (user directory)
@@ -428,31 +427,30 @@
 
     Example preset file (presets/hello.yml):
     ```yaml
-    preset:
-      name: hello
-      description: Print a greeting
-      version: 1.0.0
+    name: hello
+    description: Print a greeting
+    version: 1.0.0
 
-      parameters:
-        name:
-          type: string
-          required: true
-          description: Name to greet
+    props:
+      name:
+        type: string
+        required: true
+        description: Name to greet
 
-        excited:
-          type: bool
-          default: false
-          description: Use exclamation mark
+      excited:
+        type: bool
+        default: false
+        description: Use exclamation mark
 
-      steps:
-        - name: Print greeting
-          shell: echo "Hello, {{ parameters.name }}{% if parameters.excited %}!{% endif %}"
+    steps:
+      - name: Print greeting
+        shell: echo "Hello, {{ props.name }}{% if props.excited %}!{% endif %}"
     ```
 
     Usage:
     ```yaml
-    - preset: hello
-      with:
+    - use: hello
+      props:
         name: World
         excited: true
     ```
@@ -465,7 +463,7 @@
 # =============================================================================
 
 - name: "Summary"
-  print: |
+  log: |2
 
     Preset action examples completed!
     Covered:
@@ -486,5 +484,4 @@
       • docs/guide/presets.md
       • docs/guide/preset-authoring.md
       • examples/ollama/
-
   tags: [always]

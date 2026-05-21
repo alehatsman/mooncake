@@ -10,47 +10,47 @@ import (
 // It loads the preset definition, validates parameters, and returns the expanded steps
 // with the 'parameters' namespace injected into the execution context, along with the
 // preset's base directory for relative path resolution.
-func ExpandPreset(invocation *config.PresetInvocation) ([]config.Step, map[string]interface{}, string, error) {
-	if invocation == nil {
-		return nil, nil, "", fmt.Errorf("preset invocation is nil")
+func ExpandPreset(name string, props map[string]interface{}) ([]config.Step, map[string]interface{}, string, error) {
+	if name == "" {
+		return nil, nil, "", fmt.Errorf("preset invocation has empty name")
 	}
 
-	definition, err := LoadPreset(invocation.Name)
+	definition, err := LoadPreset(name)
 	if err != nil {
-		return nil, nil, "", fmt.Errorf("failed to load preset '%s': %w", invocation.Name, err)
+		return nil, nil, "", fmt.Errorf("failed to load preset '%s': %w", name, err)
 	}
-	return expandLoaded(invocation, definition)
+	return expandLoaded(name, props, definition)
 }
 
 // ExpandPresetFromPath is the spec-67 entry point for `use: ./foo.yml` style
 // invocations. The caller has already resolved the path to an absolute
 // location; this function loads the definition, validates props, and returns
 // the expanded steps along with the namespace and base directory.
-func ExpandPresetFromPath(invocation *config.PresetInvocation, absPath string) ([]config.Step, map[string]interface{}, string, error) {
-	if invocation == nil {
-		return nil, nil, "", fmt.Errorf("component invocation is nil")
+func ExpandPresetFromPath(name string, props map[string]interface{}, absPath string) ([]config.Step, map[string]interface{}, string, error) {
+	if name == "" {
+		return nil, nil, "", fmt.Errorf("component invocation has empty name")
 	}
 	definition, err := LoadPresetFromPath(absPath)
 	if err != nil {
 		return nil, nil, "", fmt.Errorf("failed to load component '%s': %w", absPath, err)
 	}
-	return expandLoaded(invocation, definition)
+	return expandLoaded(name, props, definition)
 }
 
 // expandLoaded runs the shared post-load steps (validate props, inject
 // namespaces, clone steps). Extracted so ExpandPreset and ExpandPresetFromPath
 // share one implementation.
-func expandLoaded(invocation *config.PresetInvocation, definition *config.PresetDefinition) ([]config.Step, map[string]interface{}, string, error) {
+func expandLoaded(name string, props map[string]interface{}, definition *config.PresetDefinition) ([]config.Step, map[string]interface{}, string, error) {
 
 	// Validate and prepare parameters
-	userParams := invocation.With
+	userParams := props
 	if userParams == nil {
 		userParams = make(map[string]interface{})
 	}
 
 	validatedParams, err := ValidateParameters(definition, userParams)
 	if err != nil {
-		return nil, nil, "", fmt.Errorf("preset '%s' parameter validation failed: %w", invocation.Name, err)
+		return nil, nil, "", fmt.Errorf("preset '%s' parameter validation failed: %w", name, err)
 	}
 
 	// Inject both `parameters` (legacy) and `props` (spec-67) namespaces so

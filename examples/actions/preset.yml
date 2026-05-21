@@ -16,27 +16,26 @@
 - name: "Example 1: Simple preset invocation (string form)"
   log: |
     Using preset with string form:
-    - preset: ollama
+    - use: ollama
   tags: [basics]
 
 - name: "Example 2: Preset with parameters"
   log: |
     Using preset with parameters:
-    - preset: ollama
-      with:
+    - use: ollama
+      props:
         state: present
         service: true
   tags: [basics]
 
-- name: "Example 3: Preset with full object form"
+- name: "Example 3: Preset with list parameter"
   log: |
-    Using full preset object:
-    - preset:
-        name: ollama
-        with:
-          state: present
-          service: true
-          pull: [llama3.1:8b]
+    Using a list-typed prop:
+    - use: ollama
+      props:
+        state: present
+        service: true
+        pull: [llama3.1:8b]
   tags: [basics]
 
 # =============================================================================
@@ -47,8 +46,8 @@
   log: |
     Install Ollama:
     - name: Install Ollama
-      preset: ollama
-      with:
+      use: ollama
+      props:
         state: present
       become: true
   tags: [ollama]
@@ -57,8 +56,8 @@
   log: |
     Install with service:
     - name: Install Ollama with service
-      preset: ollama
-      with:
+      use: ollama
+      props:
         state: present
         service: true
       become: true
@@ -68,8 +67,8 @@
   log: |
     Install and pull models:
     - name: Setup Ollama with models
-      preset: ollama
-      with:
+      use: ollama
+      props:
         state: present
         service: true
         pull:
@@ -83,8 +82,8 @@
   log: |
     Complete Ollama setup:
     - name: Deploy Ollama
-      preset: ollama
-      with:
+      use: ollama
+      props:
         state: present
         service: true
         method: auto
@@ -108,8 +107,8 @@
   log: |
     Uninstall Ollama:
     - name: Remove Ollama
-      preset: ollama
-      with:
+      use: ollama
+      props:
         state: absent
       become: true
   tags: [ollama]
@@ -118,8 +117,8 @@
   log: |
     Complete Ollama removal:
     - name: Remove Ollama and models
-      preset: ollama
-      with:
+      use: ollama
+      props:
         state: absent
         force: true  # Also removes models directory
       become: true
@@ -139,8 +138,8 @@
 - name: "Example 10: Preset with template variables"
   log: |
     Using variables:
-    - preset: ollama
-      with:
+    - use: ollama
+      props:
         state: present
         service: true
         host: "{{ ollama_host }}"
@@ -156,8 +155,8 @@
   log: |
     Run on Linux only:
     - name: Install Ollama on Linux
-      preset: ollama
-      with:
+      use: ollama
+      props:
         state: present
         service: true
       when: os == "linux"
@@ -168,8 +167,8 @@
   log: |
     Development environment only:
     - name: Install dev tools
-      preset: ollama
-      with:
+      use: ollama
+      props:
         state: present
         service: true
         pull: ["codellama:7b"]
@@ -185,8 +184,8 @@
   log: |
     Register and use result:
     - name: Install Ollama
-      preset: ollama
-      with:
+      use: ollama
+      props:
         state: present
         service: true
       become: true
@@ -207,8 +206,8 @@
   log: |
     Using tags:
     - name: Setup ML environment
-      preset: ollama
-      with:
+      use: ollama
+      props:
         state: present
         service: true
         pull: ["llama3.1:8b"]
@@ -228,8 +227,8 @@
 
     # Step 1: Install Ollama
     - name: Install Ollama
-      preset: ollama
-      with:
+      use: ollama
+      props:
         state: present
         service: true
         pull: ["llama3.1:8b"]
@@ -275,8 +274,8 @@
     Setup dev environment:
 
     - name: Install Ollama with dev models
-      preset: ollama
-      with:
+      use: ollama
+      props:
         state: present
         service: true
         host: "localhost:11434"
@@ -323,8 +322,8 @@
     Production setup:
 
     - name: Deploy Ollama for production
-      preset: ollama
-      with:
+      use: ollama
+      props:
         state: present
         service: true
         method: package  # Prefer package manager
@@ -372,8 +371,8 @@
     Handle preset errors:
 
     - name: Try to install Ollama
-      preset: ollama
-      with:
+      use: ollama
+      props:
         state: present
         service: true
       become: true
@@ -397,8 +396,8 @@
   log: |
     Complete parameter reference:
 
-    preset: ollama
-    with:
+    use: ollama
+    props:
       # Required
       state: present | absent
 
@@ -428,31 +427,30 @@
 
     Example preset file (presets/hello.yml):
     ```yaml
-    preset:
-      name: hello
-      description: Print a greeting
-      version: 1.0.0
+    name: hello
+    description: Print a greeting
+    version: 1.0.0
 
-      parameters:
-        name:
-          type: string
-          required: true
-          description: Name to greet
+    props:
+      name:
+        type: string
+        required: true
+        description: Name to greet
 
-        excited:
-          type: bool
-          default: false
-          description: Use exclamation mark
+      excited:
+        type: bool
+        default: false
+        description: Use exclamation mark
 
-      steps:
-        - name: Print greeting
-          shell: echo "Hello, {{ parameters.name }}{% if parameters.excited %}!{% endif %}"
+    steps:
+      - name: Print greeting
+        shell: echo "Hello, {{ props.name }}{% if props.excited %}!{% endif %}"
     ```
 
     Usage:
     ```yaml
-    - preset: hello
-      with:
+    - use: hello
+      props:
         name: World
         excited: true
     ```

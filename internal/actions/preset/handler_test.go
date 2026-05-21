@@ -182,37 +182,31 @@ func TestHandler_Validate(t *testing.T) {
 		{
 			name: "valid preset action with name only",
 			step: &config.Step{
-				Use: &config.PresetInvocation{
-					Name: "test-preset",
-				},
+				Use: "test-preset",
 			},
 			wantErr: false,
 		},
 		{
 			name: "valid preset action with parameters",
 			step: &config.Step{
-				Use: &config.PresetInvocation{
-					Name: "test-preset",
-					With: map[string]interface{}{
-						"param1": "value1",
-					},
+				Use: "test-preset",
+				Props: map[string]interface{}{
+					"param1": "value1",
 				},
 			},
 			wantErr: false,
 		},
 		{
-			name: "nil preset action",
+			name: "unset preset action",
 			step: &config.Step{
-				Use: nil,
+				Use: "",
 			},
 			wantErr: true,
 		},
 		{
 			name: "empty preset name",
 			step: &config.Step{
-				Use: &config.PresetInvocation{
-					Name: "",
-				},
+				Use: "",
 			},
 			wantErr: true,
 		},
@@ -236,9 +230,7 @@ func TestHandler_Execute_InvalidContextType(t *testing.T) {
 
 	step := &config.Step{
 		Name: "Test invalid context",
-		Use: &config.PresetInvocation{
-			Name: "simple-test",
-		},
+		Use:  "simple-test",
 	}
 
 	_, err := h.Run(ctx, step)
@@ -260,9 +252,7 @@ func TestHandler_Execute_NonexistentPreset(t *testing.T) {
 
 	step := &config.Step{
 		Name: "Test nonexistent preset",
-		Use: &config.PresetInvocation{
-			Name: "does-not-exist",
-		},
+		Use:  "does-not-exist",
 	}
 
 	_, err := h.Run(ec, step)
@@ -282,28 +272,25 @@ func TestPresetExpansion(t *testing.T) {
 
 	tests := []struct {
 		name           string
-		invocation     *config.PresetInvocation
+		presetName     string
+		props          map[string]interface{}
 		wantSteps      int
 		wantErr        bool
 		checkParameter string
 		expectedValue  interface{}
 	}{
 		{
-			name: "simple preset expansion",
-			invocation: &config.PresetInvocation{
-				Name: "simple-test",
-			},
-			wantSteps: 1,
-			wantErr:   false,
+			name:       "simple preset expansion",
+			presetName: "simple-test",
+			wantSteps:  1,
+			wantErr:    false,
 		},
 		{
-			name: "preset with parameters",
-			invocation: &config.PresetInvocation{
-				Name: "param-test",
-				With: map[string]interface{}{
-					"message": "Test message",
-					"count":   "5",
-				},
+			name:       "preset with parameters",
+			presetName: "param-test",
+			props: map[string]interface{}{
+				"message": "Test message",
+				"count":   "5",
 			},
 			wantSteps:      2,
 			wantErr:        false,
@@ -311,13 +298,11 @@ func TestPresetExpansion(t *testing.T) {
 			expectedValue:  "Test message",
 		},
 		{
-			name: "preset with default parameter",
-			invocation: &config.PresetInvocation{
-				Name: "param-test",
-				With: map[string]interface{}{
-					"message": "Test message",
-					// count should use default "1"
-				},
+			name:       "preset with default parameter",
+			presetName: "param-test",
+			props: map[string]interface{}{
+				"message": "Test message",
+				// count should use default "1"
 			},
 			wantSteps:      2,
 			wantErr:        false,
@@ -325,52 +310,44 @@ func TestPresetExpansion(t *testing.T) {
 			expectedValue:  "1",
 		},
 		{
-			name: "preset with enum parameter - valid",
-			invocation: &config.PresetInvocation{
-				Name: "enum-test",
-				With: map[string]interface{}{
-					"state": "present",
-				},
+			name:       "preset with enum parameter - valid",
+			presetName: "enum-test",
+			props: map[string]interface{}{
+				"state": "present",
 			},
 			wantSteps: 1,
 			wantErr:   false,
 		},
 		{
-			name: "preset with enum parameter - invalid",
-			invocation: &config.PresetInvocation{
-				Name: "enum-test",
-				With: map[string]interface{}{
-					"state": "invalid",
-				},
+			name:       "preset with enum parameter - invalid",
+			presetName: "enum-test",
+			props: map[string]interface{}{
+				"state": "invalid",
 			},
 			wantSteps: 0,
 			wantErr:   true,
 		},
 		{
-			name: "missing required parameter",
-			invocation: &config.PresetInvocation{
-				Name: "param-test",
-				With: map[string]interface{}{
-					// Missing "message" which is required
-					"count": "3",
-				},
+			name:       "missing required parameter",
+			presetName: "param-test",
+			props: map[string]interface{}{
+				// Missing "message" which is required
+				"count": "3",
 			},
 			wantSteps: 0,
 			wantErr:   true,
 		},
 		{
-			name: "multi-step preset",
-			invocation: &config.PresetInvocation{
-				Name: "multi-step-test",
-			},
-			wantSteps: 3,
-			wantErr:   false,
+			name:       "multi-step preset",
+			presetName: "multi-step-test",
+			wantSteps:  3,
+			wantErr:    false,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			steps, params, _, err := presets.ExpandPreset(tt.invocation)
+			steps, params, _, err := presets.ExpandPreset(tt.presetName, tt.props)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("ExpandPreset() error = %v, wantErr %v", err, tt.wantErr)
 				return

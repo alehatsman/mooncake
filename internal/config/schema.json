@@ -2817,6 +2817,11 @@
           "description": "Upgrade named packages or all installed packages (apt + dnf + pacman on linux, brew on darwin)",
           "$ref": "#/definitions/pkg.upgrade"
         },
+        "props": {
+          "type": "object",
+          "description": "Parameter values passed to the component invoked by `use:`.",
+          "additionalProperties": true
+        },
         "read.json": {
           "description": "Read a JSON file and optionally extract a value by path",
           "$ref": "#/definitions/read.json"
@@ -2950,16 +2955,7 @@
         },
         "use": {
           "description": "Execute a preset by expanding it into steps",
-          "oneOf": [
-            {
-              "type": "string",
-              "description": "use (simple string format)"
-            },
-            {
-              "description": "use (structured object format)",
-              "$ref": "#/definitions/use"
-            }
-          ]
+          "$ref": "#/definitions/use"
         },
         "vars": {
           "description": "Set variables for use in subsequent steps",
@@ -22331,14 +22327,7 @@
           ],
           "properties": {
             "use": {
-              "oneOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "$ref": "#/definitions/use"
-                }
-              ]
+              "type": "string"
             }
           },
           "not": {
@@ -25812,21 +25801,8 @@
       "x-version": "0.1.0"
     },
     "use": {
-      "type": "object",
-      "description": "Execute a preset by expanding it into steps",
-      "properties": {
-        "name": {
-          "type": "string",
-          "minLength": 1
-        },
-        "with": {
-          "type": "object",
-          "additionalProperties": true
-        }
-      },
-      "required": [
-        "name"
-      ],
+      "type": "string",
+      "description": "Invoke a component by path, alias, or remote ref.",
       "additionalProperties": false,
       "x-category": "system",
       "x-supports-dry-run": true

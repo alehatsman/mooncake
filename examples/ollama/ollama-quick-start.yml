@@ -2,11 +2,10 @@
 # Installs ollama and tests it with the smallest model (tinyllama ~637MB)
 
 - name: install ollama with tinyllama model
-  use:
-    name: ollama
-    with:
-      service: false  # we'll start manually for demo
-      pull: [tinyllama]  # smallest model, good for testing
+  use: ollama
+  props:
+    service: false  # we'll start manually for demo
+    pull: [tinyllama]  # smallest model, good for testing
   as_user: root
 - name: start ollama server
   shell: nohup ollama serve > /tmp/ollama.log 2>&1 &

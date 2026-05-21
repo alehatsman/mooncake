@@ -937,22 +937,6 @@ type PresetParameter struct {
 	Description string        `yaml:"description" json:"description,omitempty"` // Human-readable description
 }
 
-// PresetInvocation represents a user's invocation of a reusable component via
-// `use:` in their playbook. Originally only handled `use: <preset-name>`; spec-67
-// generalises it so Name may also be a local path (`./foo.yml`), an alias from
-// the playbook's `modules:` block (`postgres` or `postgres/backup`), or an inline
-// remote module reference (`github.com/owner/repo@v1.0.0`).
-//
-// ComponentRef is the spec-67 name for this type and is kept as an alias.
-type PresetInvocation struct {
-	Name string                 `yaml:"name" json:"name"`           // Preset/component reference (required)
-	With map[string]interface{} `yaml:"with" json:"with,omitempty"` // Parameter / prop values
-}
-
-// ComponentRef is the spec-67 name for PresetInvocation. New code should
-// prefer this alias; the old name is kept to avoid a wide rename.
-type ComponentRef = PresetInvocation
-
 // ComponentRefKind identifies which dispatch path a use: reference takes.
 type ComponentRefKind int
 
@@ -969,62 +953,41 @@ const (
 	ComponentRefAlias
 )
 
-// Kind classifies the reference form. The classification is purely syntactic;
+// ComponentRefKindOf classifies the reference form. Purely syntactic;
 // alias-vs-preset disambiguation requires the playbook's modules: map and is
 // done by the executor, not here.
-func (p *PresetInvocation) Kind() ComponentRefKind {
-	if p == nil || p.Name == "" {
+func ComponentRefKindOf(ref string) ComponentRefKind {
+	if ref == "" {
 		return ComponentRefPreset
 	}
-	if strings.Contains(p.Name, "@") {
+	if strings.Contains(ref, "@") {
 		return ComponentRefRemote
 	}
-	if strings.HasPrefix(p.Name, "./") || strings.HasPrefix(p.Name, "../") || strings.HasPrefix(p.Name, "/") {
+	if strings.HasPrefix(ref, "./") || strings.HasPrefix(ref, "../") || strings.HasPrefix(ref, "/") {
 		return ComponentRefLocalPath
 	}
-	if strings.Contains(p.Name, "/") {
+	if strings.Contains(ref, "/") {
 		return ComponentRefAlias
 	}
 	return ComponentRefPreset
 }
 
-// SplitAlias decomposes an alias-form reference into (alias, export).
+// SplitComponentAlias decomposes an alias-form reference into (alias, export).
 // "postgres" → ("postgres", "default"); "postgres/backup" → ("postgres", "backup").
 // Returns ("", "") if the reference is empty or not in alias form
 // (local paths and remote refs are excluded).
-func (p *PresetInvocation) SplitAlias() (alias, export string) {
-	if p == nil || p.Name == "" {
+func SplitComponentAlias(ref string) (alias, export string) {
+	if ref == "" {
 		return "", ""
 	}
-	k := p.Kind()
+	k := ComponentRefKindOf(ref)
 	if k != ComponentRefAlias && k != ComponentRefPreset {
 		return "", ""
 	}
-	name := p.Name
-	if i := strings.Index(name, "/"); i >= 0 {
-		return name[:i], name[i+1:]
+	if i := strings.Index(ref, "/"); i >= 0 {
+		return ref[:i], ref[i+1:]
 	}
-	return name, "default"
-}
-
-// UnmarshalYAML implements custom YAML unmarshaling to support string form.
-// Supports: preset: "ollama" AND preset: { name: "ollama", with: {...} }
-func (p *PresetInvocation) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	// Try unmarshaling as string first (simple form)
-	var str string
-	if err := unmarshal(&str); err == nil {
-		p.Name = str
-		return nil
-	}
-
-	// Try unmarshaling as structured object
-	type rawPreset PresetInvocation
-	var raw rawPreset
-	if err := unmarshal(&raw); err != nil {
-		return err
-	}
-	*p = PresetInvocation(raw)
-	return nil
+	return ref, "default"
 }
 
 // PrintAction represents a print/output action for displaying messages.
@@ -1729,7 +1692,8 @@ type Step struct {
 	WaitCommand          *WaitCommand            `yaml:"wait.command,omitempty"      json:"wait.command,omitempty"      action:"wait.command"`
 	HTTPRequest          *HTTPRequest            `yaml:"http.request,omitempty"      json:"http.request,omitempty"      action:"http.request"`
 	Log                  *PrintAction            `yaml:"log,omitempty"               json:"log,omitempty"               action:"log"`
-	Use                  *PresetInvocation       `yaml:"use,omitempty"               json:"use,omitempty"               action:"use"`
+	Use                  string                  `yaml:"use,omitempty"               json:"use,omitempty"               action:"use"`
+	Props                map[string]interface{}  `yaml:"props,omitempty"             json:"props,omitempty"`
 	Import               *string                 `yaml:"import,omitempty"            json:"import,omitempty"            action:"import"`
 	VarsLoad             *string                 `yaml:"vars.load,omitempty"         json:"vars.load,omitempty"         action:"vars.load"`
 	Vars                 *map[string]interface{} `yaml:"vars,omitempty"              json:"vars,omitempty"              action:"vars"`
@@ -2026,12 +1990,26 @@ var actionFieldIndices = func() []int {
 // external packages (e.g. the planner's renderActionTemplates).
 func ActionFieldIndices() []int { return actionFieldIndices }
 
+// actionFieldSet reports whether the action field at index i is populated.
+// Most action fields are pointers/maps/slices and use IsNil semantics; the
+// spec-67 `Use` field is a bare string so we check IsZero for non-nilable
+// kinds.
+func actionFieldSet(rv reflect.Value, i int) bool {
+	f := rv.Field(i)
+	switch f.Kind() {
+	case reflect.Pointer, reflect.Map, reflect.Slice, reflect.Chan, reflect.Func, reflect.Interface:
+		return !f.IsNil()
+	default:
+		return !f.IsZero()
+	}
+}
+
 // countActions returns the number of non-nil action fields in this step.
 func (s *Step) countActions() int {
 	rv := reflect.ValueOf(s).Elem()
 	n := 0
 	for _, i := range actionFieldIndices {
-		if !rv.Field(i).IsNil() {
+		if actionFieldSet(rv, i) {
 			n++
 		}
 	}
@@ -2043,7 +2021,7 @@ func (s *Step) countActions() int {
 func (s *Step) DetermineActionType() string {
 	rv := reflect.ValueOf(s).Elem()
 	for _, i := range actionFieldIndices {
-		if !rv.Field(i).IsNil() {
+		if actionFieldSet(rv, i) {
 			return stepType.Field(i).Tag.Get("action")
 		}
 	}
@@ -2184,6 +2162,7 @@ func (s *Step) Clone() *Step {
 		HTTPRequest:       s.HTTPRequest,
 		Log:               s.Log,
 		Use:               s.Use,
+		Props:             s.Props,
 		Import:            s.Import,
 		VarsLoad:          s.VarsLoad,
 		Vars:              s.Vars,

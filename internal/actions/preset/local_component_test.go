@@ -31,17 +31,15 @@ steps:
 		t.Fatal(err)
 	}
 
-	invocation := &config.PresetInvocation{
-		Name: "./components/setup-user.yml",
-		With: map[string]interface{}{"username": "alice"},
-	}
+	name := "./components/setup-user.yml"
+	props := map[string]interface{}{"username": "alice"}
 
 	// Simulate the handler: detect Kind, resolve relative to playbook dir, expand.
-	if invocation.Kind() != config.ComponentRefLocalPath {
-		t.Fatalf("Kind = %v, want LocalPath", invocation.Kind())
+	if config.ComponentRefKindOf(name) != config.ComponentRefLocalPath {
+		t.Fatalf("Kind = %v, want LocalPath", config.ComponentRefKindOf(name))
 	}
-	absPath := filepath.Join(dir, invocation.Name)
-	steps, ns, baseDir, err := presets.ExpandPresetFromPath(invocation, absPath)
+	absPath := filepath.Join(dir, name)
+	steps, ns, baseDir, err := presets.ExpandPresetFromPath(name, props, absPath)
 	if err != nil {
 		t.Fatalf("ExpandPresetFromPath: %v", err)
 	}
@@ -51,17 +49,16 @@ steps:
 	if baseDir != componentsDir {
 		t.Errorf("baseDir = %q, want %q", baseDir, componentsDir)
 	}
-	props := ns["props"].(map[string]interface{})
-	if props["username"] != "alice" {
-		t.Errorf("props.username = %v, want alice", props["username"])
+	gotProps := ns["props"].(map[string]interface{})
+	if gotProps["username"] != "alice" {
+		t.Errorf("props.username = %v, want alice", gotProps["username"])
 	}
 }
 
 // TestLocalComponent_MissingFile verifies the spec's error message for a
 // missing local component file.
 func TestLocalComponent_MissingFile(t *testing.T) {
-	invocation := &config.PresetInvocation{Name: "./components/missing.yml"}
-	_, _, _, err := presets.ExpandPresetFromPath(invocation, "/tmp/nonexistent/missing.yml")
+	_, _, _, err := presets.ExpandPresetFromPath("./components/missing.yml", nil, "/tmp/nonexistent/missing.yml")
 	if err == nil {
 		t.Fatal("expected error for missing component")
 	}
@@ -84,8 +81,7 @@ steps:
 	if err := os.WriteFile(componentPath, []byte(content), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	invocation := &config.PresetInvocation{Name: "./req.yml"}
-	_, _, _, err := presets.ExpandPresetFromPath(invocation, componentPath)
+	_, _, _, err := presets.ExpandPresetFromPath("./req.yml", nil, componentPath)
 	if err == nil {
 		t.Fatal("expected error for missing required prop")
 	}

@@ -153,14 +153,7 @@ func TestDryRunLogger_LogPresetOperation(t *testing.T) {
 	testLogger := logger.NewTestLogger()
 	dryRunLogger := NewDryRunLogger(testLogger)
 
-	invocation := &config.PresetInvocation{
-		Name: "ollama",
-		With: map[string]interface{}{
-			"state": "installed",
-		},
-	}
-
-	dryRunLogger.LogPresetOperation(invocation, 1)
+	dryRunLogger.LogPresetOperation("ollama", 1)
 
 	t.Log("LogPresetOperation executed successfully")
 }
@@ -170,11 +163,7 @@ func TestDryRunLogger_LogPresetOperation_NoParams(t *testing.T) {
 	testLogger := logger.NewTestLogger()
 	dryRunLogger := NewDryRunLogger(testLogger)
 
-	invocation := &config.PresetInvocation{
-		Name: "simple-preset",
-	}
-
-	dryRunLogger.LogPresetOperation(invocation, 0)
+	dryRunLogger.LogPresetOperation("simple-preset", 0)
 
 	t.Log("LogPresetOperation with no parameters executed successfully")
 }

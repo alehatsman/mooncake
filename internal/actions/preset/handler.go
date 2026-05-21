@@ -95,10 +95,7 @@ func displayPresetHelp(ec *executor.ExecutionContext, _, baseDir string) {
 
 // Validate validates the preset action configuration.
 func (h *Handler) Validate(step *config.Step) error {
-	if step.Use == nil {
-		return fmt.Errorf("preset action requires preset configuration")
-	}
-	if step.Use.Name == "" {
+	if step.Use == "" {
 		return fmt.Errorf("preset name is required")
 	}
 	return nil
@@ -124,7 +121,8 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		return nil, fmt.Errorf("invalid context type")
 	}
 
-	invocation := step.Use
+	name := step.Use
+	props := step.Props
 
 	// spec-67 dispatch:
 	//   local path  → LoadPresetFromPath against ec.CurrentDir
@@ -135,45 +133,45 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 	var parametersNamespace map[string]interface{}
 	var presetBaseDir string
 	var err error
-	switch invocation.Kind() {
+	switch config.ComponentRefKindOf(name) {
 	case config.ComponentRefLocalPath:
-		absPath := invocation.Name
+		absPath := name
 		if !filepath.IsAbs(absPath) {
-			absPath = filepath.Join(ec.CurrentDir, invocation.Name)
+			absPath = filepath.Join(ec.CurrentDir, name)
 		}
-		expandedSteps, parametersNamespace, presetBaseDir, err = presets.ExpandPresetFromPath(invocation, absPath)
+		expandedSteps, parametersNamespace, presetBaseDir, err = presets.ExpandPresetFromPath(name, props, absPath)
 		if err != nil {
-			return nil, fmt.Errorf("failed to expand component '%s': %w", invocation.Name, err)
+			return nil, fmt.Errorf("failed to expand component '%s': %w", name, err)
 		}
 	case config.ComponentRefRemote:
-		expandedSteps, parametersNamespace, presetBaseDir, err = resolveAndExpand(ec, invocation)
+		expandedSteps, parametersNamespace, presetBaseDir, err = resolveAndExpand(ec, name, props)
 		if err != nil {
 			return nil, err
 		}
 	default:
 		// Alias hit when the bare name appears in the playbook's modules: block.
 		// Otherwise fall through to the legacy preset search-path loader.
-		if _, isAlias := ec.Svc.Modules[firstSegment(invocation.Name)]; isAlias && ec.Svc.Modules != nil {
-			expandedSteps, parametersNamespace, presetBaseDir, err = resolveAndExpand(ec, invocation)
+		if _, isAlias := ec.Svc.Modules[firstSegment(name)]; isAlias && ec.Svc.Modules != nil {
+			expandedSteps, parametersNamespace, presetBaseDir, err = resolveAndExpand(ec, name, props)
 			if err != nil {
 				return nil, err
 			}
 		} else {
-			expandedSteps, parametersNamespace, presetBaseDir, err = presets.ExpandPreset(invocation)
+			expandedSteps, parametersNamespace, presetBaseDir, err = presets.ExpandPreset(name, props)
 			if err != nil {
-				return nil, fmt.Errorf("failed to expand preset '%s': %w", invocation.Name, err)
+				return nil, fmt.Errorf("failed to expand preset '%s': %w", name, err)
 			}
 		}
 	}
 
 	// Emit preset expanded event
 	ec.EmitEvent(events.EventPresetExpanded, events.PresetData{
-		Name:       invocation.Name,
-		Parameters: invocation.With,
+		Name:       name,
+		Parameters: props,
 		StepsCount: len(expandedSteps),
 	})
 
-	ec.Svc.Logger.Infof("Expanding preset '%s' into %d steps", invocation.Name, len(expandedSteps))
+	ec.Svc.Logger.Infof("Expanding preset '%s' into %d steps", name, len(expandedSteps))
 
 	// Save current context for restoration
 	saved := captureContext(ec)
@@ -202,7 +200,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		return nil, fmt.Errorf("failed to expand preset steps: %w", err)
 	}
 
-	ec.Svc.Logger.Infof("Preset '%s' expanded to %d steps (after include expansion)", invocation.Name, len(fullyExpandedSteps))
+	ec.Svc.Logger.Infof("Preset '%s' expanded to %d steps (after include expansion)", name, len(fullyExpandedSteps))
 
 	// Execute fully expanded steps
 	anyChanged := false
@@ -210,7 +208,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		ec.Svc.Logger.Debugf("Executing preset step %d/%d: %s", i+1, len(fullyExpandedSteps), expandedStep.Name)
 
 		if err := executor.ExecuteStep(expandedStep, ec); err != nil {
-			return nil, fmt.Errorf("preset '%s' step %d failed: %w", invocation.Name, i+1, err)
+			return nil, fmt.Errorf("preset '%s' step %d failed: %w", name, i+1, err)
 		}
 
 		// Track if any step changed
@@ -222,26 +220,26 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 	// Create preset result
 	result := executor.NewResult()
 	result.Changed = anyChanged
-	result.Stdout = fmt.Sprintf("Preset '%s' executed %d steps", invocation.Name, len(fullyExpandedSteps))
+	result.Stdout = fmt.Sprintf("Preset '%s' executed %d steps", name, len(fullyExpandedSteps))
 
 	// Emit preset completed event
 	ec.EmitEvent(events.EventPresetCompleted, events.PresetData{
-		Name:       invocation.Name,
-		Parameters: invocation.With,
+		Name:       name,
+		Parameters: props,
 		StepsCount: len(fullyExpandedSteps),
 		Changed:    anyChanged,
 	})
 
-	ec.Svc.Logger.Infof("Preset '%s' completed: changed=%v", invocation.Name, anyChanged)
+	ec.Svc.Logger.Infof("Preset '%s' completed: changed=%v", name, anyChanged)
 
 	// Display README if preset has state=present and execution succeeded
-	if invocation.With != nil {
-		if state, ok := invocation.With["state"].(string); ok && state == "present" {
-			displayPresetHelp(ec, invocation.Name, presetBaseDir)
+	if props != nil {
+		if state, ok := props["state"].(string); ok && state == "present" {
+			displayPresetHelp(ec, name, presetBaseDir)
 		}
 	} else {
 		// Default state is "present" if not specified
-		displayPresetHelp(ec, invocation.Name, presetBaseDir)
+		displayPresetHelp(ec, name, presetBaseDir)
 	}
 
 	return result, nil
@@ -258,17 +256,17 @@ var resolverFor = func(ec *executor.ExecutionContext) *modules.Resolver {
 
 // resolveAndExpand resolves a remote or alias `use:` reference, then expands
 // the component file. Shared by the remote and alias branches of Run.
-func resolveAndExpand(ec *executor.ExecutionContext, invocation *config.PresetInvocation) ([]config.Step, map[string]interface{}, string, error) {
+func resolveAndExpand(ec *executor.ExecutionContext, name string, props map[string]interface{}) ([]config.Step, map[string]interface{}, string, error) {
 	resolver := resolverFor(ec)
 	bgCtx := ec.Svc.Ctx
 	if bgCtx == nil {
 		bgCtx = context.Background()
 	}
-	resolved, err := resolver.Resolve(bgCtx, invocation.Name)
+	resolved, err := resolver.Resolve(bgCtx, name)
 	if err != nil {
-		return nil, nil, "", fmt.Errorf("resolve module %q: %w", invocation.Name, err)
+		return nil, nil, "", fmt.Errorf("resolve module %q: %w", name, err)
 	}
-	return presets.ExpandPresetFromPath(invocation, resolved.ComponentPath)
+	return presets.ExpandPresetFromPath(name, props, resolved.ComponentPath)
 }
 
 // firstSegment returns the portion of s before the first '/' (or all of s).

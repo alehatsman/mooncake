@@ -221,6 +221,72 @@ func TestRenderActionTemplates_AllActionTypes(t *testing.T) {
 	}
 }
 
+// TestRenderActionTemplates_UseAndProps verifies that the spec-67 `use:`
+// string action and its sibling `props:` map both get template-rendered at
+// plan time. Regression: skipping non-pointer action fields used to leave
+// {{ }} expressions in props unrendered, so component-side enum/required
+// checks at apply time would see literal templates instead of values.
+func TestRenderActionTemplates_UseAndProps(t *testing.T) {
+	planner, err := NewPlanner()
+	if err != nil {
+		t.Fatalf("NewPlanner: %v", err)
+	}
+
+	step := config.Step{
+		Use: "{{ component_path }}",
+		Props: map[string]interface{}{
+			"variant":  "{{ palette_variant }}",
+			"port":     "{{ port }}",
+			"literal":  "no_template_here",
+			"nested":   map[string]interface{}{"inner": "{{ inner }}"},
+			"list":     []interface{}{"{{ first }}", "second"},
+			"int_pass": 42,
+		},
+	}
+	ctx := &ExpansionContext{
+		Variables: map[string]interface{}{
+			"component_path":  "./components/palette/index.yml",
+			"palette_variant": "monokai_dark",
+			"port":            "5432",
+			"inner":           "deep",
+			"first":           "alpha",
+		},
+	}
+
+	if err := planner.renderActionTemplates(&step, ctx); err != nil {
+		t.Fatalf("renderActionTemplates: %v", err)
+	}
+	if step.Use != "./components/palette/index.yml" {
+		t.Errorf("Use = %q, want rendered path", step.Use)
+	}
+	if got := step.Props["variant"]; got != "monokai_dark" {
+		t.Errorf("Props[variant] = %v, want monokai_dark", got)
+	}
+	if got := step.Props["port"]; got != "5432" {
+		t.Errorf("Props[port] = %v, want 5432", got)
+	}
+	if got := step.Props["literal"]; got != "no_template_here" {
+		t.Errorf("Props[literal] = %v, want passthrough", got)
+	}
+	nested, ok := step.Props["nested"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("Props[nested] not a map: %T", step.Props["nested"])
+	}
+	if got := nested["inner"]; got != "deep" {
+		t.Errorf("Props[nested][inner] = %v, want deep", got)
+	}
+	list, ok := step.Props["list"].([]interface{})
+	if !ok {
+		t.Fatalf("Props[list] not a slice: %T", step.Props["list"])
+	}
+	if list[0] != "alpha" || list[1] != "second" {
+		t.Errorf("Props[list] = %v, want [alpha second]", list)
+	}
+	if got := step.Props["int_pass"]; got != 42 {
+		t.Errorf("Props[int_pass] = %v, want 42 (non-string passthrough)", got)
+	}
+}
+
 // TestConvertToSliceExtended tests additional edge cases for convertToSlice
 func TestConvertToSliceExtended(t *testing.T) {
 	tests := []struct {

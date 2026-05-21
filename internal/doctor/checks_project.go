@@ -138,7 +138,7 @@ func summariseSteps(steps []config.Step) (n, imports, presets int) {
 		if s.Import != nil && *s.Import != "" {
 			imports++
 		}
-		if s.Use != nil {
+		if s.Use != "" {
 			presets++
 		}
 	}

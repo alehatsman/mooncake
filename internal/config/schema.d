@@ -1146,12 +1146,10 @@ export interface ToolAction {
 }
 
 /**
- * Execute a preset by expanding it into steps
+ * Invoke a component by path, alias, or remote ref.
  * @category system
  */
 export interface UseAction {
-  name: string;
-  with?: Record<string, any>;
 }
 
 /**
@@ -1597,7 +1595,7 @@ export interface Step {
   /**
    * Execute a preset by expanding it into steps
    */
-  use?: string | UseAction;
+  use?: UseAction;
   /**
    * Set variables for use in subsequent steps
    */

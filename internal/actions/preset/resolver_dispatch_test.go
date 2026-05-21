@@ -94,18 +94,16 @@ func TestResolverDispatch_InlineRemote(t *testing.T) {
 			CloneURL: func(_ modules.Reference) string { return "file://" + bare },
 		},
 	}
-	invocation := &config.PresetInvocation{
-		Name: "github.com/owner/testmod@v1.0.0",
-		With: map[string]interface{}{"message": "hello"},
+	name := "github.com/owner/testmod@v1.0.0"
+	props := map[string]interface{}{"message": "hello"}
+	if config.ComponentRefKindOf(name) != config.ComponentRefRemote {
+		t.Fatalf("Kind = %v, want Remote", config.ComponentRefKindOf(name))
 	}
-	if invocation.Kind() != config.ComponentRefRemote {
-		t.Fatalf("Kind = %v, want Remote", invocation.Kind())
-	}
-	resolved, err := resolver.Resolve(context.Background(), invocation.Name)
+	resolved, err := resolver.Resolve(context.Background(), name)
 	if err != nil {
 		t.Fatalf("resolver.Resolve: %v", err)
 	}
-	steps, ns, _, err := presets.ExpandPresetFromPath(invocation, resolved.ComponentPath)
+	steps, ns, _, err := presets.ExpandPresetFromPath(name, props, resolved.ComponentPath)
 	if err != nil {
 		t.Fatalf("ExpandPresetFromPath: %v", err)
 	}
@@ -128,18 +126,16 @@ func TestResolverDispatch_Alias(t *testing.T) {
 		},
 		Modules: map[string]string{"testmod": "github.com/owner/testmod@v1.0.0"},
 	}
-	invocation := &config.PresetInvocation{
-		Name: "testmod",
-		With: map[string]interface{}{"message": "via-alias"},
-	}
-	resolved, err := resolver.Resolve(context.Background(), invocation.Name)
+	name := "testmod"
+	props := map[string]interface{}{"message": "via-alias"}
+	resolved, err := resolver.Resolve(context.Background(), name)
 	if err != nil {
 		t.Fatalf("resolver.Resolve: %v", err)
 	}
 	if !strings.HasSuffix(resolved.ComponentPath, "/components/install.yml") {
 		t.Errorf("ComponentPath = %q", resolved.ComponentPath)
 	}
-	_, ns, _, err := presets.ExpandPresetFromPath(invocation, resolved.ComponentPath)
+	_, ns, _, err := presets.ExpandPresetFromPath(name, props, resolved.ComponentPath)
 	if err != nil {
 		t.Fatalf("ExpandPresetFromPath: %v", err)
 	}

@@ -2,7 +2,7 @@ package config
 
 import "testing"
 
-func TestComponentRefKind(t *testing.T) {
+func TestComponentRefKindOf(t *testing.T) {
 	tests := []struct {
 		name string
 		ref  string
@@ -20,15 +20,14 @@ func TestComponentRefKind(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			p := &PresetInvocation{Name: tc.ref}
-			if got := p.Kind(); got != tc.want {
-				t.Errorf("Kind(%q) = %v, want %v", tc.ref, got, tc.want)
+			if got := ComponentRefKindOf(tc.ref); got != tc.want {
+				t.Errorf("ComponentRefKindOf(%q) = %v, want %v", tc.ref, got, tc.want)
 			}
 		})
 	}
 }
 
-func TestSplitAlias(t *testing.T) {
+func TestSplitComponentAlias(t *testing.T) {
 	tests := []struct {
 		name       string
 		ref        string
@@ -43,20 +42,11 @@ func TestSplitAlias(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			p := &PresetInvocation{Name: tc.ref}
-			alias, export := p.SplitAlias()
+			alias, export := SplitComponentAlias(tc.ref)
 			if alias != tc.wantAlias || export != tc.wantExport {
-				t.Errorf("SplitAlias(%q) = (%q, %q), want (%q, %q)",
+				t.Errorf("SplitComponentAlias(%q) = (%q, %q), want (%q, %q)",
 					tc.ref, alias, export, tc.wantAlias, tc.wantExport)
 			}
 		})
-	}
-}
-
-func TestComponentRefAlias_IsPresetInvocation(t *testing.T) {
-	// Compile-time check that ComponentRef and PresetInvocation are the same type.
-	var c ComponentRef = PresetInvocation{Name: "x"}
-	if c.Name != "x" {
-		t.Fatal("alias broken")
 	}
 }

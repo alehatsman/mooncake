@@ -230,11 +230,11 @@ func (d *DryRunLogger) LogAssertCheck(assertType, expected string) {
 }
 
 // LogPresetOperation logs a preset expansion operation in dry-run mode.
-func (d *DryRunLogger) LogPresetOperation(invocation *config.PresetInvocation, paramsCount int) {
+func (d *DryRunLogger) LogPresetOperation(name string, paramsCount int) {
 	if paramsCount > 0 {
-		d.logger.Infof("  [DRY-RUN] Would expand preset '%s' with %d parameters", invocation.Name, paramsCount)
+		d.logger.Infof("  [DRY-RUN] Would expand preset '%s' with %d parameters", name, paramsCount)
 	} else {
-		d.logger.Infof("  [DRY-RUN] Would expand preset '%s'", invocation.Name)
+		d.logger.Infof("  [DRY-RUN] Would expand preset '%s'", name)
 	}
 }
 

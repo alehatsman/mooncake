@@ -518,58 +518,54 @@ func TestShellAction_UnmarshalYAML(t *testing.T) {
 	}
 }
 
-func TestPresetInvocation_UnmarshalYAML(t *testing.T) {
+func TestStep_UseAndProps_UnmarshalYAML(t *testing.T) {
 	tests := []struct {
-		name  string
-		input string
-		want  PresetInvocation
+		name      string
+		input     string
+		wantUse   string
+		wantProps map[string]interface{}
 	}{
 		{
-			name:  "string form",
-			input: `"ollama"`,
-			want:  PresetInvocation{Name: "ollama"},
+			name:    "use string, no props",
+			input:   `{use: "ollama"}`,
+			wantUse: "ollama",
 		},
 		{
-			name:  "object form with name only",
-			input: `{name: "ollama"}`,
-			want:  PresetInvocation{Name: "ollama"},
+			name:      "use string with props",
+			input:     `{use: "ollama", props: {state: "present"}}`,
+			wantUse:   "ollama",
+			wantProps: map[string]interface{}{"state": "present"},
 		},
 		{
-			name:  "object form with parameters",
-			input: `{name: "ollama", with: {state: "present"}}`,
-			want: PresetInvocation{
-				Name: "ollama",
-				With: map[string]interface{}{"state": "present"},
-			},
+			name:      "use local path with props",
+			input:     `{use: "./components/palette/index.yml", props: {variant: "monokai_dark"}}`,
+			wantUse:   "./components/palette/index.yml",
+			wantProps: map[string]interface{}{"variant": "monokai_dark"},
 		},
 		{
-			name:  "object form with multiple parameters",
-			input: `{name: "deploy-webapp", with: {port: 8080, domain: "example.com"}}`,
-			want: PresetInvocation{
-				Name: "deploy-webapp",
-				With: map[string]interface{}{"port": 8080, "domain": "example.com"},
-			},
+			name:      "use remote ref with multiple props",
+			input:     `{use: "github.com/o/r@v1", props: {port: 8080, domain: "example.com"}}`,
+			wantUse:   "github.com/o/r@v1",
+			wantProps: map[string]interface{}{"port": 8080, "domain": "example.com"},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var got PresetInvocation
-			err := yaml.Unmarshal([]byte(tt.input), &got)
-			if err != nil {
-				t.Fatalf("UnmarshalYAML() error = %v", err)
+			var got Step
+			if err := yaml.Unmarshal([]byte(tt.input), &got); err != nil {
+				t.Fatalf("Unmarshal error = %v", err)
 			}
-			if got.Name != tt.want.Name {
-				t.Errorf("Name = %v, want %v", got.Name, tt.want.Name)
+			if got.Use != tt.wantUse {
+				t.Errorf("Use = %q, want %q", got.Use, tt.wantUse)
 			}
-			if tt.want.With != nil {
-				if got.With == nil {
-					t.Error("With should not be nil")
-				} else {
-					for k, v := range tt.want.With {
-						if got.With[k] != v {
-							t.Errorf("With[%s] = %v, want %v", k, got.With[k], v)
-						}
+			if tt.wantProps != nil {
+				if got.Props == nil {
+					t.Fatal("Props should not be nil")
+				}
+				for k, v := range tt.wantProps {
+					if got.Props[k] != v {
+						t.Errorf("Props[%s] = %v, want %v", k, got.Props[k], v)
 					}
 				}
 			}
@@ -677,7 +673,7 @@ func TestStep_DetermineActionType(t *testing.T) {
 		},
 		{
 			name: "use (preset) action",
-			step: Step{Use: &PresetInvocation{Name: "ollama"}},
+			step: Step{Use: "ollama"},
 			want: "use",
 		},
 		{
@@ -765,7 +761,7 @@ func TestStep_DetermineActionType_AllFields(t *testing.T) {
 		{"wait.file", Step{WaitFile: &WaitFile{Path: "/tmp/ready"}}},
 		{"wait.command", Step{WaitCommand: &WaitCommand{Cmd: "true"}}},
 		{"log", Step{Log: &PrintAction{Msg: "hi"}}},
-		{"use", Step{Use: &PresetInvocation{Name: "p"}}},
+		{"use", Step{Use: "p"}},
 		{"import", Step{Import: &strEmpty}},
 		{"vars.load", Step{VarsLoad: &strEmpty}},
 		{"vars", Step{Vars: &emptyVars}},

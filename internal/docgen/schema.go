@@ -27,14 +27,7 @@ func (g *Generator) generateSchemaDoc(w io.Writer) error {
 	write(w, "\n---\n\n")
 
 	// Generate preset parameter schema
-	if err := g.generateStructSchema(w, "PresetParameter", reflect.TypeOf(config.PresetParameter{})); err != nil {
-		return err
-	}
-
-	write(w, "\n---\n\n")
-
-	// Generate preset invocation schema
-	return g.generateStructSchema(w, "PresetInvocation", reflect.TypeOf(config.PresetInvocation{}))
+	return g.generateStructSchema(w, "PresetParameter", reflect.TypeOf(config.PresetParameter{}))
 }
 
 // generateStructSchema generates schema documentation for a single struct.

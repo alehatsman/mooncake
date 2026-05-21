@@ -500,14 +500,9 @@ steps:
 	os.WriteFile(presetPath, []byte(content), 0644)
 
 	// Expand preset
-	invocation := &config.PresetInvocation{
-		Name: "expand-test",
-		With: map[string]interface{}{
-			"message": "Hello World",
-		},
-	}
-
-	steps, namespace, baseDir, err := ExpandPreset(invocation)
+	steps, namespace, baseDir, err := ExpandPreset("expand-test", map[string]interface{}{
+		"message": "Hello World",
+	})
 	if err != nil {
 		t.Fatalf("ExpandPreset failed: %v", err)
 	}
@@ -533,24 +528,20 @@ steps:
 	}
 }
 
-// TestExpandPreset_NilInvocation tests nil invocation handling
-func TestExpandPreset_NilInvocation(t *testing.T) {
-	_, _, _, err := ExpandPreset(nil)
+// TestExpandPreset_EmptyName tests empty-name handling
+func TestExpandPreset_EmptyName(t *testing.T) {
+	_, _, _, err := ExpandPreset("", nil)
 	if err == nil {
-		t.Error("ExpandPreset should fail for nil invocation")
+		t.Error("ExpandPreset should fail for empty name")
 	}
-	if !strings.Contains(err.Error(), "invocation is nil") {
-		t.Errorf("Expected 'invocation is nil' error, got: %v", err)
+	if !strings.Contains(err.Error(), "empty name") {
+		t.Errorf("Expected 'empty name' error, got: %v", err)
 	}
 }
 
 // TestExpandPreset_PresetNotFound tests preset not found error
 func TestExpandPreset_PresetNotFound(t *testing.T) {
-	invocation := &config.PresetInvocation{
-		Name: "nonexistent",
-	}
-
-	_, _, _, err := ExpandPreset(invocation)
+	_, _, _, err := ExpandPreset("nonexistent", nil)
 	if err == nil {
 		t.Error("ExpandPreset should fail for non-existent preset")
 	}
@@ -579,12 +570,7 @@ steps:
 	os.WriteFile(presetPath, []byte(content), 0644)
 
 	// Try to expand without providing required parameter
-	invocation := &config.PresetInvocation{
-		Name: "required-param",
-		With: map[string]interface{}{}, // Missing required_field
-	}
-
-	_, _, _, err := ExpandPreset(invocation)
+	_, _, _, err := ExpandPreset("required-param", map[string]interface{}{}) // Missing required_field
 	if err == nil {
 		t.Error("ExpandPreset should fail for missing required parameter")
 	}
@@ -609,12 +595,7 @@ steps:
 	os.WriteFile(presetPath, []byte(content), 0644)
 
 	// Expand with nil parameters
-	invocation := &config.PresetInvocation{
-		Name: "no-params",
-		With: nil,
-	}
-
-	steps, namespace, _, err := ExpandPreset(invocation)
+	steps, namespace, _, err := ExpandPreset("no-params", nil)
 	if err != nil {
 		t.Fatalf("ExpandPreset should succeed with nil parameters: %v", err)
 	}

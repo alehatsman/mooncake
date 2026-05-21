@@ -113,7 +113,7 @@ func LoadPreset(name string) (*config.PresetDefinition, error) {
 
 	// Validate that preset steps don't contain other preset invocations (no nesting)
 	for i, step := range preset.Steps {
-		if step.Use != nil {
+		if step.Use != "" {
 			return nil, fmt.Errorf("preset '%s' step %d: presets cannot invoke other presets (nesting not supported)", name, i+1)
 		}
 	}
