@@ -3,6 +3,7 @@ package plan
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/alehatsman/mooncake/internal/config"
@@ -326,5 +327,278 @@ func TestConvertToSlice(t *testing.T) {
 				t.Errorf("convertToSlice() returned slice of length %d, want %d", len(result), tt.expected)
 			}
 		})
+	}
+}
+
+// writeComponent writes a minimal component file (props + steps) to disk.
+func writeComponent(t *testing.T, dir, name, body string) string {
+	t.Helper()
+	p := filepath.Join(dir, name)
+	if err := os.WriteFile(p, []byte(body), 0644); err != nil {
+		t.Fatalf("write %s: %v", p, err)
+	}
+	return p
+}
+
+// TestTryExpandUse_LocalPathFullyConcrete: a local-path component with all
+// templates resolvable at plan time gets expanded inline — the parent use:
+// step disappears and the component's steps land in the plan.
+func TestTryExpandUse_LocalPathFullyConcrete(t *testing.T) {
+	tmp := t.TempDir()
+	writeComponent(t, tmp, "palette.yml", `
+props:
+  variant:
+    type: string
+    default: monokai_dark
+steps:
+  - name: load palette vars
+    log: "loading {{ props.variant }}"
+`)
+
+	planner, err := NewPlanner()
+	if err != nil {
+		t.Fatalf("NewPlanner: %v", err)
+	}
+
+	step := config.Step{
+		Name: "use palette",
+		Use:  "./palette.yml",
+		Props: map[string]interface{}{
+			"variant": "monokai_dark",
+		},
+	}
+	ctx := &ExpansionContext{
+		Variables:  map[string]interface{}{},
+		CurrentDir: tmp,
+	}
+	plan := &Plan{}
+
+	expanded, err := planner.tryExpandUse(step, ctx, plan, 0)
+	if err != nil {
+		t.Fatalf("tryExpandUse: %v", err)
+	}
+	if !expanded {
+		t.Fatal("expected expanded=true for concrete local path")
+	}
+	if len(plan.Steps) != 1 {
+		t.Fatalf("plan.Steps len = %d, want 1; got: %+v", len(plan.Steps), plan.Steps)
+	}
+	if plan.Steps[0].Name != "load palette vars" {
+		t.Errorf("emitted step name = %q, want 'load palette vars'", plan.Steps[0].Name)
+	}
+	// Props/parameters must NOT leak out of the use: scope.
+	if _, leaked := ctx.Variables["props"]; leaked {
+		t.Error("ctx.Variables[props] leaked outside the use: scope")
+	}
+	if _, leaked := ctx.Variables["parameters"]; leaked {
+		t.Error("ctx.Variables[parameters] leaked outside the use: scope")
+	}
+}
+
+// TestTryExpandUse_UnresolvedTemplateDefers: a use: path that still contains
+// {{ }} after rendering (because the referenced variable hasn't been set)
+// falls through with expanded=false so the default compilePlanStep path
+// emits the opaque "not checkable" entry.
+func TestTryExpandUse_UnresolvedTemplateDefers(t *testing.T) {
+	planner, err := NewPlanner()
+	if err != nil {
+		t.Fatalf("NewPlanner: %v", err)
+	}
+
+	step := config.Step{
+		Name: "dynamic use",
+		Use:  "./{{ component_name }}.yml", // component_name absent from ctx
+	}
+	ctx := &ExpansionContext{
+		Variables:  map[string]interface{}{}, // empty
+		CurrentDir: t.TempDir(),
+	}
+	plan := &Plan{}
+
+	expanded, err := planner.tryExpandUse(step, ctx, plan, 0)
+	if err != nil {
+		t.Fatalf("tryExpandUse: %v", err)
+	}
+	if expanded {
+		t.Fatal("expected expanded=false for unresolved template")
+	}
+	if len(plan.Steps) != 0 {
+		t.Errorf("plan.Steps should be empty (defer to caller), got %d", len(plan.Steps))
+	}
+}
+
+// TestTryExpandUse_RemoteRefDefers: a remote module reference defers to apply
+// time even when the string is fully concrete — the resolver is only wired up
+// at apply time.
+func TestTryExpandUse_RemoteRefDefers(t *testing.T) {
+	planner, err := NewPlanner()
+	if err != nil {
+		t.Fatalf("NewPlanner: %v", err)
+	}
+
+	step := config.Step{
+		Name: "remote module",
+		Use:  "github.com/owner/repo@v1.0.0",
+	}
+	ctx := &ExpansionContext{
+		Variables:  map[string]interface{}{},
+		CurrentDir: t.TempDir(),
+	}
+	plan := &Plan{}
+
+	expanded, err := planner.tryExpandUse(step, ctx, plan, 0)
+	if err != nil {
+		t.Fatalf("tryExpandUse: %v", err)
+	}
+	if expanded {
+		t.Fatal("expected expanded=false for remote ref")
+	}
+}
+
+// TestTryExpandUse_MissingComponentFile: a concrete local path that doesn't
+// exist errors at plan time (loud failure beats silent deferral).
+func TestTryExpandUse_MissingComponentFile(t *testing.T) {
+	planner, err := NewPlanner()
+	if err != nil {
+		t.Fatalf("NewPlanner: %v", err)
+	}
+
+	step := config.Step{
+		Name: "missing",
+		Use:  "./does-not-exist.yml",
+	}
+	ctx := &ExpansionContext{
+		Variables:  map[string]interface{}{},
+		CurrentDir: t.TempDir(),
+	}
+	plan := &Plan{}
+
+	_, err = planner.tryExpandUse(step, ctx, plan, 0)
+	if err == nil {
+		t.Fatal("expected error for missing component file, got nil")
+	}
+}
+
+// TestTryExpandUse_BadEnumErrorsAtPlanTime: enum/type/required violations
+// surface at plan time once the use: ref + all props are concrete (instead
+// of silently expanding then exploding mid-apply).
+func TestTryExpandUse_BadEnumErrorsAtPlanTime(t *testing.T) {
+	tmp := t.TempDir()
+	writeComponent(t, tmp, "palette.yml", `
+props:
+  variant:
+    type: string
+    enum: [monokai_dark, monokai_light]
+    default: monokai_dark
+steps:
+  - log: "{{ props.variant }}"
+`)
+
+	planner, err := NewPlanner()
+	if err != nil {
+		t.Fatalf("NewPlanner: %v", err)
+	}
+
+	step := config.Step{
+		Use:   "./palette.yml",
+		Props: map[string]interface{}{"variant": "neon_purple"},
+	}
+	ctx := &ExpansionContext{
+		Variables:  map[string]interface{}{},
+		CurrentDir: tmp,
+	}
+	plan := &Plan{}
+
+	_, err = planner.tryExpandUse(step, ctx, plan, 0)
+	if err == nil {
+		t.Fatal("expected enum-validation error, got nil")
+	}
+	if !strings.Contains(err.Error(), "invalid value") {
+		t.Errorf("error = %q, want enum failure", err.Error())
+	}
+}
+
+// TestTryExpandUse_UnresolvedPropDefers: even with a concrete use: path,
+// if any prop value still has {{ after rendering, defer the whole
+// expansion. Avoids plan-time validation false-failing on templated
+// strings (e.g. port: "{{ get_port.stdout }}").
+func TestTryExpandUse_UnresolvedPropDefers(t *testing.T) {
+	tmp := t.TempDir()
+	writeComponent(t, tmp, "comp.yml", `
+props:
+  port:
+    type: string
+steps:
+  - log: "{{ props.port }}"
+`)
+
+	planner, err := NewPlanner()
+	if err != nil {
+		t.Fatalf("NewPlanner: %v", err)
+	}
+
+	step := config.Step{
+		Use: "./comp.yml",
+		Props: map[string]interface{}{
+			"port": "{{ get_port.stdout }}", // depends on register
+		},
+	}
+	ctx := &ExpansionContext{
+		Variables:  map[string]interface{}{},
+		CurrentDir: tmp,
+	}
+	plan := &Plan{}
+
+	expanded, err := planner.tryExpandUse(step, ctx, plan, 0)
+	if err != nil {
+		t.Fatalf("tryExpandUse: %v", err)
+	}
+	if expanded {
+		t.Fatal("expected expanded=false when any prop still has {{")
+	}
+}
+
+// TestTryExpandUse_PropDefaultsFillIn: caller omits an optional prop; the
+// component's default is injected into the props namespace for templates
+// in the component's steps.
+func TestTryExpandUse_PropDefaultsFillIn(t *testing.T) {
+	tmp := t.TempDir()
+	writeComponent(t, tmp, "comp.yml", `
+props:
+  msg:
+    type: string
+    default: hello
+steps:
+  - name: greet
+    log: "{{ props.msg }}"
+`)
+
+	planner, err := NewPlanner()
+	if err != nil {
+		t.Fatalf("NewPlanner: %v", err)
+	}
+
+	step := config.Step{
+		Use: "./comp.yml",
+		// No Props — caller relies on default.
+	}
+	ctx := &ExpansionContext{
+		Variables:  map[string]interface{}{},
+		CurrentDir: tmp,
+	}
+	plan := &Plan{}
+
+	expanded, err := planner.tryExpandUse(step, ctx, plan, 0)
+	if err != nil {
+		t.Fatalf("tryExpandUse: %v", err)
+	}
+	if !expanded {
+		t.Fatal("expected expanded=true")
+	}
+	if len(plan.Steps) != 1 {
+		t.Fatalf("plan.Steps len = %d, want 1", len(plan.Steps))
+	}
+	if msg := plan.Steps[0].Log.Msg; msg != "hello" {
+		t.Errorf("emitted log msg = %q, want 'hello' (default filled in)", msg)
 	}
 }

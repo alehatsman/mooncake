@@ -15,6 +15,7 @@ import (
 	"github.com/alehatsman/mooncake/internal/facts"
 	"github.com/alehatsman/mooncake/internal/filetree"
 	"github.com/alehatsman/mooncake/internal/pathutil"
+	"github.com/alehatsman/mooncake/internal/presets"
 	"github.com/alehatsman/mooncake/internal/secrets/resolver"
 	"github.com/alehatsman/mooncake/internal/security"
 	"github.com/alehatsman/mooncake/internal/template"
@@ -325,6 +326,21 @@ func (p *Planner) expandStep(step config.Step, ctx *ExpansionContext, plan *Plan
 		return p.expandInclude(step, ctx, plan, stepIndex)
 	}
 
+	// spec-67 phase-2: expand local-path `use:` references inline at plan
+	// time so the plan shows the component's actual steps, not an opaque
+	// "not checkable" entry. Remote/alias refs and paths still carrying
+	// {{ }} (because a register-captured variable hasn't run yet) fall
+	// through to the default compilePlanStep path and stay opaque.
+	if step.Use != "" {
+		expanded, err := p.tryExpandUse(step, ctx, plan, stepIndex)
+		if err != nil {
+			return err
+		}
+		if expanded {
+			return nil
+		}
+	}
+
 	// Handle loop constructs
 	if step.ForEach != nil {
 		return p.expandWithItems(step, ctx, plan)
@@ -474,6 +490,142 @@ func (p *Planner) expandInclude(step config.Step, ctx *ExpansionContext, plan *P
 	}
 
 	return p.expandSteps(includedConfig.Steps, newCtx, plan, stepIndex)
+}
+
+// tryExpandUse attempts to expand a `use:` step inline at plan time. Returns
+// (true, nil) if the component was loaded and its steps emitted; (false, nil)
+// if the step should fall through to the default compilePlanStep path (i.e.
+// remote/alias reference, or path whose template substitution still contains
+// {{ }} because a register-captured variable hasn't been resolved yet).
+//
+// Plan-time props/parameters validation is intentionally NOT done here —
+// register-dependent props are routine, so enum/type/required checks stay at
+// apply time where the final values are known. Defaults are still applied so
+// the component's downstream steps see complete props.
+func (p *Planner) tryExpandUse(step config.Step, ctx *ExpansionContext, plan *Plan, stepIndex int) (bool, error) {
+	render := func(s string) (string, error) {
+		return p.template.RenderPreserving(s, ctx.Variables)
+	}
+
+	rendered, err := render(step.Use)
+	if err != nil {
+		return false, fmt.Errorf("step %q: render use: %w", step.Name, err)
+	}
+
+	// Defer to apply time if the ref still has unresolved templates or
+	// isn't a local path. Remote/alias refs need the resolver (network +
+	// module cache), which only runs at apply time.
+	if strings.Contains(rendered, "{{") {
+		return false, nil
+	}
+	if config.ComponentRefKindOf(rendered) != config.ComponentRefLocalPath {
+		return false, nil
+	}
+
+	// Render props (best-effort; unresolved templates survive as literal
+	// {{ }} via RenderPreserving). If ANY prop value still has an
+	// unresolved template, defer the whole expansion — we don't validate
+	// or expand partially, because component-side validation would either
+	// false-fail on a templated string (enum/type checks treat "{{ x }}"
+	// as a literal) or silently let it through to apply time.
+	callerProps := step.Props
+	if callerProps != nil {
+		if err := renderPropsValue(callerProps, render); err != nil {
+			return false, fmt.Errorf("step %q: render props: %w", step.Name, err)
+		}
+		if propsHaveUnresolvedTemplates(callerProps) {
+			return false, nil
+		}
+	}
+
+	absPath := rendered
+	if !filepath.IsAbs(absPath) {
+		absPath = filepath.Join(ctx.CurrentDir, absPath)
+	}
+	p.inputFiles = append(p.inputFiles, absPath)
+
+	def, err := presets.LoadPresetFromPath(absPath)
+	if err != nil {
+		return false, fmt.Errorf("step %q: load component %q: %w", step.Name, absPath, err)
+	}
+
+	// Full validation now that props are concrete: required, type, enum,
+	// and unknown-prop checks all fire here so authoring errors surface
+	// at plan time instead of apply time.
+	validated, err := presets.ValidateParameters(def, callerProps)
+	if err != nil {
+		return false, fmt.Errorf("step %q: %w", step.Name, err)
+	}
+
+	// ValidateParameters returns (caller's value OR default) for every
+	// declared param. Use that as the namespace so downstream templates
+	// see defaults filled in.
+	paramsNamespace := validated
+
+	// Inject props/parameters into the shared variables map for the
+	// duration of expansion; restore on exit so siblings in the parent
+	// file don't see them. Mirrors how the preset handler scopes them at
+	// apply time (captureContext / restore).
+	savedProps, hadProps := ctx.Variables["props"]
+	savedParams, hadParams := ctx.Variables["parameters"]
+	ctx.Variables["props"] = paramsNamespace
+	ctx.Variables["parameters"] = paramsNamespace
+	defer func() {
+		if hadProps {
+			ctx.Variables["props"] = savedProps
+		} else {
+			delete(ctx.Variables, "props")
+		}
+		if hadParams {
+			ctx.Variables["parameters"] = savedParams
+		} else {
+			delete(ctx.Variables, "parameters")
+		}
+	}()
+
+	// Child context shares the Variables map so a `vars.load:` inside the
+	// component populates the global scope (downstream consumer templates
+	// need palette.* / editor.* etc. in scope). CurrentDir flips to the
+	// component's base dir for relative paths in its own includes.
+	childCtx := &ExpansionContext{
+		Variables:  ctx.Variables,
+		CurrentDir: def.BaseDir,
+		Tags:       ctx.Tags,
+		SkipTags:   ctx.SkipTags,
+		Names:      ctx.Names,
+	}
+
+	// Clone the component's steps + propagate parent tags before expansion.
+	steps := make([]config.Step, len(def.Steps))
+	for i, s := range def.Steps {
+		steps[i] = *s.Clone()
+		if len(step.Tags) > 0 {
+			steps[i].Tags = mergeTags(steps[i].Tags, step.Tags)
+		}
+	}
+
+	// When-propagation mirrors expandInclude: expand first, then AND the
+	// parent's `when:` into each emitted child. Doing it post-expansion
+	// lets the component's own `vars.load` always fire at plan time.
+	if step.When != "" {
+		before := len(plan.Steps)
+		if err := p.expandSteps(steps, childCtx, plan, stepIndex); err != nil {
+			return false, err
+		}
+		for i := before; i < len(plan.Steps); i++ {
+			if plan.Steps[i].When != "" {
+				plan.Steps[i].When = "(" + step.When + ") && (" + plan.Steps[i].When + ")"
+			} else {
+				plan.Steps[i].When = step.When
+			}
+		}
+		return true, nil
+	}
+
+	if err := p.expandSteps(steps, childCtx, plan, stepIndex); err != nil {
+		return false, err
+	}
+	return true, nil
 }
 
 // mergeTags returns the union of a and b, preserving order and de-duplicating.
@@ -869,6 +1021,31 @@ func renderPropsValue(v interface{}, render func(string) (string, error)) error 
 		}
 	}
 	return nil
+}
+
+// propsHaveUnresolvedTemplates reports whether any string leaf in the
+// props tree still contains a `{{` after RenderPreserving has run. Used
+// by tryExpandUse to decide whether plan-time expansion is safe; if any
+// prop value depends on apply-time state (registered output, runtime
+// fact), defer the whole expansion so apply-time validation gets a shot.
+func propsHaveUnresolvedTemplates(v interface{}) bool {
+	switch x := v.(type) {
+	case string:
+		return strings.Contains(x, "{{")
+	case map[string]interface{}:
+		for _, sub := range x {
+			if propsHaveUnresolvedTemplates(sub) {
+				return true
+			}
+		}
+	case []interface{}:
+		for _, sub := range x {
+			if propsHaveUnresolvedTemplates(sub) {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // walkAndRender recursively renders all string fields of an action struct using
