@@ -1080,7 +1080,7 @@ func walkAndRender(rv reflect.Value, render func(string) (string, error), curren
 			if err != nil {
 				return fmt.Errorf("%s: %w", sf.Name, err)
 			}
-			if isPath && !filepath.IsAbs(rendered) && !strings.HasPrefix(rendered, "~/") && rendered != "~" {
+			if isPath && shouldJoinPlanPath(rendered) {
 				rendered = filepath.Join(currentDir, rendered)
 			}
 			fv.SetString(rendered)
@@ -1098,7 +1098,7 @@ func walkAndRender(rv reflect.Value, render func(string) (string, error), curren
 				if err != nil {
 					return fmt.Errorf("%s: %w", sf.Name, err)
 				}
-				if isPath && !filepath.IsAbs(rendered) {
+				if isPath && shouldJoinPlanPath(rendered) {
 					rendered = filepath.Join(currentDir, rendered)
 				}
 				cp := reflect.New(fv.Type().Elem())
@@ -1161,6 +1161,33 @@ func walkAndRender(rv reflect.Value, render func(string) (string, error), curren
 		}
 	}
 	return nil
+}
+
+// shouldJoinPlanPath reports whether the plan-time absolute-path resolver
+// should prepend currentDir to a rendered path string.
+//
+// Skipped when:
+//   - rendered is already absolute, or
+//   - rendered begins with ~/ (apply-time home expansion), or
+//   - rendered is exactly ~, or
+//   - rendered still contains `{{` (an apply-time template that
+//     RenderPreserving deferred). The deferred portion may resolve to
+//     an absolute path (e.g. `{{ env.HOME }}/foo` → `/home/aleh/foo`),
+//     but `filepath.IsAbs` can't see that through the literal `{{` —
+//     so a naive join would bake the wrong relative-vs-absolute
+//     decision into the step config, and apply-time `ExpandPath` has
+//     no way to recover the original intent.
+func shouldJoinPlanPath(rendered string) bool {
+	if filepath.IsAbs(rendered) {
+		return false
+	}
+	if strings.HasPrefix(rendered, "~/") || rendered == "~" {
+		return false
+	}
+	if strings.Contains(rendered, "{{") {
+		return false
+	}
+	return true
 }
 
 // buildOrigin creates an Origin from the current include stack
