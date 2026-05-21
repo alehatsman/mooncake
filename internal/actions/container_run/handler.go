@@ -179,17 +179,9 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 			cur = containerruntime.ContainerState{Exists: false}
 		}
 
-		spec := containerruntime.ContainerSpec{
-			Name:    name,
-			Image:   image,
-			Command: c.Command,
-			Env:     c.Env,
-			Ports:   c.Ports,
-			Volumes: c.Volumes,
-			Network: c.Network,
-			Restart: c.Restart,
-			Detach:  true,
-			Extra:   c.Extra,
+		spec, err := renderContainerSpec(ctx, c, name, image)
+		if err != nil {
+			return nil, err
 		}
 
 		// !cur.Exists && !wantRunning is already handled by the MT-63
@@ -242,6 +234,86 @@ func renderStepEnv(ctx actions.Context, env map[string]string) (map[string]strin
 		rendered, err := ctx.GetTemplate().Render(v, ctx.GetVariables())
 		if err != nil {
 			return nil, fmt.Errorf("render env %s: %w", k, err)
+		}
+		out[k] = rendered
+	}
+	return out, nil
+}
+
+// renderContainerSpec builds the runtime ContainerSpec from the user's
+// Container step, rendering every user-controllable field through the
+// template engine. `name` and `image` are pre-rendered by the caller so
+// they're available for error messages and the pre-spec inspect call.
+//
+// Without this, `volumes: ["{{ env.HOME }}/.cache:/app/.cache"]` and the
+// equivalent in command/env/ports/extra/network/restart reach the engine
+// as literal `{{ ... }}` strings — the bug fixed in this commit.
+func renderContainerSpec(ctx actions.Context, c *config.Container, name, image string) (containerruntime.ContainerSpec, error) {
+	spec := containerruntime.ContainerSpec{
+		Name:   name,
+		Image:  image,
+		Detach: true,
+	}
+	var err error
+	if spec.Command, err = renderStringSlice(ctx, c.Command, "command"); err != nil {
+		return spec, err
+	}
+	if spec.Env, err = renderStringMap(ctx, c.Env, "env"); err != nil {
+		return spec, err
+	}
+	if spec.Ports, err = renderStringSlice(ctx, c.Ports, "ports"); err != nil {
+		return spec, err
+	}
+	if spec.Volumes, err = renderStringSlice(ctx, c.Volumes, "volumes"); err != nil {
+		return spec, err
+	}
+	if spec.Extra, err = renderStringSlice(ctx, c.Extra, "extra"); err != nil {
+		return spec, err
+	}
+	if spec.Network, err = renderScalar(ctx, c.Network, "network"); err != nil {
+		return spec, err
+	}
+	if spec.Restart, err = renderScalar(ctx, c.Restart, "restart"); err != nil {
+		return spec, err
+	}
+	return spec, nil
+}
+
+func renderScalar(ctx actions.Context, v, field string) (string, error) {
+	if v == "" {
+		return "", nil
+	}
+	out, err := ctx.GetTemplate().Render(v, ctx.GetVariables())
+	if err != nil {
+		return "", fmt.Errorf("render container.%s: %w", field, err)
+	}
+	return out, nil
+}
+
+func renderStringSlice(ctx actions.Context, vals []string, field string) ([]string, error) {
+	if len(vals) == 0 {
+		return nil, nil
+	}
+	out := make([]string, len(vals))
+	for i, v := range vals {
+		rendered, err := ctx.GetTemplate().Render(v, ctx.GetVariables())
+		if err != nil {
+			return nil, fmt.Errorf("render container.%s[%d]: %w", field, i, err)
+		}
+		out[i] = rendered
+	}
+	return out, nil
+}
+
+func renderStringMap(ctx actions.Context, m map[string]string, field string) (map[string]string, error) {
+	if len(m) == 0 {
+		return nil, nil
+	}
+	out := make(map[string]string, len(m))
+	for k, v := range m {
+		rendered, err := ctx.GetTemplate().Render(v, ctx.GetVariables())
+		if err != nil {
+			return nil, fmt.Errorf("render container.%s[%s]: %w", field, k, err)
 		}
 		out[k] = rendered
 	}
