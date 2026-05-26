@@ -16,6 +16,7 @@ import (
 	"github.com/fatih/color"
 	"github.com/urfave/cli/v2"
 
+	"github.com/alehatsman/mooncake/cmd/cmdutil"
 	"github.com/alehatsman/mooncake/internal/agentd"
 )
 
@@ -93,9 +94,9 @@ func runsCommand() *cli.Command {
 // This is the agentd analog of `apply`: same UX, daemon-backed execution.
 // Vars files are passed via --vars (multi-valued).
 func runsApplyAction(c *cli.Context) error {
-	resolvedPath, err := resolveConfigPath(c)
+	resolvedPath, err := cmdutil.ResolveConfigPath(c)
 	if err != nil {
-		if printNoConfigHintAndExit(err, "runs apply") {
+		if cmdutil.PrintNoConfigHintAndExit(err, "runs apply") {
 			return nil
 		}
 		return err
@@ -126,7 +127,7 @@ func runsApplyAction(c *cli.Context) error {
 		"goal":       c.String("goal"),
 	}
 	if tagsCSV := c.String("tags"); tagsCSV != "" {
-		body["tags"] = parseTags(tagsCSV)
+		body["tags"] = cmdutil.ParseTags(tagsCSV)
 	}
 	if d := c.String("base-dir"); d != "" {
 		bd, absErr := absPath(d)

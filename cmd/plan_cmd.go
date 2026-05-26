@@ -9,6 +9,7 @@ import (
 	"github.com/urfave/cli/v2"
 	"gopkg.in/yaml.v3"
 
+	"github.com/alehatsman/mooncake/cmd/cmdutil"
 	"github.com/alehatsman/mooncake/internal/actions"
 	"github.com/alehatsman/mooncake/internal/config"
 	"github.com/alehatsman/mooncake/internal/diff"
@@ -89,9 +90,9 @@ func planCommand() *cli.Command {
 }
 
 func planAction(c *cli.Context) error {
-	configPath, err := resolveConfigPath(c)
+	configPath, err := cmdutil.ResolveConfigPath(c)
 	if err != nil {
-		if printNoConfigHintAndExit(err, "plan") {
+		if cmdutil.PrintNoConfigHintAndExit(err, "plan") {
 			return nil
 		}
 		return err
@@ -126,8 +127,8 @@ func planAction(c *cli.Context) error {
 	noInspect := c.Bool("no-inspect")
 
 	// Parse tags
-	tags := parseTags(c.String("tags"))
-	skipTags := parseTags(c.String("skip-tags"))
+	tags := cmdutil.ParseTags(c.String("tags"))
+	skipTags := cmdutil.ParseTags(c.String("skip-tags"))
 
 	// Load variables from each file in order; later files override earlier
 	// on key collision. Matches `apply -v a.yml -v b.yml` semantics.

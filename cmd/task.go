@@ -10,6 +10,7 @@ import (
 	"strings"
 	"text/tabwriter"
 
+	"github.com/alehatsman/mooncake/cmd/cmdutil"
 	"github.com/alehatsman/mooncake/internal/apply"
 	"github.com/alehatsman/mooncake/internal/config"
 	"github.com/alehatsman/mooncake/internal/executor"
@@ -150,7 +151,7 @@ func taskFlags() []cli.Flag {
 
 // resolveTasksConfigPath returns the explicit --config flag when set,
 // otherwise the result of config.DiscoverTasksConfig. Mirrors
-// resolveConfigPath's shape but routes through the task-specific
+// cmdutil.ResolveConfigPath's shape but routes through the task-specific
 // discovery so ./tasks.yml takes precedence. The second return value
 // is the shadowed apply-config path (empty when no shadowing).
 func resolveTasksConfigPath(c *cli.Context) (path, shadowed string, err error) {
@@ -284,8 +285,8 @@ func buildTaskPlan(c *cli.Context, configPath, name string) (*plan.Plan, error) 
 	planData, err := planner.BuildPlan(plan.PlannerConfig{
 		ConfigPath: configPath,
 		Variables:  variables,
-		Tags:       parseTags(c.String("tags")),
-		SkipTags:   parseTags(c.String("skip-tags")),
+		Tags:       cmdutil.ParseTags(c.String("tags")),
+		SkipTags:   cmdutil.ParseTags(c.String("skip-tags")),
 		TaskName:   name,
 	})
 	if err != nil {

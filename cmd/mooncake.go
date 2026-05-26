@@ -38,22 +38,6 @@ const (
 	exitCodeRuntimeError    = 3 // Runtime error during execution
 )
 
-// parseTags parses a comma-separated tag string into a slice of trimmed tags
-func parseTags(tagsStr string) []string {
-	if tagsStr == "" {
-		return nil
-	}
-
-	var tags []string
-	for _, tag := range strings.Split(tagsStr, ",") {
-		trimmed := strings.TrimSpace(tag)
-		if trimmed != "" {
-			tags = append(tags, trimmed)
-		}
-	}
-	return tags
-}
-
 // hostnameForLocalOverlays returns os.Hostname() with the first DNS label
 // only. macOS reports "MacBook-Air.local"; this trims to "MacBook-Air" so
 // the corresponding overlay file an operator would commit is

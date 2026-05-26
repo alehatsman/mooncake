@@ -7,11 +7,12 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/alehatsman/mooncake/cmd/cmdutil"
 	"github.com/alehatsman/mooncake/internal/facts"
 	"github.com/urfave/cli/v2"
 )
 
-// TestParseTags tests the parseTags function
+// TestParseTags tests the cmdutil.ParseTags function
 func TestParseTags(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -52,14 +53,14 @@ func TestParseTags(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := parseTags(tt.input)
+			result := cmdutil.ParseTags(tt.input)
 			if len(result) != len(tt.expected) {
-				t.Errorf("parseTags() length = %v, expected %v", len(result), len(tt.expected))
+				t.Errorf("cmdutil.ParseTags() length = %v, expected %v", len(result), len(tt.expected))
 				return
 			}
 			for i, tag := range result {
 				if tag != tt.expected[i] {
-					t.Errorf("parseTags()[%d] = %v, expected %v", i, tag, tt.expected[i])
+					t.Errorf("cmdutil.ParseTags()[%d] = %v, expected %v", i, tag, tt.expected[i])
 				}
 			}
 		})
@@ -904,21 +905,21 @@ func TestWriteFactsJSONFilePermissions(t *testing.T) {
 	}
 }
 
-// TestParseTagsPreservesOrder tests that parseTags preserves tag order
+// TestParseTagsPreservesOrder tests that cmdutil.ParseTags preserves tag order
 func TestParseTagsPreservesOrder(t *testing.T) {
 	input := "tag3,tag1,tag2"
 	expected := []string{"tag3", "tag1", "tag2"}
 
-	result := parseTags(input)
+	result := cmdutil.ParseTags(input)
 
 	if len(result) != len(expected) {
-		t.Errorf("parseTags() length = %v, expected %v", len(result), len(expected))
+		t.Errorf("cmdutil.ParseTags() length = %v, expected %v", len(result), len(expected))
 		return
 	}
 
 	for i, tag := range result {
 		if tag != expected[i] {
-			t.Errorf("parseTags()[%d] = %v, expected %v (order not preserved)", i, tag, expected[i])
+			t.Errorf("cmdutil.ParseTags()[%d] = %v, expected %v (order not preserved)", i, tag, expected[i])
 		}
 	}
 }
@@ -1609,7 +1610,7 @@ func TestWriteFactsJSONMarshalCheck(t *testing.T) {
 	}
 }
 
-// TestParseTagsEdgeCases tests parseTags with additional edge cases
+// TestParseTagsEdgeCases tests cmdutil.ParseTags with additional edge cases
 func TestParseTagsEdgeCases(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -1650,14 +1651,14 @@ func TestParseTagsEdgeCases(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := parseTags(tt.input)
+			result := cmdutil.ParseTags(tt.input)
 			if len(result) != len(tt.expected) {
-				t.Errorf("parseTags() length = %v, expected %v", len(result), len(tt.expected))
+				t.Errorf("cmdutil.ParseTags() length = %v, expected %v", len(result), len(tt.expected))
 				return
 			}
 			for i, tag := range result {
 				if tag != tt.expected[i] {
-					t.Errorf("parseTags()[%d] = %v, expected %v", i, tag, tt.expected[i])
+					t.Errorf("cmdutil.ParseTags()[%d] = %v, expected %v", i, tag, tt.expected[i])
 				}
 			}
 		})

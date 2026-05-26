@@ -9,6 +9,7 @@ import (
 
 	"github.com/urfave/cli/v2"
 
+	"github.com/alehatsman/mooncake/cmd/cmdutil"
 	"github.com/alehatsman/mooncake/internal/apply"
 )
 
@@ -145,9 +146,9 @@ func run(c *cli.Context) error {
 	}
 
 	// Resolve config path: explicit --config wins, else auto-discover.
-	configPath, err := resolveConfigPath(c)
+	configPath, err := cmdutil.ResolveConfigPath(c)
 	if err != nil {
-		if printNoConfigHintAndExit(err, "apply") {
+		if cmdutil.PrintNoConfigHintAndExit(err, "apply") {
 			return nil
 		}
 		return err
@@ -173,8 +174,8 @@ func run(c *cli.Context) error {
 	cfg := &apply.Config{
 		ConfigPath:        configPath,
 		VarsFiles:         resolvedVars,
-		Tags:              parseTags(c.String("tags")),
-		SkipTags:          parseTags(c.String("skip-tags")),
+		Tags:              cmdutil.ParseTags(c.String("tags")),
+		SkipTags:          cmdutil.ParseTags(c.String("skip-tags")),
 		SudoPass:          c.String("sudo-pass"),
 		SudoPassFile:      c.String("sudo-pass-file"),
 		AskBecomePass:     c.Bool("ask-become-pass"),

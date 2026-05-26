@@ -7,6 +7,7 @@ import (
 
 	"github.com/urfave/cli/v2"
 
+	"github.com/alehatsman/mooncake/cmd/cmdutil"
 	"github.com/alehatsman/mooncake/internal/config"
 )
 
@@ -41,9 +42,9 @@ func validateCommand() *cli.Command {
 }
 
 func validateAction(c *cli.Context) error {
-	configPath, err := resolveConfigPath(c)
+	configPath, err := cmdutil.ResolveConfigPath(c)
 	if err != nil {
-		if printNoConfigHintAndExit(err, "validate") {
+		if cmdutil.PrintNoConfigHintAndExit(err, "validate") {
 			return nil
 		}
 		return err
