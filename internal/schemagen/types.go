@@ -105,10 +105,14 @@ type RequiredConstraint struct {
 }
 
 // SchemaRef represents a reference to another schema definition.
+// Also used inside anyOf/allOf branches as a lightweight "shape with
+// just a required clause" fragment when neither $ref nor type fits —
+// e.g. runConfig's anyOf: [{required: [steps]}, {required: [tasks]}].
 type SchemaRef struct {
-	Ref         string `json:"$ref,omitempty"`
-	Type        string `json:"type,omitempty"`
-	Description string `json:"description,omitempty"`
+	Ref         string   `json:"$ref,omitempty"`
+	Type        string   `json:"type,omitempty"`
+	Description string   `json:"description,omitempty"`
+	Required    []string `json:"required,omitempty"`
 }
 
 // GeneratorOptions configures schema generation behavior.

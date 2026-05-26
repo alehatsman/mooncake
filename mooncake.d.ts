@@ -920,13 +920,23 @@ export interface RepoTreeAction {
 }
 
 /**
- * Structured configuration with version, global variables, and steps
+ * Structured configuration with version, global variables, steps, and/or named tasks
  */
 export interface RunConfigAction {
   /**
+   * Map of alias name → module reference
+   * (host/owner/repo[/subpath]@version). Consumed by `use:`
+   */
+  modules?: Record<string, any>;
+  /**
    * Configuration steps to execute
    */
-  steps: StepAction[];
+  steps?: StepAction[];
+  /**
+   * Named tasks invoked via `mooncake task <name>`. Each task is a labeled
+   * group of steps with optional task-scoped vars.
+   */
+  tasks?: Record<string, any>;
   /**
    * Global variables available to all steps
    */
@@ -1011,6 +1021,25 @@ export interface ShellActionAction {
    */
   stdin?: string;
   unless?: string;
+}
+
+/**
+ * A named task invoked via `mooncake task <name>`. Runs through the same planner + executor as `mooncake apply`.
+ */
+export interface TaskAction {
+  /**
+   * One-line description shown when listing tasks
+   */
+  desc?: string;
+  /**
+   * Ordered list of mooncake steps to run when this task is invoked
+   */
+  steps: StepAction[];
+  /**
+   * Task-scoped variables. Override file-level vars; overridden by CLI
+   * --vars files.
+   */
+  vars?: Record<string, any>;
 }
 
 /**

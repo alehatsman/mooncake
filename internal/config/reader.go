@@ -129,11 +129,20 @@ func (r *YAMLConfigReader) ReadConfigWithValidation(path string) (*ParsedConfig,
 		// Attach source locations from locationMap
 		attachSourceLocations(runConfig.Steps, locationMap, "/steps")
 
+		// Attach source locations for each named task's steps so plan /
+		// apply diagnostics anchor at the right line when a task is
+		// invoked. Task names land in the YAML mapping in declaration
+		// order; the JSON-pointer key is /tasks/<name>/steps.
+		for name, task := range runConfig.Tasks {
+			attachSourceLocations(task.Steps, locationMap, "/tasks/"+name+"/steps")
+		}
+
 		parsedConfig = &ParsedConfig{
 			Steps:      runConfig.Steps,
 			GlobalVars: globalVars,
 			Modules:    runConfig.Modules,
 			Version:    runConfig.Version,
+			Tasks:      runConfig.Tasks,
 		}
 	}
 

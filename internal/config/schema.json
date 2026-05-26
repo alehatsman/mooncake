@@ -2453,14 +2453,24 @@
     },
     "runConfig": {
       "type": "object",
-      "description": "Structured configuration with version, global variables, and steps",
+      "description": "Structured configuration with version, global variables, steps, and/or named tasks",
       "properties": {
+        "modules": {
+          "type": "object",
+          "description": "Map of alias name → module reference (host/owner/repo[/subpath]@version). Consumed by `use:`",
+          "additionalProperties": true
+        },
         "steps": {
           "type": "array",
           "description": "Configuration steps to execute",
           "items": {
             "$ref": "#/definitions/step"
           }
+        },
+        "tasks": {
+          "type": "object",
+          "description": "Named tasks invoked via `mooncake task \u003cname\u003e`. Each task is a labeled group of steps with optional task-scoped vars.",
+          "additionalProperties": true
         },
         "vars": {
           "type": "object",
@@ -2472,8 +2482,17 @@
           "description": "Configuration schema version (e.g., '1.0')"
         }
       },
-      "required": [
-        "steps"
+      "anyOf": [
+        {
+          "required": [
+            "steps"
+          ]
+        },
+        {
+          "required": [
+            "tasks"
+          ]
+        }
       ],
       "additionalProperties": false
     },
@@ -25372,6 +25391,32 @@
             ]
           }
         }
+      ],
+      "additionalProperties": false
+    },
+    "task": {
+      "type": "object",
+      "description": "A named task invoked via `mooncake task \u003cname\u003e`. Runs through the same planner + executor as `mooncake apply`.",
+      "properties": {
+        "desc": {
+          "type": "string",
+          "description": "One-line description shown when listing tasks"
+        },
+        "steps": {
+          "type": "array",
+          "description": "Ordered list of mooncake steps to run when this task is invoked",
+          "items": {
+            "$ref": "#/definitions/step"
+          }
+        },
+        "vars": {
+          "type": "object",
+          "description": "Task-scoped variables. Override file-level vars; overridden by CLI --vars files.",
+          "additionalProperties": true
+        }
+      },
+      "required": [
+        "steps"
       ],
       "additionalProperties": false
     },

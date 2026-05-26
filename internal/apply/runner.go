@@ -13,6 +13,7 @@ import (
 	"github.com/alehatsman/mooncake/internal/facts"
 	"github.com/alehatsman/mooncake/internal/logger"
 	"github.com/alehatsman/mooncake/internal/ops"
+	"github.com/alehatsman/mooncake/internal/plan"
 )
 
 // Valid output-format values for Config.OutputFormat. Kept private —
@@ -41,6 +42,18 @@ type Runner struct {
 	fromPlan     bool
 	fromPlanPath string
 	fromPlanOpts FromPlanOptions
+
+	// in-memory-plan mode. When inMemoryPlan is true, the caller has
+	// already built a *plan.Plan and wants the Runner to execute it
+	// without re-reading the source config. Set exclusively by
+	// NewRunnerFromInMemoryPlan; mutually exclusive with the config-
+	// path and saved-plan modes. The primary consumer is
+	// `mooncake task <name>`, which builds plans with the planner's
+	// TaskName field and bypasses apply's config-reading path so
+	// apply stays unaware of tasks.
+	inMemoryPlan     bool
+	inMemoryPlanData *plan.Plan
+	inMemoryPlanOpts InMemoryPlanOptions
 }
 
 // NewRunner constructs a Runner around the given Config. cfg must
@@ -74,6 +87,9 @@ func (r *Runner) Run(ctx context.Context) (*KernelResult, error) {
 	// receives (a config-file path vs a pre-built plan).
 	if r.fromPlan {
 		return r.runFromPlan(ctx)
+	}
+	if r.inMemoryPlan {
+		return r.runFromInMemoryPlan(ctx)
 	}
 
 	if err := r.validate(); err != nil {

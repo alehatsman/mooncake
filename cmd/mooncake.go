@@ -1615,6 +1615,7 @@ func createApp() *cli.App {
 			agentdCommand(),
 			fleetCommand(),
 			stepCommand(),
+			taskCommand(),
 			toolCommand(),
 			queryCommand(),
 			{

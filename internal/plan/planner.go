@@ -120,6 +120,14 @@ type PlannerConfig struct {
 	// Names is the spec-50 step-name filter; propagated into
 	// ExpansionContext so per-step skip evaluation can consult it.
 	Names []string
+
+	// TaskName, when non-empty, selects a named task from the config's
+	// `tasks:` block instead of the top-level `steps:` list. The
+	// planner replaces RunConfig.Steps with the task's Steps and
+	// layers the task's Vars between file-level vars (lowest) and the
+	// caller-supplied Variables (highest). An unknown task name is an
+	// error from BuildPlan.
+	TaskName string
 }
 
 // NewPlanner creates a new Planner instance.
@@ -175,6 +183,22 @@ func (p *Planner) BuildPlan(cfg PlannerConfig) (*Plan, error) {
 		return nil, err
 	}
 
+	// Task selection: when TaskName is set, swap the top-level Steps
+	// for the named task's Steps and layer the task's Vars between
+	// file-level vars (lowest) and caller-supplied Variables (highest).
+	// All downstream planning — loops, includes, secrets, template
+	// rendering — runs against the task's steps unchanged.
+	taskVars := map[string]interface{}(nil)
+	if cfg.TaskName != "" {
+		task, ok := runConfig.Tasks[cfg.TaskName]
+		if !ok {
+			return nil, fmt.Errorf("task %q not found in %s (defined tasks: %s)",
+				cfg.TaskName, cfg.ConfigPath, joinTaskNames(runConfig.Tasks))
+		}
+		runConfig.Steps = task.Steps
+		taskVars = task.Vars
+	}
+
 	// Initialize plan
 	plan := &Plan{
 		Version:     "1.0",
@@ -186,8 +210,10 @@ func (p *Planner) BuildPlan(cfg PlannerConfig) (*Plan, error) {
 		Modules:     runConfig.Modules,
 	}
 
-	// Merge global vars from config with provided vars (provided vars take precedence)
-	variables := utils.MergeVariables(runConfig.Vars, cfg.Variables)
+	// Merge: file-level vars < task vars < caller-supplied vars.
+	// MergeVariables right-wins on key collision.
+	variables := utils.MergeVariables(runConfig.Vars, taskVars)
+	variables = utils.MergeVariables(variables, cfg.Variables)
 
 	// Inject system facts (ansible_os_family, ansible_distribution, etc.)
 	// These are added after config vars but before expansion, so templates can use them
@@ -262,6 +288,21 @@ func (p *Planner) BuildPlan(cfg PlannerConfig) (*Plan, error) {
 	return plan, nil
 }
 
+// joinTaskNames returns the comma-separated, sorted list of keys in
+// the tasks map, for use in unknown-task error messages. "<none>"
+// when the map is empty so the diagnostic is still informative.
+func joinTaskNames(tasks map[string]config.Task) string {
+	if len(tasks) == 0 {
+		return "<none>"
+	}
+	names := make([]string, 0, len(tasks))
+	for name := range tasks {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	return strings.Join(names, ", ")
+}
+
 // uniqueSorted dedupes and sorts a slice of strings.
 func uniqueSorted(in []string) []string {
 	seen := make(map[string]struct{}, len(in))
@@ -297,6 +338,7 @@ func (p *Planner) readRunConfig(path string) (*config.RunConfig, error) {
 		Vars:    parsedConfig.GlobalVars,
 		Modules: parsedConfig.Modules,
 		Steps:   parsedConfig.Steps,
+		Tasks:   parsedConfig.Tasks,
 	}
 
 	return runConfig, nil

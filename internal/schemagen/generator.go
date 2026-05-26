@@ -41,6 +41,12 @@ func (g *Generator) Generate() (*Schema, error) {
 	runConfigDef := g.generateRunConfigDefinition()
 	schema.Definitions["runConfig"] = runConfigDef
 
+	// Add Task definition for entries under `tasks:` in a RunConfig.
+	// Currently not referenced via $ref from runConfig.tasks (the map
+	// uses additionalProperties: true); shipping the definition is a
+	// step toward tightening once tasks have stable user surface.
+	schema.Definitions["task"] = g.generateTaskDefinition()
+
 	// Generate definitions for each action
 	for _, meta := range actions.List() {
 		def, err := g.generateActionDefinition(meta)
@@ -331,13 +337,18 @@ func (g *Generator) generateStepDefinition() (*Definition, error) {
 	return def, nil
 }
 
-// generateRunConfigDefinition creates the RunConfig definition for structured configs.
+// generateRunConfigDefinition creates the RunConfig definition for
+// structured configs. The schema accepts files with `steps:` (the
+// classic apply shape), `tasks:` (the dedicated tasks.yml shape), or
+// both (mooncake.yml that carries an apply config plus named tasks).
+// At least one of the two must be present — enforced via anyOf rather
+// than required:[steps] so a tasks-only file is valid.
 func (g *Generator) generateRunConfigDefinition() *Definition {
 	trueVal := true
 
 	def := &Definition{
 		Type:        "object", //nolint:goconst // JSON Schema type
-		Description: "Structured configuration with version, global variables, and steps",
+		Description: "Structured configuration with version, global variables, steps, and/or named tasks",
 		Properties: map[string]*Property{
 			"version": {
 				Type:        "string", //nolint:goconst // JSON Schema type
@@ -349,6 +360,19 @@ func (g *Generator) generateRunConfigDefinition() *Definition {
 				Properties:      map[string]*Property{},
 				AdditionalProps: &trueVal,
 			},
+			"modules": {
+				Type:        "object",
+				Description: "Map of alias name → module reference (host/owner/repo[/subpath]@version). Consumed by `use:`",
+				Properties:  map[string]*Property{},
+				AdditionalProps: func() *bool {
+					// modules values are strings; the runtime decodes
+					// them as map[string]string. additionalProperties:
+					// true is the closest JSON-schema shape since the
+					// keys are user-chosen alias names.
+					t := true
+					return &t
+				}(),
+			},
 			"steps": {
 				Type: "array",
 				Items: &Property{
@@ -356,8 +380,17 @@ func (g *Generator) generateRunConfigDefinition() *Definition {
 				},
 				Description: "Configuration steps to execute",
 			},
+			"tasks": {
+				Type:            "object",
+				Description:     "Named tasks invoked via `mooncake task <name>`. Each task is a labeled group of steps with optional task-scoped vars.",
+				Properties:      map[string]*Property{},
+				AdditionalProps: &trueVal, // map keys are user-chosen task names; values match #/definitions/task (validated via additionalProperties pattern in a follow-up)
+			},
 		},
-		Required: []string{"steps"},
+		AnyOf: []*SchemaRef{
+			{Required: []string{"steps"}},
+			{Required: []string{"tasks"}},
+		},
 	}
 
 	// Set additionalProperties to false if strict validation is enabled
@@ -366,6 +399,48 @@ func (g *Generator) generateRunConfigDefinition() *Definition {
 		def.AdditionalProperties = &falseVal
 	}
 
+	return def
+}
+
+// generateTaskDefinition creates the schema definition for one entry
+// inside a `tasks:` map. Tasks share the Step shape under `steps:`
+// and add a per-task `vars:` overlay plus a `desc:` description.
+//
+// Note: this definition is emitted alongside runConfig but not yet
+// referenced from runConfig.tasks (additionalProperties on the tasks
+// map). The validator in internal/config still accepts unknown task-
+// body fields via a permissive decode plus our strict KnownFields
+// pass; tightening this is a follow-up.
+func (g *Generator) generateTaskDefinition() *Definition {
+	trueVal := true
+	def := &Definition{
+		Type:        "object",
+		Description: "A named task invoked via `mooncake task <name>`. Runs through the same planner + executor as `mooncake apply`.",
+		Properties: map[string]*Property{
+			"desc": {
+				Type:        "string",
+				Description: "One-line description shown when listing tasks",
+			},
+			"vars": {
+				Type:            "object",
+				Description:     "Task-scoped variables. Override file-level vars; overridden by CLI --vars files.",
+				Properties:      map[string]*Property{},
+				AdditionalProps: &trueVal,
+			},
+			"steps": {
+				Type: "array",
+				Items: &Property{
+					Ref: "#/definitions/step",
+				},
+				Description: "Ordered list of mooncake steps to run when this task is invoked",
+			},
+		},
+		Required: []string{"steps"},
+	}
+	if g.opts.StrictValidation {
+		falseVal := false
+		def.AdditionalProperties = &falseVal
+	}
 	return def
 }
 

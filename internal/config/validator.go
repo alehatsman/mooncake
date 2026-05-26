@@ -47,15 +47,38 @@ func NewSchemaValidator() (*SchemaValidator, error) {
 // Validate validates configuration against the JSON Schema and returns diagnostics.
 // It accepts a ParsedConfig which contains the complete configuration structure.
 func (v *SchemaValidator) Validate(parsedConfig *ParsedConfig, locationMap *LocationMap, filePath string) []Diagnostic {
-	// Determine which format to validate based on whether we have version/vars
+	// Determine which format to validate based on whether the parsed
+	// config carries any of the keys that only exist in the structured
+	// (RunConfig) form: version, vars, tasks. Modules also implies the
+	// structured form. A tasks-only file (no top-level steps) lives
+	// here too; without checking parsedConfig.Tasks the validator would
+	// fall through to the array-form path and report "step must have
+	// exactly one action" against an empty step slice.
 	var dataToValidate interface{}
-	if parsedConfig.Version != "" || len(parsedConfig.GlobalVars) > 0 {
-		// New format: validate as RunConfig
-		dataToValidate = RunConfig{
-			Version: parsedConfig.Version,
-			Vars:    parsedConfig.GlobalVars,
-			Steps:   parsedConfig.Steps,
+	if parsedConfig.Version != "" || len(parsedConfig.GlobalVars) > 0 ||
+		len(parsedConfig.Tasks) > 0 || len(parsedConfig.Modules) > 0 {
+		// New format: validate as RunConfig. Use a map so we can omit
+		// empty steps cleanly — the Go struct's `json:"steps"` tag has
+		// no omitempty (changing it would affect every JSON consumer
+		// of RunConfig), and a `"steps": null` payload fails the
+		// schema's `type: array` constraint.
+		runConfigMap := map[string]interface{}{}
+		if parsedConfig.Version != "" {
+			runConfigMap["version"] = parsedConfig.Version
 		}
+		if len(parsedConfig.GlobalVars) > 0 {
+			runConfigMap["vars"] = parsedConfig.GlobalVars
+		}
+		if len(parsedConfig.Modules) > 0 {
+			runConfigMap["modules"] = parsedConfig.Modules
+		}
+		if len(parsedConfig.Steps) > 0 {
+			runConfigMap["steps"] = parsedConfig.Steps
+		}
+		if len(parsedConfig.Tasks) > 0 {
+			runConfigMap["tasks"] = parsedConfig.Tasks
+		}
+		dataToValidate = runConfigMap
 	} else {
 		// Old format: validate as array of steps
 		dataToValidate = parsedConfig.Steps

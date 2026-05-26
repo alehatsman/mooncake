@@ -1,0 +1,55 @@
+version: '1'
+
+# Dogfood mooncake's own task runner. Run with: `mooncake task <name>`.
+# Bare `mooncake task` lists every task with its description.
+#
+# Templates use Pongo2 syntax ({{ VAR }}); contrast with Taskfile.yml's
+# Go-template form ({{.VAR}}). Tasks here intentionally mirror the
+# Taskfile.yml targets that developers run day to day, so this file is
+# the canonical place to add NEW everyday targets going forward and
+# Taskfile.yml is the legacy entry point.
+
+vars:
+  BIN: out/mooncake
+
+tasks:
+
+  build:
+    desc: Build the mooncake binary
+    steps:
+      - shell:
+          cmd: "go build -v -o {{ BIN }} ./cmd"
+
+  test:
+    desc: Run go test ./...
+    steps:
+      - shell:
+          cmd: "go test ./..."
+
+  test-race:
+    desc: Run go test -race ./...
+    steps:
+      - shell:
+          cmd: "go test -race ./..."
+
+  lint:
+    desc: golangci-lint (includes gosec via .golangci.yml)
+    steps:
+      - shell:
+          cmd: "golangci-lint run ./..."
+
+  fmt:
+    desc: Format Go sources with gofmt -s
+    steps:
+      - shell:
+          cmd: "gofmt -s -w ."
+      - log:
+          msg: "code formatted"
+
+  clean:
+    desc: Remove build artifacts
+    steps:
+      - shell:
+          cmd: "rm -rf out/ testing-output/"
+      - log:
+          msg: "cleaned"

@@ -154,6 +154,34 @@ type RunConfig struct {
 
 	// Steps contains the configuration steps to execute
 	Steps []Step `yaml:"steps" json:"steps"`
+
+	// Tasks holds named task definitions. A task is a labeled group of
+	// steps with its own optional vars, invoked via `mooncake task <name>`.
+	// Tasks are independent of the top-level Steps list — `mooncake apply`
+	// ignores Tasks and `mooncake task` ignores Steps.
+	Tasks map[string]Task `yaml:"tasks,omitempty" json:"tasks,omitempty"`
+}
+
+// Task is a named group of steps invoked via `mooncake task <name>`.
+// Tasks share the planner + executor with `mooncake apply`; the only
+// difference is which step list and which vars overlay the planner
+// sees. Task-level Vars layer over the file-level vars and under any
+// --vars / KEY=value overrides supplied on the CLI.
+type Task struct {
+	// Desc is the one-line description shown by `mooncake task` when
+	// listing available tasks. Optional but recommended.
+	Desc string `yaml:"desc,omitempty" json:"desc,omitempty"`
+
+	// Vars are task-scoped variables. They override file-level vars
+	// and are themselves overridden by CLI --vars / KEY=value args.
+	Vars map[string]interface{} `yaml:"vars,omitempty" json:"vars,omitempty"`
+
+	// Steps is the ordered list of mooncake steps to run when this
+	// task is invoked. Uses the same Step shape as the top-level
+	// Steps list — every action type, every compound (try, txn,
+	// on_change), and every modifier (when, tags, for_each) is
+	// supported here.
+	Steps []Step `yaml:"steps" json:"steps"`
 }
 
 // ParsedConfig holds the result of parsing a configuration file.
@@ -170,6 +198,10 @@ type ParsedConfig struct {
 
 	// Version is the config schema version (e.g., "1.0")
 	Version string
+
+	// Tasks is the parsed `tasks:` block keyed by task name. Empty
+	// when the file declares no tasks. See Task.
+	Tasks map[string]Task
 }
 
 // File represents a file or directory operation in a configuration step.
