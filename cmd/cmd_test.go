@@ -505,7 +505,7 @@ func TestFactsCommandInvalidFormat(t *testing.T) {
 				Flags: []cli.Flag{
 					&cli.StringFlag{Name: "format", Value: "text"},
 				},
-				Action: factsCommand,
+				Action: factsAction,
 			},
 		},
 	}
@@ -963,7 +963,7 @@ func TestFactsCommandValidFormats(t *testing.T) {
 						Flags: []cli.Flag{
 							&cli.StringFlag{Name: "format", Value: "text"},
 						},
-						Action: factsCommand,
+						Action: factsAction,
 					},
 				},
 			}
@@ -1000,7 +1000,7 @@ func TestPlanCommandInvalidFormatHandling(t *testing.T) {
 					&cli.StringFlag{Name: "config", Required: true},
 					&cli.StringFlag{Name: "format", Value: "text"},
 				},
-				Action: planCommand,
+				Action: planAction,
 			},
 		},
 	}
@@ -1059,7 +1059,7 @@ func TestPlanCommandValidFormats(t *testing.T) {
 							&cli.StringFlag{Name: "config", Required: true},
 							&cli.StringFlag{Name: "format", Value: "text"},
 						},
-						Action: planCommand,
+						Action: planAction,
 					},
 				},
 			}
@@ -1098,7 +1098,7 @@ func TestPlanCommandWithTags(t *testing.T) {
 					&cli.StringFlag{Name: "format", Value: "text"},
 					&cli.StringFlag{Name: "tags"},
 				},
-				Action: planCommand,
+				Action: planAction,
 			},
 		},
 	}
@@ -1158,7 +1158,7 @@ func TestPlanCommandWithOutput(t *testing.T) {
 					&cli.StringFlag{Name: "format", Value: "text"},
 					&cli.StringFlag{Name: "output"},
 				},
-				Action: planCommand,
+				Action: planAction,
 			},
 		},
 	}
@@ -1359,7 +1359,7 @@ steps:
 					&cli.StringFlag{Name: "format", Value: "text"},
 					&cli.BoolFlag{Name: "show-origins"},
 				},
-				Action: planCommand,
+				Action: planAction,
 			},
 		},
 	}
@@ -1402,7 +1402,7 @@ func TestPlanCommandWithVars(t *testing.T) {
 					&cli.StringFlag{Name: "vars"},
 					&cli.StringFlag{Name: "format", Value: "text"},
 				},
-				Action: planCommand,
+				Action: planAction,
 			},
 		},
 	}
@@ -1437,7 +1437,7 @@ func TestPlanCommandInvalidVarsFile(t *testing.T) {
 					&cli.StringSliceFlag{Name: "vars"},
 					&cli.StringFlag{Name: "format", Value: "text"},
 				},
-				Action: planCommand,
+				Action: planAction,
 			},
 		},
 	}
@@ -1484,7 +1484,7 @@ func TestPlanCommand_MultipleVarsFiles(t *testing.T) {
 					&cli.StringFlag{Name: "output"},
 					&cli.StringFlag{Name: "format", Value: "json"},
 				},
-				Action: planCommand,
+				Action: planAction,
 			},
 		},
 	}
@@ -1531,7 +1531,7 @@ func TestPlanCommandInvalidConfigFile(t *testing.T) {
 					&cli.StringFlag{Name: "config", Required: true},
 					&cli.StringFlag{Name: "format", Value: "text"},
 				},
-				Action: planCommand,
+				Action: planAction,
 			},
 		},
 	}
@@ -1553,7 +1553,7 @@ func TestFactsCommandJSONOutput(t *testing.T) {
 				Flags: []cli.Flag{
 					&cli.StringFlag{Name: "format", Value: "text"},
 				},
-				Action: factsCommand,
+				Action: factsAction,
 			},
 		},
 	}
@@ -1768,7 +1768,7 @@ func TestFormatPlanTextAllActionTypes(t *testing.T) {
 					&cli.StringFlag{Name: "format", Value: "text"},
 					&cli.BoolFlag{Name: "show-origins"},
 				},
-				Action: planCommand,
+				Action: planAction,
 			},
 		},
 	}
@@ -2158,7 +2158,7 @@ func TestFormatPlanYAMLIndent(t *testing.T) {
 					&cli.StringFlag{Name: "config", Required: true},
 					&cli.StringFlag{Name: "format", Value: "text"},
 				},
-				Action: planCommand,
+				Action: planAction,
 			},
 		},
 	}
@@ -2231,7 +2231,7 @@ func TestFormatPlanTextWithOriginAndChain(t *testing.T) {
 					&cli.StringFlag{Name: "format", Value: "text"},
 					&cli.BoolFlag{Name: "show-origins"},
 				},
-				Action: planCommand,
+				Action: planAction,
 			},
 		},
 	}
@@ -2270,7 +2270,7 @@ func TestPlanCommandWithSkippedSteps(t *testing.T) {
 					&cli.StringFlag{Name: "format", Value: "text"},
 					&cli.StringFlag{Name: "tags"},
 				},
-				Action: planCommand,
+				Action: planAction,
 			},
 		},
 	}
@@ -2373,7 +2373,7 @@ func TestFactsCommandDefaultFormat(t *testing.T) {
 				Flags: []cli.Flag{
 					&cli.StringFlag{Name: "format", Value: "text"},
 				},
-				Action: factsCommand,
+				Action: factsAction,
 			},
 		},
 	}
@@ -2421,7 +2421,7 @@ func TestPlanCommandWithComplexConfig(t *testing.T) {
 					&cli.StringFlag{Name: "config", Required: true},
 					&cli.StringFlag{Name: "format", Value: "text"},
 				},
-				Action: planCommand,
+				Action: planAction,
 			},
 		},
 	}
@@ -2456,7 +2456,7 @@ func TestFormatPlanJSONWithComplexPlan(t *testing.T) {
 					&cli.StringFlag{Name: "config", Required: true},
 					&cli.StringFlag{Name: "format", Value: "text"},
 				},
-				Action: planCommand,
+				Action: planAction,
 			},
 		},
 	}
@@ -2492,7 +2492,7 @@ func TestPlanCommandOutputToFileYAML(t *testing.T) {
 					&cli.StringFlag{Name: "format", Value: "text"},
 					&cli.StringFlag{Name: "output"},
 				},
-				Action: planCommand,
+				Action: planAction,
 			},
 		},
 	}

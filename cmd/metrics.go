@@ -11,7 +11,42 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-func metricsCommand(c *cli.Context) error {
+// metricsCommand returns the `mooncake metrics` cli.Command.
+func metricsCommand() *cli.Command {
+	return &cli.Command{
+		Name:  "metrics",
+		Usage: "Display live system metrics (CPU/GPU/memory/load/network)",
+		Flags: []cli.Flag{
+			&cli.StringFlag{
+				Name:    "format",
+				Aliases: []string{"f"},
+				Value:   "text",
+				Usage:   "Output format: text or json",
+			},
+			&cli.StringSliceFlag{
+				Name:    "query",
+				Aliases: []string{"q"},
+				Usage:   "Query a specific metric by key (e.g. cpu_usage_pct). Repeatable.",
+			},
+			&cli.StringSliceFlag{
+				Name:  "fields",
+				Usage: "Restrict output to these keys. Repeatable or comma-separated. Adds a _collected_at sibling map.",
+			},
+			&cli.BoolFlag{
+				Name:  "refresh",
+				Usage: "Force re-sample, bypassing TTL",
+			},
+			&cli.StringFlag{
+				Name:    "output",
+				Aliases: []string{"o"},
+				Usage:   "Save metrics to file (JSON)",
+			},
+		},
+		Action: metricsAction,
+	}
+}
+
+func metricsAction(c *cli.Context) error {
 	if c.Bool("refresh") {
 		metrics.Refresh()
 	}
