@@ -26,11 +26,24 @@ tasks:
       - shell: { cmd: "go build -v -o {{ BIN }} ./cmd" }
 
   install:
-    desc: Build and install mooncake to ~/.local/bin; restart agentd if active
+    desc: Build and install mooncake to ~/.local/bin; create `mcake` alias; restart agentd if active
     steps:
       - shell: { cmd: "go build -v -o {{ BIN }} ./cmd" }
       - shell: { cmd: 'mkdir -p "$HOME/.local/bin" && install -m 0755 {{ BIN }} "$HOME/.local/bin/mooncake"' }
       - log: { msg: "installed $HOME/.local/bin/mooncake" }
+      - shell:
+          # `mcake` is the short alias. Symlink (not copy) so future
+          # `mooncake task install` runs keep both entries in sync
+          # automatically — the symlink resolves to whatever `mooncake`
+          # currently is. `-f` overwrites a stale link; `-n` ensures we
+          # don't accidentally follow into a directory of the same name.
+          # Set MCAKE_ALIAS=0 to skip the symlink (rare; e.g. when the
+          # name conflicts with a local tool you'd rather keep).
+          cmd: |
+            if [ "${MCAKE_ALIAS:-1}" != "0" ]; then
+              ln -sfn mooncake "$HOME/.local/bin/mcake"
+              echo "✓ aliased mcake → mooncake"
+            fi
       - shell:
           cmd: |
             if ! echo ":$PATH:" | grep -q ":$HOME/.local/bin:"; then
