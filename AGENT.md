@@ -26,6 +26,18 @@ mooncake task lint-fix                                   # auto-fix what golangc
 
 Reserve `mooncake task ci` for the pre-push gate or a full sweep.
 
+## Task surface
+
+```
+mooncake task                         # list every task with its description
+mooncake task <name>                  # run a task
+mooncake task <name> --plan           # preview a task without executing it
+mooncake task <name> --plan -f json   # preview as JSON
+```
+
+Tasks default to `--log-level debug` so shell-step stdout streams to
+the terminal (prefixed `|`). Pass `--log-level info` to suppress.
+
 ## Code lookups (replace grep+read cycles)
 
 Prefer `dex_context` (see CLAUDE.md "Search and exploration"). When dex
