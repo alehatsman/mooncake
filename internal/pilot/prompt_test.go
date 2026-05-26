@@ -94,3 +94,100 @@ func TestSelectStyleFragment_UnknownFallsBackToPlan(t *testing.T) {
 		t.Errorf("unknown style should fall back to plan; got: %s", got)
 	}
 }
+
+// TestBuildPrompt_LastStepStdout_Rendered confirms the user message
+// includes the captured stdout block when LastIteration.LastStepStdout
+// is populated. The block is what unblocks step-style loops: without
+// it the model re-proposes the same diagnostic step forever.
+func TestBuildPrompt_LastStepStdout_Rendered(t *testing.T) {
+	const sentinel = "M docs-working/CHANGES.md"
+	_, userPrompt, err := BuildPrompt(PlanInput{
+		Goal:     "show git status",
+		Snapshot: []byte(`{}`),
+		LastIteration: &IterationSummary{
+			Iteration:      1,
+			PlanHash:       "abc123",
+			Status:         "success",
+			LastStepStdout: "On branch master\n" + sentinel + "\n",
+		},
+		Style: StyleStep,
+	})
+	if err != nil {
+		t.Fatalf("BuildPrompt: %v", err)
+	}
+	if !strings.Contains(userPrompt, "Last Step Stdout (last 4 KB):") {
+		t.Errorf("user prompt missing Last Step Stdout header; got:\n%s", userPrompt)
+	}
+	if !strings.Contains(userPrompt, sentinel) {
+		t.Errorf("user prompt should embed captured stdout; got:\n%s", userPrompt)
+	}
+}
+
+// TestBuildPrompt_LastStepStdout_OmittedWhenEmpty pins the absence
+// path. A first iteration (LastIteration == nil) or an iteration that
+// ran no cmd/shell steps must NOT print a stray empty-block header,
+// which would confuse the model into expecting output that doesn't
+// exist.
+func TestBuildPrompt_LastStepStdout_OmittedWhenEmpty(t *testing.T) {
+	t.Run("LastIteration nil", func(t *testing.T) {
+		_, userPrompt, err := BuildPrompt(PlanInput{
+			Goal:     "do thing",
+			Snapshot: []byte(`{}`),
+			Style:    StyleStep,
+		})
+		if err != nil {
+			t.Fatalf("BuildPrompt: %v", err)
+		}
+		if strings.Contains(userPrompt, "Last Step Stdout") {
+			t.Errorf("first iteration should not render Last Step Stdout block; got:\n%s", userPrompt)
+		}
+	})
+
+	t.Run("LastStepStdout empty", func(t *testing.T) {
+		_, userPrompt, err := BuildPrompt(PlanInput{
+			Goal:     "do thing",
+			Snapshot: []byte(`{}`),
+			LastIteration: &IterationSummary{
+				Iteration: 1,
+				PlanHash:  "abc",
+				Status:    "success",
+				// LastStepStdout intentionally empty.
+			},
+			Style: StyleStep,
+		})
+		if err != nil {
+			t.Fatalf("BuildPrompt: %v", err)
+		}
+		if strings.Contains(userPrompt, "Last Step Stdout") {
+			t.Errorf("empty LastStepStdout should not render the block; got:\n%s", userPrompt)
+		}
+	})
+}
+
+// TestBuildSystemPrompt_StyleStep_LastStdoutHint pins the step-style
+// fragment update: the TASK STYLE block must now coach the model on
+// the "empty plan when stdout answers the goal" termination signal.
+// Without this hint, even with the captured-stdout block in the user
+// message, smaller models tend to re-propose the same diagnostic step.
+func TestBuildSystemPrompt_StyleStep_LastStdoutHint(t *testing.T) {
+	got, err := buildSystemPrompt(StyleStep)
+	if err != nil {
+		t.Fatalf("buildSystemPrompt: %v", err)
+	}
+	mustContain(t, got, "If LAST STEP STDOUT above answers the goal")
+	mustContain(t, got, "do not re-propose the same diagnostic step")
+}
+
+// TestBuildSystemPrompt_StylePlan_NoLastStdoutHint pins the deliberate
+// asymmetry: plan-style emits the whole plan in one turn, so per-
+// iteration stdout isn't part of its mental model and the hint must
+// stay out of promptStylePlan (avoid prompt-drift between styles).
+func TestBuildSystemPrompt_StylePlan_NoLastStdoutHint(t *testing.T) {
+	got, err := buildSystemPrompt(StylePlan)
+	if err != nil {
+		t.Fatalf("buildSystemPrompt: %v", err)
+	}
+	if strings.Contains(got, "If LAST STEP STDOUT above answers the goal") {
+		t.Errorf("plan-style prompt should not carry the step-style stdout hint; got:\n%s", got)
+	}
+}

@@ -107,6 +107,21 @@ func Run(opts RunOptions) (*IterationLog, error) {
 
 	log := logger.NewLogger(logger.ErrorLevel)
 
+	// Stream shell-step stdout/stderr to the operator's terminal during
+	// pilot apply (single-shot path). Mirrors the loop-path wiring in
+	// applyPlanIteration so `mooncake pilot run --plan x.yml` and
+	// `mooncake pilot loop` give the operator the same "I can see what
+	// the plan actually did" signal — matching `mooncake task`.
+	publisher.Subscribe(logger.NewConsoleSubscriber(logger.InfoLevel, "text", true))
+	// Also print cmd-action buffered stdout (the cmd handler doesn't
+	// emit per-line step.stdout events, so the ConsoleSubscriber alone
+	// would leave the operator staring at "▶ cmd / ~ cmd" markers
+	// without the actual output). See output_capture.go for the
+	// "buffered cmd stdout" rationale. The single-shot path doesn't
+	// chain into a next iteration, so we don't read capture.Last() —
+	// the subscriber is here purely for the operator-visible printout.
+	publisher.Subscribe(newStdoutCapture(os.Stdout))
+
 	// F016: agent.Run doesn't currently carry a context; the agent loop
 	// is invoked from CLI and CLI-level signal handling tears down the
 	// process. Use Background until a follow-up plumbs ctx through Run.

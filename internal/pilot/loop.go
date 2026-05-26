@@ -279,11 +279,12 @@ func RunLoop(opts RunOptions) (*LoopResult, error) {
 			_, _ = WriteIterationLog(opts.RepoRoot, iterLog)
 			iterations = append(iterations, *iterLog)
 			lastIteration = &IterationSummary{
-				Iteration:    iterNum,
-				PlanHash:     planHash,
-				Status:       "execution_failed",
-				ChangedFiles: changedFiles,
-				ErrorMessage: execErr.Error(),
+				Iteration:      iterNum,
+				PlanHash:       planHash,
+				Status:         "execution_failed",
+				ChangedFiles:   changedFiles,
+				ErrorMessage:   execErr.Error(),
+				LastStepStdout: outcome.LastStepStdout,
 			}
 			continue
 		}
@@ -306,10 +307,11 @@ func RunLoop(opts RunOptions) (*LoopResult, error) {
 		}
 
 		lastIteration = &IterationSummary{
-			Iteration:    iterNum,
-			PlanHash:     planHash,
-			Status:       "success",
-			ChangedFiles: changedFiles,
+			Iteration:      iterNum,
+			PlanHash:       planHash,
+			Status:         "success",
+			ChangedFiles:   changedFiles,
+			LastStepStdout: outcome.LastStepStdout,
 		}
 	}
 
@@ -388,6 +390,12 @@ type iterationOutcome struct {
 	// persists this as the iteration's audit artifact instead of the
 	// LLM bytes.
 	EditedPlanBytes []byte
+	// LastStepStdout is the 4 KiB-tail-truncated stdout from the LAST
+	// cmd/shell-family step that completed during executor.Start. The
+	// caller forwards this into the next iteration's PlanInput so the
+	// model sees the result of the action it proposed. Empty when the
+	// plan ran no cmd/shell steps or those steps produced no stdout.
+	LastStepStdout string
 }
 
 // planGate is the callback applyPlanIteration invokes between
@@ -460,10 +468,24 @@ func applyPlanIteration(wrappedBytes []byte, repoRoot string, log logger.Logger,
 	}
 
 	publisher := events.NewPublisher()
+	// Part 1 — stream shell-step stdout/stderr to the operator's
+	// terminal during pilot apply, matching `mooncake task` (cmd/task.go
+	// sets StreamStepOutput:true for the same reason). Without this
+	// subscriber the executor publishes step.stdout events into the
+	// void and the operator sees nothing between "applying…" and the
+	// next prompt — making goal-reached-but-loop-doesn't-stop look like
+	// a silent hang.
+	publisher.Subscribe(logger.NewConsoleSubscriber(logger.InfoLevel, "text", true))
+	// Part 2 — capture the last cmd/shell step's stdout so the next
+	// iteration's prompt can feed it back to the model (the loop-
+	// termination half of this work — see output_capture.go).
+	capture := newStdoutCapture(os.Stdout)
+	publisher.Subscribe(capture)
 	out.ExecErr = executor.Start(context.Background(), executor.StartConfig{
 		ConfigFilePath: tmpFile.Name(),
 	}, log, publisher)
 	publisher.Close()
+	out.LastStepStdout = capture.Last()
 
 	out.ChangedFiles, _ = CollectChangedFiles(repoRoot)
 	out.DiffStat, _ = CollectDiffStat(repoRoot)
