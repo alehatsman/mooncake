@@ -38,11 +38,14 @@ func pilotCommand() *cli.Command {
 					},
 					&cli.StringFlag{
 						Name:  "provider",
-						Usage: "LLM provider (claude for loop mode)",
+						Usage: "LLM provider: anthropic-cli, anthropic-http, or openai-shape (omit for auto-discovery)",
+					},
+					&cli.StringFlag{
+						Name:  "endpoint",
+						Usage: "OpenAI-compatible /v1 base URL (e.g. http://localhost:11434/v1); required for --provider openai-shape unless MOONCAKE_PILOT_ENDPOINT is set",
 					},
 					&cli.StringFlag{
 						Name:  "model",
-						Value: "sonnet",
 						Usage: "Model name (when using --provider)",
 					},
 					&cli.IntFlag{
@@ -84,12 +87,13 @@ func pilotRunAction(c *cli.Context) error {
 		UseStdin:      useStdin,
 		RepoRoot:      repoRoot,
 		Provider:      provider,
+		Endpoint:      c.String("endpoint"),
 		Model:         model,
 		MaxIterations: maxIterations,
 		AutoApply:     c.Bool("auto-apply"),
 	}
 
-	if provider == "claude" {
+	if planPath == "" && !useStdin {
 		result, loopErr := pilot.RunLoop(opts)
 		if loopErr != nil {
 			fmt.Fprintf(os.Stderr, "Pilot loop failed: %v\n", loopErr)
@@ -106,10 +110,6 @@ func pilotRunAction(c *cli.Context) error {
 			printPilotSummary(result.FinalLog)
 		}
 		return nil
-	}
-
-	if planPath == "" && !useStdin {
-		return fmt.Errorf("either --plan or --stdin must be specified (or use --provider=claude for loop mode)")
 	}
 
 	if planPath != "" && useStdin {

@@ -1,9 +1,9 @@
-// Package main / fleet_init.go implements `mooncake fleet init`
-// (spec-45 PR13). The discovery pieces — mDNS browse, SSH-config
-// parser, peers.toml loader, agentd probe — already shipped in spec-45
-// PRs 12 / 13.5 / 13.6. This file is the interactive wrapper that lets
-// the operator add discovered candidates to peers.toml in one
-// command instead of hand-editing TOML.
+// Package fleet implements the `mooncake fleet` subcommand tree. This
+// file owns `fleet init` (spec-45 PR13) — the interactive wrapper that
+// adds discovered candidates to peers.toml in one command instead of
+// hand-editing TOML. The discovery pieces — mDNS browse, SSH-config
+// parser, peers.toml loader, agentd probe — live in internal/fleet
+// (shipped in spec-45 PRs 12 / 13.5 / 13.6).
 package fleet
 
 import (

@@ -43,9 +43,13 @@ func RunLoop(opts RunOptions) (*LoopResult, error) {
 		fmt.Fprintln(os.Stderr, AutoApplyWarning)
 	}
 
-	client, err := llm.NewClient()
+	client, err := llm.NewClientWithOptions(llm.ClientOptions{
+		Provider: opts.Provider,
+		Endpoint: opts.Endpoint,
+		Model:    opts.Model,
+	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to create Claude client: %w", err)
+		return nil, fmt.Errorf("failed to create LLM client: %w", err)
 	}
 
 	var iterations []IterationLog

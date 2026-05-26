@@ -35,6 +35,7 @@ type RunOptions struct {
 	UseStdin      bool
 	RepoRoot      string
 	Provider      string
+	Endpoint      string
 	Model         string
 	MaxIterations int
 	// AutoApply skips the plan-confirm gate (spec-67 §10). Required for
