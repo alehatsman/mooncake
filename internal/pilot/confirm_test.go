@@ -10,39 +10,162 @@ import (
 func TestParseResponse(t *testing.T) {
 	cases := []struct {
 		in     string
+		style  Style
 		want   ResponseKind
 		wantN  int
 		reason string
 	}{
-		{"", RespReject, 0, "empty defaults to N (spec-67 §10)"},
-		{"y", RespApply, 0, "y is apply"},
-		{"Y", RespApply, 0, "case-insensitive"},
-		{"yes", RespApply, 0, "long form"},
-		{"apply", RespApply, 0, "verbose form"},
-		{"n", RespReject, 0, "n is reject"},
-		{"no", RespReject, 0, "long form reject"},
-		{"reject", RespReject, 0, "verbose reject"},
-		{"edit", RespEdit, 0, "edit triggers editor"},
-		{"e", RespEdit, 0, "e shorthand"},
-		{"abort", RespAbort, 0, "abort stops loop"},
-		{"q", RespAbort, 0, "q quits"},
-		{"quit", RespAbort, 0, "quit verb"},
-		{"explain 3", RespExplain, 3, "explain takes a step index"},
-		{"EXPLAIN 12", RespExplain, 12, "explain is case-insensitive"},
-		{"  explain   2  ", RespExplain, 2, "whitespace tolerated"},
-		{"explain", RespInvalid, 0, "bare explain without N is invalid"},
-		{"explain abc", RespInvalid, 0, "non-numeric N is invalid"},
-		{"explain 0", RespInvalid, 0, "step numbers are 1-based"},
-		{"explain -1", RespInvalid, 0, "negative is invalid"},
-		{"yes please", RespInvalid, 0, "no fuzzy yes/no — exact tokens only"},
-		{"bogus", RespInvalid, 0, "unknown command"},
+		{"", StylePlan, RespReject, 0, "empty defaults to N (spec-67 §10)"},
+		{"y", StylePlan, RespApply, 0, "y is apply"},
+		{"Y", StylePlan, RespApply, 0, "case-insensitive"},
+		{"yes", StylePlan, RespApply, 0, "long form"},
+		{"apply", StylePlan, RespApply, 0, "verbose form"},
+		{"n", StylePlan, RespReject, 0, "n is reject"},
+		{"no", StylePlan, RespReject, 0, "long form reject"},
+		{"reject", StylePlan, RespReject, 0, "verbose reject"},
+		{"edit", StylePlan, RespEdit, 0, "edit triggers editor"},
+		{"e", StylePlan, RespEdit, 0, "e shorthand"},
+		{"abort", StylePlan, RespAbort, 0, "abort stops loop"},
+		{"q", StylePlan, RespAbort, 0, "q quits"},
+		{"quit", StylePlan, RespAbort, 0, "quit verb"},
+		{"explain 3", StylePlan, RespExplain, 3, "explain takes a step index"},
+		{"EXPLAIN 12", StylePlan, RespExplain, 12, "explain is case-insensitive"},
+		{"  explain   2  ", StylePlan, RespExplain, 2, "whitespace tolerated"},
+		{"explain", StylePlan, RespInvalid, 0, "bare explain without N is invalid"},
+		{"explain abc", StylePlan, RespInvalid, 0, "non-numeric N is invalid"},
+		{"explain 0", StylePlan, RespInvalid, 0, "step numbers are 1-based"},
+		{"explain -1", StylePlan, RespInvalid, 0, "negative is invalid"},
+		{"yes please", StylePlan, RespInvalid, 0, "no fuzzy yes/no — exact tokens only"},
+		{"bogus", StylePlan, RespInvalid, 0, "unknown command"},
+		// Step-style bulk-approve tokens.
+		{"approve_next 1", StyleStep, RespApproveNext, 1, "approve_next 1 maps under step style"},
+		{"approve_next 12", StyleStep, RespApproveNext, 12, "approve_next accepts multi-digit N"},
+		{"  approve_next   3  ", StyleStep, RespApproveNext, 3, "approve_next tolerates whitespace"},
+		{"APPROVE_NEXT 2", StyleStep, RespApproveNext, 2, "approve_next is case-insensitive"},
+		{"approve_next 0", StyleStep, RespInvalid, 0, "approve_next 0 is invalid (N must be ≥ 1)"},
+		{"approve_next -1", StyleStep, RespInvalid, 0, "negative N is invalid"},
+		{"approve_next", StyleStep, RespInvalid, 0, "bare approve_next without N is invalid"},
+		{"approve_next abc", StyleStep, RespInvalid, 0, "non-numeric N is invalid"},
+		{"approve_thread", StyleStep, RespApproveThread, 0, "approve_thread under step style"},
+		{"APPROVE_THREAD", StyleStep, RespApproveThread, 0, "approve_thread is case-insensitive"},
+		// Plan-style must reject the step-only tokens (plan §3).
+		{"approve_next 3", StylePlan, RespInvalid, 0, "plan style rejects approve_next"},
+		{"approve_thread", StylePlan, RespInvalid, 0, "plan style rejects approve_thread"},
 	}
 	for _, tc := range cases {
-		got := ParseResponse(tc.in)
+		got := ParseResponse(tc.in, tc.style)
 		if got.Kind != tc.want || got.N != tc.wantN {
-			t.Errorf("ParseResponse(%q) = (%v, %d); want (%v, %d) — %s",
-				tc.in, got.Kind, got.N, tc.want, tc.wantN, tc.reason)
+			t.Errorf("ParseResponse(%q, %v) = (%v, %d); want (%v, %d) — %s",
+				tc.in, tc.style, got.Kind, got.N, tc.want, tc.wantN, tc.reason)
 		}
+	}
+}
+
+func TestConfirmPlan_StepGateAutoApproveCountdown(t *testing.T) {
+	state := &StepGateState{}
+	// First call: operator picks `approve_next 2` — this applies the
+	// current step AND auto-approves the next two without prompting.
+	in := strings.NewReader("approve_next 2\n")
+	out := &bytes.Buffer{}
+	result, err := ConfirmPlanStep(in, out, []byte(samplePlan), state)
+	if err != nil {
+		t.Fatalf("ConfirmPlanStep call 1: %v", err)
+	}
+	if result.Outcome != OutcomeApply {
+		t.Fatalf("call 1 outcome = %v, want Apply", result.Outcome)
+	}
+	if state.RemainingAutoApprovals != 2 {
+		t.Errorf("state.RemainingAutoApprovals = %d, want 2", state.RemainingAutoApprovals)
+	}
+
+	// Calls 2 and 3 must short-circuit to Apply WITHOUT reading from
+	// the input — pass a reader that would error if read.
+	for i := 2; i <= 3; i++ {
+		emptyReader := strings.NewReader("")
+		out := &bytes.Buffer{}
+		result, err := ConfirmPlanStep(emptyReader, out, []byte(samplePlan), state)
+		if err != nil {
+			t.Fatalf("ConfirmPlanStep call %d: %v", i, err)
+		}
+		if result.Outcome != OutcomeApply {
+			t.Errorf("call %d outcome = %v, want Apply (auto-approve)", i, result.Outcome)
+		}
+		if out.Len() != 0 {
+			t.Errorf("call %d should not render plan when auto-approving; got %q", i, out.String())
+		}
+	}
+	if state.RemainingAutoApprovals != 0 {
+		t.Errorf("after 2 auto-approvals counter = %d, want 0", state.RemainingAutoApprovals)
+	}
+
+	// Call 4: counter is exhausted, must prompt again. Reject to keep
+	// the test deterministic.
+	in4 := strings.NewReader("n\n")
+	out4 := &bytes.Buffer{}
+	result4, err := ConfirmPlanStep(in4, out4, []byte(samplePlan), state)
+	if err != nil {
+		t.Fatalf("ConfirmPlanStep call 4: %v", err)
+	}
+	if result4.Outcome != OutcomeReject {
+		t.Errorf("call 4 outcome = %v, want Reject after counter exhausted", result4.Outcome)
+	}
+	if !strings.Contains(out4.String(), "Apply?") {
+		t.Errorf("call 4 should re-prompt; got %q", out4.String())
+	}
+}
+
+func TestConfirmPlan_StepGateApproveThreadIsSticky(t *testing.T) {
+	state := &StepGateState{}
+	in := strings.NewReader("approve_thread\n")
+	out := &bytes.Buffer{}
+	result, err := ConfirmPlanStep(in, out, []byte(samplePlan), state)
+	if err != nil {
+		t.Fatalf("ConfirmPlanStep: %v", err)
+	}
+	if result.Outcome != OutcomeApply {
+		t.Fatalf("approve_thread outcome = %v, want Apply", result.Outcome)
+	}
+	if !state.ApprovedThread {
+		t.Error("state.ApprovedThread should be true after approve_thread")
+	}
+	// Subsequent calls must Apply without reading input regardless of
+	// how many.
+	for i := 0; i < 5; i++ {
+		result, err := ConfirmPlanStep(strings.NewReader(""), &bytes.Buffer{}, []byte(samplePlan), state)
+		if err != nil {
+			t.Fatalf("sticky call %d: %v", i, err)
+		}
+		if result.Outcome != OutcomeApply {
+			t.Errorf("sticky call %d outcome = %v, want Apply", i, result.Outcome)
+		}
+	}
+}
+
+func TestConfirmPlan_StepStylePromptIncludesBulkTokens(t *testing.T) {
+	state := &StepGateState{}
+	in := strings.NewReader("n\n")
+	out := &bytes.Buffer{}
+	_, _ = ConfirmPlanStep(in, out, []byte(samplePlan), state)
+	if !strings.Contains(out.String(), "approve_next N/approve_thread") {
+		t.Errorf("step-style prompt should advertise bulk-approve tokens; got: %s", out.String())
+	}
+}
+
+func TestConfirmPlan_PlanStyleRejectsStepTokens(t *testing.T) {
+	// Under StylePlan, `approve_next 3` and `approve_thread` are
+	// invalid tokens — the gate must re-prompt and eventually take an
+	// explicit reject.
+	in := strings.NewReader("approve_next 3\napprove_thread\nn\n")
+	out := &bytes.Buffer{}
+	result, err := ConfirmPlan(in, out, []byte(samplePlan))
+	if err != nil {
+		t.Fatalf("ConfirmPlan: %v", err)
+	}
+	if result.Outcome != OutcomeReject {
+		t.Errorf("Outcome = %v, want Reject after step tokens rejected", result.Outcome)
+	}
+	if !strings.Contains(out.String(), "did not understand") {
+		t.Errorf("plan style should print invalid-help for step tokens; got: %s", out.String())
 	}
 }
 

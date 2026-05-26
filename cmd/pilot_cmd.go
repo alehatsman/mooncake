@@ -57,6 +57,10 @@ func pilotCommand() *cli.Command {
 						Name:  "auto-apply",
 						Usage: "Skip the plan-confirm gate (required for unattended/CI runs; spec-67 §10)",
 					},
+					&cli.StringFlag{
+						Name:  "style",
+						Usage: "Planning style: plan (single complete plan, default) or step (one action per turn). Overrides MOONCAKE_PILOT_STYLE.",
+					},
 				},
 				Action: pilotRunAction,
 			},
@@ -76,6 +80,11 @@ func pilotRunAction(c *cli.Context) error {
 		return fmt.Errorf("--goal is required")
 	}
 
+	style, err := resolvePilotStyle(c.String("style"), os.Getenv("MOONCAKE_PILOT_STYLE"))
+	if err != nil {
+		return err
+	}
+
 	repoRoot, err := os.Getwd()
 	if err != nil {
 		return fmt.Errorf("failed to get working directory: %w", err)
@@ -91,6 +100,7 @@ func pilotRunAction(c *cli.Context) error {
 		Model:         model,
 		MaxIterations: maxIterations,
 		AutoApply:     c.Bool("auto-apply"),
+		Style:         style,
 	}
 
 	if planPath == "" && !useStdin {
@@ -129,6 +139,29 @@ func pilotRunAction(c *cli.Context) error {
 
 	printPilotSummary(log)
 	return nil
+}
+
+// resolvePilotStyle implements the precedence chain documented in
+// spec-67 §6.1 + plan §6: CLI --style > MOONCAKE_PILOT_STYLE env >
+// built-in default `plan`. Anything outside the {plan, step}
+// whitelist is a hard error so a typo doesn't silently downgrade the
+// run.
+func resolvePilotStyle(cliVal, envVal string) (pilot.Style, error) {
+	raw := cliVal
+	if raw == "" {
+		raw = envVal
+	}
+	if raw == "" {
+		return pilot.StylePlan, nil
+	}
+	switch raw {
+	case string(pilot.StylePlan):
+		return pilot.StylePlan, nil
+	case string(pilot.StyleStep):
+		return pilot.StyleStep, nil
+	default:
+		return "", fmt.Errorf("invalid --style %q (want plan or step)", raw)
+	}
 }
 
 func printPilotSummary(log *pilot.IterationLog) {
