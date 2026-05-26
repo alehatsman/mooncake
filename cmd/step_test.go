@@ -8,7 +8,6 @@ import (
 
 	"github.com/alehatsman/mooncake/internal/config"
 	"github.com/alehatsman/mooncake/internal/executor"
-	"gopkg.in/yaml.v3"
 )
 
 // MT-22 regression tests: `mooncake step` must surface the full
@@ -144,9 +143,7 @@ func TestBuildStepJSON_DataDoesNotShadowSharedScalars(t *testing.T) {
 // can assert the strict shape without rebuilding the cli.Context.
 func strictDecodeStep(raw string) error {
 	var step config.Step
-	dec := yaml.NewDecoder(bytes.NewReader([]byte(raw)))
-	dec.KnownFields(true)
-	return dec.Decode(&step)
+	return config.DecodeAutoStrict([]byte(raw), &step)
 }
 
 // MT-83: `mooncake step` must reject unknown fields the way `apply`
@@ -206,3 +203,23 @@ func errContainsAll(err error, needles ...string) bool {
 }
 
 func bytesContains(s, n string) bool { return len(n) == 0 || bytes.Contains([]byte(s), []byte(n)) }
+
+// config-json-input: `mooncake step` accepts JSON as well as YAML. Pilots
+// emit compact JSON to save tokens; strict-mode (MT-83) still applies.
+func TestStepStrictDecode_AcceptsJSONInput(t *testing.T) {
+	raw := `{"shell":{"cmd":"echo hi"}}`
+	if err := strictDecodeStep(raw); err != nil {
+		t.Errorf("expected clean decode for JSON step, got: %v", err)
+	}
+}
+
+func TestStepStrictDecode_RejectsUnknownFieldFromJSON(t *testing.T) {
+	raw := `{"wait.command":{"cmd":"exit 42","expected_exit":42}}`
+	err := strictDecodeStep(raw)
+	if err == nil {
+		t.Fatal("expected error for unknown field expected_exit in JSON input, got nil")
+	}
+	if !errContainsAll(err, "expected_exit", "not found") {
+		t.Errorf("error should name the unknown field; got: %v", err)
+	}
+}

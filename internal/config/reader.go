@@ -1,11 +1,8 @@
 package config
 
 import (
-	"bufio"
 	"bytes"
-	"errors"
 	"fmt"
-	"io"
 	"os"
 	"strings"
 
@@ -49,32 +46,28 @@ func (r *YAMLConfigReader) ReadConfig(path string) (*ParsedConfig, error) {
 // Returns parsed config (with steps, global vars, version), diagnostics (which may include warnings), and any parsing errors
 func (r *YAMLConfigReader) ReadConfigWithValidation(path string) (*ParsedConfig, []Diagnostic, error) {
 	// #nosec G304 -- User-specified config file path is intentional and required functionality
-	f, err := os.Open(path)
+	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, nil, err
 	}
-	defer func() {
-		closeErr := f.Close()
-		if closeErr != nil {
-			fmt.Fprintf(os.Stderr, "failed to close config file %s: %v\n", path, closeErr)
-		}
-	}()
 
-	// Parse YAML to yaml.Node to preserve source location information
-	var rootNode yaml.Node
-	decoder := yaml.NewDecoder(f)
-	err = decoder.Decode(&rootNode)
+	// MT-73: empty or whitespace-only files would otherwise surface as
+	// io.EOF (YAML) or "unexpected end of JSON input" (JSON). Replace with
+	// a clear "what to put here" message before format detection runs.
+	if len(bytes.TrimSpace(data)) == 0 {
+		return nil, nil, fmt.Errorf("config file is empty: %s — expected a list of steps (e.g. `- shell: echo hello`) or a `steps:` block", path)
+	}
+
+	// Parse to yaml.Node, auto-detecting YAML vs JSON input format.
+	// JSON input is round-tripped through yaml.Marshal so the resulting
+	// node tree is indistinguishable from a YAML-sourced one — downstream
+	// code (location map, secret-tag substitution, strict revalidation)
+	// works unchanged.
+	rootNodePtr, err := DecodeAutoNode(data)
 	if err != nil {
-		// MT-73: yaml.NewDecoder returns io.EOF for empty or
-		// whitespace-only files. The raw "EOF" string in the user-
-		// facing error tells the operator nothing about what was
-		// expected. Surface a clear "what to put here" message
-		// instead.
-		if errors.Is(err, io.EOF) {
-			return nil, nil, fmt.Errorf("config file is empty: %s — expected a list of steps (e.g. `- shell: echo hello`) or a `steps:` block", path)
-		}
 		return nil, nil, err
 	}
+	rootNode := *rootNodePtr
 
 	// spec-23 §3: rewrite `!secret <ref>` tagged scalars to sentinel-
 	// marker strings BEFORE downstream decode. Action-struct fields are
@@ -427,24 +420,17 @@ func (r *YAMLConfigReader) ReadVariables(path string) (map[string]interface{}, e
 	}
 
 	// #nosec G304 -- User-specified variables file path is intentional and required functionality
-	file, err := os.Open(path)
+	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
-	defer func() {
-		closeErr := file.Close()
-		if closeErr != nil {
-			fmt.Fprintf(os.Stderr, "failed to close variables file %s: %v\n", path, closeErr)
-		}
-	}()
-
-	reader := bufio.NewReader(file)
 
 	variables := make(map[string]interface{})
+	if len(bytes.TrimSpace(data)) == 0 {
+		return variables, nil
+	}
 
-	decoder := yaml.NewDecoder(reader)
-	err = decoder.Decode(&variables)
-	if err != nil {
+	if err := DecodeAuto(data, &variables); err != nil {
 		return nil, err
 	}
 
