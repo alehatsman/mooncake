@@ -11,6 +11,7 @@ import (
 
 	"github.com/urfave/cli/v2"
 
+	fleetcmd "github.com/alehatsman/mooncake/cmd/fleet"
 	"github.com/alehatsman/mooncake/internal/fleet"
 	"github.com/alehatsman/mooncake/internal/ops"
 	_ "github.com/alehatsman/mooncake/internal/register" // Register action handlers
@@ -200,7 +201,7 @@ func createApp() *cli.App {
 			historyCommand(),
 			mcpCommand(),
 			agentdCommand(),
-			fleetCommand(),
+			fleetcmd.Command(),
 			stepCommand(),
 			taskCommand(),
 			toolCommand(),
@@ -250,6 +251,11 @@ func applyQuietUsageError(cmds []*cli.Command) {
 }
 
 func main() {
+	// Propagate the linker-stamped binary version into the fleet
+	// subpackage so `fleet bootstrap` can report it as the controller's
+	// version to remote agentds.
+	fleetcmd.Version = version
+
 	app := createApp()
 
 	if err := app.Run(reorderArgs(os.Args, app)); err != nil {

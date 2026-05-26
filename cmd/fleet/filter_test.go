@@ -1,4 +1,4 @@
-package main
+package fleet
 
 import (
 	"io"

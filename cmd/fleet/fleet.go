@@ -1,4 +1,4 @@
-package main
+package fleet
 
 import (
 	"context"
@@ -17,7 +17,14 @@ import (
 	"github.com/alehatsman/mooncake/internal/fleet/transport"
 )
 
-func fleetCommand() *cli.Command {
+// Version is the binary's controller version, stamped at build time by
+// goreleaser linker flags into cmd/mooncake.go's `version` and copied
+// here from main() before Command() is invoked. Lives at the package
+// level (not closed over Command()) so fleet subcommands deep in the
+// tree can read it without threading the value through every action.
+var Version = "dev"
+
+func Command() *cli.Command {
 	return &cli.Command{
 		Name:  "fleet",
 		Usage: "Manage and operate a personal fleet of mooncake peers (experimental)",
@@ -124,7 +131,7 @@ func fleetBootstrapAction(c *cli.Context) error {
 		Tags:              c.StringSlice("tag"),
 		Port:              c.Int("agentd-port"),
 		LocalBinary:       binPath,
-		ControllerVersion: version,
+		ControllerVersion: Version,
 		Upgrade:           c.Bool("upgrade"),
 		AsUser:            c.Bool("user"),
 		Writer:            w,

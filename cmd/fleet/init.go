@@ -4,7 +4,7 @@
 // PRs 12 / 13.5 / 13.6. This file is the interactive wrapper that lets
 // the operator add discovered candidates to peers.toml in one
 // command instead of hand-editing TOML.
-package main
+package fleet
 
 import (
 	"bufio"

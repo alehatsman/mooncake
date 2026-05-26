@@ -1,4 +1,4 @@
-package main
+package fleet
 
 import (
 	"bytes"
@@ -164,7 +164,7 @@ func writePeersToml(t *testing.T, dir string, entries map[string]string, token s
 func captureLogsApp() (*cli.App, *bytes.Buffer) {
 	out := &bytes.Buffer{}
 	return &cli.App{
-		Commands:       []*cli.Command{fleetCommand()},
+		Commands:       []*cli.Command{Command()},
 		Writer:         out,
 		ErrWriter:      out,
 		ExitErrHandler: func(*cli.Context, error) {},

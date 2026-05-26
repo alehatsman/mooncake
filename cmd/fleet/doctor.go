@@ -1,4 +1,4 @@
-package main
+package fleet
 
 // fleet_doctor.go implements `mooncake fleet doctor <peer>` — an
 // opinionated probe ladder that turns "peer is unreachable" into a

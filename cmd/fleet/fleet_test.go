@@ -1,4 +1,4 @@
-package main
+package fleet
 
 import (
 	"bytes"
@@ -20,7 +20,7 @@ import (
 // returns cli.Exit.
 func newTestFleetApp() *cli.App {
 	return &cli.App{
-		Commands:                  []*cli.Command{fleetCommand()},
+		Commands:                  []*cli.Command{Command()},
 		Writer:                    io.Discard,
 		ErrWriter:                 io.Discard,
 		ExitErrHandler:            func(*cli.Context, error) {},
@@ -31,7 +31,7 @@ func newTestFleetApp() *cli.App {
 // TestFleetCommand_Help ensures the command tree wires up: `fleet` exists,
 // `fleet apply` is a subcommand, and the flags are reachable.
 func TestFleetCommand_Help(t *testing.T) {
-	cmd := fleetCommand()
+	cmd := Command()
 	if cmd.Name != "fleet" {
 		t.Fatalf("Name = %q, want fleet", cmd.Name)
 	}
