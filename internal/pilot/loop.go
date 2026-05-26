@@ -28,6 +28,10 @@ const defaultMaxIterations = 5
 // different budget can fork the value if/when --llm-timeout lands.
 const planGenTimeout = 5 * time.Minute
 
+// newClient is the package-level LLM-client factory so tests can swap
+// in a stub. Mirrors the editorRunner pattern in confirm.go.
+var newClient = llm.NewClientWithOptions
+
 type LoopResult struct {
 	Iterations []IterationLog
 	StopReason StopReason
@@ -43,7 +47,7 @@ func RunLoop(opts RunOptions) (*LoopResult, error) {
 		fmt.Fprintln(os.Stderr, AutoApplyWarning)
 	}
 
-	client, err := llm.NewClientWithOptions(llm.ClientOptions{
+	client, err := newClient(llm.ClientOptions{
 		Provider: opts.Provider,
 		Endpoint: opts.Endpoint,
 		Model:    opts.Model,
@@ -51,6 +55,10 @@ func RunLoop(opts RunOptions) (*LoopResult, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to create LLM client: %w", err)
 	}
+
+	// Single per-loop state for the step-style bulk-approve gate.
+	// Allocated unconditionally; only ConfirmPlanStep consults it.
+	stepGate := &StepGateState{}
 
 	var iterations []IterationLog
 	var lastIteration *IterationSummary
@@ -75,6 +83,7 @@ func RunLoop(opts RunOptions) (*LoopResult, error) {
 			Goal:          opts.Goal,
 			Snapshot:      snapJSON,
 			LastIteration: lastIteration,
+			Style:         opts.Style,
 		})
 		if err != nil {
 			return nil, fmt.Errorf("failed to build prompt: %w", err)
@@ -120,6 +129,26 @@ func RunLoop(opts RunOptions) (*LoopResult, error) {
 			}, nil
 		}
 
+		// Step-style contract enforcement (spec-67 §12.3, plan §4 + §8).
+		// Helper decides between done / continue / violation; the loop
+		// reacts. Extracted so RunLoop's gocyclo stays under cap.
+		if opts.Style == StyleStep {
+			disp, doneLog, summary := stepContractDispatch(planBytes, opts, iterNum, planHash)
+			switch disp {
+			case stepDispDone:
+				iterations = append(iterations, *doneLog)
+				return &LoopResult{
+					Iterations: iterations,
+					StopReason: StopStepDone,
+					FinalLog:   doneLog,
+				}, nil
+			case stepDispViolation:
+				iterations = append(iterations, *doneLog)
+				lastIteration = summary
+				continue
+			}
+		}
+
 		wrappedBytes, err := WrapInTransaction(planBytes)
 		if err != nil {
 			log := writeLoopFailureLog(opts.RepoRoot, iterNum, opts, planHash, "wrap_failed", err.Error())
@@ -139,11 +168,27 @@ func RunLoop(opts RunOptions) (*LoopResult, error) {
 		// stay unaffected on non-interactive shells.
 		var gate planGate
 		if !opts.AutoApply {
-			if ttyErr := EnsureInteractive(os.Stdin); ttyErr != nil {
-				return &LoopResult{Iterations: iterations, StopReason: StopFailed}, ttyErr
+			// Step-style with an already-engaged auto-approve gate can
+			// skip the TTY check entirely — ConfirmPlanStep short-
+			// circuits without reading stdin. Plan-style and the first
+			// step call still need an interactive terminal.
+			needsTTY := true
+			if opts.Style == StyleStep && (stepGate.ApprovedThread || stepGate.RemainingAutoApprovals > 0) {
+				needsTTY = false
 			}
-			gate = func() (ConfirmResult, error) {
-				return ConfirmPlan(os.Stdin, os.Stderr, planBytes)
+			if needsTTY {
+				if ttyErr := EnsureInteractive(os.Stdin); ttyErr != nil {
+					return &LoopResult{Iterations: iterations, StopReason: StopFailed}, ttyErr
+				}
+			}
+			if opts.Style == StyleStep {
+				gate = func() (ConfirmResult, error) {
+					return ConfirmPlanStep(os.Stdin, os.Stderr, planBytes, stepGate)
+				}
+			} else {
+				gate = func() (ConfirmResult, error) {
+					return ConfirmPlan(os.Stdin, os.Stderr, planBytes)
+				}
 			}
 		}
 
@@ -247,7 +292,12 @@ func RunLoop(opts RunOptions) (*LoopResult, error) {
 		_, _ = WriteIterationLog(opts.RepoRoot, iterLog)
 		iterations = append(iterations, *iterLog)
 
-		if len(changedFiles) == 0 {
+		// Under --style step the goal-reached signal is an empty plan
+		// (handled above); a no-op step is not a stop condition — the
+		// model may legitimately propose a diagnostic step (e.g. a
+		// read-only shell command) and continue iterating. Only plan-
+		// style treats "no files changed" as "we're done".
+		if len(changedFiles) == 0 && opts.Style != StyleStep {
 			return &LoopResult{
 				Iterations: iterations,
 				StopReason: StopSuccess,
@@ -418,4 +468,53 @@ func applyPlanIteration(wrappedBytes []byte, repoRoot string, log logger.Logger,
 	out.ChangedFiles, _ = CollectChangedFiles(repoRoot)
 	out.DiffStat, _ = CollectDiffStat(repoRoot)
 	return out, nil
+}
+
+// stepDisposition is the three-way result of stepContractDispatch.
+type stepDisposition int
+
+const (
+	// stepDispProceed: plan parsed and has exactly one step — let the
+	// rest of the iteration run as normal. Also the safe fallback when
+	// decode fails — the regular validation path will surface that.
+	stepDispProceed stepDisposition = iota
+	// stepDispDone: empty plan, the documented goal-reached signal
+	// (spec-67 §12.3). Caller should write the done log and return
+	// StopStepDone.
+	stepDispDone
+	// stepDispViolation: >1 step, contract violation (plan §8 dec. 2).
+	// Caller appends the failure log and continues the loop so the
+	// next prompt carries the error back to the model.
+	stepDispViolation
+)
+
+func stepContractDispatch(planBytes []byte, opts RunOptions, iterNum int, planHash string) (stepDisposition, *IterationLog, *IterationSummary) {
+	steps, _, _, err := decodePlan(planBytes)
+	if err != nil {
+		return stepDispProceed, nil, nil
+	}
+	switch {
+	case len(steps) == 0:
+		doneLog := &IterationLog{
+			Iteration: iterNum,
+			Goal:      opts.Goal,
+			PlanHash:  planHash,
+			Status:    "step_done",
+			Provider:  opts.Provider,
+			Model:     opts.Model,
+		}
+		_, _ = WriteIterationLog(opts.RepoRoot, doneLog)
+		return stepDispDone, doneLog, nil
+	case len(steps) > 1:
+		errMsg := fmt.Sprintf("--style step requires exactly one step, got %d", len(steps))
+		rejLog := writeLoopFailureLog(opts.RepoRoot, iterNum, opts, planHash, "step_contract_violation", errMsg)
+		summary := &IterationSummary{
+			Iteration:    iterNum,
+			PlanHash:     planHash,
+			Status:       "step_contract_violation",
+			ErrorMessage: errMsg,
+		}
+		return stepDispViolation, rejLog, summary
+	}
+	return stepDispProceed, nil, nil
 }

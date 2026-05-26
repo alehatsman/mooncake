@@ -28,9 +28,11 @@ const promptConstraints = `CONSTRAINTS:
 
 // buildSystemPrompt assembles the system prompt by combining the static
 // preamble + best-practices + constraints with a schema-derived action
-// vocabulary chunk. The vocabulary is generated from internal/config/schema.json
-// so new actions surface without editing this file (spec-67 §12.2).
-func buildSystemPrompt() (string, error) {
+// vocabulary chunk and a style-specific TASK STYLE block. The
+// vocabulary is generated from internal/config/schema.json so new
+// actions surface without editing this file (spec-67 §12.2). The
+// style fragment is the only per-style difference (spec-67 §12.3).
+func buildSystemPrompt(style Style) (string, error) {
 	chunk, err := BuildSchemaChunk()
 	if err != nil {
 		return "", fmt.Errorf("build schema chunk: %w", err)
@@ -43,11 +45,13 @@ func buildSystemPrompt() (string, error) {
 	b.WriteString(promptBestPractices)
 	b.WriteString("\n\n")
 	b.WriteString(promptConstraints)
+	b.WriteString("\n\n")
+	b.WriteString(selectStyleFragment(style))
 	return b.String(), nil
 }
 
 func BuildPrompt(input PlanInput) (string, string, error) {
-	systemPrompt, err := buildSystemPrompt()
+	systemPrompt, err := buildSystemPrompt(input.Style)
 	if err != nil {
 		return "", "", err
 	}
@@ -99,11 +103,6 @@ func BuildPrompt(input PlanInput) (string, string, error) {
 
 	b.WriteString("Generate a Mooncake YAML plan to accomplish the goal.\n")
 	b.WriteString("Output ONLY a YAML array of steps (starting with -), no other text.\n")
-	b.WriteString("Example format:\n")
-	b.WriteString("- name: step1\n")
-	b.WriteString("  file.write:\n")
-	b.WriteString("    path: /path/to/file\n")
-	b.WriteString("    content: data\n")
 
 	return systemPrompt, b.String(), nil
 }

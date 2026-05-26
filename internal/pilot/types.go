@@ -41,12 +41,18 @@ type RunOptions struct {
 	// AutoApply skips the plan-confirm gate (spec-67 §10). Required for
 	// unattended runs (CI, scripted). Emits a warning at thread start.
 	AutoApply bool
+	// Style selects the planning style (spec-67 §12.3). Zero value is
+	// StylePlan (the historical default).
+	Style Style
 }
 
 type PlanInput struct {
 	Goal          string
 	Snapshot      []byte
 	LastIteration *IterationSummary
+	// Style picks the trailing TASK STYLE block in the system prompt
+	// (spec-67 §12.3). Zero value is StylePlan.
+	Style Style
 }
 
 type IterationSummary struct {
@@ -68,4 +74,7 @@ const (
 	// StopAborted is set when the operator picks `abort` at the plan-
 	// confirm gate (spec-67 §10).
 	StopAborted StopReason = "aborted"
+	// StopStepDone fires under --style step when the model emits an
+	// empty plan, the documented "goal reached" signal (spec-67 §12.3).
+	StopStepDone StopReason = "step_done"
 )
