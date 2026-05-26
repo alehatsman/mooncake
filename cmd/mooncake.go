@@ -270,7 +270,7 @@ func run(c *cli.Context) error {
 		if c.String("from-plan") != "" {
 			return fmt.Errorf("--dry-run is incompatible with --from-plan: the plan was already produced; just run `mooncake apply --from-plan <file>` to apply it, or `mooncake plan -c <config>` to re-preview")
 		}
-		return planCommand(c)
+		return planAction(c)
 	}
 
 	// Check if running from plan
@@ -430,7 +430,7 @@ func runWithSignalCtx(parent context.Context, body func(context.Context) error) 
 	return err
 }
 
-func factsCommand(c *cli.Context) error {
+func factsAction(c *cli.Context) error {
 	// Collect facts (cached)
 	f := facts.Collect()
 
@@ -462,7 +462,7 @@ func factsCommand(c *cli.Context) error {
 //
 // Wave 1: only kind:action resolves; run / resource / op fall through to a
 // typed not_found.
-func explainCommand(c *cli.Context) error {
+func explainAction(c *cli.Context) error {
 	if c.NArg() != 1 {
 		return fmt.Errorf("usage: mooncake explain <noun>")
 	}
@@ -741,8 +741,8 @@ func renderExplainNotFoundText(w io.Writer, p *explain.NotFoundPayload) {
 	}
 }
 
-// actionsListCommand lists all registered actions with their platform support.
-func actionsListCommand(c *cli.Context) error {
+// actionsListAction lists all registered actions with their platform support.
+func actionsListAction(c *cli.Context) error {
 	format := c.String("format")
 
 	// Validate format
@@ -824,7 +824,7 @@ func yesNo(b bool) string {
 // loadActionShowDefinition resolves <name> against the live registry
 // and returns the matching ActionMetadata + a schemagen Definition
 // generated with the same options actionsShowCommand renders from.
-// Extracted from actionsShowCommand so the F047 regression test can
+// Extracted from actionsShowAction so the F047 regression test can
 // drive the real lookup + generator path without forking a process
 // or refactoring stdout away from the command entry point.
 //
@@ -878,7 +878,7 @@ func loadActionShowDefinition(name string) (*actions.ActionMetadata, *schemagen.
 	return meta, def, nil
 }
 
-// actionsShowCommand prints a per-action card (dx proposal-04). The
+// actionsShowAction prints a per-action card (dx proposal-04). The
 // per-action surface is "what parameters does this action take, what's
 // required, what's the minimum example" — the question a user hits the
 // moment after `actions list`. All data is already in the registry +
@@ -887,7 +887,7 @@ func loadActionShowDefinition(name string) (*actions.ActionMetadata, *schemagen.
 // --format text (default) prints a human-shaped card; json/yaml dump
 // the schema Definition (already x-implements-*-decorated by
 // proposal-05) so editors and agents can consume it directly.
-func actionsShowCommand(c *cli.Context) error {
+func actionsShowAction(c *cli.Context) error {
 	if c.NArg() == 0 {
 		return fmt.Errorf("specify an action name; try `mooncake actions list`")
 	}
@@ -1133,7 +1133,7 @@ func writeFactsJSON(f *facts.Facts, path string) error {
 	return nil
 }
 
-func planCommand(c *cli.Context) error {
+func planAction(c *cli.Context) error {
 	configPath, err := resolveConfigPath(c)
 	if err != nil {
 		if printNoConfigHintAndExit(err, "plan") {
@@ -1430,7 +1430,7 @@ func riskBand(r int) string {
 	return "unknown"
 }
 
-func pilotRunCommand(c *cli.Context) error {
+func pilotRunAction(c *cli.Context) error {
 	goal := c.String("goal")
 	planPath := c.String("plan")
 	useStdin := c.Bool("stdin")
@@ -1522,7 +1522,7 @@ func printPilotSummary(log *pilot.IterationLog) {
 	}
 }
 
-func validateCommand(c *cli.Context) error {
+func validateAction(c *cli.Context) error {
 	configPath, err := resolveConfigPath(c)
 	if err != nil {
 		if printNoConfigHintAndExit(err, "validate") {
@@ -1618,298 +1618,15 @@ func createApp() *cli.App {
 			taskCommand(),
 			toolCommand(),
 			queryCommand(),
-			{
-				Name:   "apply",
-				Usage:  "Apply a playbook or saved plan. Use --dry-run to preview without changes.",
-				Flags:  applyFlags(),
-				Action: run,
-			},
-			{
-				Name:  "plan",
-				Usage: "Generate and display execution plan (dry-run)",
-				Flags: []cli.Flag{
-					&cli.StringFlag{
-						Name:    "config",
-						Aliases: []string{"c"},
-						Usage:   "Path to configuration file (default: ./mooncake.yml or ./mooncake/main.yml)",
-					},
-					&cli.StringSliceFlag{
-						Name:    "vars",
-						Aliases: []string{"v"},
-						Usage:   "Path to a variables file. Repeat to layer multiple files; later wins on key collision.",
-					},
-					&cli.StringFlag{
-						Name:    "tags",
-						Aliases: []string{"t"},
-						Usage:   "Filter steps by tags (comma-separated)",
-					},
-					&cli.StringFlag{
-						Name:  "skip-tags",
-						Usage: "Exclude steps whose tags appear in this list (comma-separated)",
-					},
-					&cli.StringFlag{
-						Name:    "format",
-						Aliases: []string{"f"},
-						Value:   "text",
-						Usage:   "Output format: text, json, or yaml",
-					},
-					&cli.BoolFlag{
-						Name:  "show-origins",
-						Value: false,
-						Usage: "Show origin file:line:col for each step",
-					},
-					&cli.BoolFlag{
-						Name:  "no-inspect",
-						Value: false,
-						Usage: "Skip the per-step state inspection pass (Spec 16). With this flag, plan output reflects only static YAML expansion — no would-change predictions.",
-					},
-					&cli.BoolFlag{
-						Name:    "diff",
-						Aliases: []string{"d"},
-						Value:   false,
-						Usage:   "Show unified diff for file steps that would change content",
-					},
-					&cli.StringFlag{
-						Name:    "output",
-						Aliases: []string{"o"},
-						Usage:   "Save plan to file (format determined by extension: .json, .yaml, .yml)",
-					},
-					// Sudo-credential flags: plan goes through the same
-					// dispatchRunner preflight as apply (spec-69 phase 4
-					// catches Sudo:true + AsUser + no-password at plan
-					// time). Without these flags, a plan against a step
-					// with as_user: root errors out before any prediction
-					// gets rendered — which is the right behavior for
-					// "fail at plan, not at apply" but inconvenient for
-					// preview workflows. These flags let operators feed
-					// the password to plan too.
-					&cli.StringFlag{Name: "sudo-pass-file", Usage: "Read sudo password from file (must have 0600 permissions)"},
-					&cli.StringFlag{Name: "sudo-pass", Aliases: []string{"s"}, Usage: "Sudo password (requires --insecure-sudo-pass)"},
-					&cli.BoolFlag{Name: "ask-become-pass", Aliases: []string{"K"}, Usage: "Prompt for sudo password interactively"},
-					&cli.BoolFlag{Name: "insecure-sudo-pass", Usage: "Allow --sudo-pass flag (WARNING: visible in shell history)"},
-				},
-				Action: planCommand,
-			},
-			{
-				Name:  "facts",
-				Usage: "Display system facts",
-				Flags: []cli.Flag{
-					&cli.StringFlag{
-						Name:    "format",
-						Aliases: []string{"f"},
-						Value:   "text",
-						Usage:   "Output format: text or json",
-					},
-					&cli.StringSliceFlag{
-						Name:    "query",
-						Aliases: []string{"q"},
-						Usage:   "Query a specific fact by dot-path key (e.g. go.version). Repeatable.",
-					},
-				},
-				Action: factsCommand,
-			},
-			{
-				Name:      "explain",
-				Usage:     "Look up typed information about a mooncake noun (action verb, run, resource, op)",
-				ArgsUsage: "<noun>",
-				Flags: []cli.Flag{
-					&cli.StringFlag{
-						Name:    "format",
-						Aliases: []string{"f"},
-						Value:   outputFormatText,
-						Usage:   "Output format: text, json, or yaml",
-					},
-					&cli.IntFlag{
-						Name:  "examples-limit",
-						Value: 3,
-						Usage: "Max example excerpts to include for kind:action results",
-					},
-				},
-				Action: explainCommand,
-			},
-			{
-				Name:  "metrics",
-				Usage: "Display live system metrics (CPU/GPU/memory/load/network)",
-				Flags: []cli.Flag{
-					&cli.StringFlag{
-						Name:    "format",
-						Aliases: []string{"f"},
-						Value:   "text",
-						Usage:   "Output format: text or json",
-					},
-					&cli.StringSliceFlag{
-						Name:    "query",
-						Aliases: []string{"q"},
-						Usage:   "Query a specific metric by key (e.g. cpu_usage_pct). Repeatable.",
-					},
-					&cli.StringSliceFlag{
-						Name:  "fields",
-						Usage: "Restrict output to these keys. Repeatable or comma-separated. Adds a _collected_at sibling map.",
-					},
-					&cli.BoolFlag{
-						Name:  "refresh",
-						Usage: "Force re-sample, bypassing TTL",
-					},
-					&cli.StringFlag{
-						Name:    "output",
-						Aliases: []string{"o"},
-						Usage:   "Save metrics to file (JSON)",
-					},
-				},
-				Action: metricsCommand,
-			},
-			{
-				Name:  "actions",
-				Usage: "Manage and inspect actions",
-				Subcommands: []*cli.Command{
-					{
-						Name:  "list",
-						Usage: "List all available actions with platform support",
-						Flags: []cli.Flag{
-							&cli.StringFlag{
-								Name:    "format",
-								Aliases: []string{"f"},
-								Value:   "text",
-								Usage:   "Output format: text or json",
-							},
-						},
-						Action: actionsListCommand,
-					},
-					{
-						Name:      "show",
-						Usage:     "Show per-action documentation (params, platforms, capabilities, minimum example)",
-						ArgsUsage: "<action-name>",
-						Flags: []cli.Flag{
-							&cli.StringFlag{
-								Name:    "format",
-								Aliases: []string{"f"},
-								Value:   "text",
-								Usage:   "Output format: text, json, or yaml",
-							},
-						},
-						Action: actionsShowCommand,
-					},
-				},
-			},
-			{
-				Name:  "runs",
-				Usage: "Submit and follow runs on the local agentd daemon",
-				Subcommands: []*cli.Command{
-					{
-						Name:  "apply",
-						Usage: "Submit a config to agentd and stream events back",
-						Flags: []cli.Flag{
-							&cli.StringFlag{Name: "config", Aliases: []string{"c"}, Usage: "Path to configuration file (default: ./mooncake.yml or ./mooncake/main.yml)"},
-							&cli.StringSliceFlag{Name: "vars", Aliases: []string{"v"}, Usage: "Path to a variables file. Repeat to layer."},
-							&cli.StringFlag{Name: "tags", Aliases: []string{"t"}, Usage: "Filter steps by tags (comma-separated)"},
-							&cli.StringFlag{Name: "base-dir", Usage: "Base directory the daemon should chdir into (default: dirname of --config)"},
-							&cli.StringFlag{Name: "goal", Aliases: []string{"g"}, Usage: "Free-text goal recorded with the run"},
-							&cli.BoolFlag{Name: "system", Usage: "Use the system-mode agentd socket (/run/mooncake/agentd.sock)"},
-						},
-						Action: runsApplyCommand,
-					},
-					{
-						Name:      "follow",
-						Usage:     "Stream events for an existing run, rendered like `apply`",
-						ArgsUsage: "<run_id>",
-						Flags: []cli.Flag{
-							&cli.BoolFlag{Name: "system", Usage: "Use the system-mode agentd socket"},
-						},
-						Action: runsFollowCommand,
-					},
-					{
-						Name:      "get",
-						Usage:     "Print the JSON record for one run",
-						ArgsUsage: "<run_id>",
-						Flags:     []cli.Flag{&cli.BoolFlag{Name: "system"}},
-						Action:    runsGetCommand,
-					},
-					{
-						Name:  "list",
-						Usage: "List runs known to the daemon",
-						Flags: []cli.Flag{
-							&cli.BoolFlag{Name: "system"},
-							// Daemon already returns JSON natively; accept the
-							// flag for symmetry with metrics / snapshot / facts
-							// so `--format json` doesn't error (#56).
-							&cli.StringFlag{Name: "format", Aliases: []string{"f"}, Value: "json", Usage: "Output format (currently only 'json' is supported)"},
-						},
-						Action: runsListCommand,
-					},
-				},
-			},
-			{
-				Name:  "pilot",
-				Usage: "Pilot operations",
-				Subcommands: []*cli.Command{
-					{
-						Name:  "run",
-						Usage: "Execute pilot iteration",
-						Flags: []cli.Flag{
-							&cli.StringFlag{
-								Name:     "goal",
-								Aliases:  []string{"g"},
-								Required: true,
-								Usage:    "Goal description",
-							},
-							&cli.StringFlag{
-								Name:    "plan",
-								Aliases: []string{"p"},
-								Usage:   "Path to plan YAML file",
-							},
-							&cli.BoolFlag{
-								Name:  "stdin",
-								Usage: "Read plan from stdin",
-							},
-							&cli.StringFlag{
-								Name:  "provider",
-								Usage: "LLM provider (claude for loop mode)",
-							},
-							&cli.StringFlag{
-								Name:  "model",
-								Value: "sonnet",
-								Usage: "Model name (when using --provider)",
-							},
-							&cli.IntFlag{
-								Name:  "max-iterations",
-								Value: 5,
-								Usage: "Maximum iterations for loop mode",
-							},
-							&cli.BoolFlag{
-								Name:  "auto-apply",
-								Usage: "Skip the plan-confirm gate (required for unattended/CI runs; spec-67 §10)",
-							},
-						},
-						Action: pilotRunCommand,
-					},
-				},
-			},
-			{
-				Name:  "validate",
-				Usage: "Validate configuration file without executing",
-				Flags: []cli.Flag{
-					&cli.StringFlag{
-						Name:    "config",
-						Aliases: []string{"c"},
-						Usage:   "Path to configuration file (default: ./mooncake.yml or ./mooncake/main.yml)",
-					},
-					&cli.StringSliceFlag{
-						Name:    "vars",
-						Aliases: []string{"v"},
-						Usage:   "Path to a variables file. Repeat to layer multiple files; later wins on key collision.",
-					},
-					&cli.StringFlag{
-						// MT-68: accept --output-format too so users
-						// who learned the verb on `apply` don't get a
-						// "flag not defined" error on `validate`.
-						Name:    "format",
-						Aliases: []string{"f", "output-format"},
-						Value:   "text",
-						Usage:   "Output format: text or json",
-					},
-				},
-				Action: validateCommand,
-			},
+			applyCommand(),
+			planCommand(),
+			factsCommand(),
+			explainCommand(),
+			metricsCommand(),
+			actionsCommand(),
+			runsCommand(),
+			pilotCommand(),
+			validateCommand(),
 		},
 	}
 

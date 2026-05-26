@@ -35,12 +35,64 @@ func agentdHTTPClient(systemMode bool) (*http.Client, string, error) {
 	return &http.Client{Transport: transport}, cfg.SocketPath, nil
 }
 
-// runsApplyCommand submits a config to the local agentd and streams events
+// runsCommand returns the `mooncake runs` parent with its four
+// daemon-facing subcommands (apply / follow / get / list).
+func runsCommand() *cli.Command {
+	return &cli.Command{
+		Name:  "runs",
+		Usage: "Submit and follow runs on the local agentd daemon",
+		Subcommands: []*cli.Command{
+			{
+				Name:  "apply",
+				Usage: "Submit a config to agentd and stream events back",
+				Flags: []cli.Flag{
+					&cli.StringFlag{Name: "config", Aliases: []string{"c"}, Usage: "Path to configuration file (default: ./mooncake.yml or ./mooncake/main.yml)"},
+					&cli.StringSliceFlag{Name: "vars", Aliases: []string{"v"}, Usage: "Path to a variables file. Repeat to layer."},
+					&cli.StringFlag{Name: "tags", Aliases: []string{"t"}, Usage: "Filter steps by tags (comma-separated)"},
+					&cli.StringFlag{Name: "base-dir", Usage: "Base directory the daemon should chdir into (default: dirname of --config)"},
+					&cli.StringFlag{Name: "goal", Aliases: []string{"g"}, Usage: "Free-text goal recorded with the run"},
+					&cli.BoolFlag{Name: "system", Usage: "Use the system-mode agentd socket (/run/mooncake/agentd.sock)"},
+				},
+				Action: runsApplyAction,
+			},
+			{
+				Name:      "follow",
+				Usage:     "Stream events for an existing run, rendered like `apply`",
+				ArgsUsage: "<run_id>",
+				Flags: []cli.Flag{
+					&cli.BoolFlag{Name: "system", Usage: "Use the system-mode agentd socket"},
+				},
+				Action: runsFollowAction,
+			},
+			{
+				Name:      "get",
+				Usage:     "Print the JSON record for one run",
+				ArgsUsage: "<run_id>",
+				Flags:     []cli.Flag{&cli.BoolFlag{Name: "system"}},
+				Action:    runsGetAction,
+			},
+			{
+				Name:  "list",
+				Usage: "List runs known to the daemon",
+				Flags: []cli.Flag{
+					&cli.BoolFlag{Name: "system"},
+					// Daemon already returns JSON natively; accept the
+					// flag for symmetry with metrics / snapshot / facts
+					// so `--format json` doesn't error (#56).
+					&cli.StringFlag{Name: "format", Aliases: []string{"f"}, Value: "json", Usage: "Output format (currently only 'json' is supported)"},
+				},
+				Action: runsListAction,
+			},
+		},
+	}
+}
+
+// runsApplyAction submits a config to the local agentd and streams events
 // back to stdout with the same rendering as a foreground `mooncake apply`.
 //
 // This is the agentd analog of `apply`: same UX, daemon-backed execution.
 // Vars files are passed via --vars (multi-valued).
-func runsApplyCommand(c *cli.Context) error {
+func runsApplyAction(c *cli.Context) error {
 	resolvedPath, err := resolveConfigPath(c)
 	if err != nil {
 		if printNoConfigHintAndExit(err, "runs apply") {
@@ -110,10 +162,10 @@ func runsApplyCommand(c *cli.Context) error {
 	return streamRunEvents(hc, submitResp.RunID)
 }
 
-// runsFollowCommand attaches to an already-submitted run and renders its
+// runsFollowAction attaches to an already-submitted run and renders its
 // events to stdout. If the run is already terminal, this still reads back
 // all replayable events from the daemon's store and prints a recap.
-func runsFollowCommand(c *cli.Context) error {
+func runsFollowAction(c *cli.Context) error {
 	runID := c.Args().First()
 	if runID == "" {
 		return cli.Exit("usage: mooncake runs follow <run_id>", 1)
@@ -125,7 +177,7 @@ func runsFollowCommand(c *cli.Context) error {
 	return streamRunEvents(hc, runID)
 }
 
-func runsGetCommand(c *cli.Context) error {
+func runsGetAction(c *cli.Context) error {
 	runID := c.Args().First()
 	if runID == "" {
 		return cli.Exit("usage: mooncake runs get <run_id>", 1)
@@ -153,7 +205,7 @@ func runsGetCommand(c *cli.Context) error {
 	return nil
 }
 
-func runsListCommand(c *cli.Context) error {
+func runsListAction(c *cli.Context) error {
 	// Issue #29 part D: `--format text` historically fell through to the
 	// JSON dump silently. Until a text-mode renderer lands, reject the
 	// non-JSON value explicitly so the operator sees their flag was
