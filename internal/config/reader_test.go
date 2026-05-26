@@ -736,3 +736,58 @@ steps:
 		})
 	}
 }
+
+// config-json-input: config files may be authored as JSON. Compact JSON costs
+// fewer tokens for pilot-emitted configs and avoids YAML indentation mistakes.
+// Detection is content-sniffed (first non-whitespace byte), not extension-based.
+func TestReadConfigWithValidation_JSONArrayInput(t *testing.T) {
+	tmpFile := createTempYAML(t, `[{"name":"hi","shell":{"cmd":"echo hi"}}]`)
+	defer os.Remove(tmpFile)
+
+	cfg, _, err := ReadConfigWithValidation(tmpFile)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(cfg.Steps) != 1 {
+		t.Fatalf("expected 1 step, got %d", len(cfg.Steps))
+	}
+	if cfg.Steps[0].Name != "hi" {
+		t.Errorf("name: got %q", cfg.Steps[0].Name)
+	}
+}
+
+func TestReadConfigWithValidation_JSONRunConfigInput(t *testing.T) {
+	tmpFile := createTempYAML(t, `{"version":"1.0","vars":{"app":"foo"},"steps":[{"name":"s1","shell":{"cmd":"echo {{app}}"}}]}`)
+	defer os.Remove(tmpFile)
+
+	cfg, _, err := ReadConfigWithValidation(tmpFile)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(cfg.Steps) != 1 {
+		t.Fatalf("expected 1 step, got %d", len(cfg.Steps))
+	}
+	if cfg.GlobalVars["app"] != "foo" {
+		t.Errorf("global var app: got %v", cfg.GlobalVars["app"])
+	}
+}
+
+func TestReadVariables_JSONInput(t *testing.T) {
+	tmpDir := t.TempDir()
+	tmpFile := filepath.Join(tmpDir, "vars.json")
+	if err := os.WriteFile(tmpFile, []byte(`{"db_host":"localhost","db_port":5432}`), 0644); err != nil {
+		t.Fatalf("write vars: %v", err)
+	}
+
+	r := NewYAMLConfigReader()
+	vars, err := r.ReadVariables(tmpFile)
+	if err != nil {
+		t.Fatalf("ReadVariables: %v", err)
+	}
+	if vars["db_host"] != "localhost" {
+		t.Errorf("db_host: got %v", vars["db_host"])
+	}
+	if v, ok := vars["db_port"].(int); !ok || v != 5432 {
+		t.Errorf("db_port: got %v (%T)", vars["db_port"], vars["db_port"])
+	}
+}

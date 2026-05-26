@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -18,7 +17,6 @@ import (
 	"github.com/alehatsman/mooncake/internal/security"
 	"github.com/alehatsman/mooncake/internal/template"
 	"github.com/urfave/cli/v2"
-	"gopkg.in/yaml.v3"
 )
 
 // buildStepJSON assembles the JSON payload for `mooncake step`. Mirrors
@@ -86,10 +84,8 @@ func stepCommand() *cli.Command {
 			// with the default value — agents see a confusing timeout
 			// instead of a "field unknown" error.
 			var step config.Step
-			dec := yaml.NewDecoder(bytes.NewReader([]byte(raw)))
-			dec.KnownFields(true)
-			if err := dec.Decode(&step); err != nil {
-				return fmt.Errorf("failed to parse step YAML: %w", err)
+			if err := config.DecodeAutoStrict([]byte(raw), &step); err != nil {
+				return fmt.Errorf("failed to parse step: %w", err)
 			}
 
 			if c.Bool("become") && step.AsUser == "" {

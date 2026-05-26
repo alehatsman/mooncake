@@ -10,8 +10,6 @@ import (
 	"strings"
 	"sync"
 
-	"gopkg.in/yaml.v3"
-
 	"github.com/alehatsman/mooncake/internal/config"
 )
 
@@ -92,9 +90,9 @@ func LoadPreset(name string) (*config.PresetDefinition, error) {
 		return nil, fmt.Errorf("failed to read preset file '%s': %w", presetPath, err)
 	}
 
-	// Parse YAML
+	// Parse preset (YAML or JSON, auto-detected from content)
 	var preset config.PresetDefinition
-	if err := yaml.Unmarshal(data, &preset); err != nil {
+	if err := config.DecodeAuto(data, &preset); err != nil {
 		return nil, fmt.Errorf("failed to parse preset file '%s': %w", presetPath, err)
 	}
 
@@ -168,7 +166,7 @@ func LoadPresetFromPath(path string) (*config.PresetDefinition, error) {
 		return nil, fmt.Errorf("read component %s: %w", path, err)
 	}
 	var preset config.PresetDefinition
-	if err := yaml.Unmarshal(data, &preset); err != nil {
+	if err := config.DecodeAuto(data, &preset); err != nil {
 		return nil, fmt.Errorf("parse component %s: %w", path, err)
 	}
 	if preset.Name == "" {

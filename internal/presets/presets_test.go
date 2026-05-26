@@ -840,3 +840,38 @@ steps:
 		t.Error("invalid preset should be skipped")
 	}
 }
+
+// config-json-input: preset files may be authored as JSON too. The loader
+// sniffs the content (not the extension) so a JSON document with .yml suffix
+// still works — pilots that write to the conventional path don't have to
+// rename anything.
+func TestLoadPresetFromPath_JSONContent(t *testing.T) {
+	tmpDir := t.TempDir()
+	presetPath := filepath.Join(tmpDir, "json-preset.yml")
+
+	jsonContent := `{
+  "name": "json-preset",
+  "description": "JSON-authored preset",
+  "version": "1.0.0",
+  "steps": [
+    {"name": "Step 1", "log": {"msg": "hi"}}
+  ]
+}`
+	if err := os.WriteFile(presetPath, []byte(jsonContent), 0644); err != nil {
+		t.Fatalf("write preset: %v", err)
+	}
+
+	preset, err := LoadPresetFromPath(presetPath)
+	if err != nil {
+		t.Fatalf("LoadPresetFromPath: %v", err)
+	}
+	if preset.Name != "json-preset" {
+		t.Errorf("name: got %q", preset.Name)
+	}
+	if preset.Description != "JSON-authored preset" {
+		t.Errorf("description: got %q", preset.Description)
+	}
+	if len(preset.Steps) != 1 {
+		t.Errorf("expected 1 step, got %d", len(preset.Steps))
+	}
+}
