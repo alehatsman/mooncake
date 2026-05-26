@@ -14,6 +14,7 @@ import (
 	agentdcmd "github.com/alehatsman/mooncake/cmd/agentd"
 	fleetcmd "github.com/alehatsman/mooncake/cmd/fleet"
 	modcmd "github.com/alehatsman/mooncake/cmd/mod"
+	toolcmd "github.com/alehatsman/mooncake/cmd/tool"
 	"github.com/alehatsman/mooncake/internal/fleet"
 	"github.com/alehatsman/mooncake/internal/ops"
 	_ "github.com/alehatsman/mooncake/internal/register" // Register action handlers
@@ -190,7 +191,7 @@ func createApp() *cli.App {
 			fleetcmd.Command(),
 			stepCommand(),
 			taskCommand(),
-			toolCommand(),
+			toolcmd.Command(),
 			queryCommand(),
 			applyCommand(),
 			planCommand(),

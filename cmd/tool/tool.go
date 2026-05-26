@@ -1,4 +1,7 @@
-package main
+// Package tool implements the `mooncake tool` CLI tree — read-only
+// inspection of tools resolved through the project's lockfile
+// (`mooncake tool which|list|env`).
+package tool
 
 import (
 	"context"
@@ -13,11 +16,11 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-// toolCommand groups the read-only `mooncake tool …` subcommands that
+// Command groups the read-only `mooncake tool …` subcommands that
 // inspect the local tool-action lockfile and install state.
 // Spec 19. No install/upgrade verbs at this level — installation happens
 // via `mooncake apply` against a config with `tool:` steps.
-func toolCommand() *cli.Command {
+func Command() *cli.Command {
 	return &cli.Command{
 		Name:  "tool",
 		Usage: "Inspect tools installed via the `tool` action",
