@@ -55,7 +55,7 @@ Reason: every universal field on `Step` is a concept every step type
 must ignore or honor. The closed action set is the kernel's moat
 (see `docs-working/vision/kernel.md`); the cost of that is a
 monotonically-growing `config.go`. Today's count is 36 (run
-`task budget-status`). Past 40, the field has become a tag everyone
+`mooncake task budget-status`). Past 40, the field has become a tag everyone
 has to ignore, and the question "why does *every* step need this?"
 stops having a good answer.
 
@@ -69,7 +69,7 @@ function.
 
 ### Today's known violations (tracked, not blocking)
 
-Run `task budget-status` for the current source-of-truth list.
+Run `mooncake task budget-status` for the current source-of-truth list.
 Pinning the list inline here has drifted within a sprint every time
 we've tried it (see code-review finding F002); the script is the
 authoritative source.

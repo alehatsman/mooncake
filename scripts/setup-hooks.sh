@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # Setup git hooks for mooncake development.
 #
-# Installs two hooks, both thin wrappers over `task`:
+# Installs two hooks, both thin wrappers over `mooncake task`:
 #
-#   pre-commit → task ci:fast
+#   pre-commit → mooncake task ci-fast
 #     Fast gate (target <5s on warm cache): go vet, gofmt on staged files,
 #     ai-lint on staged files, soft-cap budget report, docs/schema regen
 #     auto-stage when handler/config Go files are staged. Catches the
@@ -11,13 +11,17 @@
 #     stub panics, agent-tagged TODOs, generated-doc drift) without
 #     blocking iteration speed.
 #
-#   pre-push → task ci
-#     Full gate: build + test-race + lint + scan + docs/schema regen +
-#     arch-snapshot + budget + dupl. Slow (~1-2 min), runs once per push.
+#   pre-push → mooncake task ci
+#     Full gate: build + test + lint + scan + docs/schema regen +
+#     arch-snapshot + budget + dupl + escalation-lint. Slow (~1-2 min),
+#     runs once per push.
 #
 # Bypass: `git commit --no-verify` or `git push --no-verify`. Use sparingly —
 # both hooks exist because the issues they catch are easier to fix at commit
 # time than during review.
+#
+# Requires mooncake to be on PATH. Install with `mooncake task install`
+# (or `go build -o ~/.local/bin/mooncake ./cmd` on first checkout).
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -40,19 +44,14 @@ set -e
 REPO_ROOT="$(git rev-parse --show-toplevel)"
 cd "$REPO_ROOT"
 
-TASK_BIN=""
-if command -v task >/dev/null 2>&1; then
-  TASK_BIN="task"
-elif [ -x "$(go env GOPATH 2>/dev/null)/bin/task" ]; then
-  TASK_BIN="$(go env GOPATH)/bin/task"
-else
-  echo "pre-commit: 'task' (go-task) is required but not installed." >&2
-  echo "            Install: go install github.com/go-task/task/v3/cmd/task@latest" >&2
+if ! command -v mooncake >/dev/null 2>&1; then
+  echo "pre-commit: 'mooncake' is required but not on PATH." >&2
+  echo "            Install: go build -o ~/.local/bin/mooncake ./cmd" >&2
   exit 1
 fi
 
-echo "pre-commit: running 'task ci:fast' (vet + gofmt + ai-lint + budget + docs-regen)..."
-if ! "$TASK_BIN" ci:fast; then
+echo "pre-commit: running 'mooncake task ci-fast' (vet + gofmt + ai-lint + budget + docs-regen)..."
+if ! mooncake task ci-fast; then
   echo "" >&2
   echo "pre-commit: ✗ fast gate failed. Fix the issue above and re-commit," >&2
   echo "            or 'git commit --no-verify' to bypass (not recommended)." >&2
@@ -60,7 +59,7 @@ if ! "$TASK_BIN" ci:fast; then
 fi
 HOOK_EOF
 chmod +x "$HOOKS_DIR/pre-commit"
-echo "  ✓ pre-commit → task ci:fast"
+echo "  ✓ pre-commit → mooncake task ci-fast"
 
 # ----- pre-push --------------------------------------------------------------
 cat > "$HOOKS_DIR/pre-push" << 'HOOK_EOF'
@@ -71,19 +70,14 @@ set -e
 REPO_ROOT="$(git rev-parse --show-toplevel)"
 cd "$REPO_ROOT"
 
-TASK_BIN=""
-if command -v task >/dev/null 2>&1; then
-  TASK_BIN="task"
-elif [ -x "$(go env GOPATH 2>/dev/null)/bin/task" ]; then
-  TASK_BIN="$(go env GOPATH)/bin/task"
-else
-  echo "pre-push: 'task' (go-task) is required but not installed." >&2
-  echo "          Install: go install github.com/go-task/task/v3/cmd/task@latest" >&2
+if ! command -v mooncake >/dev/null 2>&1; then
+  echo "pre-push: 'mooncake' is required but not on PATH." >&2
+  echo "          Install: go build -o ~/.local/bin/mooncake ./cmd" >&2
   exit 1
 fi
 
-echo "pre-push: running 'task ci' (build + test-race + lint + scan + docs/schema + arch + dupl)..."
-if ! "$TASK_BIN" ci; then
+echo "pre-push: running 'mooncake task ci' (build + test + lint + scan + docs/schema + arch + budget + dupl)..."
+if ! mooncake task ci; then
   echo "" >&2
   echo "pre-push: ✗ full gate failed. Fix the issue above and re-push," >&2
   echo "          or 'git push --no-verify' to bypass (not recommended)." >&2
@@ -91,24 +85,24 @@ if ! "$TASK_BIN" ci; then
 fi
 HOOK_EOF
 chmod +x "$HOOKS_DIR/pre-push"
-echo "  ✓ pre-push → task ci"
+echo "  ✓ pre-push → mooncake task ci"
 
 cat <<EOM
 
 Installed:
-  pre-commit  → 'task ci:fast' (~seconds). Catches stub panics, agent
-                TODOs, unformatted code, soft-cap regressions, and
+  pre-commit  → 'mooncake task ci-fast' (~seconds). Catches stub panics,
+                agent TODOs, unformatted code, soft-cap regressions, and
                 generated-doc drift before they land in a commit.
                 Auto-stages docs-next/generated/* + schema.json when a
                 handler/config Go file is staged and the generator
                 emits new content.
-  pre-push    → 'task ci'      (~1-2 min). Full build + test-race + lint
-                + scan + docs/schema regen + arch + dupl before the
-                commits leave the machine.
+  pre-push    → 'mooncake task ci'      (~1-2 min). Full build + test +
+                lint + scan + docs/schema regen + arch + budget + dupl
+                + escalation-lint before the commits leave the machine.
 
 Bypass either with --no-verify when you really need it.
 
-If 'task' isn't on PATH yet:
-  go install github.com/go-task/task/v3/cmd/task@latest
-  task install-tools
+If 'mooncake' isn't on PATH yet:
+  go build -o ~/.local/bin/mooncake ./cmd
+  mooncake task install-tools
 EOM

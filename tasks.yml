@@ -1,55 +1,225 @@
 version: '1'
 
-# Dogfood mooncake's own task runner. Run with: `mooncake task <name>`.
+# Mooncake's own task runner — the canonical entry point for developer
+# workflows in this repo. Run with: `mooncake task <name>`.
 # Bare `mooncake task` lists every task with its description.
 #
-# Templates use Pongo2 syntax ({{ VAR }}); contrast with Taskfile.yml's
-# Go-template form ({{.VAR}}). Tasks here intentionally mirror the
-# Taskfile.yml targets that developers run day to day, so this file is
-# the canonical place to add NEW everyday targets going forward and
-# Taskfile.yml is the legacy entry point.
+# Templates use Pongo2 syntax ({{ VAR }}). Day-to-day targets live
+# here; the heavier multi-step gates (CI fast / full) live in
+# scripts/ci/ so this file stays scannable.
+#
+# Conventions:
+#   - Tasks that need the built binary call `out/mooncake` directly.
+#     If the build is stale, run `mooncake task build` first.
+#   - Non-trivial shell logic moves to scripts/. Keep this file at
+#     "what" level, scripts at "how" level.
 
 vars:
   BIN: out/mooncake
 
 tasks:
 
+  # ── Build / install / clean ──────────────────────────────────────────
   build:
-    desc: Build the mooncake binary
+    desc: Build the mooncake binary into out/mooncake
     steps:
-      - shell:
-          cmd: "go build -v -o {{ BIN }} ./cmd"
+      - shell: { cmd: "go build -v -o {{ BIN }} ./cmd" }
 
+  install:
+    desc: Build and install mooncake to ~/.local/bin; restart agentd if active
+    steps:
+      - shell: { cmd: "go build -v -o {{ BIN }} ./cmd" }
+      - shell: { cmd: 'mkdir -p "$HOME/.local/bin" && install -m 0755 {{ BIN }} "$HOME/.local/bin/mooncake"' }
+      - log: { msg: "installed $HOME/.local/bin/mooncake" }
+      - shell:
+          cmd: |
+            if ! echo ":$PATH:" | grep -q ":$HOME/.local/bin:"; then
+              echo "⚠ $HOME/.local/bin is not on PATH — add it to your shell rc."
+            fi
+            if command -v systemctl >/dev/null 2>&1; then
+              if systemctl --user is-active --quiet mooncake-agentd 2>/dev/null; then
+                systemctl --user restart mooncake-agentd && echo "✓ Restarted mooncake-agentd (user)"
+              fi
+              if systemctl is-active --quiet mooncake-agentd 2>/dev/null; then
+                sudo systemctl restart mooncake-agentd && echo "✓ Restarted mooncake-agentd (system)"
+              fi
+            fi
+
+  clean:
+    desc: Remove build artifacts (out/, testing-output/)
+    steps:
+      - shell: { cmd: "rm -rf out/ testing-output/" }
+      - log: { msg: "cleaned" }
+
+  # ── Test ─────────────────────────────────────────────────────────────
   test:
     desc: Run go test ./...
     steps:
-      - shell:
-          cmd: "go test ./..."
+      - shell: { cmd: "go test ./..." }
 
   test-race:
-    desc: Run go test -race ./...
+    desc: Run go test -race ./... (slower; not in default ci)
     steps:
-      - shell:
-          cmd: "go test -race ./..."
+      - shell: { cmd: "go test -race ./..." }
 
+  test-cover:
+    desc: Run tests with HTML coverage report at testing-output/coverage.html
+    steps:
+      - shell: { cmd: "mkdir -p testing-output" }
+      - shell: { cmd: "go test -coverprofile=testing-output/coverage.out -covermode=atomic ./..." }
+      - shell: { cmd: "go tool cover -html=testing-output/coverage.out -o testing-output/coverage.html" }
+      - log: { msg: "coverage report: testing-output/coverage.html" }
+
+  # ── Lint / format ────────────────────────────────────────────────────
   lint:
     desc: golangci-lint (includes gosec via .golangci.yml)
     steps:
-      - shell:
-          cmd: "golangci-lint run ./..."
+      - shell: { cmd: "golangci-lint run ./..." }
+
+  lint-new:
+    desc: golangci-lint on lines changed since HEAD~1 (refactor-friendly)
+    steps:
+      - shell: { cmd: "golangci-lint run --new-from-rev=HEAD~1 ./..." }
+
+  lint-fix:
+    desc: Auto-fix what golangci-lint can fix (misspell, unconvert, staticcheck QF/S, revive)
+    steps:
+      - shell: { cmd: "golangci-lint run --fix ./..." }
 
   fmt:
     desc: Format Go sources with gofmt -s
     steps:
-      - shell:
-          cmd: "gofmt -s -w ."
-      - log:
-          msg: "code formatted"
+      - shell: { cmd: "gofmt -s -w ." }
+      - log: { msg: "code formatted" }
 
-  clean:
-    desc: Remove build artifacts
+  # ── Security / vuln ──────────────────────────────────────────────────
+  vuln:
+    desc: govulncheck
+    steps:
+      - shell: { cmd: "govulncheck ./..." }
+
+  scan:
+    desc: Security + vulnerability scan (lint + vuln)
+    steps:
+      - shell: { cmd: "golangci-lint run ./..." }
+      - shell: { cmd: "govulncheck ./..." }
+
+  # ── Docs / schema ────────────────────────────────────────────────────
+  docs-generate:
+    desc: Generate documentation from code (actions, schema, properties)
+    steps:
+      - shell: { cmd: "go build -o {{ BIN }} ./cmd" }
+      - shell: { cmd: "mkdir -p docs-next/generated" }
+      - shell: { cmd: "{{ BIN }} docs generate --section all                --output docs-next/generated/actions.md" }
+      - shell: { cmd: "{{ BIN }} docs generate --section schema             --output docs-next/generated/schema.md" }
+      - shell: { cmd: "{{ BIN }} docs generate --section action-properties  --output docs-next/generated/properties.md" }
+      - log: { msg: "generated docs-next/generated/{actions,schema,properties}.md" }
+
+  docs-check:
+    desc: Verify generated docs are up to date with the current code
+    steps:
+      - shell: { cmd: "go build -o {{ BIN }} ./cmd" }
+      - shell: { cmd: "BIN={{ BIN }} bash ./scripts/docs-check.sh" }
+
+  docs-serve:
+    desc: Build and serve documentation site (requires pipenv + mkdocs)
+    steps:
+      - shell: { cmd: "pipenv run mkdocs build" }
+      - shell: { cmd: "pipenv run mkdocs serve" }
+
+  schema-generate:
+    desc: Generate JSON Schema + TypeScript types from code
+    steps:
+      - shell: { cmd: "go build -o {{ BIN }} ./cmd" }
+      - shell: { cmd: "{{ BIN }} schema generate --format json       --output internal/config/schema.json --strict" }
+      - shell: { cmd: "{{ BIN }} schema generate --format typescript --output internal/config/schema.d" }
+      - shell: { cmd: "{{ BIN }} schema generate --format typescript --output mooncake.d.ts" }
+      - log: { msg: "generated internal/config/schema.json + schema.d + mooncake.d.ts" }
+
+  schema-check:
+    desc: Verify generated JSON schema is up to date
+    steps:
+      - shell: { cmd: "go build -o {{ BIN }} ./cmd" }
+      - shell: { cmd: "BIN={{ BIN }} bash ./scripts/schema-check.sh" }
+
+  # ── Architecture / analysis ──────────────────────────────────────────
+  arch-snapshot:
+    desc: Regenerate docs-working/ARCH_SNAPSHOT.md (gitignored; local read-only)
+    steps:
+      - shell: { cmd: "bash ./scripts/arch-snapshot.sh" }
+
+  budget-status:
+    desc: Show current state of the three CLAUDE.md soft caps
+    steps:
+      - shell: { cmd: "bash ./scripts/budget-status.sh" }
+
+  dupl:
+    desc: Code-duplication report (production only; override threshold with T=N in scripts/dupl-report.sh)
+    steps:
+      - shell: { cmd: "bash ./scripts/dupl-report.sh" }
+
+  # ── AI-smell sweep / escalation lint ─────────────────────────────────
+  ai-lint:
+    desc: AI-smell sweep on staged Go files (stub panics, agent TODOs, prompt artifacts)
+    steps:
+      - shell: { cmd: "bash ./scripts/ai-lint.sh" }
+
+  ai-lint-all:
+    desc: AI-smell sweep on every tracked Go file
+    steps:
+      - shell: { cmd: "bash ./scripts/ai-lint.sh --all" }
+
+  escalation-lint:
+    desc: "spec-72 §G1: report direct security.BecomeRunner/PrivilegedRunner constructs outside the allowlist"
+    steps:
+      - shell: { cmd: "bash ./scripts/escalation-lint.sh" }
+
+  # ── Tools ────────────────────────────────────────────────────────────
+  install-tools:
+    desc: Install every static-analysis tool the project depends on
+    steps:
+      - shell: { cmd: "bash ./scripts/install-tools.sh" }
+
+  check-tools:
+    desc: Report which static-analysis tools are installed
+    steps:
+      - shell: { cmd: "bash ./scripts/check-tools.sh" }
+
+  # ── Pilot evals (LLM-cost gated) ─────────────────────────────────────
+  pilot-evals:
+    desc: Run mooncake pilot evals (requires MOONCAKE_PILOT_EVAL=1; costs API tokens)
     steps:
       - shell:
-          cmd: "rm -rf out/ testing-output/"
-      - log:
-          msg: "cleaned"
+          cmd: |
+            if [ "$MOONCAKE_PILOT_EVAL" != "1" ]; then
+              echo "mooncake task pilot-evals: refusing to run — set MOONCAKE_PILOT_EVAL=1 to opt in." >&2
+              echo "                           use 'mooncake task pilot-evals-dry' for a no-cost shape check." >&2
+              exit 2
+            fi
+            go run ./testing-next/pilot-evals/
+
+  pilot-evals-dry:
+    desc: Validate pilot-eval harness without an LLM call
+    steps:
+      - shell: { cmd: "go run ./testing-next/pilot-evals/ -dry-run" }
+
+  # ── Release ──────────────────────────────────────────────────────────
+  release:
+    desc: Create a new release (runs scripts/release.sh)
+    steps:
+      - shell: { cmd: "bash ./scripts/release.sh" }
+
+  # ── CI gates ─────────────────────────────────────────────────────────
+  # The phase-by-phase gate logic lives in scripts/ci/ so this file
+  # stays a one-liner per task. See those scripts for the per-phase
+  # output and `set -e` flow.
+
+  ci-fast:
+    desc: "Pre-commit gate: vet + gofmt (staged) + ai-lint (staged) + budget + docs-regen (gated)"
+    steps:
+      - shell: { cmd: "bash ./scripts/ci/fast.sh" }
+
+  ci:
+    desc: "Pre-push gate: build + test + lint + scan + docs/schema + arch + budget + dupl + escalation-lint"
+    steps:
+      - shell: { cmd: "bash ./scripts/ci/full.sh" }

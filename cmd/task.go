@@ -96,8 +96,14 @@ func taskFlags() []cli.Flag {
 		&cli.StringFlag{
 			Name:    "log-level",
 			Aliases: []string{"l"},
-			Value:   "info",
-			Usage:   "Log level (debug, info, error)",
+			// Tasks are dev-loop: users want to see the underlying
+			// shell-step stdout/stderr by default, not just step-start
+			// / step-end markers. debug streams stdout (prefixed `|`);
+			// apply's run path keeps info as default since operator
+			// workflows tolerate quieter output. Pass --log-level info
+			// here to suppress the per-line stream.
+			Value: "debug",
+			Usage: "Log level (debug, info, error). Default debug so shell-step stdout streams.",
 		},
 
 		// Preview / plan mode.
