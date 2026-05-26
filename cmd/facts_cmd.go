@@ -1,9 +1,17 @@
 package main
 
-import "github.com/urfave/cli/v2"
+import (
+	"encoding/json"
+	"fmt"
+	"os"
 
-// factsCommand returns the `mooncake facts` cli.Command. The action
-// function (factsAction) lives in mooncake.go.
+	"github.com/urfave/cli/v2"
+
+	"github.com/alehatsman/mooncake/internal/facts"
+	"github.com/alehatsman/mooncake/internal/factsfmt"
+)
+
+// factsCommand returns the `mooncake facts` cli.Command.
 func factsCommand() *cli.Command {
 	return &cli.Command{
 		Name:  "facts",
@@ -23,4 +31,52 @@ func factsCommand() *cli.Command {
 		},
 		Action: factsAction,
 	}
+}
+
+func factsAction(c *cli.Context) error {
+	// Collect facts (cached)
+	f := facts.Collect()
+
+	// --query mode: print specific values and exit
+	if queries := c.StringSlice("query"); len(queries) > 0 {
+		return queryMap(f.ToMap(), queries)
+	}
+
+	format := c.String("format")
+	if format != outputFormatText && format != outputFormatJSON {
+		return fmt.Errorf("invalid format: %s (use 'text' or 'json')", format)
+	}
+
+	switch format {
+	case outputFormatJSON:
+		encoder := json.NewEncoder(os.Stdout)
+		encoder.SetIndent("", "  ")
+		return encoder.Encode(f)
+	case outputFormatText:
+		factsfmt.DisplayFacts(f)
+		return nil
+	default:
+		return fmt.Errorf("unsupported format: %s", format)
+	}
+}
+
+// writeFactsJSON is preserved for cmd/cmd_test.go's coverage of the
+// snake_case marshal pattern. The live caller moved to
+// internal/apply/runner.go's writeFactsJSON in R1.1a; this cmd-side
+// copy stays so the existing TestWriteFactsJSON* suite keeps pinning
+// the contract.
+//
+//nolint:unused // covered by cmd/cmd_test.go; lint runs with tests:false.
+func writeFactsJSON(f *facts.Facts, path string) error {
+	// MT-74: marshal via ToMap() so keys are snake_case, matching the
+	// daemon's /v1/facts endpoint and the template scope (`{{ os }}`).
+	// Direct json.Marshal(*Facts) would emit PascalCase Go field names.
+	data, err := json.MarshalIndent(f.ToMap(), "", "  ")
+	if err != nil {
+		return fmt.Errorf("marshal facts: %w", err)
+	}
+	if err := os.WriteFile(path, data, 0600); err != nil {
+		return fmt.Errorf("write file: %w", err)
+	}
+	return nil
 }
