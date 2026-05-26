@@ -98,6 +98,21 @@ func BuildPrompt(input PlanInput) (string, string, error) {
 				b.WriteString(fmt.Sprintf("  %s\n", line))
 			}
 		}
+		// Surface the captured stdout from the last cmd/shell step so
+		// the model can decide whether the goal is already answered.
+		// Without this block step-style pilot loops re-propose the same
+		// diagnostic step forever — the LLM has no way to see the
+		// command's output. Already 4 KiB-tail-truncated at capture
+		// time (see output_capture.go); printed verbatim here.
+		if input.LastIteration.LastStepStdout != "" {
+			b.WriteString("- Last Step Stdout (last 4 KB):\n")
+			b.WriteString("```\n")
+			b.WriteString(input.LastIteration.LastStepStdout)
+			if !strings.HasSuffix(input.LastIteration.LastStepStdout, "\n") {
+				b.WriteString("\n")
+			}
+			b.WriteString("```\n")
+		}
 		b.WriteString("\n")
 	}
 

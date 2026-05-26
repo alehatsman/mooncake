@@ -61,6 +61,14 @@ type IterationSummary struct {
 	Status       string
 	ChangedFiles []string
 	ErrorMessage string
+	// LastStepStdout is the captured stdout from the LAST cmd/shell-
+	// family step that completed during this iteration's apply (capped
+	// at 4 KB tail). The next iteration's prompt surfaces it so the
+	// model can decide whether the goal is answered; without this signal
+	// step-style loops re-propose the same diagnostic step forever.
+	// Empty when the iteration ran no cmd/shell steps or produced no
+	// stdout (e.g. only file/template actions).
+	LastStepStdout string
 }
 
 type StopReason string

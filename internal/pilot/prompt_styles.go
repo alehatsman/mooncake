@@ -25,12 +25,20 @@ const promptStylePlan = "TASK STYLE: complete plan\n" +
 // promptStyleStep is the TASK STYLE block appended when Style ==
 // StyleStep. Plan §8 decision 3: no assert: hint in step mode — the
 // model has no follow-up step in the same plan to validate against.
+//
+// The trailing "If LAST STEP STDOUT above answers the goal" sentence
+// is the step-style-only counterpart to the captured-output prompt
+// block (see prompt.go's Last Step Stdout rendering). Plan-style emits
+// the whole plan in one turn, so per-iteration stdout isn't part of
+// its mental model and the hint stays out of promptStylePlan.
 const promptStyleStep = "TASK STYLE: one step at a time\n" +
 	"Propose the NEXT SINGLE action needed to make progress toward\n" +
 	"the goal. Output a YAML plan containing EXACTLY ONE step.\n" +
 	"After we execute it and report back in LAST ITERATION, you\n" +
 	"will propose the next single action. When the goal is reached,\n" +
-	"emit an empty plan (the YAML literal `[]`) to signal \"done\"."
+	"emit an empty plan (the YAML literal `[]`) to signal \"done\".\n" +
+	"If LAST STEP STDOUT above answers the goal, emit an empty plan\n" +
+	"(`[]`) to signal done — do not re-propose the same diagnostic step."
 
 // selectStyleFragment returns the TASK STYLE block for the given
 // style. Unrecognized values fall back to StylePlan so a stray env
