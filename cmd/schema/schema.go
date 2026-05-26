@@ -1,4 +1,7 @@
-package main
+// Package schema implements the `mooncake schema` CLI tree —
+// generate JSON Schema and OpenAPI specifications from the live
+// action metadata in internal/schemagen.
+package schema
 
 import (
 	"bytes"
@@ -9,8 +12,8 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-// schemaCommand creates the schema command with subcommands.
-func schemaCommand() *cli.Command {
+// Command creates the schema command with subcommands.
+func Command() *cli.Command {
 	return &cli.Command{
 		Name:  "schema",
 		Usage: "Generate JSON Schema and OpenAPI specifications from action metadata",

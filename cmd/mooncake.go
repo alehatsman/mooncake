@@ -14,6 +14,7 @@ import (
 	agentdcmd "github.com/alehatsman/mooncake/cmd/agentd"
 	fleetcmd "github.com/alehatsman/mooncake/cmd/fleet"
 	modcmd "github.com/alehatsman/mooncake/cmd/mod"
+	schemacmd "github.com/alehatsman/mooncake/cmd/schema"
 	toolcmd "github.com/alehatsman/mooncake/cmd/tool"
 	"github.com/alehatsman/mooncake/internal/fleet"
 	"github.com/alehatsman/mooncake/internal/ops"
@@ -183,7 +184,7 @@ func createApp() *cli.App {
 			presetsCommand(),
 			modcmd.Command(),
 			docsCommand(),
-			schemaCommand(),
+			schemacmd.Command(),
 			snapshotCommand(),
 			historyCommand(),
 			mcpCommand(),
