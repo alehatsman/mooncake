@@ -32,6 +32,12 @@ type InMemoryPlanOptions struct {
 	// or "error". Unknown values default to info.
 	LogLevel string
 
+	// StreamStepOutput mirrors Config.StreamStepOutput: render captured
+	// step stdout/stderr regardless of LogLevel. `mooncake task <name>`
+	// sets this true so shell steps stream by default without flipping
+	// the noisier internal debug logs on.
+	StreamStepOutput bool
+
 	// OpID, when non-empty, links this in-memory apply to a row in
 	// ops.jsonl (spec-68 wave 2). Same semantics as Config.OpID on
 	// the config-path Runner — minted by the CLI before invocation.
@@ -85,7 +91,7 @@ func (r *Runner) runFromInMemoryPlan(ctx context.Context) (*KernelResult, error)
 	// agent output should render the *KernelResult themselves; the
 	// in-memory path's reason for being is "execute this plan", not
 	// "negotiate output format".
-	publisher.Subscribe(logger.NewConsoleSubscriber(level, outputFormatText))
+	publisher.Subscribe(logger.NewConsoleSubscriber(level, outputFormatText, r.inMemoryPlanOpts.StreamStepOutput))
 
 	var runID string
 	if r.inMemoryPlanOpts.OpID != "" {

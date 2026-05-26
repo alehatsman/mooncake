@@ -49,6 +49,14 @@ type Config struct {
 	// written to the run audit.
 	LogLevel string
 
+	// StreamStepOutput, when true, makes the console subscriber render
+	// captured step stdout/stderr lines regardless of LogLevel. The
+	// dev-loop entry points (`mooncake task <name>`) want shell-step
+	// output visible by default; the operator entry point
+	// (`mooncake apply`) defaults to false so per-step apt/curl chatter
+	// stays out of the way until the user opts in with --log-level debug.
+	StreamStepOutput bool
+
 	// OutputFormat selects the user-visible renderer ("text"
 	// (default), "json", "agent", or "quiet"). Runner.Run validates
 	// the value; JSON is incompatible with TUI.

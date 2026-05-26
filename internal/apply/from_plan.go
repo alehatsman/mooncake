@@ -98,7 +98,7 @@ func (r *Runner) runFromPlan(ctx context.Context) (*KernelResult, error) {
 
 	// Saved-plan apply renders only as text. Pre-extraction
 	// runFromPlan hardcoded this; keep the contract.
-	publisher.Subscribe(logger.NewConsoleSubscriber(level, outputFormatText))
+	publisher.Subscribe(logger.NewConsoleSubscriber(level, outputFormatText, false))
 
 	// Record run history (best-effort) keyed by the plan file the
 	// user pointed at, mirroring the pre-extraction behavior. When the

@@ -49,7 +49,7 @@ func TestNewConsoleSubscriber(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			sub := NewConsoleSubscriber(tt.logLevel, tt.logFormat)
+			sub := NewConsoleSubscriber(tt.logLevel, tt.logFormat, false)
 			if sub == nil {
 				t.Fatal("NewConsoleSubscriber returned nil")
 			}
@@ -64,7 +64,7 @@ func TestNewConsoleSubscriber(t *testing.T) {
 }
 
 func TestConsoleSubscriber_SetRedactor(t *testing.T) {
-	sub := NewConsoleSubscriber(1, "text")
+	sub := NewConsoleSubscriber(1, "text", false)
 	if sub.redactor != nil {
 		t.Error("expected nil redactor initially")
 	}
@@ -78,13 +78,13 @@ func TestConsoleSubscriber_SetRedactor(t *testing.T) {
 }
 
 func TestConsoleSubscriber_Close(t *testing.T) {
-	sub := NewConsoleSubscriber(1, "text")
+	sub := NewConsoleSubscriber(1, "text", false)
 	// Should not panic
 	sub.Close()
 }
 
 func TestConsoleSubscriber_OnEvent_JSON(t *testing.T) {
-	sub := NewConsoleSubscriber(1, "json")
+	sub := NewConsoleSubscriber(1, "json", false)
 
 	event := events.Event{
 		Type:      events.EventStepStarted,
@@ -115,7 +115,7 @@ func TestConsoleSubscriber_OnEvent_JSON(t *testing.T) {
 }
 
 func TestConsoleSubscriber_OnEvent_Text_StepStarted(t *testing.T) {
-	sub := NewConsoleSubscriber(1, "text")
+	sub := NewConsoleSubscriber(1, "text", false)
 
 	tests := []struct {
 		name       string
@@ -202,7 +202,7 @@ func TestConsoleSubscriber_OnEvent_Text_StepStarted(t *testing.T) {
 }
 
 func TestConsoleSubscriber_OnEvent_Text_StepCompleted(t *testing.T) {
-	sub := NewConsoleSubscriber(1, "text")
+	sub := NewConsoleSubscriber(1, "text", false)
 
 	tests := []struct {
 		name       string
@@ -272,7 +272,7 @@ func TestConsoleSubscriber_OnEvent_Text_StepCompleted(t *testing.T) {
 }
 
 func TestConsoleSubscriber_OnEvent_Text_StepFailed(t *testing.T) {
-	sub := NewConsoleSubscriber(1, "text")
+	sub := NewConsoleSubscriber(1, "text", false)
 
 	data := events.StepFailedData{
 		StepID:       "step-1",
@@ -309,7 +309,7 @@ func TestConsoleSubscriber_OnEvent_Text_StepFailed(t *testing.T) {
 }
 
 func TestConsoleSubscriber_OnEvent_Text_StepSkipped(t *testing.T) {
-	sub := NewConsoleSubscriber(1, "text")
+	sub := NewConsoleSubscriber(1, "text", false)
 
 	tests := []struct {
 		name       string
@@ -398,7 +398,7 @@ func TestConsoleSubscriber_OnEvent_Text_StepSkipped(t *testing.T) {
 }
 
 func TestConsoleSubscriber_OnEvent_Text_RunCompleted(t *testing.T) {
-	sub := NewConsoleSubscriber(1, "text")
+	sub := NewConsoleSubscriber(1, "text", false)
 
 	tests := []struct {
 		name       string
@@ -498,7 +498,7 @@ func TestConsoleSubscriber_OnEvent_Text_RunCompleted(t *testing.T) {
 }
 
 func TestConsoleSubscriber_OnEvent_Text_OutputEvents(t *testing.T) {
-	sub := NewConsoleSubscriber(1, "text")
+	sub := NewConsoleSubscriber(1, "text", false)
 
 	tests := []struct {
 		name      string
@@ -534,7 +534,7 @@ func TestConsoleSubscriber_OnEvent_Text_OutputEvents(t *testing.T) {
 }
 
 func TestConsoleSubscriber_OnEvent_Text_UnknownEvent(t *testing.T) {
-	sub := NewConsoleSubscriber(1, "text")
+	sub := NewConsoleSubscriber(1, "text", false)
 
 	// Test with various event types that should not produce output
 	tests := []struct {
@@ -572,7 +572,7 @@ func TestConsoleSubscriber_OnEvent_Text_UnknownEvent(t *testing.T) {
 }
 
 func TestConsoleSubscriber_Concurrency(t *testing.T) {
-	sub := NewConsoleSubscriber(1, "text")
+	sub := NewConsoleSubscriber(1, "text", false)
 
 	// Test concurrent access to SetRedactor and OnEvent
 	done := make(chan bool)
@@ -612,7 +612,7 @@ func TestConsoleSubscriber_Concurrency(t *testing.T) {
 }
 
 func TestConsoleSubscriber_InvalidEventData(t *testing.T) {
-	sub := NewConsoleSubscriber(1, "text")
+	sub := NewConsoleSubscriber(1, "text", false)
 
 	tests := []struct {
 		name      string
