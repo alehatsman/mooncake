@@ -157,7 +157,7 @@ func (r *Runner) Run(ctx context.Context) (*KernelResult, error) {
 			tuiSubscriber, err := logger.NewTUISubscriber(level)
 			if err != nil {
 				// Fallback to console subscriber if TUI init fails.
-				publisher.Subscribe(logger.NewConsoleSubscriber(level, r.cfg.OutputFormat))
+				publisher.Subscribe(logger.NewConsoleSubscriber(level, r.cfg.OutputFormat, r.cfg.StreamStepOutput))
 			} else {
 				tuiSubscriber.Start()
 				defer tuiSubscriber.Stop()
@@ -165,7 +165,7 @@ func (r *Runner) Run(ctx context.Context) (*KernelResult, error) {
 			}
 		} else {
 			// Console subscriber for text / json output.
-			publisher.Subscribe(logger.NewConsoleSubscriber(level, r.cfg.OutputFormat))
+			publisher.Subscribe(logger.NewConsoleSubscriber(level, r.cfg.OutputFormat, r.cfg.StreamStepOutput))
 		}
 	}
 

@@ -860,7 +860,7 @@ func executePresetInstall(c *cli.Context, name string) error {
 	defer publisher.Close()
 
 	level := logger.InfoLevel
-	subscriber := logger.NewConsoleSubscriber(level, "text")
+	subscriber := logger.NewConsoleSubscriber(level, "text", false)
 	publisher.Subscribe(subscriber)
 
 	internalLog := logger.NewLogger(level)
@@ -1062,7 +1062,7 @@ func uninstallPresetAction(c *cli.Context) error {
 	defer publisher.Close()
 
 	level := logger.InfoLevel
-	subscriber := logger.NewConsoleSubscriber(level, "text")
+	subscriber := logger.NewConsoleSubscriber(level, "text", false)
 	publisher.Subscribe(subscriber)
 
 	internalLog := logger.NewLogger(level)

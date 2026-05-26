@@ -1,3 +1,7 @@
+// Package agentd implements the `mooncake agentd` daemon CLI tree and
+// its sibling `mooncake runs` client tree. Both verbs talk to the
+// local /v1/* HTTP surface served by internal/agentd: this package is
+// the CLI side of that protocol.
 package agentd
 
 import (

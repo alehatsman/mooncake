@@ -97,14 +97,16 @@ func taskFlags() []cli.Flag {
 		&cli.StringFlag{
 			Name:    "log-level",
 			Aliases: []string{"l"},
-			// Tasks are dev-loop: users want to see the underlying
-			// shell-step stdout/stderr by default, not just step-start
-			// / step-end markers. debug streams stdout (prefixed `|`);
-			// apply's run path keeps info as default since operator
-			// workflows tolerate quieter output. Pass --log-level info
-			// here to suppress the per-line stream.
-			Value: "debug",
-			Usage: "Log level (debug, info, error). Default debug so shell-step stdout streams.",
+			// info is the operator-grade default. Shell-step stdout
+			// streams via apply.InMemoryPlanOptions.StreamStepOutput
+			// (always true for tasks) — independent of log level —
+			// so users get the dev-loop "see what go test prints"
+			// experience without dragging in the executor's internal
+			// debug logs (per-step variable-map dumps, when-expression
+			// trace, etc.) that flooded the terminal in the earlier
+			// always-debug default.
+			Value: "info",
+			Usage: "Log level (debug, info, error). Step stdout/stderr streams regardless; debug adds internal traces.",
 		},
 
 		// Preview / plan mode.
@@ -341,8 +343,13 @@ func executeTaskPlan(c *cli.Context, configPath, name string, planData *plan.Pla
 	opts := apply.InMemoryPlanOptions{
 		SudoPass: c.String("sudo-pass"),
 		LogLevel: c.String("log-level"),
-		OpID:     recordOp("task "+name, configPath, false),
-		RootFile: configPath,
+		// Tasks always stream shell-step stdout/stderr — the dev loop
+		// (`go test`, linters, build) is the whole point. Independent
+		// from LogLevel so users can keep --log-level info to avoid
+		// the executor's internal debug traces.
+		StreamStepOutput: true,
+		OpID:             recordOp("task "+name, configPath, false),
+		RootFile:         configPath,
 	}
 	return runWithSignalCtx(c.Context, func(ctx context.Context) error {
 		_, runErr := apply.NewRunnerFromInMemoryPlan(planData, opts).Run(ctx)

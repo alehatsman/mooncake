@@ -173,9 +173,10 @@ linters:
         linters: [errcheck]
         text: "Error return value of `fmt\\.F"
 
-      # resp.Body.Close and io.Copy in cmd/runs.go — standard streaming
-      # pattern; defer/best-effort close errors are intentionally unchecked.
-      - path: cmd/runs\.go
+      # resp.Body.Close and io.Copy in cmd/agentd/runs.go — standard
+      # streaming pattern; defer/best-effort close errors are intentionally
+      # unchecked. (Was cmd/runs.go before the cmd/agentd/ sub-package move.)
+      - path: cmd/agentd/runs\.go
         linters: [errcheck]
         text: "Error return value of `(resp\\.Body\\.Close|io\\.Copy)` is not checked"
 

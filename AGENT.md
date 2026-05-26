@@ -35,8 +35,11 @@ mooncake task <name> --plan           # preview a task without executing it
 mooncake task <name> --plan -f json   # preview as JSON
 ```
 
-Tasks default to `--log-level debug` so shell-step stdout streams to
-the terminal (prefixed `|`). Pass `--log-level info` to suppress.
+Tasks stream shell-step stdout/stderr to the terminal by default
+(prefixed `|`), independent of `--log-level`. Default level is `info`
+— the quiet, operator-grade setting. Pass `--log-level debug` if you
+also want the executor's internal traces (variable maps,
+when-expression evaluation, etc.).
 
 ## Code lookups (replace grep+read cycles)
 

@@ -1,11 +1,71 @@
 package pilot
 
 import (
+	"context"
+	"errors"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/alehatsman/mooncake/internal/pilot/llm"
 )
+
+// stubLLMClient returns a canned plan per call. Used by step-style
+// loop tests to drive RunLoop without touching a real provider.
+type stubLLMClient struct {
+	plans []string
+	calls int
+}
+
+func (s *stubLLMClient) GeneratePlan(_ context.Context, _, _, _ string) (string, error) {
+	if s.calls >= len(s.plans) {
+		return "", errors.New("stub exhausted")
+	}
+	out := s.plans[s.calls]
+	s.calls++
+	return out, nil
+}
+
+// withStubClient swaps the package-level newClient factory for the
+// duration of one test. Returns a cleanup func.
+func withStubClient(t *testing.T, stub *stubLLMClient) func() {
+	t.Helper()
+	orig := newClient
+	newClient = func(_ llm.ClientOptions) (llm.Client, error) {
+		return stub, nil
+	}
+	return func() { newClient = orig }
+}
+
+// initGitRepo turns a TempDir into a minimal git repo so
+// snapshot.Collect (which shells out to `git rev-parse`) doesn't
+// fail with exit 128 inside loop tests. Inherited GIT_* env vars
+// are stripped — pilot's TestMain already does this, but defending
+// here keeps the helper safe under direct invocation too.
+func initGitRepo(t *testing.T, dir string) {
+	t.Helper()
+	cleanEnv := make([]string, 0, len(os.Environ()))
+	for _, e := range os.Environ() {
+		if !strings.HasPrefix(e, "GIT_") {
+			cleanEnv = append(cleanEnv, e)
+		}
+	}
+	for _, args := range [][]string{
+		{"init", "-q"},
+		{"config", "user.email", "test@example.com"},
+		{"config", "user.name", "test"},
+		{"commit", "--allow-empty", "-q", "-m", "init"},
+	} {
+		cmd := exec.Command("git", args...)
+		cmd.Dir = dir
+		cmd.Env = cleanEnv
+		if out, err := cmd.CombinedOutput(); err != nil {
+			t.Fatalf("git %v: %v\n%s", args, err, out)
+		}
+	}
+}
 
 func TestNoProgressDetection(t *testing.T) {
 	plan1 := []byte("- shell:\n    cmd: echo hello")
@@ -121,5 +181,115 @@ func TestSavePlan_ReturnsErrorOnFailure(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "create iterations dir") {
 		t.Errorf("error should name the failing stage; got %q", err.Error())
+	}
+}
+
+// TestRunLoop_StyleStep_EmptyPlanReturnsStepDone covers plan §4: an
+// empty YAML plan under --style step is the documented "goal reached"
+// signal, terminating the loop with StopStepDone after exactly one
+// iteration.
+func TestRunLoop_StyleStep_EmptyPlanReturnsStepDone(t *testing.T) {
+	repo := t.TempDir()
+	initGitRepo(t, repo)
+	stub := &stubLLMClient{plans: []string{"[]\n"}}
+	cleanup := withStubClient(t, stub)
+	defer cleanup()
+
+	result, err := RunLoop(RunOptions{
+		Goal:          "no-op",
+		RepoRoot:      repo,
+		MaxIterations: 3,
+		AutoApply:     true, // skip TTY gate
+		Style:         StyleStep,
+	})
+	if err != nil {
+		t.Fatalf("RunLoop: %v", err)
+	}
+	if result.StopReason != StopStepDone {
+		t.Errorf("StopReason = %q, want %q", result.StopReason, StopStepDone)
+	}
+	if len(result.Iterations) != 1 {
+		t.Errorf("Iterations = %d, want 1", len(result.Iterations))
+	}
+	if stub.calls != 1 {
+		t.Errorf("LLM calls = %d, want 1", stub.calls)
+	}
+	if result.FinalLog == nil || result.FinalLog.Status != "step_done" {
+		t.Errorf("FinalLog status = %v, want step_done", result.FinalLog)
+	}
+}
+
+// TestRunLoop_StyleStep_MultiStepRejected covers plan §8 decision 2:
+// when the model emits >1 step under --style step, the iteration
+// fails with a clear error and the loop continues so the model can
+// self-correct. We give the stub a multi-step plan then an empty
+// plan; iter 1 must be a contract-violation log, iter 2 terminates
+// cleanly. The error message must carry the actual step count.
+func TestRunLoop_StyleStep_MultiStepRejected(t *testing.T) {
+	repo := t.TempDir()
+	initGitRepo(t, repo)
+	multiStep := "- shell: echo one\n- shell: echo two\n"
+	stub := &stubLLMClient{plans: []string{multiStep, "[]\n"}}
+	cleanup := withStubClient(t, stub)
+	defer cleanup()
+
+	result, err := RunLoop(RunOptions{
+		Goal:          "reject multi-step",
+		RepoRoot:      repo,
+		MaxIterations: 3,
+		AutoApply:     true,
+		Style:         StyleStep,
+	})
+	if err != nil {
+		t.Fatalf("RunLoop: %v", err)
+	}
+	if len(result.Iterations) != 2 {
+		t.Fatalf("Iterations = %d, want 2", len(result.Iterations))
+	}
+	if got := result.Iterations[0].Status; got != "step_contract_violation" {
+		t.Errorf("iter 1 status = %q, want step_contract_violation", got)
+	}
+	wantSubstr := "--style step requires exactly one step, got 2"
+	if !strings.Contains(result.Iterations[0].ValidationError, wantSubstr) {
+		t.Errorf("iter 1 error = %q, want substring %q", result.Iterations[0].ValidationError, wantSubstr)
+	}
+	if result.StopReason != StopStepDone {
+		t.Errorf("StopReason = %q, want %q", result.StopReason, StopStepDone)
+	}
+}
+
+// TestRunLoop_StyleStep_FeedsResultBack: a single-step plan followed
+// by an empty plan should terminate cleanly with StopStepDone and
+// the second LLM call must have happened (proving the iteration loop
+// fed the first result back). The single step doesn't have to
+// execute successfully — we use --auto-apply so the TTY gate is
+// skipped, and the executor may fail under a no-op step; either path
+// still proceeds to iter 2 (execution_failed continues the loop).
+func TestRunLoop_StyleStep_FeedsResultBack(t *testing.T) {
+	repo := t.TempDir()
+	initGitRepo(t, repo)
+	// A trivial single-step plan + an empty terminator. The exact
+	// action doesn't matter; we only care that iter 1 is processed
+	// and iter 2 sees the model.
+	singleStep := "- shell: echo step-one\n"
+	stub := &stubLLMClient{plans: []string{singleStep, "[]\n"}}
+	cleanup := withStubClient(t, stub)
+	defer cleanup()
+
+	result, err := RunLoop(RunOptions{
+		Goal:          "feed-back",
+		RepoRoot:      repo,
+		MaxIterations: 3,
+		AutoApply:     true,
+		Style:         StyleStep,
+	})
+	if err != nil {
+		t.Fatalf("RunLoop: %v", err)
+	}
+	if stub.calls != 2 {
+		t.Errorf("LLM calls = %d, want 2 (iter 1 fed back into iter 2)", stub.calls)
+	}
+	if result.StopReason != StopStepDone {
+		t.Errorf("StopReason = %q, want %q", result.StopReason, StopStepDone)
 	}
 }

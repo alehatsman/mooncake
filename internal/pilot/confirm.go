@@ -28,6 +28,14 @@ const (
 	RespEdit
 	RespExplain
 	RespAbort
+	// RespApproveNext is the step-style bulk-approve token
+	// `approve_next N`: apply the current step plus auto-apply the
+	// next N step-gate calls without prompting (spec-67 §10, plan §3).
+	RespApproveNext
+	// RespApproveThread is the step-style sticky bulk-approve token
+	// `approve_thread`: apply every subsequent step-gate call this
+	// invocation without prompting.
+	RespApproveThread
 )
 
 // Response is the parsed user input from the confirm-gate prompt.
@@ -58,9 +66,16 @@ type ConfirmResult struct {
 // prompt. Empty input maps to `N` (reject) — that is the documented
 // default in spec-67 §10. Whitespace and case are tolerated.
 //
+// The style argument gates which tokens are honored. Under StylePlan
+// the whitelist is the historical {y, n, edit, explain N, abort}; the
+// step-style bulk-approve tokens (`approve_next N`, `approve_thread`)
+// map to RespInvalid so plan-style runs cannot smuggle them in. Under
+// StyleStep those tokens are recognized in addition to the historical
+// set.
+//
 // Returns RespInvalid for unrecognized input so the caller can re-prompt
 // without dispatching. Never returns an error.
-func ParseResponse(line string) Response {
+func ParseResponse(line string, style Style) Response {
 	s := strings.ToLower(strings.TrimSpace(line))
 	if s == "" {
 		return Response{Kind: RespReject}
@@ -88,6 +103,23 @@ func ParseResponse(line string) Response {
 		return Response{Kind: RespInvalid}
 	}
 
+	if style == StyleStep {
+		if s == "approve_thread" {
+			return Response{Kind: RespApproveThread}
+		}
+		if rest, ok := stripPrefix(s, "approve_next "); ok {
+			n, err := strconv.Atoi(strings.TrimSpace(rest))
+			if err != nil || n < 1 {
+				return Response{Kind: RespInvalid}
+			}
+			return Response{Kind: RespApproveNext, N: n}
+		}
+		if rest, ok := stripPrefix(s, "approve_next"); ok && rest == "" {
+			// Bare `approve_next` without a count is a typo.
+			return Response{Kind: RespInvalid}
+		}
+	}
+
 	return Response{Kind: RespInvalid}
 }
 
@@ -98,9 +130,26 @@ func stripPrefix(s, prefix string) (string, bool) {
 	return "", false
 }
 
+// StepGateState carries the bulk-approve state across consecutive
+// step-style confirm-gate calls within one RunLoop invocation
+// (spec-67 §10, plan §3). The zero value behaves as a plain per-step
+// gate; once `approve_next N` fires RemainingAutoApprovals counts
+// down, and once `approve_thread` fires ApprovedThread sticks for
+// the rest of the loop.
+//
+// State is in-memory only — never persisted to disk. A fresh
+// `mooncake pilot` invocation starts with a zero-value gate. Multi-
+// turn thread resume (S-pilot-multi-turn) defers its persistence
+// decision; this story stays scoped to single-invocation behavior.
+type StepGateState struct {
+	RemainingAutoApprovals int
+	ApprovedThread         bool
+}
+
 // ConfirmPlan presents the plan to the operator and loops until they
 // choose a terminal outcome (apply / reject / abort). Editor and
-// explain selections re-prompt; invalid input re-prompts.
+// explain selections re-prompt; invalid input re-prompts. Uses the
+// plan-style token whitelist.
 //
 // planBytes is the UNWRAPPED plan (the LLM's output, fences stripped).
 // On OutcomeApply, the returned PlanBytes is the form the caller should
@@ -115,14 +164,49 @@ func stripPrefix(s, prefix string) (string, bool) {
 // caller is responsible for ensuring `in` is a terminal — see
 // EnsureInteractive.
 func ConfirmPlan(in io.Reader, out io.Writer, planBytes []byte) (ConfirmResult, error) {
+	return confirmPlan(in, out, planBytes, StylePlan, nil)
+}
+
+// ConfirmPlanStep is the step-style wrapper around ConfirmPlan: same
+// editor + explain loop, but accepts the bulk-approve tokens
+// `approve_next N` and `approve_thread` and persists their effect
+// across consecutive calls via state.
+//
+// state must be non-nil; pass a single &StepGateState shared across
+// every step-gate call in one RunLoop invocation so the counter and
+// the sticky thread-approve flag survive turn-to-turn. When the gate
+// is already in auto-approve mode (counter > 0 or thread-approved),
+// the function short-circuits to OutcomeApply without reading from in.
+func ConfirmPlanStep(in io.Reader, out io.Writer, planBytes []byte, state *StepGateState) (ConfirmResult, error) {
+	if state == nil {
+		state = &StepGateState{}
+	}
+	return confirmPlan(in, out, planBytes, StyleStep, state)
+}
+
+func confirmPlan(in io.Reader, out io.Writer, planBytes []byte, style Style, state *StepGateState) (ConfirmResult, error) {
+	// Auto-approve short-circuit: never reads from in. ApprovedThread
+	// is sticky; RemainingAutoApprovals decrements per call.
+	if style == StyleStep && state != nil {
+		if state.ApprovedThread {
+			return ConfirmResult{Outcome: OutcomeApply, PlanBytes: planBytes}, nil
+		}
+		if state.RemainingAutoApprovals > 0 {
+			state.RemainingAutoApprovals--
+			return ConfirmResult{Outcome: OutcomeApply, PlanBytes: planBytes}, nil
+		}
+	}
+
 	current := planBytes
 	reader := bufio.NewReader(in)
+	prompt := promptForStyle(style)
+	invalidHelp := invalidHelpForStyle(style)
 
 	for {
 		if err := renderPlan(out, current); err != nil {
 			return ConfirmResult{}, err
 		}
-		fmt.Fprint(out, "Apply? [y/N/edit/explain N/abort]: ")
+		fmt.Fprint(out, prompt)
 
 		line, err := reader.ReadString('\n')
 		if err != nil {
@@ -136,7 +220,7 @@ func ConfirmPlan(in io.Reader, out io.Writer, planBytes []byte) (ConfirmResult, 
 			}
 		}
 
-		resp := ParseResponse(line)
+		resp := ParseResponse(line, style)
 		switch resp.Kind {
 		case RespApply:
 			return ConfirmResult{Outcome: OutcomeApply, PlanBytes: current}, nil
@@ -157,10 +241,40 @@ func ConfirmPlan(in io.Reader, out io.Writer, planBytes []byte) (ConfirmResult, 
 				continue
 			}
 			current = edited
+		case RespApproveNext:
+			// resp.N covers the FOLLOWING calls; the current step counts
+			// as the explicit operator approval, not toward the counter.
+			if state != nil {
+				state.RemainingAutoApprovals = resp.N
+			}
+			return ConfirmResult{Outcome: OutcomeApply, PlanBytes: current}, nil
+		case RespApproveThread:
+			// Plan §8 decision 5: print the audit line to stderr once
+			// at the moment the gate flips. No JSONL audit record yet
+			// (deferred to S-pilot-multi-turn).
+			if state != nil && !state.ApprovedThread {
+				state.ApprovedThread = true
+				fmt.Fprintln(os.Stderr, "auto-approving remaining steps this thread")
+			}
+			return ConfirmResult{Outcome: OutcomeApply, PlanBytes: current}, nil
 		case RespInvalid:
-			fmt.Fprintln(out, "did not understand response. Try one of: y, N, edit, explain N, abort.")
+			fmt.Fprintln(out, invalidHelp)
 		}
 	}
+}
+
+func promptForStyle(style Style) string {
+	if style == StyleStep {
+		return "Apply? [y/N/edit/explain N/approve_next N/approve_thread/abort]: "
+	}
+	return "Apply? [y/N/edit/explain N/abort]: "
+}
+
+func invalidHelpForStyle(style Style) string {
+	if style == StyleStep {
+		return "did not understand response. Try one of: y, N, edit, explain N, approve_next N, approve_thread, abort."
+	}
+	return "did not understand response. Try one of: y, N, edit, explain N, abort."
 }
 
 // EnsureInteractive returns nil if `in` is a terminal capable of

@@ -15,17 +15,31 @@ import (
 type ConsoleSubscriber struct {
 	logLevel  int
 	logFormat string // "text" or "json"
-	redactor  interface {
+	// streamOutput is the opt-in for rendering captured step stdout/
+	// stderr lines into the console output, INDEPENDENT of logLevel.
+	// `mooncake task` sets this true so dev-loop commands ('go build',
+	// 'go test', linters) stream their output by default — without
+	// also flipping logLevel to debug, which would drag in internal
+	// variable dumps and other developer-noise log lines.
+	//
+	// Backward-compat: logLevel <= DebugLevel also enables streaming,
+	// so `mooncake apply --log-level debug` still firehoses.
+	streamOutput bool
+	redactor     interface {
 		Redact(string) string
 	}
 	mu sync.Mutex
 }
 
-// NewConsoleSubscriber creates a new console subscriber
-func NewConsoleSubscriber(logLevel int, logFormat string) *ConsoleSubscriber {
+// NewConsoleSubscriber creates a new console subscriber.
+// streamOutput=false matches the historical `mooncake apply` UX
+// (step-start/end markers only at info; shell stdout/stderr only at
+// debug). `mooncake task` constructs with streamOutput=true.
+func NewConsoleSubscriber(logLevel int, logFormat string, streamOutput bool) *ConsoleSubscriber {
 	return &ConsoleSubscriber{
-		logLevel:  logLevel,
-		logFormat: logFormat,
+		logLevel:     logLevel,
+		logFormat:    logFormat,
+		streamOutput: streamOutput,
 	}
 }
 
@@ -100,10 +114,13 @@ func (c *ConsoleSubscriber) renderText(event events.Event) {
 		}
 
 	case events.EventStepStdout, events.EventStepStderr:
-		// At -l debug stream the captured lines into the console so users
-		// see what their shell steps actually printed; otherwise stay quiet
-		// to keep the default UX uncluttered.
-		if c.logLevel <= DebugLevel {
+		// Two independent gates: the explicit streamOutput opt-in (used
+		// by `mooncake task` so dev-loop shell steps stream by default)
+		// and the legacy -l debug path (so power users running
+		// `mooncake apply --log-level debug` still get the firehose).
+		// Either one enables rendering; both off keeps the default UX
+		// uncluttered.
+		if c.streamOutput || c.logLevel <= DebugLevel {
 			if data, ok := event.Data.(events.StepOutputData); ok {
 				c.renderStepOutput(data, event.Type)
 			}
