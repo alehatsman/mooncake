@@ -1,4 +1,4 @@
-package main
+package agentd
 
 import (
 	"fmt"
@@ -17,7 +17,14 @@ import (
 	"github.com/alehatsman/mooncake/internal/fleet/install"
 )
 
-// agentdCommand is the parent for the daemon-side verbs.
+// Version is the binary's controller/agentd version stamped at build
+// time by goreleaser linker flags into cmd/mooncake.go's `version` and
+// copied here from main() before Command() or RunsCommand() is invoked.
+// Read by `agentd run` (daemon startup) and by `agentd bootstrap`
+// (local-install rendering).
+var Version = "dev"
+
+// Command is the parent for the daemon-side verbs.
 //
 // Spec-70 split the leaf `mooncake agentd` into two subcommands:
 //
@@ -29,7 +36,7 @@ import (
 // will fail to start on a post-split binary — re-bootstrap them
 // (`mooncake fleet bootstrap` or `mooncake agentd bootstrap`) to
 // re-render the unit with the new `agentd run` form.
-func agentdCommand() *cli.Command {
+func Command() *cli.Command {
 	return &cli.Command{
 		Name:  "agentd",
 		Usage: "Mooncake host daemon (run / install) (experimental)",
@@ -150,7 +157,7 @@ func agentdRun(c *cli.Context) error {
 		return err
 	}
 
-	srv, err := agentd.New(cfg, log, version)
+	srv, err := agentd.New(cfg, log, Version)
 	if err != nil {
 		return err
 	}
@@ -239,7 +246,7 @@ func agentdBootstrapAction(c *cli.Context) error {
 		Port:              port,
 		AsUser:            asUser,
 		LocalBinary:       binPath,
-		ControllerVersion: version,
+		ControllerVersion: Version,
 		Upgrade:           c.Bool("upgrade"),
 		ReachableHost:     "127.0.0.1",
 		Writer:            w,

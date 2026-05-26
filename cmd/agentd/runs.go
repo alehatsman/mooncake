@@ -1,4 +1,4 @@
-package main
+package agentd
 
 import (
 	"bufio"
@@ -36,9 +36,9 @@ func agentdHTTPClient(systemMode bool) (*http.Client, string, error) {
 	return &http.Client{Transport: transport}, cfg.SocketPath, nil
 }
 
-// runsCommand returns the `mooncake runs` parent with its four
+// RunsCommand returns the `mooncake runs` parent with its four
 // daemon-facing subcommands (apply / follow / get / list).
-func runsCommand() *cli.Command {
+func RunsCommand() *cli.Command {
 	return &cli.Command{
 		Name:  "runs",
 		Usage: "Submit and follow runs on the local agentd daemon",

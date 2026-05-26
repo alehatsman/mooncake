@@ -1,4 +1,4 @@
-package main
+package agentd
 
 import (
 	"bytes"
@@ -18,7 +18,7 @@ import (
 func newTestAgentdApp() *cli.App {
 	var buf bytes.Buffer
 	return &cli.App{
-		Commands:       []*cli.Command{agentdCommand()},
+		Commands:       []*cli.Command{Command()},
 		Writer:         &buf,
 		ErrWriter:      io.Discard,
 		ExitErrHandler: func(*cli.Context, error) {},
@@ -31,7 +31,7 @@ func newTestAgentdApp() *cli.App {
 // spec-70 — pin it here so a "tidy refactor" that adds an Action back
 // trips the test.
 func TestAgentdCommand_Subcommands(t *testing.T) {
-	cmd := agentdCommand()
+	cmd := Command()
 	if cmd.Action != nil {
 		t.Errorf("agentd parent should have no Action; spec-70 split it into `run` + `bootstrap`")
 	}

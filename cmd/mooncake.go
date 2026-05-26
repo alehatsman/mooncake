@@ -11,6 +11,7 @@ import (
 
 	"github.com/urfave/cli/v2"
 
+	agentdcmd "github.com/alehatsman/mooncake/cmd/agentd"
 	fleetcmd "github.com/alehatsman/mooncake/cmd/fleet"
 	"github.com/alehatsman/mooncake/internal/fleet"
 	"github.com/alehatsman/mooncake/internal/ops"
@@ -184,7 +185,7 @@ func createApp() *cli.App {
 			snapshotCommand(),
 			historyCommand(),
 			mcpCommand(),
-			agentdCommand(),
+			agentdcmd.Command(),
 			fleetcmd.Command(),
 			stepCommand(),
 			taskCommand(),
@@ -196,7 +197,7 @@ func createApp() *cli.App {
 			explainCommand(),
 			metricsCommand(),
 			actionsCommand(),
-			runsCommand(),
+			agentdcmd.RunsCommand(),
 			pilotCommand(),
 			validateCommand(),
 		},
@@ -235,10 +236,10 @@ func applyQuietUsageError(cmds []*cli.Command) {
 }
 
 func main() {
-	// Propagate the linker-stamped binary version into the fleet
-	// subpackage so `fleet bootstrap` can report it as the controller's
-	// version to remote agentds.
+	// Propagate the linker-stamped binary version into the cmd/
+	// sub-packages that surface it back to operators or remotes.
 	fleetcmd.Version = version
+	agentdcmd.Version = version
 
 	app := createApp()
 
