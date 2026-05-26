@@ -507,8 +507,22 @@ func handleStepError(step config.Step, ec *ExecutionContext, stepErr error, step
 		failedData.ExitCode = cmdErr.ExitCode
 	}
 	if ec.CurrentResult != nil {
-		failedData.Stdout = truncate(ec.CurrentResult.Stdout, 2000)
-		failedData.Stderr = truncate(ec.CurrentResult.Stderr, 2000)
+		// stdout/stderr on the failure event flow into the stderr JSON
+		// blob (NewStderrErrorSubscriber) AND the runlog StepEntry, so
+		// the cap balances three concerns: enough context for the
+		// caller to actually diagnose the failure, not so much that
+		// a verbose-but-truncated stream blows up the runlog, and a
+		// known ceiling for SSE/fleet consumers that forward events
+		// over the wire. 64 KiB covers ~800 lines at typical CLI
+		// widths — fits the worst observed CI-gate failure (~40 KiB
+		// of phase output before the failing line) with headroom.
+		//
+		// truncateTail keeps the LAST n bytes. For step failures the
+		// useful information ("FAIL: ...", stack trace, exit code) is
+		// always at the end of the stream; preserving the head leaves
+		// the operator staring at the script's startup boilerplate.
+		failedData.Stdout = truncateTail(ec.CurrentResult.Stdout, 65536)
+		failedData.Stderr = truncateTail(ec.CurrentResult.Stderr, 65536)
 	}
 	ec.EmitEvent(events.EventStepFailed, failedData)
 
@@ -1262,11 +1276,23 @@ func formatMode(mode os.FileMode) string {
 	return fmt.Sprintf("%#o", mode)
 }
 
-func truncate(s string, maxLen int) string {
+// truncateTail returns the last maxLen bytes of s, prefixed with an
+// ellipsis line so callers see that earlier output was dropped. For
+// step-failure stdout/stderr where the diagnostic ("FAIL: ...", stack
+// trace, exit-code printout) is invariably at the END of the stream;
+// using the head-truncating truncate() would leave operators staring
+// at startup boilerplate while the actual error scrolled off.
+//
+// The "... <N bytes truncated> ...\n" marker is intentionally
+// human-parseable (no JSON, no structured fields) — this output lands
+// in a free-text stdout/stderr field that downstream consumers (runlog
+// reader, MCP, the stderr error subscriber) display verbatim.
+func truncateTail(s string, maxLen int) string {
 	if len(s) <= maxLen {
 		return s
 	}
-	return s[:maxLen]
+	dropped := len(s) - maxLen
+	return fmt.Sprintf("... <%d bytes truncated> ...\n%s", dropped, s[dropped:])
 }
 
 // dispatchRunner invokes a Spec 16 Runner handler. The handler's Run
