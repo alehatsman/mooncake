@@ -1,4 +1,7 @@
-// Package main: spec-67 `mooncake mod` subcommands.
+// Package mod implements the `mooncake mod` CLI tree — fetch, cache,
+// and register modules (Git repositories that export reusable
+// components, spec-67). Successor to the marketplace surface in
+// cmd/presets.go.
 //
 // Three subcommands ship in phase 1:
 //
@@ -10,7 +13,7 @@
 // writes/updates the `modules:` block in the nearest mooncake.yml. The cache
 // directory lives at ~/.cache/mooncake/modules (overridable via
 // $MOONCAKE_MODULE_CACHE).
-package main
+package mod
 
 import (
 	"context"
@@ -25,7 +28,7 @@ import (
 	"github.com/alehatsman/mooncake/internal/modules"
 )
 
-func modCommand() *cli.Command {
+func Command() *cli.Command {
 	return &cli.Command{
 		Name:  "mod",
 		Usage: "Manage Git-native component modules",
