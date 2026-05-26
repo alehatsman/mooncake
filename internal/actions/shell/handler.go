@@ -247,18 +247,31 @@ func (h *Handler) setupCommandContext(step *config.Step) (context.Context, conte
 
 // configureCommandEnvironment sets environment variables and working directory
 func (h *Handler) configureCommandEnvironment(command *exec.Cmd, ctx actions.Context, step *config.Step) error {
-	// Set environment variables
-	if len(step.Env) > 0 {
-		envVars := os.Environ()
-		for key, value := range step.Env {
-			renderedValue, err := ctx.GetTemplate().Render(value, ctx.GetVariables())
-			if err != nil {
-				return fmt.Errorf("failed to render env var %s: %w", key, err)
-			}
-			envVars = append(envVars, fmt.Sprintf("%s=%s", key, renderedValue))
-		}
-		command.Env = envVars
+	// Build the child env: parent env + force-color propagation +
+	// step.Env overrides. We always set command.Env (rather than
+	// letting exec.Cmd default to os.Environ) because the force-color
+	// branch needs to inject regardless of whether the user supplied
+	// step.Env.
+	envVars := os.Environ()
+
+	// Color propagation: when the OUTER mooncake's stdout is a TTY,
+	// instruct the CHILD (typically another mooncake apply / plan
+	// shelled out from a tasks.yml entry) to emit ANSI codes even
+	// though the child's own stdout is the pipe we wrap with the `|`
+	// stream prefix. NO_COLOR in the parent env propagates naturally
+	// and short-circuits this in the child's DetectTerminal().
+	if shouldForceChildColor() && !hasEnv(envVars, "FORCE_COLOR") {
+		envVars = append(envVars, "FORCE_COLOR=1")
 	}
+
+	for key, value := range step.Env {
+		renderedValue, err := ctx.GetTemplate().Render(value, ctx.GetVariables())
+		if err != nil {
+			return fmt.Errorf("failed to render env var %s: %w", key, err)
+		}
+		envVars = append(envVars, fmt.Sprintf("%s=%s", key, renderedValue))
+	}
+	command.Env = envVars
 
 	// Set working directory
 	if step.Cwd != "" {

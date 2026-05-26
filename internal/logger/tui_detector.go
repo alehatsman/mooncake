@@ -19,22 +19,44 @@ func DetectTerminal() TerminalInfo {
 	fd := int(os.Stdout.Fd())
 	isTerminal := term.IsTerminal(fd)
 
-	if !isTerminal {
+	// NO_COLOR always wins — explicit user opt-out per
+	// https://no-color.org, regardless of TTY state or downstream
+	// force-color hints.
+	if os.Getenv("NO_COLOR") != "" {
 		return TerminalInfo{
-			IsTerminal:   false,
+			IsTerminal:   isTerminal,
 			SupportsANSI: false,
-			Width:        0,
-			Height:       0,
 		}
 	}
 
-	// Check environment variables that indicate non-interactive mode
-	if os.Getenv("CI") == "true" || os.Getenv("TERM") == "dumb" || os.Getenv("NO_COLOR") != "" {
+	// FORCE_COLOR / CLICOLOR_FORCE flip ANSI on even when stdout is a
+	// pipe — the standard convention used by ripgrep, fatih/color,
+	// git, and the rest of the modern CLI ecosystem. `mooncake task`
+	// injects FORCE_COLOR=1 into the child env when the outer process
+	// is a TTY (see internal/actions/shell handler.go), so colors
+	// flow through the outer task's `|`-prefixed stream wrap to the
+	// user's terminal.
+	if !isTerminal {
+		if os.Getenv("FORCE_COLOR") != "" || os.Getenv("CLICOLOR_FORCE") != "" {
+			return TerminalInfo{
+				IsTerminal:   false,
+				SupportsANSI: true,
+			}
+		}
+		return TerminalInfo{
+			IsTerminal:   false,
+			SupportsANSI: false,
+		}
+	}
+
+	// CI / dumb-term suppression. These imply "no interactive
+	// features" rather than "no color", but mooncake conflates the
+	// two through SupportsANSI today; preserve that bundling to avoid
+	// regression.
+	if os.Getenv("CI") == "true" || os.Getenv("TERM") == "dumb" {
 		return TerminalInfo{
 			IsTerminal:   true,
 			SupportsANSI: false,
-			Width:        0,
-			Height:       0,
 		}
 	}
 
