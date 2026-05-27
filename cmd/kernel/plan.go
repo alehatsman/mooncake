@@ -84,6 +84,11 @@ func PlanCommand() *cli.Command {
 			&cli.StringFlag{Name: "sudo-pass", Aliases: []string{"s"}, Usage: "Sudo password (requires --insecure-sudo-pass)"},
 			&cli.BoolFlag{Name: "ask-become-pass", Aliases: []string{"K"}, Usage: "Prompt for sudo password interactively"},
 			&cli.BoolFlag{Name: "insecure-sudo-pass", Usage: "Allow --sudo-pass flag (WARNING: visible in shell history)"},
+			&cli.BoolFlag{
+				Name:  "allow-undefined",
+				Value: false,
+				Usage: "Downgrade unresolved `{{ var }}` references from a fatal error to a warning. By default, plan errors on any root identifier not in initial_vars and not produced by a prior step's `as:` register.",
+			},
 		},
 		Action: planAction,
 	}
@@ -159,6 +164,15 @@ func planAction(c *cli.Context) error {
 	})
 	if err != nil {
 		return fmt.Errorf("failed to build plan: %w", err)
+	}
+
+	// Strict-template gate. The planner already populated
+	// planData.UnresolvedTemplates; we just decide whether to fail.
+	// JSON/YAML callers always get the field for programmatic
+	// consumption, but we still exit non-zero so scripts notice.
+	if len(planData.UnresolvedTemplates) > 0 && !c.Bool("allow-undefined") {
+		fmt.Fprint(os.Stderr, FormatUnresolvedTemplates(planData.UnresolvedTemplates))
+		return cli.Exit("", exitCodeValidationError)
 	}
 
 	// Spec 16: after the static config expansion, inspect each step

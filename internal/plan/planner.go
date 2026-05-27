@@ -285,6 +285,13 @@ func (p *Planner) BuildPlan(cfg PlannerConfig) (*Plan, error) {
 	}
 	plan.InputFilesHash = hash
 
+	// Strict-template scan: surfaces `{{ root }}` references whose
+	// root identifier is not in initial_vars and not produced by a
+	// prior step's `as:` register. The planner attaches the list to
+	// the plan; commands (`validate`, `plan`) decide whether the
+	// presence of any refs is fatal.
+	plan.UnresolvedTemplates = CheckPlanStrict(plan)
+
 	return plan, nil
 }
 

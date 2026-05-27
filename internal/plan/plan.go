@@ -29,6 +29,13 @@ type Plan struct {
 	// Modules carries the playbook's `modules:` alias map (spec-67) so the
 	// executor can resolve `use: <alias>` references at apply time.
 	Modules map[string]string `json:"modules,omitempty" yaml:"modules,omitempty"`
+
+	// UnresolvedTemplates lists `{{ root }}` references whose root
+	// identifier is not present in initial_vars, not produced by a
+	// prior step's `as:` register, and not a recognized loop/env name.
+	// Populated by CheckPlanStrict after expansion; surfaced by the
+	// `validate` and `plan` commands.
+	UnresolvedTemplates []UnresolvedRef `json:"unresolved_templates,omitempty" yaml:"unresolved_templates,omitempty"`
 }
 
 // StepInspection is the result of running a handler in ModePlan against
