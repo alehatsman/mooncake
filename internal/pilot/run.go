@@ -48,7 +48,7 @@ func Run(opts RunOptions) (*IterationLog, error) {
 		return nil, fmt.Errorf("failed to collect snapshot: %w", err)
 	}
 
-	tmpFile, err := os.CreateTemp("", "mooncake-plan-*.yml")
+	tmpFile, err := createPlanTempFile(opts.RepoRoot)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create temp file: %w", err)
 	}
