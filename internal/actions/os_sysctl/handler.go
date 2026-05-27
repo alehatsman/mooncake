@@ -18,6 +18,7 @@ import (
 	"regexp"
 	"runtime"
 	"strings"
+	"time"
 
 	"github.com/alehatsman/mooncake/internal/actions"
 	"github.com/alehatsman/mooncake/internal/config"
@@ -32,6 +33,12 @@ const (
 	stateAbsent      = "absent"
 	atomicTempSuffix = ".mooncake-tmp"
 	managedHeader    = "# Managed by mooncake os.sysctl"
+
+	// sysctlCmdTimeout bounds the `sysctl -w` shell-out. sysctl is
+	// fast in the happy path (sub-ms) but blocks on some hardware
+	// sysctls when the underlying driver is wedged (F051). 5s
+	// matches the facts probeTimeout precedent.
+	sysctlCmdTimeout = 5 * time.Second
 )
 
 // sysctlPaths controls the persist file location. Tests override it.
@@ -543,9 +550,11 @@ func realSysctlGet(name string) (string, error) {
 
 // realSysctlApply runs `sysctl -w name=value` to push the value to the
 // running kernel. Goes through the supplied runner — writing /proc/sys/*
-// requires root.
+// requires root. Bounded by sysctlCmdTimeout (F051).
 func realSysctlApply(runner *security.Privileged, name, value string) error {
-	out, err := runner.Run(context.TODO(), "sysctl", "-w", name+"="+value)
+	ctx, cancel := context.WithTimeout(context.Background(), sysctlCmdTimeout)
+	defer cancel()
+	out, err := runner.Run(ctx, "sysctl", "-w", name+"="+value)
 	if err != nil {
 		msg := strings.TrimSpace(string(out))
 		if msg != "" {

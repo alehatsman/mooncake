@@ -75,8 +75,11 @@ func applyPlanLinux(runner *security.Privileged, plan computedPlan, _ *userState
 // runner falls back to a zero-value security.PrivilegedRunner — same
 // shape used by os_group/platform_linux.go's runLinuxCmd. Mirrors the
 // spec-69 "tests can pass nil and still get a usable runner" pattern.
+// Bounded by userCmdTimeout (F051).
 func runLinuxCmd(runner *security.Privileged, bin string, args ...string) error {
-	out, err := runner.Run(context.TODO(), bin, args...)
+	ctx, cancel := context.WithTimeout(context.Background(), userCmdTimeout)
+	defer cancel()
+	out, err := runner.Run(ctx, bin, args...)
 	if err != nil {
 		msg := strings.TrimSpace(string(out))
 		if msg != "" {

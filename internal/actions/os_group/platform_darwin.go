@@ -164,7 +164,9 @@ func nextAvailableGID(minBound, maxBound int) (int, error) {
 // require root on macOS.
 func dsclGroupRun(runner *security.Privileged, args ...string) error {
 	fullArgs := append([]string{"."}, args...)
-	out, err := runner.Run(context.TODO(), "dscl", fullArgs...)
+	ctx, cancel := context.WithTimeout(context.Background(), groupCmdTimeout)
+	defer cancel()
+	out, err := runner.Run(ctx, "dscl", fullArgs...)
 	if err != nil {
 		msg := strings.TrimSpace(string(out))
 		if msg != "" {

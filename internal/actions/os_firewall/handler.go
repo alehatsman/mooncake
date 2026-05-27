@@ -16,6 +16,7 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/alehatsman/mooncake/internal/actions"
 	"github.com/alehatsman/mooncake/internal/config"
@@ -37,6 +38,13 @@ const (
 
 	protoTCP = "tcp"
 	protoUDP = "udp"
+
+	// ufwCmdTimeout bounds each `ufw` invocation. netfilter / nft
+	// lock contention (another process holding the table lock, or a
+	// `firewalld` mid-restart) can otherwise block apply
+	// indefinitely (F051). 10s is well above ufw's normal sub-100ms
+	// response.
+	ufwCmdTimeout = 10 * time.Second
 )
 
 // ufwRun / ufwStatus are package-level hooks so tests can swap the
@@ -461,11 +469,14 @@ func normalizeSource(s string) string {
 	return low
 }
 
-// realUFWRun shells out to `ufw <args>` via the supplied runner. The
-// action is registered as RequiresSudo: true; the runner handles
-// escalation when mooncake runs as a non-root user.
+// realUFWRun shells out to `ufw <args>` via the supplied runner.
+// Bounded by ufwCmdTimeout (F051). The action is registered as
+// RequiresSudo: true; the runner handles escalation when mooncake
+// runs as a non-root user.
 func realUFWRun(runner *security.Privileged, args ...string) error {
-	out, err := runner.Run(context.TODO(), "ufw", args...)
+	ctx, cancel := context.WithTimeout(context.Background(), ufwCmdTimeout)
+	defer cancel()
+	out, err := runner.Run(ctx, "ufw", args...)
 	if err != nil {
 		msg := strings.TrimSpace(string(out))
 		if msg != "" {
@@ -477,7 +488,9 @@ func realUFWRun(runner *security.Privileged, args ...string) error {
 }
 
 func realUFWStatus(runner *security.Privileged) (string, error) {
-	out, err := runner.Run(context.TODO(), "ufw", "status", "numbered")
+	ctx, cancel := context.WithTimeout(context.Background(), ufwCmdTimeout)
+	defer cancel()
+	out, err := runner.Run(ctx, "ufw", "status", "numbered")
 	if err != nil {
 		msg := strings.TrimSpace(string(out))
 		if msg != "" {

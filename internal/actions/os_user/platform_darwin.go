@@ -263,7 +263,9 @@ func applyGroupsDarwin(runner *security.Privileged, username string, currentGrou
 // surfaces with the captured output for diagnosis.
 func dsclRun(runner *security.Privileged, args ...string) error {
 	fullArgs := append([]string{"."}, args...)
-	out, err := runner.Run(context.TODO(), "dscl", fullArgs...)
+	ctx, cancel := context.WithTimeout(context.Background(), userCmdTimeout)
+	defer cancel()
+	out, err := runner.Run(ctx, "dscl", fullArgs...)
 	if err != nil {
 		msg := strings.TrimSpace(string(out))
 		if msg != "" {
@@ -276,9 +278,11 @@ func dsclRun(runner *security.Privileged, args ...string) error {
 
 // runDarwinCmd is the createhomedir / rm escape hatch — same shape
 // as dsclRun but for the non-dscl helpers Darwin's apply path still
-// needs root for.
+// needs root for. Bounded by userCmdTimeout (F051).
 func runDarwinCmd(runner *security.Privileged, bin string, args ...string) error {
-	out, err := runner.Run(context.TODO(), bin, args...)
+	ctx, cancel := context.WithTimeout(context.Background(), userCmdTimeout)
+	defer cancel()
+	out, err := runner.Run(ctx, bin, args...)
 	if err != nil {
 		msg := strings.TrimSpace(string(out))
 		if msg != "" {

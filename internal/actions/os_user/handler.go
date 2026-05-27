@@ -20,6 +20,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/alehatsman/mooncake/internal/actions"
 	"github.com/alehatsman/mooncake/internal/config"
@@ -31,6 +32,14 @@ const (
 	actionName   = "os.user"
 	statePresent = "present"
 	stateAbsent  = "absent"
+
+	// userCmdTimeout bounds the wallclock for every useradd /
+	// usermod / userdel / dscl shell-out. The happy path is sub-
+	// 100ms; the failure mode this guards is nss/sssd lookups
+	// blocking against a network identity provider (LDAP, AD)
+	// that is unreachable or paused (F051). 10s comfortably
+	// covers sssd cache-refresh paths.
+	userCmdTimeout = 10 * time.Second
 )
 
 // Handler implements os.user.

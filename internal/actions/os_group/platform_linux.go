@@ -58,8 +58,12 @@ func applyPlanLinux(runner *security.Privileged, plan computedPlan) error {
 	return nil
 }
 
+// runLinuxCmd shells out via the PrivilegedRunner. Bounded by
+// groupCmdTimeout (F051).
 func runLinuxCmd(runner *security.Privileged, bin string, args ...string) error {
-	out, err := runner.Run(context.TODO(), bin, args...)
+	ctx, cancel := context.WithTimeout(context.Background(), groupCmdTimeout)
+	defer cancel()
+	out, err := runner.Run(ctx, bin, args...)
 	if err != nil {
 		msg := strings.TrimSpace(string(out))
 		if msg != "" {

@@ -18,6 +18,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/alehatsman/mooncake/internal/actions"
 	"github.com/alehatsman/mooncake/internal/config"
@@ -34,6 +35,11 @@ const (
 	sshDirMode       = 0o700
 	authorizedMode   = 0o600
 	atomicTempSuffix = ".mooncake-tmp"
+
+	// chownCmdTimeout bounds the privileged chown retry (F051).
+	// chown is fast in the happy path; the bound exists so a
+	// wedged nss lookup (uid → name) can't hang apply.
+	chownCmdTimeout = 5 * time.Second
 )
 
 // Handler implements os.ssh_key.
@@ -589,7 +595,9 @@ func writeAuthorizedKeys(performer actions.Performer, runner *security.Privilege
 			// remediation is visible alongside whatever the runner
 			// reported.
 			spec := strconv.Itoa(uid) + ":" + strconv.Itoa(gid)
-			out, sErr := runner.Run(context.TODO(), "chown", spec, path)
+			chownCtx, chownCancel := context.WithTimeout(context.Background(), chownCmdTimeout)
+			out, sErr := runner.Run(chownCtx, "chown", spec, path)
+			chownCancel()
 			if sErr != nil {
 				msg := strings.TrimSpace(string(out))
 				if msg != "" {

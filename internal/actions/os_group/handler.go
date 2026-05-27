@@ -17,6 +17,7 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/alehatsman/mooncake/internal/actions"
 	"github.com/alehatsman/mooncake/internal/config"
@@ -28,6 +29,12 @@ const (
 	actionName   = "os.group"
 	statePresent = "present"
 	stateAbsent  = "absent"
+
+	// groupCmdTimeout bounds groupadd / groupmod / groupdel / dscl
+	// shell-outs (F051). Same rationale as userCmdTimeout in
+	// os_user/handler.go — nss/sssd lookups can hang against a
+	// stalled identity provider.
+	groupCmdTimeout = 10 * time.Second
 )
 
 // Handler implements os.group.

@@ -32,6 +32,15 @@ const (
 	stateFstabOnly   = "fstab_only"
 	stateAbsent      = "absent"
 	atomicTempSuffix = ".mooncake-tmp"
+
+	// mountCmdTimeout bounds the wallclock budget for the
+	// `mount` / `umount` shell-outs. NFS hangs under default
+	// `hard,intr` options can otherwise block apply indefinitely
+	// because actions.Context doesn't expose a cancellable parent
+	// (F051). 30s is generous for slow-but-healthy NFS; failure-
+	// mode hangs (server unreachable, locked mount) are caught
+	// quickly via context.DeadlineExceeded.
+	mountCmdTimeout = 30 * time.Second
 )
 
 // mountPaths controls the on-disk locations the handler reads/writes.
@@ -568,9 +577,12 @@ func snapshotFstab(performer actions.Performer) error {
 	return nil
 }
 
-// realMount shells out to `mount <dest>` via the supplied runner.
+// realMount shells out to `mount <dest>` via the supplied runner,
+// bounded by mountCmdTimeout (F051).
 func realMount(runner *security.Privileged, dest string) error {
-	out, err := runner.Run(context.TODO(), "mount", dest)
+	ctx, cancel := context.WithTimeout(context.Background(), mountCmdTimeout)
+	defer cancel()
+	out, err := runner.Run(ctx, "mount", dest)
 	if err != nil {
 		msg := strings.TrimSpace(string(out))
 		if msg != "" {
@@ -581,9 +593,12 @@ func realMount(runner *security.Privileged, dest string) error {
 	return nil
 }
 
-// realUmount shells out to `umount <dest>` via the supplied runner.
+// realUmount shells out to `umount <dest>` via the supplied runner,
+// bounded by mountCmdTimeout (F051).
 func realUmount(runner *security.Privileged, dest string) error {
-	out, err := runner.Run(context.TODO(), "umount", dest)
+	ctx, cancel := context.WithTimeout(context.Background(), mountCmdTimeout)
+	defer cancel()
+	out, err := runner.Run(ctx, "umount", dest)
 	if err != nil {
 		msg := strings.TrimSpace(string(out))
 		if msg != "" {
