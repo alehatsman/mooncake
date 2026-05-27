@@ -28,7 +28,6 @@ These are brainstormed proposals, not specs.
 | [01](./proposal-01-result-schema-conventions.md) | Standardize result schema: 5-field common envelope | M | High | Every action returns its own shape; agents have to know each |
 | [02](./proposal-02-recap-counter-discipline.md) | Codify `ok / changed / skipped / failed / reverted / cancelled` | S | High | Counters are the user's exit signal; today their semantics are folklore |
 | [03](./proposal-03-step-validator-consistency.md) | `mooncake step` enforces `additionalProperties: false` | XS | Medium | Closes the asymmetry where `step` accepts unknown fields silently |
-| [04](./proposal-04-typed-plan-diff.md) | Typed plan diffs (per-action-type, not just file) | M | High | `plan --diff` is the safety story; only file diffs are useful today |
 | [05](./proposal-05-action-capability-flags.md) | Surface `Permissions/Diff/Cost/Reverse` capability flags | XS | Medium | spec-22 shipped the methods; make their outputs inspectable |
 | [06](./proposal-06-failed-vs-error-distinction.md) | Reconcile `failed: false` + `error: "..."`; query vs. mutation taxonomy | S | Medium | Recurring confusion across observe/wait/os actions (#61 umbrella) |
 | [07](./proposal-07-pkg-aur-support.md) | `pkg.install: manager: yay` / `paru` for Arch AUR | S | Medium | Today's AUR install is a 20-line `shell: yay -S` block — no idempotency, no plan diff |
@@ -46,12 +45,12 @@ These are brainstormed proposals, not specs.
 
 ### Audit-distilled (kernel discipline)
 
-1. **03 step validator** — XS, no controversy, fixes #83
-2. **05 capability flags** — XS, no controversy, exposes existing data
+1. **03 step validator** — XS, no controversy, fixes #83 *(shipped, in archive/done)*
+2. **05 capability flags** — XS, no controversy, exposes existing data *(shipped, in archive/done)*
 3. **01 result schema** — M, deprecation window required; ship per-PR
 4. **06 failed/error distinction** — S, depends on 01; handler-by-handler
 5. **02 recap counter discipline** — S, depends on 01 + 06
-6. **04 typed plan diff** — M, biggest scope; ship last
+6. **04 typed plan diff** — M, biggest scope; ship last *(promoted to spec-66, shipped 2026-05-27)*
 
 The first two are pure cleanup. The middle three are the disciplined
 refactor of the result + recap surface. The last is new functionality
