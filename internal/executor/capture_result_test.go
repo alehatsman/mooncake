@@ -230,3 +230,55 @@ func TestCaptureResult_TwoDistinctLoopsAtDifferentOriginsWarn(t *testing.T) {
 		t.Errorf("distinct loops at different origins must warn, got logs: %+v", tl.GetLogs())
 	}
 }
+
+// TestRunCapture_MarkStepReverted is the F054 regression for the
+// capture-side half of the rollback-visibility fix: when a
+// transaction rollback successfully reverses a step, the capture
+// record's Reverted flag flips so the runlog projection
+// (`apply.buildStepEntries`) can mirror it into the StepEntry.
+// The original step's record stays in steps[]; rollback just
+// decorates it — `mooncake history` shows "this step ran, then
+// was rolled back" without a second entry.
+func TestRunCapture_MarkStepReverted(t *testing.T) {
+	c := &RunCapture{}
+	step1 := config.Step{ID: "s1", Name: "step-one"}
+	step2 := config.Step{ID: "s2", Name: "step-two"}
+	c.appendStep(step1, &Result{Changed: true})
+	c.appendStep(step2, &Result{Changed: true})
+
+	// Mark only step1 reverted. Lookup by ID.
+	c.markStepReverted("s1")
+
+	steps := c.Steps()
+	if len(steps) != 2 {
+		t.Fatalf("Steps() len = %d, want 2", len(steps))
+	}
+	if !steps[0].Reverted {
+		t.Errorf("step1 Reverted = false, want true after markStepReverted")
+	}
+	if steps[1].Reverted {
+		t.Errorf("step2 Reverted = true, want false (not marked)")
+	}
+}
+
+// TestRunCapture_MarkStepReverted_UnknownID covers the silent
+// no-op path: marking a step that isn't in the capture (mismatched
+// ID, capture cleared, etc.) does not panic and does not flip any
+// existing record's flag.
+func TestRunCapture_MarkStepReverted_UnknownID(t *testing.T) {
+	c := &RunCapture{}
+	c.appendStep(config.Step{ID: "s1"}, &Result{Changed: true})
+
+	c.markStepReverted("missing")
+
+	steps := c.Steps()
+	if len(steps) != 1 || steps[0].Reverted {
+		t.Errorf("unknown ID should be no-op; got steps=%+v", steps)
+	}
+
+	// Nil receiver is also defensive — the transaction.go call site
+	// passes `ec.Svc.Capture` which can be nil when ExecutePlan ran
+	// without a capture (legacy callers).
+	var nilCapture *RunCapture
+	nilCapture.markStepReverted("anything") // must not panic
+}

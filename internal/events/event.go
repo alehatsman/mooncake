@@ -107,6 +107,24 @@ const (
 	EventPrintMessage EventType = "print.message"
 )
 
+// Event types for transaction rollback (F054 / spec-30).
+//
+// Spec-30 §"Key files" promised a six-event surface for transaction
+// lifecycle (begin / commit / rollback_begin / step_reversed /
+// rollback_complete / rollback_failed); the implementation shipped
+// the executor-side semantics but never wired the event emit. F054
+// closes the visibility half: four events at natural emit boundaries
+// inside handleTxnBodyFailure + the inverse-step dispatch path. The
+// two missing events (TransactionBegin / TransactionCommit) need
+// compound-parent step.started semantics that don't exist yet —
+// deferred until the executor exposes per-compound-parent lifecycle.
+const (
+	EventTransactionRollbackBegin    EventType = "transaction.rollback_begin"
+	EventTransactionStepReversed     EventType = "transaction.step_reversed"
+	EventTransactionRollbackComplete EventType = "transaction.rollback_complete"
+	EventTransactionRollbackFailed   EventType = "transaction.rollback_failed"
+)
+
 // RunStartedData contains data for run.started events
 type RunStartedData struct {
 	RootFile   string   `json:"root_file"`
@@ -429,4 +447,62 @@ type StepCheckedData struct {
 	// inspectionCollector type-asserts back. Nil when the handler
 	// doesn't implement Coster.
 	Cost any `json:"cost,omitempty"`
+}
+
+// TransactionRollbackBeginData fires once at the start of a
+// transaction's LIFO rollback walk — i.e. the first time a body
+// child fails. Carries the failed step's identity + the originating
+// error so machine-readable consumers (runlog, agent telemetry) can
+// trace which body step triggered the unwind.
+type TransactionRollbackBeginData struct {
+	TxnParentID    string `json:"txn_parent_id"`
+	FailedStepID   string `json:"failed_step_id"`
+	FailedStepName string `json:"failed_step_name,omitempty"`
+	ErrorMessage   string `json:"error_message"`
+	// CompletedSteps is the count of body children that ran to
+	// completion before the failure — i.e. the count of inverse
+	// steps the rollback will attempt. Lets consumers pre-allocate
+	// or size progress UI.
+	CompletedSteps int `json:"completed_steps"`
+}
+
+// TransactionStepReversedData fires after each successful inverse
+// step dispatch during rollback. Identifies the ORIGINAL body
+// step (the one whose effect just got undone), not the inverse step
+// — readers of `mooncake history` care which user-authored step
+// was reverted, not which synthesized inverse handler ran.
+type TransactionStepReversedData struct {
+	TxnParentID string `json:"txn_parent_id"`
+	StepID      string `json:"step_id"`
+	Name        string `json:"name,omitempty"`
+	// Action is the original step's action type (e.g. "file.write").
+	// The inverse's action is usually the same but with a different
+	// shape (state=absent for a create, state=present with captured
+	// bytes for a delete). Identifying via the original lets log
+	// readers correlate to the original step in the plan.
+	Action string `json:"action,omitempty"`
+	// DurationMs is how long the inverse Run took.
+	DurationMs int64 `json:"duration_ms"`
+}
+
+// TransactionRollbackCompleteData fires at the end of a fully-
+// successful rollback (every previously-completed body child got
+// reversed cleanly).
+type TransactionRollbackCompleteData struct {
+	TxnParentID   string `json:"txn_parent_id"`
+	ReversedSteps int    `json:"reversed_steps"`
+}
+
+// TransactionRollbackFailedData fires when at least one Reverse()
+// failed during the LIFO walk. ReversedSteps counts the inverses
+// that ran successfully BEFORE the first failure — i.e. the steps
+// that ARE rolled back. The system state past that step is
+// indeterminate; the spec-30 "ROLLBACK INCOMPLETE — manual
+// intervention required" UX is built from this event.
+type TransactionRollbackFailedData struct {
+	TxnParentID           string `json:"txn_parent_id"`
+	ReversedSteps         int    `json:"reversed_steps"`
+	FailedReverseStepID   string `json:"failed_reverse_step_id"`
+	FailedReverseStepName string `json:"failed_reverse_step_name,omitempty"`
+	ErrorMessage          string `json:"error_message"`
 }

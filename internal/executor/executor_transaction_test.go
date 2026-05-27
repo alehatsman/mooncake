@@ -291,3 +291,114 @@ steps:
 	}
 	_ = strings.TrimSpace // keep strings import used
 }
+
+// TestTransaction_F054_RollbackEvents pins the spec-30 rollback-event
+// surface F054 added: the four transaction.rollback_* events fire in
+// order across a transaction with a mid-stream failure. Before F054,
+// only the "↺ Reverse:" log line surfaced rollback to operators;
+// machine-readable consumers (runlog, fleet telemetry, mooncake history)
+// saw nothing.
+//
+// Sequence asserted on a 3-body transaction failing at step 3:
+//
+//  1. transaction.rollback_begin   (failed_step_id = step 3, completed_steps = 2)
+//  2. transaction.step_reversed    (step 2, ordered before step 1 by LIFO)
+//  3. transaction.step_reversed    (step 1)
+//  4. transaction.rollback_complete (reversed_steps = 2)
+//
+// transaction.rollback_failed fires INSTEAD of complete when any
+// Reverse() returns an error — covered by the subtest below.
+func TestTransaction_F054_RollbackEvents(t *testing.T) {
+	dir := t.TempDir()
+	a := filepath.Join(dir, "evt-a")
+	b := filepath.Join(dir, "evt-b")
+	c := "/dev/null/cannot-write-here"
+
+	yaml := `version: "1.0"
+steps:
+  - name: deploy
+    transaction:
+      - file.write: { path: ` + a + `, content: A }
+      - file.write: { path: ` + b + `, content: B }
+      - file.write: { path: ` + c + `, content: C }
+`
+	configPath := filepath.Join(t.TempDir(), "config.yml")
+	if err := os.WriteFile(configPath, []byte(yaml), 0o644); err != nil {
+		t.Fatalf("write config: %v", err)
+	}
+
+	var seen []events.EventType
+	var beginData *events.TransactionRollbackBeginData
+	var reversed []events.TransactionStepReversedData
+	var completeData *events.TransactionRollbackCompleteData
+	publisher := events.NewSyncPublisher()
+	publisher.Subscribe(&capturingSubscriber{
+		onEvent: func(e events.Event) {
+			switch e.Type {
+			case events.EventTransactionRollbackBegin,
+				events.EventTransactionStepReversed,
+				events.EventTransactionRollbackComplete,
+				events.EventTransactionRollbackFailed:
+				seen = append(seen, e.Type)
+			}
+			switch d := e.Data.(type) {
+			case events.TransactionRollbackBeginData:
+				beginData = &d
+			case events.TransactionStepReversedData:
+				reversed = append(reversed, d)
+			case events.TransactionRollbackCompleteData:
+				completeData = &d
+			}
+		},
+	})
+
+	_ = executor.Start(context.Background(), executor.StartConfig{
+		ConfigFilePath: configPath,
+	}, logger.NewTestLogger(), publisher)
+
+	// 1. rollback_begin fired exactly once with CompletedSteps == 2.
+	if beginData == nil {
+		t.Fatal("transaction.rollback_begin event was never emitted")
+	}
+	if beginData.CompletedSteps != 2 {
+		t.Errorf("rollback_begin.CompletedSteps = %d, want 2 (a + b completed before c failed)",
+			beginData.CompletedSteps)
+	}
+	if beginData.FailedStepName == "" && beginData.FailedStepID == "" {
+		t.Error("rollback_begin missing both FailedStepID and FailedStepName")
+	}
+
+	// 2 + 3. Two step_reversed events in LIFO order (b then a).
+	if len(reversed) != 2 {
+		t.Fatalf("step_reversed event count = %d, want 2", len(reversed))
+	}
+	if reversed[0].Action != "file.write" || reversed[1].Action != "file.write" {
+		t.Errorf("step_reversed events should carry file.write action; got %q, %q",
+			reversed[0].Action, reversed[1].Action)
+	}
+
+	// 4. rollback_complete (NOT failed) since file.write reverse never errors here.
+	if completeData == nil {
+		t.Fatal("transaction.rollback_complete event was never emitted")
+	}
+	if completeData.ReversedSteps != 2 {
+		t.Errorf("rollback_complete.ReversedSteps = %d, want 2", completeData.ReversedSteps)
+	}
+
+	// Sequence: begin → reversed → reversed → complete. Drop any
+	// interleaved non-rollback events; we already filtered above.
+	wantSeq := []events.EventType{
+		events.EventTransactionRollbackBegin,
+		events.EventTransactionStepReversed,
+		events.EventTransactionStepReversed,
+		events.EventTransactionRollbackComplete,
+	}
+	if len(seen) != len(wantSeq) {
+		t.Fatalf("event sequence length = %d, want %d (got %v)", len(seen), len(wantSeq), seen)
+	}
+	for i, want := range wantSeq {
+		if seen[i] != want {
+			t.Errorf("event[%d] = %s, want %s", i, seen[i], want)
+		}
+	}
+}

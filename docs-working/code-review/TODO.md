@@ -11,7 +11,7 @@ Queue**, produces a finding (or several), and the queue updates.
 
 | | Count |
 |---|---:|
-| ✅ Findings filed and resolved (F001–F053, F036 skipped) | **52** |
+| ✅ Findings filed and resolved (F001–F054, F036 skipped) | **53** |
 | 🟡 Findings open (filed, not yet fixed) | **0** |
 | 📋 Packages still queued for review | **0 substantive** (1 broad follow-up — see below) |
 
@@ -61,17 +61,19 @@ Adjacent observations from this pass:
   uniformly nil-safe, no per-site guards needed. New
   `TestStatHelpers_NilSafe` pins the contract (nil pointers are
   no-ops, not panics; decStat clamps at zero per MT-45).
-- **Reverse-step dispatch bypasses `step.started` / `step.completed`
-  events.** `transaction.go:179` calls `dispatchRunner` directly,
-  not through `ExecuteStep`. Consumers of those events (RunCapture,
-  console subscriber, runlog StepEntry append) never see the inverse
-  step. The operator gets a single `↺ Reverse: <name>` log line plus
-  the Stats.Reverted counter, but `mooncake history`/`explain`
-  cannot reconstruct what was undone. Could be intentional (MT-45
-  added the counter as the visibility contract; per-step events
-  during rollback would clutter the console), but the spec-22 phase 5
-  rollback-visibility design note doesn't explicitly say. **Open**.
-  Worth a human read of spec-22 §5 before filing.
+- ~~**Reverse-step dispatch bypasses `step.started` / `step.completed`
+  events.**~~ **Filed as F054 + fixed** (2026-05-27, hybrid scope).
+  Investigation found spec-30 §"Key files" promised a six-event
+  rollback surface that was never implemented (zero hits for
+  `transaction_step_reversed` etc. in `internal/`). Closed by adding
+  four event types (RollbackBegin / StepReversed / RollbackComplete
+  / RollbackFailed) emitted at boundaries in `handleTxnBodyFailure`
+  + a `Reverted` flag flowing from `RunCapture.markStepReverted` →
+  `executor.StepRecord.Reverted` → `runlog.StepEntry.Reverted`.
+  TransactionBegin / TransactionCommit deferred — needs compound-
+  parent step.started semantics the executor doesn't expose today
+  (transaction parents aren't dispatched; only their children are).
+  Tracked under "Cross-cutting themes" below.
 - ~~**`runWithRetry` error message hard-codes "command failed".**~~
   **Fixed** as part of F053 (commit `c6bd27ac`). Message is now
   action-agnostic ("step failed after N attempts").
@@ -142,6 +144,7 @@ closed — see that folder's README.
 | F051 | os_* handlers context.TODO() (11 sites) | risk | **done** | [findings/F051](../archive/code-review/findings/F051-os-handlers-context-todo-cross-cutting.md) |
 | F052 | cmd/kernel/validate.go os.Exit (3 sites) | smell | **done** | [findings/F052](../archive/code-review/findings/F052-kernel-validate-os-exit-hostile-to-callers.md) |
 | F053 | executor.runWithRetry time.Sleep not cancellable | risk | **done** | [findings/F053](../archive/code-review/findings/F053-executor-retry-sleep-not-cancellable.md) |
+| F054 | spec-30 rollback events never implemented | smell | **done** | [findings/F054](../archive/code-review/findings/F054-rollback-events-never-implemented.md) |
 
 ## Still to review
 
@@ -242,6 +245,17 @@ Updated as the review uncovers patterns.
   most are fine (short fixed sleeps in retry-with-cap helpers
   for facts/observe), but each should justify why it doesn't
   need ctx-awareness.
+- **Compound-parent lifecycle events missing** (followup to
+  F054). Transaction parents (and try-block parents from
+  spec-23) don't dispatch — only their children do — so there's
+  no natural emission point for `transaction.begin` /
+  `transaction.commit` / `try.begin` / `try.commit` events.
+  Spec-30 designed for begin/commit; F054 implemented the
+  rollback four and left begin/commit for a separate scope.
+  Real fix is a compound-parent lifecycle hook in the dispatch
+  loop, not a per-spec event-set bolt-on. Defer until at least
+  one more compound shape (transaction + try) makes the
+  generic hook obviously worth designing.
 - **Stale doc-strings track action / field counts** (F002 in
   CLAUDE.md, F013 in config.go). Pattern: pin the number → it
   drifts within the next sprint. Lean on `make budget-status`

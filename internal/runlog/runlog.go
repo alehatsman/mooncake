@@ -58,14 +58,23 @@ type Entry struct {
 // Pre-spec-68 entries decode with these fields at zero values; both
 // carry omitempty so old + new shapes coexist on the wire.
 type StepEntry struct {
-	Index      int             `json:"index"`
-	Action     string          `json:"action"`
-	Resource   string          `json:"resource,omitempty"`
-	Result     string          `json:"result"` // changed | ok | skipped | failed
-	StartTS    time.Time       `json:"start_ts,omitempty"`
-	DurationMs int64           `json:"duration_ms,omitempty"`
-	Reversible bool            `json:"reversible,omitempty"`
-	Diff       json.RawMessage `json:"diff,omitempty"`
+	Index      int       `json:"index"`
+	Action     string    `json:"action"`
+	Resource   string    `json:"resource,omitempty"`
+	Result     string    `json:"result"` // changed | ok | skipped | failed
+	StartTS    time.Time `json:"start_ts,omitempty"`
+	DurationMs int64     `json:"duration_ms,omitempty"`
+	Reversible bool      `json:"reversible,omitempty"`
+	// Reverted is true when this step's mutation was undone by a
+	// transaction rollback's LIFO Reverse() pass (F054 / spec-30).
+	// The original action ran (Result = "changed") then the inverse
+	// undid it; both facts are surfaced to `mooncake history` so
+	// the operator can see "X ran, then was rolled back" without
+	// stitching two log lines. Reversible can be true here too —
+	// they're orthogonal: Reversible says "the handler declared
+	// Reverse"; Reverted says "we actually called it on this run".
+	Reverted bool            `json:"reverted,omitempty"`
+	Diff     json.RawMessage `json:"diff,omitempty"`
 }
 
 // logPath returns the path to the run log file.

@@ -87,6 +87,14 @@ func buildStepEntries(records []executor.StepRecord) []runlog.StepEntry {
 				entry.Reversible = true
 			}
 		}
+		// F054: surface the rollback-reverted flag set on the
+		// capture record by transaction.go's rollback walk. Orthogonal
+		// to Reversible — a step can be Reversible (handler declared
+		// Reverse) without being Reverted on this run; conversely
+		// Reverted implies the inverse ran successfully (the rollback
+		// halts at the first Reverse failure, so any step still
+		// flagged Reverted definitely got undone).
+		entry.Reverted = sr.Reverted
 		out = append(out, entry)
 	}
 	return out

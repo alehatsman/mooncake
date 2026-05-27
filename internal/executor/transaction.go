@@ -25,10 +25,12 @@ package executor
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/alehatsman/mooncake/internal/actions"
 	"github.com/alehatsman/mooncake/internal/config"
 	"github.com/alehatsman/mooncake/internal/control"
+	"github.com/alehatsman/mooncake/internal/events"
 )
 
 // txn returns (or lazily creates) the TxnState for a given parent ID.
@@ -96,16 +98,42 @@ func (ec *ExecutionContext) handleTxnBodyFailure(failedStep config.Step) error {
 
 	completed := ec.CompletedByTxn[failedStep.TxnParent]
 
+	// F054 / spec-30: emit the rollback_begin event so machine-
+	// readable consumers (runlog, fleet telemetry, mooncake history)
+	// see the boundary. Pre-F054 only the "↺ Reverse:" log line
+	// surfaced this; explain/JSON consumers had no signal.
+	failedErrMsg := ""
+	if ec.CurrentResult != nil && ec.CurrentResult.Failed {
+		// CurrentResult is the failing body child's result; its
+		// stderr/stdout tail are already on the step.failed event,
+		// but the high-level "what triggered rollback" message
+		// belongs on rollback_begin so consumers don't have to
+		// stitch two events together.
+		failedErrMsg = ec.CurrentResult.Reason
+	}
+	ec.EmitEvent(events.EventTransactionRollbackBegin, events.TransactionRollbackBeginData{
+		TxnParentID:    failedStep.TxnParent,
+		FailedStepID:   failedStep.ID,
+		FailedStepName: failedStep.Name,
+		ErrorMessage:   failedErrMsg,
+		CompletedSteps: len(completed),
+	})
+
 	// LIFO reverse walk. Stop at the first Reverse failure but keep
 	// RolledBack=true so on_rollback still fires for visibility.
 	var firstErr error
+	var reversedCount int
+	var failedReverseStepID, failedReverseStepName string
 	for i := len(completed) - 1; i >= 0; i-- {
 		entry := completed[i]
 		// MT-45: log the rollback step visibly so the operator can see
 		// what's being undone. The README documents `↺ Reverse:` lines.
 		ec.Svc.Logger.Infof("↺ Reverse: %s", entry.Step.Name)
+		reverseStart := time.Now()
 		if err := ec.runReverse(entry.Step, entry.Result); err != nil {
 			t.PartialRollback = true
+			failedReverseStepID = entry.Step.ID
+			failedReverseStepName = entry.Step.Name
 			if firstErr == nil {
 				firstErr = err
 			}
@@ -114,6 +142,22 @@ func (ec *ExecutionContext) handleTxnBodyFailure(failedStep config.Step) error {
 			// undos. Halt and let on_rollback surface the partial state.
 			break
 		}
+		// F054: per-step reversed event. Identifies the ORIGINAL step
+		// (the one whose effect just got undone), not the inverse —
+		// that's what `mooncake history` readers care about.
+		ec.EmitEvent(events.EventTransactionStepReversed, events.TransactionStepReversedData{
+			TxnParentID: failedStep.TxnParent,
+			StepID:      entry.Step.ID,
+			Name:        entry.Step.Name,
+			Action:      entry.Step.DetermineActionType(),
+			DurationMs:  time.Since(reverseStart).Milliseconds(),
+		})
+		// F054: mark the original step's RunCapture record as
+		// Reverted so the runlog StepEntry projection lights up
+		// the Reverted flag. Lookup uses step.ID; nil-capture
+		// callers (legacy ExecutePlan without RunCapture) no-op.
+		ec.Svc.Capture.markStepReverted(entry.Step.ID)
+		reversedCount++
 		// MT-45: a successful Reverse cancels out the original body
 		// step's reported change. Subtract from the run-wide Changed
 		// counter and bump Reverted so the recap reflects net effect
@@ -126,6 +170,26 @@ func (ec *ExecutionContext) handleTxnBodyFailure(failedStep config.Step) error {
 		}
 	}
 	t.RolledBack = true
+
+	// F054: terminal event — Complete on clean rollback, Failed when
+	// any Reverse erred (partial rollback). The two events are
+	// mutually exclusive; consumers can subscribe to whichever they
+	// care about without needing to disambiguate from the
+	// rollback_begin alone.
+	if firstErr == nil {
+		ec.EmitEvent(events.EventTransactionRollbackComplete, events.TransactionRollbackCompleteData{
+			TxnParentID:   failedStep.TxnParent,
+			ReversedSteps: reversedCount,
+		})
+	} else {
+		ec.EmitEvent(events.EventTransactionRollbackFailed, events.TransactionRollbackFailedData{
+			TxnParentID:           failedStep.TxnParent,
+			ReversedSteps:         reversedCount,
+			FailedReverseStepID:   failedReverseStepID,
+			FailedReverseStepName: failedReverseStepName,
+			ErrorMessage:          firstErr.Error(),
+		})
+	}
 	return firstErr
 }
 
