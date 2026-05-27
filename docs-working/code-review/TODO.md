@@ -7,21 +7,42 @@ Queue**, produces a finding (or several), and the queue updates.
 > moved to `docs-working/archive/code-review/findings/`. New findings
 > go in that same folder; add a row to the index below.
 
-## At-a-glance status (2026-05-18)
+## At-a-glance status (2026-05-27)
 
 | | Count |
 |---|---:|
 | ✅ Findings filed and resolved (F001–F050, F036 skipped) | **49** |
-| 🟡 Findings open / in progress | **0** |
-| 📋 Packages still queued for review | see below |
+| 🟡 Findings open (filed, not yet fixed) | **2** — F051, F052 |
+| 📋 Packages still queued for review | **0 substantive** (1 broad follow-up — see below) |
 
-**Queue clean**: F048 (fleet.yml strict YAML) shipped at `a6cb7741`;
-F049 (pkg.Permissions manager-aware) shipped 2026-05-18; F050
-(preset fetch unbounded body) filed and fixed in the same commit
-2026-05-18. The remaining work is *review*: read more packages,
-file new findings if you spot smells. The companion manual-test
-queue at `docs-working/archive/analysis/findings-2026-05-15/` is
-also closed — see that folder's README.
+**2026-05-27 cold-read pass closed the queue.** Eight package
+areas read cold (agentd handlers + sinks + self-shutdown,
+git_checkout/git_config, six os_* handlers, three text_* handlers,
+wait_file/wait_port, two windows_* handlers, cmd/* CLI wiring,
+fleet/bootstrap_windows_target). Two new findings filed:
+
+- **F051** — cross-cutting `context.TODO()` in 11 os_* sites
+  (mount/umount/ufw can hang on NFS or netfilter lock). Risk;
+  F012/F016/F042 family. Filed open; fix is per-package `runCmd`
+  helper with timeouts (option 1) or plumb ctx through
+  `actions.Context` (option 2, bigger blast radius — defer).
+- **F052** — `cmd/kernel/validate.go` has three direct `os.Exit`
+  calls. Smell; F020 shape. Mechanical fix: replace with
+  `cli.Exit(msg, code)` returns.
+
+Everything else surfaced by the cold-read pass fell out as
+documented design intent (self_shutdown delay goroutine,
+files_handler fsync swallow, apply SIGINT hard-exit per F016
+follow-up, agentd Windows TCP-loopback default per spec-49) or
+false-positive (text_patch_yaml "nil derefs" guarded by walk
+invariant, git_config exit-1 sentinel actually correct,
+cmd/mooncake `TrimLeft` edge guarded by `=` check, cmd/agentd
+`absPath` inside the bearer-auth boundary). All reviewed areas
+recorded in the table below.
+
+The companion manual-test queue at
+`docs-working/archive/analysis/findings-2026-05-15/` remains
+closed — see that folder's README.
 
 ## Findings index
 
@@ -72,26 +93,30 @@ also closed — see that folder's README.
 | F048 | fleet machine manifest YAML non-strict | bug | **done** | [findings/F048](../archive/code-review/findings/F048-fleet-machine-manifest-non-strict-yaml.md) |
 | F049 | pkg.Permissions not manager-aware | bug | **done** | [findings/F049](../archive/code-review/findings/F049-pkg-handler-permissions-not-manager-aware.md) |
 | F050 | preset fetch unbounded body | risk | **done** | [findings/F050](../archive/code-review/findings/F050-preset-fetch-unbounded-body.md) |
+| F051 | os_* handlers context.TODO() (11 sites) | risk | **open** | [findings/F051](../archive/code-review/findings/F051-os-handlers-context-todo-cross-cutting.md) |
+| F052 | cmd/kernel/validate.go os.Exit (3 sites) | smell | **open** | [findings/F052](../archive/code-review/findings/F052-kernel-validate-os-exit-hostile-to-callers.md) |
 
 ## Still to review
 
-Packages no reviewer has read in this pass. Absence of findings
-≠ clean — just unread. Pick any entry, read it cold, file
-`findings/F<NNN>-<slug>.md` if you spot something.
+Cold-read queue **cleared on 2026-05-27**. One broad follow-up
+remains; pick it up when a stream is between specs:
 
 | # | Package / area | Notes |
 |---|---|---|
-| 1 | ~~`internal/fleet/machine.go`~~ | reviewed 2026-05-17 → F048 (non-strict YAML) |
-| 2 | `internal/fleet/bootstrap_windows_target.go` | Windows-only; not exercised on Linux CI |
-| 3 | `internal/agentd/{handlers,jsonl_sink,respond,config*,self_mac,self_shutdown*}.go` | not read in the original pass; `self_mac` + `self_shutdown*` are brand-new from the fleet WoL+shutdown work landing 2026-05-17 |
-| 4 | `internal/presets/registry` (rest) | only `remote.go` covered (via F012); loader / validator / expander unread |
-| 5 | `internal/actions/git_*` (except `git_clone`) | `git_checkout`, `git_config` — Reverse-capture pattern landed here, worth a read |
-| 6 | `internal/actions/os_*` (except `service`, `systemd`, `ssh_key`) | `os_user`, `os_group`, `os_cron`, `os_mount`, `os_sysctl`, `os_firewall` — darwin parity just landed, skim for shared smells |
-| 7 | `internal/actions/text_*` | `text_line`, `text_patch_ini`, `text_patch_yaml` (json done via F033) |
-| 8 | `internal/actions/wait_*` (except `wait_http`, `wait_command`) | `wait_file`, `wait_port` |
-| 9 | `internal/actions/windows_*` | `windows_firewall_rule`, `windows_scheduled_task` — shipped in spec-57, never reviewed |
-| 10 | `cmd/*` (rest of CLI wiring) | ~10K LOC. Only `cmd/presets.go` + `cmd/fleet.go::readToken` spot-checked. Big files: `mooncake.go`, `fleet.go`, `step.go`, `tool.go` |
-| 11 | Test-coverage gaps in churned packages | spec-66 wave 5, proposal-16 wave 3, R2.1c phase 2 — recently changed without tests catching up |
+| 1 | Test-coverage gaps in churned packages | spec-66 wave 5, proposal-16 wave 3, R2.1c phase 2 — recently changed without tests catching up. Scope this with the user before starting; it's a test-writing pass, not a review pass. |
+
+The previous 10-row queue is fully consumed:
+
+- ~~`internal/fleet/machine.go`~~ → F048 (2026-05-17)
+- ~~`internal/fleet/bootstrap_windows_target.go`~~ → reviewed 2026-05-27, clean
+- ~~`internal/agentd/{handlers,jsonl_sink,respond,config*,self_mac,self_shutdown*}.go`~~ → reviewed 2026-05-27, clean (self_shutdown delay-goroutine race is documented design intent)
+- ~~`internal/presets/registry`~~ → **deleted in 4db53ad6** (orphan package, presets-CLI retirement)
+- ~~`internal/actions/git_checkout`, `git_config`~~ → reviewed 2026-05-27, clean (reverse-capture pattern sound)
+- ~~`internal/actions/{os_user,os_group,os_cron,os_mount,os_sysctl,os_firewall}`~~ → reviewed 2026-05-27 → F051 (cross-cutting ctx.TODO)
+- ~~`internal/actions/{text_line,text_patch_ini,text_patch_yaml}`~~ → reviewed 2026-05-27, clean (writeAtomic duplicated 3x is minor; the suspected nil-derefs in text_patch_yaml are guarded by walk's invariant)
+- ~~`internal/actions/{wait_file,wait_port}`~~ → reviewed 2026-05-27, clean
+- ~~`internal/actions/{windows_firewall_rule,windows_scheduled_task}`~~ → reviewed 2026-05-27, clean (proper psQuote/xmlEscape/-EncodedCommand defense-in-depth)
+- ~~`cmd/*` (rest)~~ → reviewed 2026-05-27 → F052 (validate.go os.Exit)
 
 ## Reviewed (done)
 
@@ -138,6 +163,14 @@ Packages no reviewer has read in this pass. Absence of findings
 | 2026-05-16 | `internal/actions/container_image` | none locally (F016-family ctx.Background, already tracked) |
 | 2026-05-16 | `internal/agent/loop.go` | F039 (defer-in-loop, 0644 plan files, silent save errors) |
 | 2026-05-17 | `internal/fleet/machine.go` | F048 (non-strict YAML — fleet.yml silently accepts unknown fields) |
+| 2026-05-27 | `internal/agentd/{handlers,jsonl_sink,respond,config*,self_mac,self_shutdown*}` | none (clean — bearer-auth and shutdown semantics sound) |
+| 2026-05-27 | `internal/fleet/bootstrap_windows_target.go` | none (clean — psQuote / xmlEscape / -EncodedCommand defense, 15s timeout on critical step) |
+| 2026-05-27 | `internal/actions/git_checkout`, `internal/actions/git_config` | none (clean — reverse-capture pattern correct, git invoked via argv) |
+| 2026-05-27 | `internal/actions/{os_user,os_group,os_cron,os_mount,os_sysctl,os_firewall}` | F051 (cross-cutting context.TODO() — mount/umount/ufw can hang on NFS or netfilter lock) |
+| 2026-05-27 | `internal/actions/{text_line,text_patch_ini,text_patch_yaml}` | none (clean — suspected nil-derefs guarded by walk invariant; writeAtomic duplication is minor) |
+| 2026-05-27 | `internal/actions/{wait_file,wait_port}` | none (clean — Ticker + ctx-aware select, dial timeout bounded) |
+| 2026-05-27 | `internal/actions/{windows_firewall_rule,windows_scheduled_task}` | none (clean — proper PowerShell escaping + base64-encoded command + idempotent delete-and-recreate) |
+| 2026-05-27 | `cmd/mooncake.go` + `cmd/{kernel,fleet,step,tool,agentd}` | F052 (kernel/validate.go os.Exit — F020 shape) |
 
 ## Cross-cutting themes / patterns to track
 
