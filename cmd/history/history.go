@@ -1,4 +1,6 @@
-package main
+// Package history implements the `mooncake history` CLI — inspect
+// past mooncake runs from the runlog.
+package history
 
 import (
 	"encoding/json"
@@ -12,10 +14,12 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-// historyCommand replaces the old `mooncake last`. Bare invocation
+const outputFormatJSON = "json"
+
+// Command replaces the old `mooncake last`. Bare invocation
 // preserves last's behaviour (print the most recent run); subcommands
 // add `list` and `show <index>` for browsing the full log.
-func historyCommand() *cli.Command {
+func Command() *cli.Command {
 	return &cli.Command{
 		Name:  "history",
 		Usage: "Inspect past mooncake runs",

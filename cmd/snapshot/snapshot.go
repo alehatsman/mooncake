@@ -1,4 +1,6 @@
-package main
+// Package snapshot implements the `mooncake snapshot` CLI — print a
+// compact machine state snapshot (facts + system inventory).
+package snapshot
 
 import (
 	"fmt"
@@ -8,7 +10,15 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-func snapshotCommand() *cli.Command {
+// Output-format tokens duplicated locally (cmd/mooncake.go has the
+// authoritative copies). Two strings; not worth promoting to cmdutil
+// for one subpackage.
+const (
+	outputFormatJSON = "json"
+	outputFormatText = "text"
+)
+
+func Command() *cli.Command {
 	return &cli.Command{
 		Name:  "snapshot",
 		Usage: "Print a compact machine state snapshot",

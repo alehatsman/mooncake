@@ -1,4 +1,6 @@
-package main
+// Package doctor implements the `mooncake doctor` CLI — check the
+// local installation, state, tools, and project for common issues.
+package doctor
 
 import (
 	"fmt"
@@ -8,7 +10,13 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-func doctorCommand() *cli.Command {
+// Version is the binary's version, stamped at build time by goreleaser
+// linker flags into cmd/mooncake.go's `version` and copied here from
+// main() before Command() is invoked. Surfaced through
+// internal/doctor's BinaryVersion check.
+var Version = "dev"
+
+func Command() *cli.Command {
 	return &cli.Command{
 		Name:  "doctor",
 		Usage: "Check mooncake's installation, state, tools, and project for issues",
@@ -46,7 +54,7 @@ func doctorCommand() *cli.Command {
 func doctorAction(c *cli.Context) error {
 	// Wire the binary version into the install/binary check so the
 	// doctor package stays decoupled from cmd-layer globals.
-	doctor.BinaryVersion = version
+	doctor.BinaryVersion = Version
 
 	format := c.String("format")
 	if format != "text" && format != "json" {

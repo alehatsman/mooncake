@@ -1,4 +1,6 @@
-package main
+// Package init implements the `mooncake init` CLI — scaffold a new
+// mooncake project in the current directory.
+package init
 
 import (
 	"os"
@@ -7,7 +9,7 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-func initCommand() *cli.Command {
+func Command() *cli.Command {
 	return &cli.Command{
 		Name:  "init",
 		Usage: "Scaffold a new mooncake project in the current directory",

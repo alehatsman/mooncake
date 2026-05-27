@@ -12,10 +12,16 @@ import (
 	"github.com/urfave/cli/v2"
 
 	agentdcmd "github.com/alehatsman/mooncake/cmd/agentd"
+	docscmd "github.com/alehatsman/mooncake/cmd/docs"
+	doctorcmd "github.com/alehatsman/mooncake/cmd/doctor"
 	fleetcmd "github.com/alehatsman/mooncake/cmd/fleet"
+	historycmd "github.com/alehatsman/mooncake/cmd/history"
+	initcmd "github.com/alehatsman/mooncake/cmd/init"
+	mcpcmd "github.com/alehatsman/mooncake/cmd/mcp"
 	modcmd "github.com/alehatsman/mooncake/cmd/mod"
 	querycmd "github.com/alehatsman/mooncake/cmd/query"
 	schemacmd "github.com/alehatsman/mooncake/cmd/schema"
+	snapshotcmd "github.com/alehatsman/mooncake/cmd/snapshot"
 	stepcmd "github.com/alehatsman/mooncake/cmd/step"
 	toolcmd "github.com/alehatsman/mooncake/cmd/tool"
 	"github.com/alehatsman/mooncake/internal/fleet"
@@ -181,15 +187,15 @@ func createApp() *cli.App {
 		DisableSliceFlagSeparator: true,
 
 		Commands: []*cli.Command{
-			initCommand(),
-			doctorCommand(),
+			initcmd.Command(),
+			doctorcmd.Command(),
 			presetsCommand(),
 			modcmd.Command(),
-			docsCommand(),
+			docscmd.Command(),
 			schemacmd.Command(),
-			snapshotCommand(),
-			historyCommand(),
-			mcpCommand(),
+			snapshotcmd.Command(),
+			historycmd.Command(),
+			mcpcmd.Command(),
 			agentdcmd.Command(),
 			fleetcmd.Command(),
 			stepcmd.Command(),
@@ -245,6 +251,7 @@ func main() {
 	// sub-packages that surface it back to operators or remotes.
 	fleetcmd.Version = version
 	agentdcmd.Version = version
+	doctorcmd.Version = version
 
 	app := createApp()
 

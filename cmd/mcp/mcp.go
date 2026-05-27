@@ -1,4 +1,7 @@
-package main
+// Package mcp implements the `mooncake mcp` CLI — start the MCP
+// (Model Context Protocol) server over stdio for LLM tool-call
+// clients (Claude Desktop, etc.).
+package mcp
 
 import (
 	"os"
@@ -7,7 +10,7 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-func mcpCommand() *cli.Command {
+func Command() *cli.Command {
 	return &cli.Command{
 		Name:  "mcp",
 		Usage: "Start MCP server (stdio transport) for use with Claude Desktop and other MCP clients",

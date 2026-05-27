@@ -1,4 +1,6 @@
-package main
+// Package docs implements the `mooncake docs` CLI — generate
+// documentation from action metadata.
+package docs
 
 import (
 	"bytes"
@@ -22,8 +24,8 @@ func docContentEqual(a, b []byte) bool {
 	)
 }
 
-// docsCommand creates the docs command with subcommands.
-func docsCommand() *cli.Command {
+// Command creates the docs command with subcommands.
+func Command() *cli.Command {
 	return &cli.Command{
 		Name:  "docs",
 		Usage: "Generate documentation from action metadata",
