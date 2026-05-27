@@ -131,9 +131,12 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		return result, fmt.Errorf("text.patch.yaml: %w", err)
 	}
 
+	result.Operation = executor.OpUpdate
+	result.Target = path
 	result.Data = map[string]interface{}{"path": path}
 
 	if !mutated {
+		result.Operation = executor.OpNoop
 		result.Reason = "YAML file already matches desired state"
 		return result, nil
 	}
@@ -150,6 +153,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 	}
 
 	if bytes.Equal(newBytes, original) {
+		result.Operation = executor.OpNoop
 		result.Reason = "YAML file already matches desired state"
 		return result, nil
 	}

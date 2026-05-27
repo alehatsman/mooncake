@@ -260,6 +260,8 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 	r := step.PkgRepo
 	result := executor.NewResult()
 	result.Checkable = true
+	result.Operation = executor.OpUpdate
+	result.Target = r.Name
 
 	switch {
 	case r.Dnf != nil:

@@ -79,6 +79,8 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 	if ctx.Mode() == actions.ModePlan {
 		r := executor.NewResult()
 		r.Checkable = true
+		r.Operation = executor.OpQuery
+		r.Target = path
 		if ok, _ := checkFile(path, contains); ok {
 			r.Reason = fmt.Sprintf("file already satisfies wait: %s", path)
 			return r, nil
@@ -119,6 +121,8 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 	elapsed := time.Since(start)
 
 	result := executor.NewResult()
+	result.Operation = executor.OpQuery
+	result.Target = path
 	result.Changed = false
 	result.Data = map[string]any{
 		"path":       path,

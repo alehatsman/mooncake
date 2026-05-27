@@ -100,6 +100,15 @@ func (c *RunCapture) markStepReverted(stepID string) {
 	for i := len(c.steps) - 1; i >= 0; i-- {
 		if c.steps[i].Step.ID == stepID {
 			c.steps[i].Reverted = true
+			// Proposal-01: surface the rollback on the per-step
+			// envelope too. The recap counter for reverted=N is
+			// driven by Stats.Reverted (separate), but consumers
+			// inspecting the registered Result want Operation =
+			// "reverted" to see the rollback verb cleanly without
+			// having to cross-reference the rollback table.
+			if c.steps[i].Result != nil {
+				c.steps[i].Result.Operation = OpReverted
+			}
 			return
 		}
 	}

@@ -102,10 +102,15 @@ func RealExec(script string) (string, error) {
 // the unit-file path (refused in v1).
 func Handle(serviceName string, serviceAction *config.ServiceAction, step config.Step, ec *executor.ExecutionContext) error {
 	result := executor.NewResult()
+	result.Operation = executor.OpUpdate
+	result.Target = serviceName
 	result.StartTime = time.Now()
 	defer func() {
 		result.EndTime = time.Now()
 		result.Duration = result.EndTime.Sub(result.StartTime)
+		if !result.Changed && !result.Failed {
+			result.Operation = executor.OpNoop
+		}
 		ec.CurrentResult = result
 	}()
 

@@ -238,6 +238,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 
 	result := executor.NewResult()
 	result.Checkable = true
+	result.Operation = executor.OpUpdate
 
 	if runtime.GOOS != "linux" {
 		result.Reason = fmt.Sprintf("service state inspection not implemented on %s", runtime.GOOS)
@@ -254,6 +255,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 	if err != nil {
 		return result, fmt.Errorf("failed to render service name: %w", err)
 	}
+	result.Target = renderedName
 
 	var reasons []string
 

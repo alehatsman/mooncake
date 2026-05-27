@@ -191,8 +191,8 @@ func run(c *cli.Context) error {
 		OpID:              recordOp("apply", configPath, false),
 	}
 	return runWithSignalCtx(c.Context, func(ctx context.Context) error {
-		_, runErr := apply.NewRunner(cfg).Run(ctx)
-		return runErr
+		kr, runErr := apply.NewRunner(cfg).Run(ctx)
+		return mapCancelExit(kr, runErr)
 	})
 }
 
@@ -203,15 +203,32 @@ func run(c *cli.Context) error {
 func runFromPlan(c *cli.Context, planPath string) error {
 	opID := recordOp("apply", planPath, false)
 	return runWithSignalCtx(c.Context, func(ctx context.Context) error {
-		_, err := apply.NewRunnerFromPlan(planPath, apply.FromPlanOptions{
+		kr, err := apply.NewRunnerFromPlan(planPath, apply.FromPlanOptions{
 			SudoPass:   c.String("sudo-pass"),
 			LogLevel:   c.String("log-level"),
 			MaxPlanAge: c.Duration("max-plan-age"),
 			AllowStale: c.Bool("allow-stale"),
 			OpID:       opID,
 		}).Run(ctx)
-		return err
+		return mapCancelExit(kr, err)
 	})
+}
+
+// mapCancelExit translates a cancelled-but-not-failed run into the
+// proposal-02 exit code 130 (SIGINT-equivalent). Other outcomes pass
+// runErr through unchanged.
+//
+// The OS-signal path in runWithSignalCtx hard-exits with 130/143
+// before this code runs. This shim covers the embedded / programmatic
+// cancel paths — timeout-bounded runs, fleet-driven cancel, MCP
+// shutdown — where ctx is cancelled without an OS signal and the
+// Runner returns ctx.Err(). Without this, those runs exit 1, which
+// makes timeouts indistinguishable from real failures in CI.
+func mapCancelExit(kr *apply.KernelResult, runErr error) error {
+	if kr != nil && kr.Summary.Cancelled > 0 && kr.Summary.Failed == 0 {
+		return cli.Exit("", 130)
+	}
+	return runErr
 }
 
 // runWithSignalCtx wires SIGINT/SIGTERM handling for CLI-launched

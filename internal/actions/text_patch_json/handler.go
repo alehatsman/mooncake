@@ -140,6 +140,8 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		return result, fmt.Errorf("text.patch.json: %w", err)
 	}
 
+	result.Operation = executor.OpUpdate
+	result.Target = path
 	result.Data = map[string]interface{}{"path": path}
 
 	// If no edit actually changed the tree (e.g. delete of a missing
@@ -148,6 +150,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 	// no-op edit must produce a no-op result regardless of how the
 	// source happens to be whitespaced.
 	if !mutated {
+		result.Operation = executor.OpNoop
 		result.Reason = "JSON file already matches desired state"
 		return result, nil
 	}
@@ -158,6 +161,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 	}
 
 	if bytesEqual(newBytes, original) {
+		result.Operation = executor.OpNoop
 		result.Reason = "JSON file already matches desired state"
 		return result, nil
 	}
