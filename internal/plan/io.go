@@ -46,18 +46,44 @@ func SavePlanToFile(p *Plan, filePath string) (err error) {
 
 	out := redactSecretMarkers(buf.Bytes())
 
-	file, err := os.Create(filePath) // #nosec G304 -- filePath is user-provided CLI argument
+	// F056: 0o600 perms (was bare os.Create → 0644 under typical
+	// umask). Plans carry secret refs + full playbook structure;
+	// on a multi-user host the contents leak. F037 family —
+	// pilot.RunLoop's saved plans were already fixed; this path
+	// was missed.
+	//
+	// Atomic write (write to <path>.tmp, then rename): a failure
+	// mid-write previously left a partial/empty plan at the
+	// destination, which `apply --from-plan` would refuse with a
+	// confusing decode error. With rename, the destination is
+	// either the pre-existing file (untouched by this call) or
+	// the fully-written new bytes — never partial.
+	tmpPath := filePath + ".tmp"
+	file, err := os.OpenFile(tmpPath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0o600) // #nosec G304 -- filePath is user-provided CLI argument
 	if err != nil {
 		return fmt.Errorf("failed to create plan file: %w", err)
 	}
+	// Cleanup the temp file on any error path. Successful rename
+	// moves it out so the deferred Remove no-ops (file already
+	// gone); on a write/close failure the temp file would otherwise
+	// be orphaned next to the destination.
+	renamed := false
 	defer func() {
-		if closeErr := file.Close(); closeErr != nil && err == nil {
-			err = fmt.Errorf("failed to close plan file: %w", closeErr)
+		if !renamed {
+			_ = os.Remove(tmpPath)
 		}
 	}()
-	if _, err := file.Write(out); err != nil {
-		return fmt.Errorf("failed to write plan file: %w", err)
+	if _, writeErr := file.Write(out); writeErr != nil {
+		_ = file.Close()
+		return fmt.Errorf("failed to write plan file: %w", writeErr)
 	}
+	if closeErr := file.Close(); closeErr != nil {
+		return fmt.Errorf("failed to close plan file: %w", closeErr)
+	}
+	if renameErr := os.Rename(tmpPath, filePath); renameErr != nil {
+		return fmt.Errorf("failed to rename plan file into place: %w", renameErr)
+	}
+	renamed = true
 	return nil
 }
 
@@ -123,11 +149,25 @@ func LoadPlanFromFile(filePath string) (*Plan, error) {
 
 	switch ext {
 	case ".json":
-		if err := json.Unmarshal(data, plan); err != nil {
+		// F048 family: strict decode so a typo'd plan field
+		// surfaces as an error instead of silently dropping.
+		// Stage a decoder with DisallowUnknownFields so the
+		// behavior matches the YAML branch below.
+		dec := json.NewDecoder(bytes.NewReader(data))
+		dec.DisallowUnknownFields()
+		if err := dec.Decode(plan); err != nil {
 			return nil, fmt.Errorf("failed to decode JSON plan: %w", err)
 		}
 	case ".yaml", ".yml":
-		if err := yaml.Unmarshal(data, plan); err != nil {
+		// F048 family: strict YAML decode. yaml.v3's KnownFields(true)
+		// rejects unknown top-level keys instead of silently
+		// dropping. A user-edited plan with a typo'd field (e.g.
+		// `step:` instead of `steps:`) now errors at read time
+		// rather than producing an apply that silently does the
+		// wrong thing.
+		dec := yaml.NewDecoder(bytes.NewReader(data))
+		dec.KnownFields(true)
+		if err := dec.Decode(plan); err != nil {
 			return nil, fmt.Errorf("failed to decode YAML plan: %w", err)
 		}
 	default:

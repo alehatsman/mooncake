@@ -11,8 +11,8 @@ Queue**, produces a finding (or several), and the queue updates.
 
 | | Count |
 |---|---:|
-| ✅ Findings filed and resolved (F001–F055, F036 skipped) | **54** |
-| 🟡 Findings open (filed, not yet fixed) | **2** (F056, F057) |
+| ✅ Findings filed and resolved (F001–F057, F036 skipped) | **56** |
+| 🟡 Findings open (filed, not yet fixed) | **0** |
 | 📋 Packages still queued for review | **0 substantive** (1 broad follow-up — see below) |
 
 **2026-05-27 cold-read pass closed the queue.** Eight package
@@ -250,8 +250,8 @@ closed — see that folder's README.
 | F053 | executor.runWithRetry time.Sleep not cancellable | risk | **done** | [findings/F053](../archive/code-review/findings/F053-executor-retry-sleep-not-cancellable.md) |
 | F054 | spec-30 rollback events never implemented | smell | **done** | [findings/F054](../archive/code-review/findings/F054-rollback-events-never-implemented.md) |
 | F055 | executor `unless:` runs without ctx/timeout | risk | **done** | [findings/F055](../archive/code-review/findings/F055-idempotency-unless-no-ctx-no-timeout.md) |
-| F056 | plan.SavePlanToFile uses default umask (0644 on shared hosts) | smell | **open** | [findings/F056](../archive/code-review/findings/F056-plan-io-default-umask-perms.md) |
-| F057 | Pongo2Renderer per-renderer mutex misses pongo2's global TemplateSet | smell | **open** | [findings/F057](../archive/code-review/findings/F057-pongo2-per-renderer-mutex-misses-global-state.md) |
+| F056 | plan.SavePlanToFile uses default umask (0644 on shared hosts) | smell | **done** | [findings/F056](../archive/code-review/findings/F056-plan-io-default-umask-perms.md) |
+| F057 | Pongo2Renderer per-renderer mutex misses pongo2's global TemplateSet | smell | **done** | [findings/F057](../archive/code-review/findings/F057-pongo2-per-renderer-mutex-misses-global-state.md) |
 
 ## Still to review
 

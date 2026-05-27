@@ -2,6 +2,7 @@ package template
 
 import (
 	"strings"
+	"sync"
 	"testing"
 )
 
@@ -531,4 +532,57 @@ func TestLooksLikeFilterCall(t *testing.T) {
 			t.Errorf("looksLikeFilterCall(%q) = %v, want %v", c.in, got, c.want)
 		}
 	}
+}
+
+// TestF057_ConcurrentRendersAcrossRenderers pins the F057 fix: two
+// distinct Pongo2Renderer instances calling Render concurrently
+// must NOT race on pongo2's package-level DefaultSet. Pre-fix the
+// per-receiver r.mu only serialized one renderer's calls; promoting
+// to a package-level fromStringMu (the actual scope of the shared
+// state) closes the race.
+//
+// Without -race this test only exercises that concurrent Renders
+// don't panic — the race detector is the real assertion. Worth
+// keeping anyway: it documents the parallel-Render contract and
+// catches any regression that re-introduces per-receiver locking.
+func TestF057_ConcurrentRendersAcrossRenderers(t *testing.T) {
+	r1, err := NewPongo2Renderer()
+	if err != nil {
+		t.Fatalf("r1: %v", err)
+	}
+	r2, err := NewPongo2Renderer()
+	if err != nil {
+		t.Fatalf("r2: %v", err)
+	}
+
+	const iterations = 200
+	var wg sync.WaitGroup
+	for i := 0; i < iterations; i++ {
+		wg.Add(2)
+		go func(i int) {
+			defer wg.Done()
+			out, rerr := r1.Render(`{{ x }}-{{ y }}`, map[string]interface{}{
+				"x": "a", "y": i,
+			})
+			if rerr != nil {
+				t.Errorf("r1 Render: %v", rerr)
+			}
+			if out == "" {
+				t.Errorf("r1 Render: empty output")
+			}
+		}(i)
+		go func(i int) {
+			defer wg.Done()
+			out, rerr := r2.Render(`{{ k | upper }}/{{ n }}`, map[string]interface{}{
+				"k": "abc", "n": i,
+			})
+			if rerr != nil {
+				t.Errorf("r2 Render: %v", rerr)
+			}
+			if out == "" {
+				t.Errorf("r2 Render: empty output")
+			}
+		}(i)
+	}
+	wg.Wait()
 }

@@ -380,3 +380,87 @@ func TestSaveAndLoadRoundTrip(t *testing.T) {
 		t.Errorf("YAML round-trip: Steps count mismatch")
 	}
 }
+
+// TestF056_SavePlanToFile_Perms0o600 pins F056: plan files must be
+// written at 0o600 (owner-read/write only), not the umask-default
+// 0o644. Plans carry secret refs + the full playbook structure
+// (every package, service, sysctl, ssh_key targeted on the host);
+// on a multi-user host or a packaged-product worker that other
+// services can read(2), 0o644 leaks recon to anyone with shell
+// access. F037 closed this for pilot saved plans; F056 closes it
+// for the SavePlanToFile path.
+func TestF056_SavePlanToFile_Perms0o600(t *testing.T) {
+	tmpDir := t.TempDir()
+	p := &Plan{Version: "1.0", RootFile: "fixture.yml"}
+
+	for _, ext := range []string{"json", "yaml"} {
+		t.Run(ext, func(t *testing.T) {
+			path := filepath.Join(tmpDir, "plan."+ext)
+			if err := SavePlanToFile(p, path); err != nil {
+				t.Fatalf("SavePlanToFile: %v", err)
+			}
+			info, err := os.Stat(path)
+			if err != nil {
+				t.Fatalf("stat: %v", err)
+			}
+			got := info.Mode().Perm()
+			if got != 0o600 {
+				t.Errorf("file mode = %v, want 0o600", got)
+			}
+		})
+	}
+}
+
+// TestF056_SavePlanToFile_AtomicOnFailure: a failure mid-write must
+// not corrupt an existing plan at the destination. The pre-cleanup
+// path called os.Create(filePath) directly → a write that errored
+// halfway left a partial/empty file at the destination. The post-
+// cleanup path writes to <path>.tmp and renames; a write failure
+// leaves the original file untouched and the tmp file cleaned up.
+//
+// We can't easily inject a Write failure from outside, so we test
+// the success-path invariant: the .tmp file is gone after a
+// successful save (cleaned up by rename moving it out).
+func TestF056_SavePlanToFile_AtomicCleanup(t *testing.T) {
+	tmpDir := t.TempDir()
+	path := filepath.Join(tmpDir, "plan.json")
+	if err := SavePlanToFile(&Plan{Version: "1.0"}, path); err != nil {
+		t.Fatalf("SavePlanToFile: %v", err)
+	}
+	// No <path>.tmp orphan after a successful write.
+	if _, err := os.Stat(path + ".tmp"); !os.IsNotExist(err) {
+		t.Errorf("expected %s.tmp to be cleaned up; stat err = %v", path, err)
+	}
+}
+
+// TestLoadPlanFromFile_RejectsUnknownYAMLFields covers the strict-
+// decode change: pre-fix, yaml.Unmarshal silently dropped unknown
+// fields. A user-edited plan with a typo'd field (e.g. `step:`
+// instead of `steps:`) decoded into an empty Steps slice and the
+// apply proceeded as a no-op — surprising and indistinguishable
+// from "I told it to do nothing." Post-fix, the decode errors and
+// the operator hears about the typo.
+func TestLoadPlanFromFile_RejectsUnknownYAMLFields(t *testing.T) {
+	tmpDir := t.TempDir()
+	path := filepath.Join(tmpDir, "plan.yaml")
+	// `step` instead of `steps` — the common typo.
+	if err := os.WriteFile(path, []byte("version: \"1.0\"\nstep:\n  - { name: oops }\n"), 0o600); err != nil {
+		t.Fatalf("write fixture: %v", err)
+	}
+	if _, err := LoadPlanFromFile(path); err == nil {
+		t.Fatal("expected error decoding plan with unknown YAML field; got nil")
+	}
+}
+
+// TestLoadPlanFromFile_RejectsUnknownJSONFields covers the JSON
+// branch of the same strict-decode change.
+func TestLoadPlanFromFile_RejectsUnknownJSONFields(t *testing.T) {
+	tmpDir := t.TempDir()
+	path := filepath.Join(tmpDir, "plan.json")
+	if err := os.WriteFile(path, []byte(`{"version":"1.0","step":[{"name":"oops"}]}`), 0o600); err != nil {
+		t.Fatalf("write fixture: %v", err)
+	}
+	if _, err := LoadPlanFromFile(path); err == nil {
+		t.Fatal("expected error decoding plan with unknown JSON field; got nil")
+	}
+}

@@ -42,12 +42,28 @@ type Renderer interface {
 	RenderPreserving(template string, variables map[string]interface{}) (string, error)
 }
 
+// fromStringMu guards pongo2.FromString calls across **all**
+// Pongo2Renderer instances. pongo2.FromString mutates the package-
+// level pongo2.DefaultSet's tplCache / bannedTags / bannedFilters
+// maps; a per-receiver mutex (F057's pre-fix state) only serialized
+// one renderer's calls and left two distinct renderers racing on
+// shared state. Latent in v1 under the single-worker FIFO invariant
+// (agentd/worker.go:14-17) but the lock was misleading: a future
+// maintainer adding parallelism would see r.mu and conclude
+// "already handled."
+//
+// Promoting to package-level matches what the comment already
+// asserted ("the pongo2 TemplateSet is not thread-safe") instead
+// of the per-renderer placement it had. The per-call serialization
+// cost is identical — one Lock/Unlock pair around FromString —
+// just at the correct scope.
+var fromStringMu sync.Mutex
+
 // Pongo2Renderer implements Renderer using the pongo2 template engine.
-type Pongo2Renderer struct {
-	// Mutex to protect concurrent access to pongo2.FromString
-	// The pongo2 TemplateSet is not thread-safe
-	mu sync.Mutex
-}
+// Stateless: the package-level fromStringMu does all the
+// synchronisation needed by FromString; there's no per-receiver
+// state to protect.
+type Pongo2Renderer struct{}
 
 // NewPongo2Renderer creates a new Pongo2Renderer with filters registered.
 // Returns an error if filter registration fails (e.g., filter name already registered).
@@ -401,11 +417,14 @@ func (r *Pongo2Renderer) Render(template string, variables map[string]interface{
 	// explicit filter chains keep their current rendering.
 	template = autoJSONNonScalars(template, variables)
 
-	// Lock to prevent race condition in pongo2.FromString
-	// The pongo2 TemplateSet is not thread-safe for concurrent FromString calls
-	r.mu.Lock()
+	// F057: serialize FromString via the package-level fromStringMu
+	// (was a per-receiver r.mu — see the var's doc comment for why).
+	// pongo2.FromString mutates pongo2.DefaultSet's package-level
+	// maps; the mutex protects the global state, not just one
+	// renderer.
+	fromStringMu.Lock()
 	pongoTemplate, err := pongo2.FromString(template)
-	r.mu.Unlock()
+	fromStringMu.Unlock()
 
 	if err != nil {
 		return "", annotateFilterArgError(template, err)

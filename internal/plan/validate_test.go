@@ -259,3 +259,66 @@ func TestHashInputFiles_Determinism(t *testing.T) {
 // Sanity: the runtime package is imported indirectly via facts; keep
 // this reference so the test file compiles cleanly across platforms.
 var _ = runtime.GOOS
+
+// TestValidateForApplyWithReasons_AllowStaleSurfacesReasons pins
+// the adjacent-observation fix: when AllowStale is true, the
+// `error` return is nil but the reasons list MUST still enumerate
+// every check that fired. Pre-fix the caller had no signal —
+// "--allow-stale" silently swallowed everything. Post-fix the
+// operator running with the override sees exactly what was
+// overridden.
+func TestValidateForApplyWithReasons_AllowStaleSurfacesReasons(t *testing.T) {
+	// Build a plan that fails the age check unconditionally:
+	// GeneratedAt 1h in the past with MaxAge=1m.
+	p := &Plan{
+		GeneratedAt: time.Now().Add(-time.Hour),
+	}
+	reasons, err := ValidateForApplyWithReasons(p, ValidateOptions{
+		MaxAge:     time.Minute,
+		AllowStale: true,
+	})
+	if err != nil {
+		t.Errorf("AllowStale should swallow the error; got %v", err)
+	}
+	if len(reasons) != 1 || reasons[0] != StaleReasonAgeExceeded {
+		t.Errorf("reasons = %v, want [%s] (the age check fired)", reasons, StaleReasonAgeExceeded)
+	}
+}
+
+// TestValidateForApplyWithReasons_AllowStaleFalseReturnsFirstError
+// pins the non-override path: with AllowStale=false the FIRST
+// failing check produces a *StaleError, but the reasons list still
+// contains that check's reason (subsequent checks aren't run when
+// the first fails — the loop short-circuits via firstErr).
+func TestValidateForApplyWithReasons_AllowStaleFalseReturnsFirstError(t *testing.T) {
+	p := &Plan{
+		GeneratedAt: time.Now().Add(-time.Hour),
+	}
+	reasons, err := ValidateForApplyWithReasons(p, ValidateOptions{
+		MaxAge:     time.Minute,
+		AllowStale: false,
+	})
+	if err == nil {
+		t.Fatal("expected error without AllowStale")
+	}
+	if !IsStaleError(err) {
+		t.Errorf("err = %T %v, want *StaleError", err, err)
+	}
+	if len(reasons) != 1 || reasons[0] != StaleReasonAgeExceeded {
+		t.Errorf("reasons = %v, want [%s]", reasons, StaleReasonAgeExceeded)
+	}
+}
+
+// TestValidateForApply_PreservesPassFailContract pins the shim:
+// existing callers using the bare error return keep working. The
+// shim discards reasons and forwards err.
+func TestValidateForApply_PreservesPassFailContract(t *testing.T) {
+	p := &Plan{GeneratedAt: time.Now()}
+	if err := ValidateForApply(p, ValidateOptions{}); err != nil {
+		t.Errorf("clean plan should validate; got %v", err)
+	}
+	p.GeneratedAt = time.Now().Add(-time.Hour)
+	if err := ValidateForApply(p, ValidateOptions{MaxAge: time.Minute}); err == nil {
+		t.Error("stale plan should fail; got nil")
+	}
+}

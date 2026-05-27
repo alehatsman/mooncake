@@ -47,8 +47,26 @@ type ValidateOptions struct {
 	AllowStale bool
 }
 
-// ValidateForApply checks that a plan loaded from disk is safe to
-// apply against the current host:
+// ValidateForApply is the convenience shim around
+// ValidateForApplyWithReasons that drops the per-check reason list.
+// Existing callers that only care about pass/fail keep working.
+func ValidateForApply(p *Plan, opts ValidateOptions) error {
+	_, err := ValidateForApplyWithReasons(p, opts)
+	return err
+}
+
+// ValidateForApplyWithReasons checks that a plan loaded from disk is
+// safe to apply against the current host and returns BOTH:
+//
+//   - reasons: every stale-check that would have rejected the plan,
+//     populated regardless of AllowStale. Callers running with
+//     `--allow-stale` use this to surface "we allowed apply despite
+//     X / Y" so the operator sees what was overridden.
+//   - err: the first *StaleError that fired (when AllowStale is
+//     false), wrapped via standard `errors.Is/As`. nil when no
+//     check failed OR when AllowStale demoted them all.
+//
+// Checks (in order):
 //
 //  1. The host facts subset (os_family, arch, distro_family) matches
 //     the values captured at plan time.
@@ -57,9 +75,19 @@ type ValidateOptions struct {
 //     unrelated edits to the YAML between plan and apply.
 //  3. If opts.MaxAge is set, the plan must be younger than that.
 //
-// Returns nil if all checks pass (or AllowStale is set). Returns a
-// *StaleError otherwise.
-func ValidateForApply(p *Plan, opts ValidateOptions) error {
+// Hash I/O errors that aren't "file missing" (perm-denied, EIO, …)
+// short-circuit immediately and return as the raw wrap — they
+// aren't stale-plan conditions, they're system errors.
+func ValidateForApplyWithReasons(p *Plan, opts ValidateOptions) ([]StaleReason, error) {
+	var reasons []StaleReason
+	var firstErr error
+	record := func(se *StaleError) {
+		reasons = append(reasons, se.Reason)
+		if firstErr == nil && !opts.AllowStale {
+			firstErr = se
+		}
+	}
+
 	// 1. Host facts subset
 	current := facts.Collect()
 	want := p.GeneratedOn
@@ -67,15 +95,12 @@ func ValidateForApply(p *Plan, opts ValidateOptions) error {
 		if want.OsFamily != current.OS ||
 			want.Arch != current.Arch ||
 			want.DistroFamily != current.Distribution {
-			err := &StaleError{
+			record(&StaleError{
 				Reason: StaleReasonHostMismatch,
 				Message: fmt.Sprintf("plan was built on %s/%s/%s; applying on %s/%s/%s",
 					want.OsFamily, want.Arch, want.DistroFamily,
 					current.OS, current.Arch, current.Distribution),
-			}
-			if !opts.AllowStale {
-				return err
-			}
+			})
 		}
 	}
 
@@ -84,25 +109,21 @@ func ValidateForApply(p *Plan, opts ValidateOptions) error {
 		got, err := HashInputFiles(p.InputFiles)
 		if err != nil {
 			if errors.Is(err, ErrInputFileMissing) {
-				se := &StaleError{
+				record(&StaleError{
 					Reason:  StaleReasonFileMissing,
 					Message: err.Error(),
-				}
-				if !opts.AllowStale {
-					return se
-				}
+				})
 			} else {
-				return fmt.Errorf("hash plan inputs: %w", err)
+				// Non-stale I/O error short-circuits — it isn't a
+				// stale-plan condition, it's a system fault.
+				return reasons, fmt.Errorf("hash plan inputs: %w", err)
 			}
 		}
 		if got != "" && got != p.InputFilesHash {
-			se := &StaleError{
+			record(&StaleError{
 				Reason:  StaleReasonHashMismatch,
 				Message: "plan input files have changed since the plan was built",
-			}
-			if !opts.AllowStale {
-				return se
-			}
+			})
 		}
 	}
 
@@ -115,16 +136,13 @@ func ValidateForApply(p *Plan, opts ValidateOptions) error {
 	if opts.MaxAge > 0 && !p.GeneratedAt.IsZero() {
 		age := time.Since(p.GeneratedAt)
 		if age > opts.MaxAge {
-			se := &StaleError{
+			record(&StaleError{
 				Reason: StaleReasonAgeExceeded,
 				Message: fmt.Sprintf("plan is %s old; --max-plan-age is %s",
 					age.Round(time.Millisecond), opts.MaxAge),
-			}
-			if !opts.AllowStale {
-				return se
-			}
+			})
 		}
 	}
 
-	return nil
+	return reasons, firstErr
 }

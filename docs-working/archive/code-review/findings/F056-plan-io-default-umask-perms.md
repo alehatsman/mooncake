@@ -5,7 +5,9 @@ severity: smell
 package: internal/plan
 file: internal/plan/io.go
 lines: 49
-status: open
+status: done
+fixed: 2026-05-27 — `SavePlanToFile` now writes via `os.OpenFile(tmpPath, O_RDWR|O_CREATE|O_TRUNC, 0o600)` against `<filePath>.tmp`, then `os.Rename`s into place. Two wins in one change: (1) the file mode is 0o600 (owner-read/write only) instead of 0644 under typical umask 022; (2) the write is atomic via temp+rename — a mid-write failure leaves the destination untouched (was: partial/empty file at the destination). Cleanup of the temp file on the error path is deferred so write/close failures don't orphan a `.tmp` next to the destination.
+post-fix verified: 2026-05-27 — three new tests in `io_test.go`: `TestF056_SavePlanToFile_Perms0o600` (subtests for both .json and .yaml) confirms the resulting file's `Mode().Perm()` is `0o600`. `TestF056_SavePlanToFile_AtomicCleanup` confirms no `.tmp` orphan after a successful write. `TestLoadPlanFromFile_RejectsUnknownYAMLFields` and `_JSON` cover the adjacent strict-decode change (same PR). Full `mooncake task ci` green.
 discovered: 2026-05-27 — cold-read of internal/plan/. `SavePlanToFile` uses bare `os.Create(filePath)` which creates files with mode `0666 & ^umask`. The typical operator umask of `022` resolves to `0644` — world-readable. Plan files carry the playbook structure (every step, all variables, every secret reference). The redaction pass in `redactSecretMarkers` strips secret VALUES but leaves the refs (`!secret env:FOO`) and the full plan shape intact. On a shared host (CI runner, dev box with multiple users, a packaged-product worker that other system services can `read(2)`), the plan file's contents are exposed to anyone who can stat the directory it lives in. F037 closed this exact shape for the pilot agent's saved plans (`internal/pilot/loop.go` now uses `0o600`); the plan-IO save path was never updated to match.
 related: F037 (pilot.RunLoop saved plans world-readable — same shape, fixed 2026-05-22), F039 (agentd run-state perms), F031 (`cmd/fleet readToken` perms-check). The "plan artifacts contain sensitive shape, default-umask is too loose" pattern recurs.
 ---

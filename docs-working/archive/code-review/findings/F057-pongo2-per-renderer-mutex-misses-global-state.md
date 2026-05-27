@@ -5,7 +5,9 @@ severity: smell
 package: internal/template
 file: internal/template/renderer.go
 lines: 406-408
-status: open
+status: done
+fixed: 2026-05-27 — fix option (A) from the finding's proposal block landed: promoted the per-receiver `r.mu` to a package-level `var fromStringMu sync.Mutex`. The mutex now actually guards pongo2.DefaultSet (the package-level state pongo2.FromString mutates). Pongo2Renderer is now stateless — no per-receiver fields. Option (B) (per-renderer TemplateSet) is the cleaner long-term move and is documented in the finding for whenever a real multi-set use case appears.
+post-fix verified: 2026-05-27 — new `TestF057_ConcurrentRendersAcrossRenderers` in `renderer_test.go`: spawns 200 concurrent Render calls across two distinct `*Pongo2Renderer` instances (`r1`, `r2`), each with its own template string + variable map. Run under `-race`. Pre-fix: data race in pongo2's internal DefaultSet maps (or a fatal `concurrent map writes` panic). Post-fix: clean. Test stays useful even without `-race` as a documenting contract — any regression that re-introduces per-receiver locking would still produce flaky results under load. Full `mooncake task ci` (which runs tests with `-race`) green.
 discovered: 2026-05-27 — cold-read of internal/template/. `Pongo2Renderer.Render` (line 390) acquires the receiver's `r.mu` before calling `pongo2.FromString`. The acquisition comment makes the threat explicit:
 
 ```go
