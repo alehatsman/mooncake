@@ -73,20 +73,27 @@ const (
 	actionName       = "os.systemd"
 	statePresent     = "present"
 	stateAbsent      = "absent"
+	scopeSystem      = "system"
+	scopeUser        = "user"
 	atomicTempSuffix = ".mooncake-tmp"
 	managedHeader    = "# Managed by mooncake os.systemd"
 )
 
 // systemdPaths controls where unit files are written. Tests override
-// the directory to a tempdir to keep apply hermetic.
+// the directories to a tempdir to keep apply hermetic. systemDir is
+// the absolute path for scope=system; userDir, when non-empty,
+// overrides the per-user `$HOME/.config/systemd/user` default
+// (tests inject a tempdir here so the real $HOME stays untouched).
 var systemdPaths = struct {
-	dir string
+	systemDir string
+	userDir   string
 }{
-	dir: "/etc/systemd/system",
+	systemDir: "/etc/systemd/system",
 }
 
 // Hooks for the systemctl primitives. Tests replace these with
-// in-memory stubs.
+// in-memory stubs. Each takes a scope ("system"|"user") so the user
+// scope path can prepend --user without touching the call sites.
 var (
 	systemctlDaemonReload = realDaemonReload
 	systemctlIsEnabled    = realIsEnabled
@@ -139,9 +146,11 @@ var validUnitSuffixes = map[string]bool{
 //
 // os.systemd writes unit files to /etc/systemd/system (default) or
 // step.Path, and shells to systemctl for daemon-reload / enable /
-// start. Always Sudo, RequiredBinaries=[systemctl]. The unit
-// content writes are scoped to the unit path; FilesystemWrite
-// surfaces it for the policy layer.
+// start. System scope always needs Sudo; user scope (proposal-17)
+// owns its own bus + unit dir under $HOME and drops Sudo.
+// RequiredBinaries=[systemctl] in both cases. The unit content
+// writes are scoped to the unit path; FilesystemWrite surfaces it
+// for the policy layer.
 func (Handler) Permissions(step *config.Step) actions.PermissionSet {
 	ps := actions.PermissionSet{
 		Sudo:             true,
@@ -150,9 +159,17 @@ func (Handler) Permissions(step *config.Step) actions.PermissionSet {
 	if step == nil || step.OsSystemd == nil {
 		return ps
 	}
+	scope := normalizeScope(step.OsSystemd.Scope)
+	if scope == scopeUser {
+		ps.Sudo = false
+	}
 	dir := step.OsSystemd.Path
 	if dir == "" {
-		dir = "/etc/systemd/system"
+		if scope == scopeUser {
+			dir = defaultUserDir()
+		} else {
+			dir = "/etc/systemd/system"
+		}
 	}
 	if step.OsSystemd.Name != "" {
 		ps.FilesystemWrite = []string{dir + "/" + step.OsSystemd.Name}
@@ -178,6 +195,12 @@ func (h *Handler) Validate(step *config.Step) error {
 	state := normalizeState(s.State)
 	if state != statePresent && state != stateAbsent {
 		return fmt.Errorf("os.systemd: state must be present or absent, got %q", s.State)
+	}
+	if s.Scope != "" {
+		scope := strings.ToLower(s.Scope)
+		if scope != scopeSystem && scope != scopeUser {
+			return fmt.Errorf("os.systemd: scope must be system or user, got %q", s.Scope)
+		}
 	}
 	if state == statePresent {
 		// Require at least one section so we're not writing an empty file.
@@ -261,7 +284,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 	// here to capture all three pieces, even ones the plan didn't
 	// look at (e.g. if Enabled/Started weren't pinned the plan
 	// skipped the systemctl calls).
-	result.ReverseData = captureReverseInfo(rendered.name, plan.path)
+	result.ReverseData = captureReverseInfo(rendered.scope, rendered.name, plan.path)
 
 	if err := applyPlan(plan); err != nil {
 		return result, err
@@ -287,6 +310,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 type renderedSystemd struct {
 	name           string
 	state          string
+	scope          string // "system" | "user"
 	path           string
 	content        string // empty when state=absent
 	enabled        *bool
@@ -313,13 +337,20 @@ func renderSystemd(ctx actions.Context, s *config.OsSystemd) (renderedSystemd, e
 		name = s.Name
 	}
 
-	dir := systemdPaths.dir
-	if s.Path != "" {
+	scope := normalizeScope(s.Scope)
+
+	var dir string
+	switch {
+	case s.Path != "":
 		rdir, err := render(s.Path)
 		if err != nil {
 			return renderedSystemd{}, fmt.Errorf("os.systemd: render path: %w", err)
 		}
 		dir = rdir
+	case scope == scopeUser:
+		dir = defaultUserDir()
+	default:
+		dir = systemdPaths.systemDir
 	}
 
 	state := normalizeState(s.State)
@@ -332,6 +363,7 @@ func renderSystemd(ctx actions.Context, s *config.OsSystemd) (renderedSystemd, e
 	r := renderedSystemd{
 		name:           name,
 		state:          state,
+		scope:          scope,
 		path:           filepath.Join(dir, name),
 		enabled:        s.Enabled,
 		started:        s.Started,
@@ -465,6 +497,25 @@ func normalizeState(s string) string {
 	return strings.ToLower(s)
 }
 
+func normalizeScope(s string) string {
+	switch strings.ToLower(s) {
+	case scopeUser:
+		return scopeUser
+	default:
+		return scopeSystem
+	}
+}
+
+// defaultUserDir returns the per-user systemd unit dir. Tests set
+// systemdPaths.userDir to a tempdir so apply paths never escape
+// into the real $HOME/.config tree.
+func defaultUserDir() string {
+	if systemdPaths.userDir != "" {
+		return systemdPaths.userDir
+	}
+	return filepath.Join(os.Getenv("HOME"), ".config/systemd/user")
+}
+
 // systemdPlan captures the diff between desired and current state plus
 // the side-effects (daemon-reload, enable/disable, start/stop) needed
 // to converge.
@@ -480,6 +531,7 @@ type systemdPlan struct {
 	enableOp    enableOp
 	startOp     startOp
 	name        string
+	scope       string // "system" | "user"
 }
 
 type fileOperation int
@@ -507,7 +559,7 @@ const (
 )
 
 func computePlan(r renderedSystemd) (systemdPlan, error) {
-	plan := systemdPlan{path: r.path, name: r.name}
+	plan := systemdPlan{path: r.path, name: r.name, scope: r.scope}
 
 	current, exists, err := readFile(r.path)
 	if err != nil {
@@ -527,11 +579,11 @@ func computePlan(r renderedSystemd) (systemdPlan, error) {
 		// active / enabled. Errors from systemctl (e.g. "unit not
 		// found") are treated as "not in that state" — there's nothing
 		// to act on.
-		if active, err := systemctlIsActive(r.name); err == nil && active {
+		if active, err := systemctlIsActive(r.scope, r.name); err == nil && active {
 			plan.startOp = startUnset
 			reasons = append(reasons, "would stop "+r.name)
 		}
-		if enabled, err := systemctlIsEnabled(r.name); err == nil && enabled {
+		if enabled, err := systemctlIsEnabled(r.scope, r.name); err == nil && enabled {
 			plan.enableOp = enableUnset
 			reasons = append(reasons, "would disable "+r.name)
 		}
@@ -562,7 +614,7 @@ func computePlan(r renderedSystemd) (systemdPlan, error) {
 	}
 
 	if r.enabled != nil {
-		isEnabled, err := systemctlIsEnabled(r.name)
+		isEnabled, err := systemctlIsEnabled(r.scope, r.name)
 		if err == nil {
 			if *r.enabled && !isEnabled {
 				plan.enableOp = enableSet
@@ -582,7 +634,7 @@ func computePlan(r renderedSystemd) (systemdPlan, error) {
 	}
 
 	if r.started != nil {
-		isActive, err := systemctlIsActive(r.name)
+		isActive, err := systemctlIsActive(r.scope, r.name)
 		if err == nil {
 			if *r.started && !isActive {
 				plan.startOp = startSet
@@ -634,15 +686,15 @@ func applyPlan(plan systemdPlan) error {
 
 	if plan.operation == "delete" {
 		if plan.startOp == startUnset {
-			if active, err := systemctlIsActive(plan.name); err == nil && active {
-				if err := systemctlStop(plan.name); err != nil {
+			if active, err := systemctlIsActive(plan.scope, plan.name); err == nil && active {
+				if err := systemctlStop(plan.scope, plan.name); err != nil {
 					return fmt.Errorf("os.systemd: stop %s: %w", plan.name, err)
 				}
 			}
 		}
 		if plan.enableOp == enableUnset {
-			if enabled, err := systemctlIsEnabled(plan.name); err == nil && enabled {
-				if err := systemctlDisable(plan.name); err != nil {
+			if enabled, err := systemctlIsEnabled(plan.scope, plan.name); err == nil && enabled {
+				if err := systemctlDisable(plan.scope, plan.name); err != nil {
 					return fmt.Errorf("os.systemd: disable %s: %w", plan.name, err)
 				}
 			}
@@ -653,7 +705,7 @@ func applyPlan(plan systemdPlan) error {
 			}
 		}
 		if plan.reload {
-			if err := systemctlDaemonReload(); err != nil {
+			if err := systemctlDaemonReload(plan.scope); err != nil {
 				return fmt.Errorf("os.systemd: daemon-reload: %w", err)
 			}
 		}
@@ -664,32 +716,32 @@ func applyPlan(plan systemdPlan) error {
 		if err := os.MkdirAll(filepath.Dir(plan.path), 0o755); err != nil {
 			return fmt.Errorf("os.systemd: mkdir %s: %w", filepath.Dir(plan.path), err)
 		}
-		if err := writeAtomic(plan.path, []byte(plan.wantContent), 0o644); err != nil {
+		if err := writeAtomic(plan.scope, plan.path, []byte(plan.wantContent), 0o644); err != nil {
 			return fmt.Errorf("os.systemd: write %s: %w", plan.path, err)
 		}
 	}
 	if plan.reload {
-		if err := systemctlDaemonReload(); err != nil {
+		if err := systemctlDaemonReload(plan.scope); err != nil {
 			return fmt.Errorf("os.systemd: daemon-reload: %w", err)
 		}
 	}
 	switch plan.enableOp {
 	case enableSet:
-		if err := systemctlEnable(plan.name); err != nil {
+		if err := systemctlEnable(plan.scope, plan.name); err != nil {
 			return fmt.Errorf("os.systemd: enable %s: %w", plan.name, err)
 		}
 	case enableUnset:
-		if err := systemctlDisable(plan.name); err != nil {
+		if err := systemctlDisable(plan.scope, plan.name); err != nil {
 			return fmt.Errorf("os.systemd: disable %s: %w", plan.name, err)
 		}
 	}
 	switch plan.startOp {
 	case startSet:
-		if err := systemctlStart(plan.name); err != nil {
+		if err := systemctlStart(plan.scope, plan.name); err != nil {
 			return fmt.Errorf("os.systemd: start %s: %w", plan.name, err)
 		}
 	case startUnset:
-		if err := systemctlStop(plan.name); err != nil {
+		if err := systemctlStop(plan.scope, plan.name); err != nil {
 			return fmt.Errorf("os.systemd: stop %s: %w", plan.name, err)
 		}
 	}
@@ -707,11 +759,14 @@ func readFile(path string) (string, bool, error) {
 	return string(data), true, nil
 }
 
-func writeAtomic(path string, content []byte, mode os.FileMode) error {
+func writeAtomic(scope, path string, content []byte, mode os.FileMode) error {
 	// Fast path: direct write — works when mooncake itself runs as root,
 	// or the unit path happens to be user-writable (custom Path: in
-	// step config). The sudo fallback below kicks in only on
-	// EACCES/EPERM against the default /etc/systemd/system.
+	// step config, or scope=user dir under $HOME). The sudo fallback
+	// below kicks in only on EACCES/EPERM against the default
+	// /etc/systemd/system. User scope never uses the fallback: the
+	// user owns the destination dir; if a direct write fails there
+	// it's a real error and sudo wouldn't be the right answer.
 	tmp := path + atomicTempSuffix
 	if err := os.WriteFile(tmp, content, mode); err == nil {
 		if err := os.Rename(tmp, path); err != nil {
@@ -720,6 +775,8 @@ func writeAtomic(path string, content []byte, mode os.FileMode) error {
 		}
 		return nil
 	} else if !os.IsPermission(err) {
+		return err
+	} else if scope == scopeUser {
 		return err
 	}
 
@@ -760,16 +817,16 @@ func writeAtomic(path string, content []byte, mode os.FileMode) error {
 }
 
 // realDaemonReload shells out to `systemctl daemon-reload`.
-func realDaemonReload() error {
-	return runSystemctl("daemon-reload")
+func realDaemonReload(scope string) error {
+	return runSystemctl(scope, "daemon-reload")
 }
 
 // realIsEnabled returns true when systemctl reports the unit enabled.
 // "static", "indirect", "alias" and "linked" are treated as enabled —
 // they ship a [Install] section equivalent. "disabled", "masked",
 // "generated", "transient", "bad" → false. Errors propagate.
-func realIsEnabled(name string) (bool, error) {
-	out, err := runSystemctlOut("is-enabled", name)
+func realIsEnabled(scope, name string) (bool, error) {
+	out, err := runSystemctlOut(scope, "is-enabled", name)
 	state := strings.TrimSpace(out)
 	if err != nil {
 		// systemctl is-enabled exits 1 for disabled; map that to (false, nil)
@@ -791,15 +848,15 @@ func enableFromToken(tok string) bool {
 	}
 }
 
-func realEnable(name string) error  { return runSystemctl("enable", name) }
-func realDisable(name string) error { return runSystemctl("disable", name) }
+func realEnable(scope, name string) error  { return runSystemctl(scope, "enable", name) }
+func realDisable(scope, name string) error { return runSystemctl(scope, "disable", name) }
 
 // realIsActive returns true when the unit's ActiveState is "active".
 // "reloading" and "activating" also count as active so we don't fight
 // in-progress transitions. Exit code 3 from `is-active` means inactive
 // — that's not an error.
-func realIsActive(name string) (bool, error) {
-	out, err := runSystemctlOut("is-active", name)
+func realIsActive(scope, name string) (bool, error) {
+	out, err := runSystemctlOut(scope, "is-active", name)
 	state := strings.TrimSpace(out)
 	if err != nil {
 		if state != "" {
@@ -819,22 +876,43 @@ func activeFromToken(tok string) bool {
 	}
 }
 
-func realStart(name string) error { return runSystemctl("start", name) }
-func realStop(name string) error  { return runSystemctl("stop", name) }
+func realStart(scope, name string) error { return runSystemctl(scope, "start", name) }
+func realStop(scope, name string) error  { return runSystemctl(scope, "stop", name) }
 
-// systemctlBecome decides whether systemctl calls run under sudo. True
-// when mooncake is invoked as a non-root user (the common case for the
-// system-scope unit path /etc/systemd/system). Skipping sudo when
-// already root keeps the call path simple and avoids requiring a
-// SudoPass that's never used. The is-enabled/is-active read paths
+// systemctlBecome decides whether systemctl calls run under sudo.
+// System scope: true when mooncake is invoked as a non-root user
+// (the common case for /etc/systemd/system writes). Skipping sudo
+// when already root keeps the call path simple and avoids requiring
+// a SudoPass that's never used. The is-enabled/is-active read paths
 // don't strictly need root on most distros, but a sudo wrap is
 // harmless and keeps every systemctl call going through one helper.
-func systemctlBecome() bool { return os.Geteuid() != 0 }
+// User scope: always false — the user already owns its own systemd
+// session bus, and `sudo systemctl --user` would target root's bus.
+func systemctlBecome(scope string) bool {
+	if scope == scopeUser {
+		return false
+	}
+	return os.Geteuid() != 0
+}
 
-func runSystemctl(args ...string) error {
-	cmd, err := becomeCommand(systemctlBecome(), "systemctl", args...)
+// withScope prepends `--user` to args when scope=user. Returns a
+// freshly-allocated slice so callers don't mutate caller-owned
+// argument lists.
+func withScope(scope string, args ...string) []string {
+	if scope != scopeUser {
+		return args
+	}
+	out := make([]string, 0, len(args)+1)
+	out = append(out, "--user")
+	out = append(out, args...)
+	return out
+}
+
+func runSystemctl(scope string, args ...string) error {
+	full := withScope(scope, args...)
+	cmd, err := becomeCommand(systemctlBecome(scope), "systemctl", full...)
 	if err != nil {
-		return fmt.Errorf("systemctl %s: %w", strings.Join(args, " "), err)
+		return fmt.Errorf("systemctl %s: %w", strings.Join(full, " "), err)
 	}
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
@@ -848,10 +926,11 @@ func runSystemctl(args ...string) error {
 	return nil
 }
 
-func runSystemctlOut(args ...string) (string, error) {
-	cmd, err := becomeCommand(systemctlBecome(), "systemctl", args...)
+func runSystemctlOut(scope string, args ...string) (string, error) {
+	full := withScope(scope, args...)
+	cmd, err := becomeCommand(systemctlBecome(scope), "systemctl", full...)
 	if err != nil {
-		return "", fmt.Errorf("systemctl %s: %w", strings.Join(args, " "), err)
+		return "", fmt.Errorf("systemctl %s: %w", strings.Join(full, " "), err)
 	}
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout

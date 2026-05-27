@@ -716,6 +716,11 @@ export interface OsSystemdAction {
   name: string;
   path?: string;
   reload_on_change?: boolean;
+  /**
+   * 
+   * @values system | user
+   */
+  scope?: "system" | "user";
   service?: Record<string, any>;
   socket?: Record<string, any>;
   started?: boolean;

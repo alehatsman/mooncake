@@ -66,6 +66,34 @@ func TestDiff_AbsentIsDelete(t *testing.T) {
 	}
 }
 
+func TestDiff_SurfacesScope(t *testing.T) {
+	h := Handler{}
+	d, _ := h.Diff(nil, &config.Step{OsSystemd: &config.OsSystemd{
+		Name:    "mcsearch.service",
+		Scope:   "user",
+		Service: map[string]interface{}{"ExecStart": "/bin/true"},
+	}})
+	after, ok := d.After.(*actions.ServiceDiff)
+	if !ok {
+		t.Fatalf("After = %T, want *actions.ServiceDiff", d.After)
+	}
+	if after.Scope != "user" {
+		t.Errorf("ServiceDiff.Scope = %q, want user", after.Scope)
+	}
+}
+
+func TestDiff_DefaultScopeIsSystem(t *testing.T) {
+	h := Handler{}
+	d, _ := h.Diff(nil, &config.Step{OsSystemd: &config.OsSystemd{
+		Name:    "mysvc.service",
+		Service: map[string]interface{}{"ExecStart": "/bin/true"},
+	}})
+	after := d.After.(*actions.ServiceDiff)
+	if after.Scope != "system" {
+		t.Errorf("ServiceDiff.Scope = %q, want system (default)", after.Scope)
+	}
+}
+
 func TestDiff_NilStep(t *testing.T) {
 	h := Handler{}
 	testutil.AssertNilStepErrors(t, "Diff", func() error { _, err := h.Diff(nil, nil); return err })

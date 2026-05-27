@@ -16,6 +16,9 @@ var KnownEnums = map[string][]string{
 	"os.cron.state":   {"present", "absent"},
 	"os.sysctl.state": {"present", "absent"},
 
+	// os.systemd scope enum (proposal-17)
+	"os.systemd.scope": {"system", "user"},
+
 	// shell.interpreter is intentionally unconstrained: any executable on
 	// PATH is valid (bash, sh, zsh, pwsh, powershell, cmd, nu, ...).
 }
