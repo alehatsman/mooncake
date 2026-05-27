@@ -1,6 +1,6 @@
 # Proposal — `http.request`: kernel-honest HTTP action
 
-**Status**: Partially shipped 2026-05-17 — Wave 1 (`cdec9bb3`), Wave 2 probe + reverse (`9f37718f`), Wave 3 `save_to` (`f897c37c`) and `expect_json_keys` (`71c90dae`). **Open**: `expect_json_schema` (full draft-07 file-path schema validation) — deferred pending a focused design conversation on the validator library + schema-loading rules. The narrow `expect_json_keys` (above) covers the most common assertion needs.
+**Status**: **Done** 2026-05-27 — all waves shipped. Wave 1 (`cdec9bb3`), Wave 2 probe + reverse (`9f37718f`), Wave 3 `save_to` (`f897c37c`), `expect_json_keys` (`71c90dae`), and `expect_json_schema` (this PR — draft-07 file-path schema validation, Node-style path resolution via `ec.CurrentDir`, rejected inside `probe:` blocks; bundled with the broader drop-of-`PresetBaseDir` cleanup).
 **Filed**: 2026-05-17 by aleh
 
 ---
@@ -123,10 +123,10 @@ All three flow through the secret-redaction filter for logs/diffs/events.
 
 | Wave | Scope | Status |
 |---|---|---|
-| **1** | Step field, handler, Validate (idempotency contract), Permissions, Run (plan/apply branch), body/auth/headers/method/retries/timeout/expect_status, register, redaction, events, tests | In flight 2026-05-17 |
-| **2** | Plan-mode GET probes, reverse compensation | Deferred |
-| **3** | `expect_json_schema`, `save_to` (writes response body, adds FilesystemWrite) | Deferred |
-| **4** | docs/actions/http_request.md | Deferred |
+| **1** | Step field, handler, Validate (idempotency contract), Permissions, Run (plan/apply branch), body/auth/headers/method/retries/timeout/expect_status, register, redaction, events, tests | **Shipped** 2026-05-17 (`cdec9bb3`) |
+| **2** | Plan-mode GET probes, reverse compensation | **Shipped** 2026-05-17 (`9f37718f`) |
+| **3** | `save_to`, `expect_json_keys`, `expect_json_schema` | **Shipped** 2026-05-17..27 (`f897c37c`, `71c90dae`, this PR) |
+| **4** | docs/actions/http_request.md | Deferred (low priority; the action is self-documenting via schema + `mooncake explain http.request`) |
 
 ## Open questions
 

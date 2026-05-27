@@ -176,10 +176,11 @@ type ExecutionContext struct {
 	Scope *VariableScope
 
 	// CurrentDir is the directory containing the current config file.
+	// Set per-file by the planner (each include / component flips it to
+	// the included file's own dir). All relative paths in step fields
+	// resolve against this Node-style: `./foo` is relative to the YAML
+	// file that declares the step.
 	CurrentDir string
-
-	// PresetBaseDir is the root directory of the currently executing preset.
-	PresetBaseDir string
 
 	// CurrentFile is the absolute path to the current config file being executed.
 	CurrentFile string
@@ -259,13 +260,12 @@ type TxnCompletedChild struct {
 // Svc is shared by pointer; Scope is deep-cloned (User+Results); per-step fields are reset.
 func (ec *ExecutionContext) Clone() ExecutionContext {
 	cloned := ExecutionContext{
-		Svc:           ec.Svc,
-		CurrentDir:    ec.CurrentDir,
-		PresetBaseDir: ec.PresetBaseDir,
-		CurrentFile:   ec.CurrentFile,
-		Level:         ec.Level,
-		CurrentIndex:  ec.CurrentIndex,
-		TotalSteps:    ec.TotalSteps,
+		Svc:          ec.Svc,
+		CurrentDir:   ec.CurrentDir,
+		CurrentFile:  ec.CurrentFile,
+		Level:        ec.Level,
+		CurrentIndex: ec.CurrentIndex,
+		TotalSteps:   ec.TotalSteps,
 		// CurrentStepID and CurrentResult intentionally omitted — per-step state
 	}
 	cloned.Scope = ec.Scope.Clone()

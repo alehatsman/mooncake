@@ -26,17 +26,15 @@ func init() {
 
 // savedContext captures the current execution context state for restoration.
 type savedContext struct {
-	variables     map[string]interface{}
-	currentDir    string
-	presetBaseDir string
+	variables  map[string]interface{}
+	currentDir string
 }
 
 // captureContext saves the current execution context state.
 func captureContext(ec *executor.ExecutionContext) *savedContext {
 	saved := &savedContext{
-		variables:     make(map[string]interface{}),
-		currentDir:    ec.CurrentDir,
-		presetBaseDir: ec.PresetBaseDir,
+		variables:  make(map[string]interface{}),
+		currentDir: ec.CurrentDir,
 	}
 	for k, v := range ec.Scope.User {
 		saved.variables[k] = v
@@ -56,9 +54,7 @@ func (s *savedContext) restore(ec *executor.ExecutionContext, parametersNamespac
 	for k, v := range s.variables {
 		ec.Scope.User[k] = v
 	}
-	// Restore original directories
 	ec.CurrentDir = s.currentDir
-	ec.PresetBaseDir = s.presetBaseDir
 }
 
 // Metadata returns the action metadata.
@@ -182,10 +178,10 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		ec.Scope.User[k] = v
 	}
 
-	// Set PresetBaseDir to preset base directory for template path resolution
-	// This persists across included task files, unlike CurrentDir which changes per file
+	// Flip CurrentDir to the preset's entrypoint dir so the first file's
+	// relative paths resolve against the preset root. Subsequent includes
+	// inside the preset re-flip CurrentDir per file via the planner.
 	if presetBaseDir != "" {
-		ec.PresetBaseDir = presetBaseDir
 		ec.CurrentDir = presetBaseDir
 	}
 

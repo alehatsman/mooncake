@@ -865,6 +865,9 @@
             "type": "string"
           }
         },
+        "expect_json_schema": {
+          "type": "string"
+        },
         "expect_status": {
           "type": "array",
           "items": {
@@ -954,6 +957,9 @@
               "items": {
                 "type": "string"
               }
+            },
+            "expect_json_schema": {
+              "type": "string"
             },
             "expect_status": {
               "type": "array",
@@ -1093,6 +1099,9 @@
               "items": {
                 "type": "string"
               }
+            },
+            "expect_json_schema": {
+              "type": "string"
             },
             "expect_status": {
               "type": "array",

@@ -120,14 +120,10 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		return nil, fmt.Errorf("context is not an ExecutionContext")
 	}
 
-	// Resolve src path against the preset root if set, otherwise the
-	// current config dir. Preserves the existing template-handler
-	// contract.
-	baseDir := ec.CurrentDir
-	if ec.PresetBaseDir != "" {
-		baseDir = ec.PresetBaseDir
-	}
-	src, err := ec.Svc.PathUtil.ExpandPath(tmpl.Src, baseDir, ctx.GetVariables())
+	// Resolve src path against the source file's directory (Node-style:
+	// relative paths are relative to the YAML file that declares the
+	// step). CurrentDir is set per-file by the planner.
+	src, err := ec.Svc.PathUtil.ExpandPath(tmpl.Src, ec.CurrentDir, ctx.GetVariables())
 	if err != nil {
 		return nil, fmt.Errorf("failed to expand src path: %w", err)
 	}

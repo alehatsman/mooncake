@@ -1522,13 +1522,38 @@ type HTTPRequest struct {
 	// listing what's missing.
 	//
 	// This is deliberately a narrower contract than the full JSON-
-	// schema validation deferred under expect_json_schema (file
-	// path → draft-07 validator). The narrow check covers the most
-	// common "I called POST /hooks, prove the server returned an id
-	// and url" assertion without taking on a JSONSchema dependency.
-	// Empty/whitespace-only entries are rejected by Validate so
-	// `expect_json_keys: [""]` doesn't silently no-op.
+	// schema validation under ExpectJSONSchema (below). The narrow
+	// check covers the most common "I called POST /hooks, prove the
+	// server returned an id and url" assertion. Empty/whitespace-only
+	// entries are rejected by Validate so `expect_json_keys: [""]`
+	// doesn't silently no-op.
 	ExpectJSONKeys []string `yaml:"expect_json_keys,omitempty" json:"expect_json_keys,omitempty"`
+
+	// ExpectJSONSchema is a path to a JSON Schema (draft-07) file
+	// that the auto-parsed response JSON must validate against.
+	// After a successful response (status accepted, JSON parsed), the
+	// handler reads the file, compiles the schema, and validates
+	// response.json against it. The first violation fails the step
+	// with a clear error including the JSON-pointer path of the
+	// failing location.
+	//
+	// Path resolution: Node-style — relative to the YAML file that
+	// declares the step (ec.CurrentDir, set per-file by the planner).
+	// `./schema.json` resolves to the same dir as the step's source
+	// file; `../schemas/hook.json` walks one dir up. Absolute paths
+	// are honored. The path is template-rendered against vars before
+	// resolution (so `{{ .schema_dir }}/hook.json` works).
+	//
+	// Compilation is run-time, not Validate-time, because the path
+	// may reference vars that aren't bound until apply. A missing
+	// file, malformed schema, or unparseable draft fails the step
+	// BEFORE the network call runs.
+	//
+	// Composes with ExpectJSONKeys: both run if both set (keys
+	// first, schema second). Rejected inside `probe:` sub-blocks
+	// (matches the SaveTo rule — probes are read-only inspection).
+	// Allowed inside `reverse:` sub-blocks.
+	ExpectJSONSchema string `yaml:"expect_json_schema,omitempty" json:"expect_json_schema,omitempty"`
 }
 
 // HTTPAuth is the one-of credential block for HTTPRequest. Set at

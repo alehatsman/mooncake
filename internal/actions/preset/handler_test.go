@@ -382,7 +382,6 @@ func TestCaptureContext(t *testing.T) {
 		"var2": 42,
 	})
 	ec.CurrentDir = "/test/dir"
-	ec.PresetBaseDir = "/test/preset"
 
 	saved := captureContext(ec)
 
@@ -396,9 +395,6 @@ func TestCaptureContext(t *testing.T) {
 	if saved.currentDir != "/test/dir" {
 		t.Errorf("Saved currentDir = %s, want '/test/dir'", saved.currentDir)
 	}
-	if saved.presetBaseDir != "/test/preset" {
-		t.Errorf("Saved presetBaseDir = %s, want '/test/preset'", saved.presetBaseDir)
-	}
 }
 
 func TestSavedContext_Restore(t *testing.T) {
@@ -407,7 +403,6 @@ func TestSavedContext_Restore(t *testing.T) {
 		"original": "value",
 	})
 	ec.CurrentDir = "/original/dir"
-	ec.PresetBaseDir = "/original/preset"
 
 	// Capture state
 	saved := captureContext(ec)
@@ -424,7 +419,6 @@ func TestSavedContext_Restore(t *testing.T) {
 		ec.Scope.User[k] = v
 	}
 	ec.CurrentDir = "/modified/dir"
-	ec.PresetBaseDir = "/modified/preset"
 
 	// Restore state
 	saved.restore(ec, parametersNamespace)
@@ -444,9 +438,6 @@ func TestSavedContext_Restore(t *testing.T) {
 	}
 	if ec.CurrentDir != "/original/dir" {
 		t.Errorf("CurrentDir after restore = %s, want '/original/dir'", ec.CurrentDir)
-	}
-	if ec.PresetBaseDir != "/original/preset" {
-		t.Errorf("PresetBaseDir after restore = %s, want '/original/preset'", ec.PresetBaseDir)
 	}
 }
 

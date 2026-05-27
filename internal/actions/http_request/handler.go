@@ -48,6 +48,7 @@ import (
 	"github.com/alehatsman/mooncake/internal/events"
 	"github.com/alehatsman/mooncake/internal/executor"
 	"github.com/alehatsman/mooncake/internal/httputil"
+	"github.com/santhosh-tekuri/jsonschema/v5"
 )
 
 const (
@@ -152,6 +153,9 @@ func (Handler) Validate(step *config.Step) error {
 		if strings.TrimSpace(r.Probe.SaveTo) != "" {
 			return fmt.Errorf("%s: probe must not declare save_to (probes are read-only inspection; declare save_to on the top-level request)", actionName)
 		}
+		if strings.TrimSpace(r.Probe.ExpectJSONSchema) != "" {
+			return fmt.Errorf("%s: probe must not declare expect_json_schema (probes are read-only inspection; declare expect_json_schema on the top-level request)", actionName)
+		}
 		probeMethod, err := normalizeMethod(r.Probe.Method)
 		if err != nil {
 			return fmt.Errorf("%s.probe: %w", actionName, err)
@@ -224,6 +228,9 @@ func validateStructural(r *config.HTTPRequest, fieldPrefix string) error {
 	}
 	if r.MaxResponseBytes < 0 {
 		return fmt.Errorf("%s: %s must be >= 0", actionName, at("max_response_bytes"))
+	}
+	if r.ExpectJSONSchema != "" && strings.TrimSpace(r.ExpectJSONSchema) == "" {
+		return fmt.Errorf("%s: %s must not be whitespace-only", actionName, at("expect_json_schema"))
 	}
 	for i, k := range r.ExpectJSONKeys {
 		if strings.TrimSpace(k) == "" {
@@ -677,6 +684,18 @@ func (h *Handler) runApply(ctx actions.Context, step *config.Step, rr *renderedR
 		}
 	}
 
+	// Wave 3 / expect_json_schema: validate response.json against a
+	// JSON-Schema (draft-07) file. Path is Node-style — resolved
+	// against ec.CurrentDir (the dir of the YAML file declaring the
+	// step). Composes with expect_json_keys (keys above already
+	// passed); runs second because it's more expensive.
+	if strings.TrimSpace(step.HTTPRequest.ExpectJSONSchema) != "" {
+		if err := checkExpectJSONSchema(ctx, step.HTTPRequest.ExpectJSONSchema, data); err != nil {
+			res.Failed = true
+			return res, fmt.Errorf("%s: %w", actionName, err)
+		}
+	}
+
 	// Wave 3: persist the response body to save_to when set. The path
 	// is template-rendered so callers can interpolate response facts
 	// (e.g. `save_to: "/var/cache/hooks/{{ response.json.id }}.json"`).
@@ -971,4 +990,85 @@ func checkExpectJSONKeys(want []string, data map[string]interface{}) error {
 		return fmt.Errorf("expect_json_keys: missing key(s) %v in response.json", missing)
 	}
 	return nil
+}
+
+// checkExpectJSONSchema validates the parsed-JSON response fact
+// against a JSON Schema (draft-07) loaded from disk. The schema path
+// is resolved Node-style against the step's source-file dir
+// (ec.CurrentDir) — `./schema.json` is next to the YAML declaring the
+// step; `../schemas/x.json` walks one up; absolute paths honored.
+//
+// Failure modes, all before the response is accepted:
+//   - response was not JSON (Content-Type didn't auto-parse)
+//   - schema file is missing / unreadable
+//   - schema is malformed (compile error)
+//   - response.json fails validation — first violation is reported
+//     with its JSON-pointer location
+//
+// Compilation runs at apply time (not Validate) because the path may
+// reference vars. The compiled schema is local to this call; no
+// process-wide cache (each step is reborn per apply, and schemas are
+// cheap to compile relative to a network round-trip).
+func checkExpectJSONSchema(ctx actions.Context, schemaPathTemplate string, data map[string]interface{}) error {
+	raw, ok := data["json"]
+	if !ok || raw == nil {
+		return fmt.Errorf("expect_json_schema: response was not JSON (Content-Type did not auto-parse); declare a JSON-returning endpoint or drop expect_json_schema")
+	}
+
+	ec, ok := ctx.(*executor.ExecutionContext)
+	if !ok {
+		return fmt.Errorf("expect_json_schema: context is not an ExecutionContext")
+	}
+	resolved, err := ec.Svc.PathUtil.ExpandPath(schemaPathTemplate, ec.CurrentDir, ctx.GetVariables())
+	if err != nil {
+		return fmt.Errorf("expect_json_schema: resolve %q: %w", schemaPathTemplate, err)
+	}
+	resolved = strings.TrimSpace(resolved)
+	if resolved == "" {
+		return fmt.Errorf("expect_json_schema: path %q rendered to empty string", schemaPathTemplate)
+	}
+
+	schemaBytes, err := readFile(resolved)
+	if err != nil {
+		return fmt.Errorf("expect_json_schema: read %s: %w", resolved, err)
+	}
+
+	compiler := jsonschema.NewCompiler()
+	compiler.Draft = jsonschema.Draft7
+	const schemaURL = "mooncake://expect_json_schema"
+	if err := compiler.AddResource(schemaURL, bytes.NewReader(schemaBytes)); err != nil {
+		return fmt.Errorf("expect_json_schema: add schema %s: %w", resolved, err)
+	}
+	schema, err := compiler.Compile(schemaURL)
+	if err != nil {
+		return fmt.Errorf("expect_json_schema: compile %s: %w", resolved, err)
+	}
+
+	if err := schema.Validate(raw); err != nil {
+		// jsonschema returns a *ValidationError tree; the leaf-most
+		// cause is the most actionable. Walk to the deepest leaf and
+		// report it with its InstanceLocation (JSON pointer).
+		if vErr, ok := err.(*jsonschema.ValidationError); ok {
+			leaf := deepestValidationCause(vErr)
+			loc := leaf.InstanceLocation
+			if loc == "" {
+				loc = "/"
+			}
+			return fmt.Errorf("expect_json_schema: response failed validation at %s: %s", loc, leaf.Message)
+		}
+		return fmt.Errorf("expect_json_schema: response failed validation: %w", err)
+	}
+	return nil
+}
+
+// deepestValidationCause walks the *jsonschema.ValidationError tree
+// to the most specific leaf cause — the one with no further causes
+// of its own. That's the actionable "this field, this rule" message;
+// the outer errors are just "oneOf failed" envelopes.
+func deepestValidationCause(v *jsonschema.ValidationError) *jsonschema.ValidationError {
+	cur := v
+	for len(cur.Causes) > 0 {
+		cur = cur.Causes[0]
+	}
+	return cur
 }
