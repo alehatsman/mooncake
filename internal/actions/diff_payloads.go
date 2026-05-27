@@ -243,3 +243,46 @@ type RepoDiff struct {
 	// "brew" | "" (none).
 	Driver string `json:"driver,omitempty"`
 }
+
+// TransactionDiff is the synthesized After payload for a transaction-
+// parent step. Transactions have no handler, so the planner cannot
+// emit a Differ.Diff — instead the plan-render call site synthesizes
+// one from the parent step + its sibling children. Consumers
+// dispatch on Resource.Attributes["kind"] == "transaction".
+type TransactionDiff struct {
+	// Name is the transaction step's name (Identifier carries the
+	// same value).
+	Name string `json:"name,omitempty"`
+
+	// AllowIrreversible mirrors step.AllowIrreversible — when true,
+	// non-Reverser children were accepted at plan time.
+	AllowIrreversible bool `json:"allow_irreversible,omitempty"`
+
+	// BodyChildren is the ordered list of body-child step names (the
+	// `transaction:` block).
+	BodyChildren []string `json:"body_children,omitempty"`
+
+	// RollbackChildren is the ordered list of rollback-child step
+	// names (the `on_rollback:` block).
+	RollbackChildren []string `json:"rollback_children,omitempty"`
+}
+
+// TryDiff is the synthesized After payload for a try-parent step.
+// Same shape rationale as TransactionDiff. Consumers dispatch on
+// Resource.Attributes["kind"] == "try".
+type TryDiff struct {
+	// Name is the try step's name.
+	Name string `json:"name,omitempty"`
+
+	// TryChildren is the ordered list of body-child step names (the
+	// `try:` block).
+	TryChildren []string `json:"try_children,omitempty"`
+
+	// CatchChildren is the ordered list of catch-handler step names
+	// (the `catch:` block).
+	CatchChildren []string `json:"catch_children,omitempty"`
+
+	// FinallyChildren is the ordered list of finally-handler step
+	// names (the `finally:` block).
+	FinallyChildren []string `json:"finally_children,omitempty"`
+}

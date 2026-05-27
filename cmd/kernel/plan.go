@@ -279,13 +279,20 @@ func FormatPlanText(p *plan.Plan, showOrigins bool, showDiff bool) error {
 		ins := insByID[step.ID]
 		sym := planSymbol(ins, step.Skipped)
 
+		// Spec-66 wave 7: a transaction-/try-parent step has no
+		// handler (the children carry the actions) so it lands as
+		// "?" not-inspected. Synthesize a compound Diff from the
+		// parent + siblings so internal/diff renders the compound
+		// shape under the parent line.
+		compound := diff.SynthesizeCompound(step, p.Steps)
+
 		name := step.Name
 		if name == "" {
 			name = step.ID
 		}
 		// One line per step: <sym> <name>   <reason>
 		line := fmt.Sprintf("%s %s", sym, name)
-		if ins.Reason != "" {
+		if ins.Reason != "" && compound == nil {
 			line = fmt.Sprintf("%-50s  %s", line, ins.Reason)
 		} else if step.Skipped {
 			line = fmt.Sprintf("%-50s  %s", line, "skipped (tags)")
@@ -302,8 +309,12 @@ func FormatPlanText(p *plan.Plan, showOrigins bool, showDiff bool) error {
 			}
 		}
 
-		if showDiff && sym == "↑" {
-			if r := diff.Lookup(ins.Detail, ins.Diff); r != nil {
+		if showDiff && (sym == "↑" || compound != nil) {
+			// Compound diff fires regardless of symbol — the parent
+			// step is structural, not action-bearing, so it has no
+			// "would change" verdict of its own; child steps each
+			// render their own typed diffs under their sibling lines.
+			if r := diff.Lookup(ins.Detail, ins.Diff, compound); r != nil {
 				var buf strings.Builder
 				if err := r.Render(&buf, diff.FormatText); err == nil && buf.Len() > 0 {
 					fmt.Print(buf.String())
