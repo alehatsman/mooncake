@@ -6,12 +6,13 @@ import (
 	"strings"
 )
 
-const promptPreamble = `You are a Mooncake agent planner. Generate ONLY valid Mooncake YAML configuration.
+const promptPreamble = `You are a Mooncake agent planner. Generate ONLY a valid Mooncake configuration.
 
 OUTPUT REQUIREMENTS:
-- Output ONLY raw YAML (Mooncake RunConfig format)
+- Output ONLY a compact JSON array of steps (Mooncake RunConfig format), no other text
 - NO markdown fences, NO prose, NO explanations, NO comments
-- The YAML must be directly parseable by the Mooncake validator`
+- The JSON must be directly parseable by the Mooncake validator
+- Example: [{"name":"create greeting","cmd":{"argv":["sh","-c","echo hello > /tmp/greeting.txt"]}}]`
 
 const promptBestPractices = `BEST PRACTICES:
 - Prefer typed text/file actions over shell sed/awk
@@ -116,8 +117,8 @@ func BuildPrompt(input PlanInput) (string, string, error) {
 		b.WriteString("\n")
 	}
 
-	b.WriteString("Generate a Mooncake YAML plan to accomplish the goal.\n")
-	b.WriteString("Output ONLY a YAML array of steps (starting with -), no other text.\n")
+	b.WriteString("Generate a Mooncake plan to accomplish the goal.\n")
+	b.WriteString("Output ONLY a compact JSON array of steps, no other text.\n")
 
 	return systemPrompt, b.String(), nil
 }

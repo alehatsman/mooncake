@@ -23,9 +23,11 @@ func TestBuildSystemPrompt_StylePlan_Snapshot(t *testing.T) {
 	mustContain(t, got, "BEST PRACTICES:")
 	mustContain(t, got, "CONSTRAINTS:")
 	mustContain(t, got, "TASK STYLE: complete plan")
-	mustContain(t, got, "Design a complete mooncake YAML plan accomplishing this goal.")
+	mustContain(t, got, "Design a complete mooncake plan accomplishing this goal.")
 	mustContain(t, got, "Aim for 4–30 steps")
 	mustContain(t, got, "`assert:` where useful.")
+	// Proposal-08: the preamble now instructs JSON output, not YAML.
+	mustContain(t, got, "Output ONLY a compact JSON array of steps")
 
 	if strings.Contains(got, "TASK STYLE: one step at a time") {
 		t.Errorf("plan-style prompt should not contain step-style fragment")
@@ -47,7 +49,10 @@ func TestBuildSystemPrompt_StyleStep_Snapshot(t *testing.T) {
 	mustContain(t, got, "TASK STYLE: one step at a time")
 	mustContain(t, got, "Propose the NEXT SINGLE action")
 	mustContain(t, got, "EXACTLY ONE step")
-	mustContain(t, got, "emit an empty plan (the YAML literal `[]`) to signal \"done\".")
+	// Proposal-08: empty-plan literal is now JSON `[]`, not YAML `[]`.
+	mustContain(t, got, "emit an empty plan (the JSON literal `[]`) to signal \"done\".")
+	// And the step fragment carries a one-step JSON example.
+	mustContain(t, got, `[{"name":"check git status","cmd":{"argv":["git","status","--short"]}}]`)
 
 	if strings.Contains(got, "TASK STYLE: complete plan") {
 		t.Errorf("step-style prompt should not contain plan-style fragment")

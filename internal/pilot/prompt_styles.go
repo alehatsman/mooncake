@@ -17,7 +17,7 @@ const (
 // promptStylePlan is the TASK STYLE block appended to the system
 // prompt when Style == StylePlan. Verbatim from spec-67 §12.3.
 const promptStylePlan = "TASK STYLE: complete plan\n" +
-	"Design a complete mooncake YAML plan accomplishing this goal.\n" +
+	"Design a complete mooncake plan accomplishing this goal.\n" +
 	"Output the entire plan in a single response; we execute the\n" +
 	"whole plan in one transaction. Aim for 4–30 steps; verify with\n" +
 	"`assert:` where useful."
@@ -33,10 +33,12 @@ const promptStylePlan = "TASK STYLE: complete plan\n" +
 // its mental model and the hint stays out of promptStylePlan.
 const promptStyleStep = "TASK STYLE: one step at a time\n" +
 	"Propose the NEXT SINGLE action needed to make progress toward\n" +
-	"the goal. Output a YAML plan containing EXACTLY ONE step.\n" +
+	"the goal. Output a JSON plan containing EXACTLY ONE step (a\n" +
+	"single-element array). Example: " +
+	`[{"name":"check git status","cmd":{"argv":["git","status","--short"]}}]` + "\n" +
 	"After we execute it and report back in LAST ITERATION, you\n" +
 	"will propose the next single action. When the goal is reached,\n" +
-	"emit an empty plan (the YAML literal `[]`) to signal \"done\".\n" +
+	"emit an empty plan (the JSON literal `[]`) to signal \"done\".\n" +
 	"If LAST STEP STDOUT above answers the goal, emit an empty plan\n" +
 	"(`[]`) to signal done — do not re-propose the same diagnostic step."
 
