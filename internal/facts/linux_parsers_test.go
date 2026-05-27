@@ -58,8 +58,8 @@ func TestParsePercent(t *testing.T) {
 // TestDetectLinuxDistribution_NonLinux tests distribution detection on non-Linux
 func TestDetectLinuxDistribution_NonLinux(t *testing.T) {
 	// Should handle missing /etc/os-release gracefully
-	dist, version := detectLinuxDistribution()
-	t.Logf("Distribution: %s, Version: %s", dist, version)
+	dist, version, codename := detectLinuxDistribution()
+	t.Logf("Distribution: %s, Version: %s, Codename: %s", dist, version, codename)
 }
 
 // TestDetectLinuxPackageManager_NonLinux tests package manager detection
@@ -178,7 +178,7 @@ func TestLinuxFunctions_NoBlankReturn(t *testing.T) {
 	// Call all functions to ensure they execute without panicking
 	// On non-Linux systems, they should return empty/zero values gracefully
 
-	_, _ = detectLinuxDistribution()
+	_, _, _ = detectLinuxDistribution()
 	_ = detectLinuxPackageManager("")
 	_ = detectLinuxMemory()
 	_ = detectLinuxDisks()

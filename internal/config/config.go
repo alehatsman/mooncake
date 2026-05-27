@@ -483,13 +483,21 @@ type PkgRepo struct {
 // PkgRepoApt is the apt driver block for pkg.repo. Written as DEB822
 // to /etc/apt/sources.list.d/<name>.sources with the keyring (if any)
 // at /etc/apt/keyrings/<name>.gpg.
+//
+// `ppa:` is a shorthand for launchpad PPAs (proposal-22) — when set,
+// uri/suites/components default to the launchpad layout and the
+// signing-key fingerprint is discovered from launchpad's REST API, so
+// `gpg_check: true` (the default) holds without the operator pinning
+// the key by hand. `ppa:` is mutually exclusive with `uri:` and
+// `gpg_key_url:`; the other fields stay overrideable.
 type PkgRepoApt struct {
-	URI               string   `yaml:"uri" json:"uri"`                                           // Required: repository URI
-	Suites            []string `yaml:"suites" json:"suites,omitempty"`                           // Required: suite names (e.g. [nodistro] or [jammy])
+	URI               string   `yaml:"uri" json:"uri,omitempty"`                                 // Required unless `ppa:` is set
+	PPA               string   `yaml:"ppa" json:"ppa,omitempty"`                                 // Launchpad PPA shorthand, e.g. "neovim-ppa/unstable"
+	Suites            []string `yaml:"suites" json:"suites,omitempty"`                           // Required without `ppa:`; defaults to [distribution_codename] when `ppa:` is set
 	Components        []string `yaml:"components" json:"components,omitempty"`                   // Default: [main]
 	Architectures     []string `yaml:"architectures" json:"architectures,omitempty"`             // Default: host arch
-	GPGKeyURL         string   `yaml:"gpg_key_url" json:"gpg_key_url,omitempty"`                 // URL to .gpg or .asc public key
-	GPGKeyFingerprint string   `yaml:"gpg_key_fingerprint" json:"gpg_key_fingerprint,omitempty"` // Required when gpg_check is true
+	GPGKeyURL         string   `yaml:"gpg_key_url" json:"gpg_key_url,omitempty"`                 // URL to .gpg or .asc public key (mutex with ppa)
+	GPGKeyFingerprint string   `yaml:"gpg_key_fingerprint" json:"gpg_key_fingerprint,omitempty"` // Required when gpg_check is true; auto-discovered for `ppa:`
 	GPGCheck          *bool    `yaml:"gpg_check" json:"gpg_check,omitempty"`                     // Default: true
 	UpdateCache       *bool    `yaml:"update_cache" json:"update_cache,omitempty"`               // Run apt-get update after change (default: true)
 }

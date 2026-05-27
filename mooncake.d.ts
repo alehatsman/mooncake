@@ -822,6 +822,7 @@ export interface PkgRepoAction {
     gpg_check: boolean;
     gpg_key_fingerprint: string;
     gpg_key_url: string;
+    ppa: string;
     suites: string[];
     update_cache: boolean;
     uri: string;

@@ -47,6 +47,14 @@ func TestValidate(t *testing.T) {
 		}}, true},
 		{"apt no uri", &config.Step{PkgRepo: &config.PkgRepo{Name: "x", Apt: &config.PkgRepoApt{Suites: []string{"s"}}}}, true},
 		{"apt no suites", &config.Step{PkgRepo: &config.PkgRepo{Name: "x", Apt: &config.PkgRepoApt{URI: "u"}}}, true},
+
+		// Proposal-22: ppa shorthand
+		{"apt ppa ok minimal", &config.Step{PkgRepo: &config.PkgRepo{Name: "nv", Apt: &config.PkgRepoApt{PPA: "neovim-ppa/unstable"}}}, false},
+		{"apt ppa with explicit suites ok", &config.Step{PkgRepo: &config.PkgRepo{Name: "nv", Apt: &config.PkgRepoApt{PPA: "neovim-ppa/unstable", Suites: []string{"focal"}}}}, false},
+		{"apt ppa + uri rejected", &config.Step{PkgRepo: &config.PkgRepo{Name: "nv", Apt: &config.PkgRepoApt{PPA: "neovim-ppa/unstable", URI: "http://x"}}}, true},
+		{"apt ppa + gpg_key_url rejected", &config.Step{PkgRepo: &config.PkgRepo{Name: "nv", Apt: &config.PkgRepoApt{PPA: "neovim-ppa/unstable", GPGKeyURL: "http://k"}}}, true},
+		{"apt bad ppa shape rejected", &config.Step{PkgRepo: &config.PkgRepo{Name: "nv", Apt: &config.PkgRepoApt{PPA: "neovim-ppa"}}}, true},
+		{"apt absent ppa accepted", &config.Step{PkgRepo: &config.PkgRepo{Name: "nv", State: "absent", Apt: &config.PkgRepoApt{PPA: "neovim-ppa/unstable"}}}, false},
 		{"gpg check default needs fingerprint", &config.Step{PkgRepo: &config.PkgRepo{Name: "x", Apt: apt("https://k", "", nil)}}, true},
 		{"gpg check off ok without fingerprint", &config.Step{PkgRepo: &config.PkgRepo{Name: "x", Apt: apt("https://k", "", boolp(false))}}, false},
 		{"ok apt", &config.Step{PkgRepo: &config.PkgRepo{Name: "nodesource", Apt: apt("", "", nil)}}, false},

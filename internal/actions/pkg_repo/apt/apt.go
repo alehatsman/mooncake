@@ -73,6 +73,18 @@ func Run(ctx actions.Context, r *config.PkgRepo, result *executor.Result) (actio
 		return result, err
 	}
 
+	// Proposal-22: expand `ppa:` shorthand into uri/suites/components +
+	// (when state=present and the operator didn't pre-pin) the
+	// launchpad-discovered fingerprint and keyserver URL. The expansion
+	// is deferred until apply time because fingerprint discovery is a
+	// network call.
+	if r.Apt.PPA != "" {
+		state := shared.NormalizeState(r.State)
+		if err := expandPPA(ctx, &rendered, r.Apt, state); err != nil {
+			return result, err
+		}
+	}
+
 	plan, err := computePlan(r.Name, shared.NormalizeState(r.State), rendered)
 	if err != nil {
 		return result, err
@@ -348,7 +360,15 @@ func apply(performer actions.Performer, p plan_, r rendered_) error {
 				return fmt.Errorf("pkg.repo.apt: %w (key url: %s)", vErr, r.gpgKeyURL)
 			}
 		}
-		if e := performer.WriteFile(p.keyringPath, body, 0o644, pOptsWithMode); e.Err != nil {
+		// apt's DEB822 Signed-By expects a *binary* keyring. Keys from
+		// keyserver.ubuntu.com (the ppa shorthand path) and many third-
+		// party mirrors return ASCII-armored .asc bodies, so normalise
+		// here. shared.MaybeDearmor is a no-op for binary input.
+		keyBytes, err := shared.MaybeDearmor(body)
+		if err != nil {
+			return fmt.Errorf("pkg.repo.apt: normalise gpg key: %w", err)
+		}
+		if e := performer.WriteFile(p.keyringPath, keyBytes, 0o644, pOptsWithMode); e.Err != nil {
 			return fmt.Errorf("pkg.repo.apt: write keyring: %w", e.Err)
 		}
 	}

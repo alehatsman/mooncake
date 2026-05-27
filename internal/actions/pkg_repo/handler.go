@@ -146,6 +146,37 @@ func (Handler) Permissions(step *config.Step) actions.PermissionSet {
 	return ps
 }
 
+// validateApt enforces apt-driver field rules for state=present. Split
+// out of Validate so the cross-cutting checks there stay below the
+// project-wide cyclomatic cap. Proposal-22 added the ppa branch.
+func validateApt(a *config.PkgRepoApt) error {
+	hasPPA := strings.TrimSpace(a.PPA) != ""
+	hasURI := strings.TrimSpace(a.URI) != ""
+	switch {
+	case hasPPA && hasURI:
+		return fmt.Errorf("pkg.repo.apt: ppa and uri are mutually exclusive (ppa derives uri)")
+	case hasPPA && a.GPGKeyURL != "":
+		return fmt.Errorf("pkg.repo.apt: ppa and gpg_key_url are mutually exclusive (ppa discovers the key via launchpad)")
+	case !hasPPA && !hasURI:
+		return fmt.Errorf("pkg.repo.apt: one of uri or ppa is required when state=present")
+	}
+	if hasPPA {
+		if !apt.PPARE.MatchString(a.PPA) {
+			return fmt.Errorf("pkg.repo.apt: ppa %q must match <owner>/<name> (e.g. neovim-ppa/unstable)", a.PPA)
+		}
+	} else if len(a.Suites) == 0 {
+		return fmt.Errorf("pkg.repo.apt: suites is required when state=present")
+	}
+	// gpg_key_fingerprint pinning rule still applies when the user
+	// supplies their own gpg_key_url. With `ppa:` the driver discovers
+	// the fingerprint from launchpad before fetching the key, so the
+	// operator doesn't need to set it by hand.
+	if a.GPGKeyURL != "" && apt.GPGCheckEnabled(a) && strings.TrimSpace(a.GPGKeyFingerprint) == "" {
+		return fmt.Errorf("pkg.repo.apt: gpg_key_fingerprint is required when gpg_check is true (set gpg_check: false to opt out)")
+	}
+	return nil
+}
+
 func (h *Handler) Validate(step *config.Step) error {
 	r := step.PkgRepo
 	if r == nil {
@@ -178,14 +209,8 @@ func (h *Handler) Validate(step *config.Step) error {
 		return fmt.Errorf("pkg.repo: exactly one of apt/dnf/brew may be supplied per step")
 	}
 	if r.Apt != nil && state == statePresent {
-		if strings.TrimSpace(r.Apt.URI) == "" {
-			return fmt.Errorf("pkg.repo.apt: uri is required when state=present")
-		}
-		if len(r.Apt.Suites) == 0 {
-			return fmt.Errorf("pkg.repo.apt: suites is required when state=present")
-		}
-		if r.Apt.GPGKeyURL != "" && apt.GPGCheckEnabled(r.Apt) && strings.TrimSpace(r.Apt.GPGKeyFingerprint) == "" {
-			return fmt.Errorf("pkg.repo.apt: gpg_key_fingerprint is required when gpg_check is true (set gpg_check: false to opt out)")
+		if err := validateApt(r.Apt); err != nil {
+			return err
 		}
 	}
 	if r.Dnf != nil && state == statePresent {

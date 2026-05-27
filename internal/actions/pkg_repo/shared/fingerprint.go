@@ -93,6 +93,29 @@ func readerForKey(body []byte) (io.Reader, error) {
 	return bytes.NewReader(body), nil
 }
 
+// MaybeDearmor returns `body` unchanged when it's already binary
+// OpenPGP, or dearmors it (strips the `-----BEGIN PGP …-----` headers
+// and base64-decodes) when it's ASCII-armored. apt's DEB822
+// `Signed-By:` and dnf's `gpgkey=file://…` both want binary keyring
+// bytes; sources like keyserver.ubuntu.com return armored, so the
+// driver must normalize before writing the keyring file. Returns an
+// error only when the armor header is present but malformed — that
+// would otherwise produce a silently-broken keyring on disk.
+func MaybeDearmor(body []byte) ([]byte, error) {
+	if !bytes.HasPrefix(bytes.TrimSpace(body), []byte("-----BEGIN")) {
+		return body, nil
+	}
+	block, err := armor.Decode(bytes.NewReader(body))
+	if err != nil {
+		return nil, fmt.Errorf("decode armor: %w", err)
+	}
+	out, err := io.ReadAll(block.Body)
+	if err != nil {
+		return nil, fmt.Errorf("read armored body: %w", err)
+	}
+	return out, nil
+}
+
 // NormalizeFingerprint upper-cases the hex and strips the
 // inconsequential separators so two transcriptions of the same
 // fingerprint compare equal:

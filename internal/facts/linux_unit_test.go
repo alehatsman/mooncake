@@ -215,8 +215,8 @@ func TestDetectUnitLinuxDistribution_OsRelease(t *testing.T) {
 		t.Skip("Linux-only test")
 	}
 
-	name, version := detectLinuxDistribution()
-	t.Logf("Distribution: %s %s", name, version)
+	name, version, codename := detectLinuxDistribution()
+	t.Logf("Distribution: %s %s (%s)", name, version, codename)
 
 	// At least name should be detected
 	if name == "" {

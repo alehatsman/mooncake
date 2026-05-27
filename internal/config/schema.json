@@ -2160,6 +2160,9 @@
             "gpg_key_url": {
               "type": "string"
             },
+            "ppa": {
+              "type": "string"
+            },
             "suites": {
               "type": "array",
               "items": {
@@ -2170,13 +2173,9 @@
               "type": "boolean"
             },
             "uri": {
-              "type": "string",
-              "minLength": 1
+              "type": "string"
             }
           },
-          "required": [
-            "uri"
-          ],
           "additionalProperties": false
         },
         "brew": {

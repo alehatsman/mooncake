@@ -16,7 +16,7 @@ const (
 
 // collectLinuxFacts gathers Linux-specific system information
 func collectLinuxFacts(f *Facts) {
-	f.Distribution, f.DistributionVersion = detectLinuxDistribution()
+	f.Distribution, f.DistributionVersion, f.DistributionCodename = detectLinuxDistribution()
 	f.DistributionMajor = extractMajorVersion(f.DistributionVersion)
 	f.PackageManager = detectLinuxPackageManager(f.Distribution)
 	f.MemoryTotalMB = detectLinuxMemory()
@@ -44,31 +44,41 @@ func collectLinuxFacts(f *Facts) {
 	}
 }
 
-// detectLinuxDistribution reads /etc/os-release to identify distribution
-func detectLinuxDistribution() (distro, version string) {
+// detectLinuxDistribution reads /etc/os-release to identify distribution.
+// Returns (ID, VERSION_ID, VERSION_CODENAME) — codename empty on distros that
+// omit it (e.g. arch rolling, alpine point-releases).
+func detectLinuxDistribution() (distro, version, codename string) {
 	// Try /etc/os-release (standard)
 	data, err := os.ReadFile("/etc/os-release")
 	if err != nil {
 		// Fallback to /etc/lsb-release
 		data, err = os.ReadFile("/etc/lsb-release")
 		if err != nil {
-			return "", ""
+			return "", "", ""
 		}
 	}
+	return parseOSRelease(data)
+}
 
-	lines := strings.Split(string(data), "\n")
-	var id, versionID string
-
-	for _, line := range lines {
+// parseOSRelease extracts ID / VERSION_ID / VERSION_CODENAME (with the
+// Ubuntu-style DISTRIB_CODENAME fallback) from os-release/lsb-release
+// bytes. Split out from detectLinuxDistribution for testability.
+func parseOSRelease(data []byte) (id, versionID, codename string) {
+	for _, line := range strings.Split(string(data), "\n") {
 		line = strings.TrimSpace(line)
-		if strings.HasPrefix(line, "ID=") {
+		switch {
+		case strings.HasPrefix(line, "ID="):
 			id = strings.Trim(strings.TrimPrefix(line, "ID="), "\"")
-		} else if strings.HasPrefix(line, "VERSION_ID=") {
+		case strings.HasPrefix(line, "VERSION_ID="):
 			versionID = strings.Trim(strings.TrimPrefix(line, "VERSION_ID="), "\"")
+		case strings.HasPrefix(line, "VERSION_CODENAME="):
+			codename = strings.Trim(strings.TrimPrefix(line, "VERSION_CODENAME="), "\"")
+		case strings.HasPrefix(line, "DISTRIB_CODENAME=") && codename == "":
+			// /etc/lsb-release fallback (Ubuntu).
+			codename = strings.Trim(strings.TrimPrefix(line, "DISTRIB_CODENAME="), "\"")
 		}
 	}
-
-	return id, versionID
+	return id, versionID, codename
 }
 
 // detectLinuxPackageManager determines the package manager based on distribution
