@@ -323,6 +323,28 @@ func RunLoop(opts RunOptions) (*LoopResult, error) {
 	}, nil
 }
 
+// createPlanTempFile creates the temp plan file the executor reads
+// inside `repoRoot` itself (NOT a subdirectory) so the executor's
+// plan-relative path resolution honors operator intent. The executor
+// sets `CurrentDir = filepath.Dir(rootConfigFile)` and resolves plan
+// paths (e.g. `file.write: { path: hello.txt }`) against that dir.
+// Before this fix the tempfile lived in `$TMPDIR`, so a plan with
+// `path: hello.txt` wrote to `/tmp/hello.txt` instead of the
+// operator's project — the silent-wrong-path bug behind
+// pilot-tmpfile-cwd. Anchoring on `repoRoot` (not `repoRoot/.mooncake`)
+// is the point: with `.mooncake/` we'd just trade one wrong location
+// for another (the file would land in `<repo>/.mooncake/hello.txt`).
+//
+// The pattern keeps the `.yml` suffix so config.ReadConfigWithValidation
+// sees a recognized extension. The file is short-lived — the caller
+// deletes it via defer once the executor returns.
+func createPlanTempFile(repoRoot string) (*os.File, error) {
+	if err := os.MkdirAll(repoRoot, 0o755); err != nil { // #nosec G301 -- standard directory permissions
+		return nil, fmt.Errorf("create repoRoot dir: %w", err)
+	}
+	return os.CreateTemp(repoRoot, ".mooncake-plan-*.yml")
+}
+
 // SavePlan persists an LLM-generated plan to `<repoRoot>/.mooncake/
 // iterations/<n>.plan.yml` and returns the path. The directory is
 // created at 0700 and the file at 0600 — plan artifacts can contain
@@ -419,7 +441,7 @@ type planGate func() (ConfirmResult, error)
 // is rewritten with the edited bytes before executor.Start runs.
 func applyPlanIteration(wrappedBytes []byte, repoRoot string, log logger.Logger, gate planGate) (iterationOutcome, error) {
 	var out iterationOutcome
-	tmpFile, err := os.CreateTemp("", "mooncake-plan-*.yml")
+	tmpFile, err := createPlanTempFile(repoRoot)
 	if err != nil {
 		return out, fmt.Errorf("failed to create temp file: %w", err)
 	}

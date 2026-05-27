@@ -293,3 +293,76 @@ func TestRunLoop_StyleStep_FeedsResultBack(t *testing.T) {
 		t.Errorf("StopReason = %q, want %q", result.StopReason, StopStepDone)
 	}
 }
+
+// TestCreatePlanTempFile_AnchoredOnRepoRoot — pilot-tmpfile-cwd. The
+// executor resolves plan-relative paths against the config file's
+// directory; before the fix, pilot wrote that file to os.CreateTemp("",
+// ...) which is $TMPDIR. A plan saying `file.write: { path: hello.txt }`
+// would land in /tmp instead of the operator's repo. Lock the temp
+// file's parent to repoRoot itself (not a subdirectory) so the
+// resolution honors operator intent.
+func TestCreatePlanTempFile_AnchoredOnRepoRoot(t *testing.T) {
+	repoRoot := t.TempDir()
+	f, err := createPlanTempFile(repoRoot)
+	if err != nil {
+		t.Fatalf("createPlanTempFile: %v", err)
+	}
+	defer func() {
+		_ = f.Close()
+		_ = os.Remove(f.Name())
+	}()
+
+	gotDir := filepath.Dir(f.Name())
+	if gotDir != repoRoot {
+		t.Errorf("plan tempfile parent = %q, want %q (executor resolves plan-relative paths against this dir)", gotDir, repoRoot)
+	}
+	if !strings.HasSuffix(f.Name(), ".yml") {
+		t.Errorf("plan tempfile = %q, want .yml suffix so config.ReadConfigWithValidation accepts it", f.Name())
+	}
+	// The leading dot keeps the artifact unobtrusive when the operator
+	// lists their working directory (pilot tempfiles are short-lived
+	// but they exist during executor.Start).
+	if !strings.HasPrefix(filepath.Base(f.Name()), ".mooncake-plan-") {
+		t.Errorf("plan tempfile = %q, want a dot-prefixed name", filepath.Base(f.Name()))
+	}
+}
+
+// TestRunLoop_RelativePathResolvesAgainstRepoRoot — end-to-end proof
+// of the pilot-tmpfile-cwd fix. A plan with a relative `file.write`
+// path must land inside repoRoot, not in $TMPDIR. Pre-fix: pilot's
+// tempfile lived in /tmp, so the executor (which resolves plan-
+// relative paths against the config file's dir) wrote to /tmp/hello.txt.
+// Post-fix: the tempfile is under <repoRoot>/.mooncake/ and the file
+// resolves to <repoRoot>/hello.txt.
+func TestRunLoop_RelativePathResolvesAgainstRepoRoot(t *testing.T) {
+	repo := t.TempDir()
+	initGitRepo(t, repo)
+	// A single-step plan with a RELATIVE path. If the executor resolved
+	// from $TMPDIR (the bug), hello.txt lands at <$TMPDIR>/hello.txt.
+	// Post-fix, it lands at <repo>/hello.txt because the tempfile lives
+	// in <repo>/.mooncake/.
+	plan := "- file.write:\n    path: hello.txt\n    content: hi\n"
+	stub := &stubLLMClient{plans: []string{plan, "[]\n"}}
+	cleanup := withStubClient(t, stub)
+	defer cleanup()
+
+	_, err := RunLoop(RunOptions{
+		Goal:          "create hello.txt with relative path",
+		RepoRoot:      repo,
+		MaxIterations: 3,
+		AutoApply:     true,
+		Style:         StyleStep,
+	})
+	if err != nil {
+		t.Fatalf("RunLoop: %v", err)
+	}
+
+	wantPath := filepath.Join(repo, "hello.txt")
+	got, err := os.ReadFile(wantPath)
+	if err != nil {
+		t.Fatalf("expected hello.txt at %q (relative path should resolve against repoRoot): %v", wantPath, err)
+	}
+	if string(got) != "hi" {
+		t.Errorf("hello.txt content = %q, want %q", string(got), "hi")
+	}
+}
