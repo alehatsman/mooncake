@@ -98,5 +98,6 @@ import (
 
 	// Windows-only
 	_ "github.com/alehatsman/mooncake/internal/actions/windows_firewall_rule"
+	_ "github.com/alehatsman/mooncake/internal/actions/windows_hyperv_firewall_rule"
 	_ "github.com/alehatsman/mooncake/internal/actions/windows_scheduled_task"
 )
