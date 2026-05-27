@@ -65,9 +65,10 @@ mooncake init --template dotfiles
 
 ## See also
 
-- `mooncake presets list` — 330+ ready-made workflows (zsh, neovim,
-  docker, …)
-- `mooncake presets recommend` — fact-aware suggestions for your host
+- Browse `./presets/` — 330+ ready-made components (zsh, neovim,
+  docker, …) you include in a playbook with `use:`
 - `mooncake actions list` — full typed-action surface
+- `mooncake mod add github.com/mooncake-modules/<name>@<v>` —
+  fetch a remote module into your project
 - `mooncake init --list-templates` — starter scaffolds
 - [Full documentation](https://mooncake.alehatsman.com)

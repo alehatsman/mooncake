@@ -342,5 +342,5 @@ func printSummary(out io.Writer, tpl string, created []string) {
 	fmt.Fprintln(out, "Next:")
 	fmt.Fprintln(out, "  mooncake plan          # preview what will run")
 	fmt.Fprintln(out, "  mooncake apply         # run it")
-	fmt.Fprintln(out, "  mooncake presets list  # browse 330+ built-in workflows")
+	fmt.Fprintln(out, "  mooncake actions list  # browse the action vocabulary")
 }

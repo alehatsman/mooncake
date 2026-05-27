@@ -27,7 +27,6 @@ func registeredChecks() []Check {
 		checkPresetPaths{},
 		// tools
 		checkTool{name: "git", usedBy: []string{"git.* actions"}},
-		checkTool{name: "fzf", usedBy: []string{"mooncake presets (interactive selector)"}},
 		checkTool{name: "sudo", usedBy: []string{"steps with become: true"}, unixOnly: true},
 		// project
 		checkProjectConfig{},

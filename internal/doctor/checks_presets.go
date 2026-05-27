@@ -36,7 +36,7 @@ func (checkPresetPaths) Run(ctx Context) Result {
 	if total == 0 {
 		r.Status = StatusWarning
 		r.Message = "no presets found in any search path"
-		r.Fix = "install the mooncake-presets package, or `mooncake presets update` to fetch from the remote registry"
+		r.Fix = "populate at least one preset search path — clone github.com/mooncake/presets, or vendor components under ./presets/ in your project"
 		return r
 	}
 	r.Status = StatusOK

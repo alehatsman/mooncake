@@ -20,7 +20,7 @@ import (
 //
 //   list_actions       → actions.List()             (≈ mooncake actions list)
 //   describe_action    → registry + schemagen pipeline (≈ mooncake actions show)
-//   list_presets       → presets.DiscoverAllPresets (≈ mooncake presets list)
+//   list_presets       → presets.DiscoverAllPresets (in-process; no CLI equivalent — the `mooncake presets` CLI was retired in `2b7eee8e`)
 //
 // Returning JSON-as-text matches the rest of the MCP tool surface
 // (the response envelope handles the text wrapping; handlers just
@@ -168,9 +168,10 @@ func HandleDescribeAction(_ context.Context, args json.RawMessage) (string, erro
 	})
 }
 
-// listPresetsEntry is the wire shape per preset. Same fields as
-// `mooncake presets list --format json` so an agent integrating both
-// surfaces sees a consistent record.
+// listPresetsEntry is the wire shape per preset. Mirrors the
+// presets.DiscoverAllPresets in-process surface so MCP clients see a
+// stable record regardless of how the operator browses presets
+// out-of-band (filesystem walk under `./presets/`, or future tooling).
 type listPresetsEntry struct {
 	Name        string `json:"name"`
 	Description string `json:"description,omitempty"`

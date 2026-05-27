@@ -436,9 +436,10 @@ systemctl list-units --type=service | grep myservice
 
 **Solution**:
 
-1. List available presets:
+1. Browse available components:
 ```bash
-mooncake presets list
+ls ./presets/                       # project-local components
+mooncake doctor                     # confirms search paths in use
 ```
 
 2. Check preset name spelling:
@@ -459,8 +460,8 @@ mooncake presets list
 **Solution**: Check preset documentation:
 
 ```bash
-# Show preset details
-mooncake presets status docker
+# Show the preset's parameter schema + default values
+cat ./presets/docker/preset.yml
 ```
 
 Use correct parameter names and types:

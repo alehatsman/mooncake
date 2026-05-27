@@ -262,9 +262,14 @@ mooncake run --config config.yml --tags setup
 - brew, port (macOS)
 - choco, scoop (Windows)
 
-**See all presets**:
+**Browse the action vocabulary** (the typed surface every step is built from):
 ```bash
-mooncake presets list
+mooncake actions list
+```
+
+**Browse built-in components** to include with `use:` in your playbook:
+```bash
+ls ./presets/
 ```
 
 ### Does Mooncake work on Windows?

@@ -130,8 +130,9 @@ task shell-ubuntu-amd64
 task shell-ubuntu-arm64
 
 # Inside container:
-mooncake presets list
-mooncake presets install docker
+mooncake actions list
+mooncake facts
+ls /usr/share/mooncake/presets/ 2>/dev/null  # or wherever the container vendors them
 ```
 
 ## Multi-Architecture Details

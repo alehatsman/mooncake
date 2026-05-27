@@ -84,63 +84,20 @@
 
 ### Core Features
 
-#### 1. Preset Parameter Collection 🎯
-**Status**: ✅ Complete (2026-02-09)
-**Implementation**: `cmd/presets.go` (collectParameters function, 170 lines)
+#### 1. Preset Parameter Collection 🎯 (Retired)
+**Status**: 🪦 Retired (2026-05-27)
+**Retired in**: `2b7eee8e` (CLI delete) + `4db53ad6` (orphan packages delete)
 
-**Completed Features**:
-- ✅ Interactive parameter prompts with descriptions and help text
-- ✅ Type-specific parsing (string, bool, array)
-- ✅ Enum validation during input
-- ✅ Required parameter enforcement
-- ✅ Default value handling
-- ✅ Non-interactive mode (`--non-interactive` flag)
-- ✅ CLI parameter overrides (`--param key=value`)
-- ✅ Parameter precedence (CLI > Interactive > Defaults)
-- ✅ User-friendly error messages
+The `mooncake presets …` CLI shipped in v0.4 and was retired in
+favor of `mooncake mod` (modules) and direct `use:` of components
+under `./presets/`. Parameter collection (interactive prompts,
+enum validation, `--param` overrides) is gone; component
+parameters now come from the playbook's `vars:` block or the
+caller's `with:` arguments to the `preset` action.
 
-**Usage**:
-```bash
-# Interactive mode (prompts for parameters)
-mooncake presets install ollama
-
-# Non-interactive with CLI params
-mooncake presets install ollama --non-interactive \
-  --param state=present \
-  --param pull=[llama3.1:8b,mistral] \
-  --param service=true
-
-# CLI override in interactive mode
-mooncake presets install ollama --param service=false
-```
-
-**Example Output**:
-```bash
-$ mooncake presets install ollama
-
-Preset: ollama (v1.0.0)
-Install and manage Ollama LLM runtime
-
-Parameters:
-
-? state (optional) [string]
-  Whether Ollama should be installed or removed
-  Options: [present, absent]
-  Default: present
-  > [Enter to use default]
-
-? pull (optional) [array]
-  List of models to pull
-  > llama3.1:8b,mistral
-
-Installing ollama with parameters:
-  - state: present
-  - pull: [llama3.1:8b mistral]
-  - service: true
-  - method: auto
-```
-
-**Impact**: All 330+ presets now support interactive installation with validation
+See `MODULES.md` for the replacement model and the deleted
+`docs-next/guide/preset-lifecycle.md` for the historical CLI
+shape (recoverable from git history before `4db53ad6`).
 
 ---
 

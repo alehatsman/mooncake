@@ -15,8 +15,9 @@
 - name: Print server summary
   shell: echo "mooncake managing server {{ os }}/{{ arch }} ({{ distribution }})"
 
-- name: Suggest a starter preset
+- name: Suggest a starter component
   shell: |
-    echo "Try:  mooncake presets info docker"
-    echo "      mooncake presets info ufw"
-    echo "      mooncake presets info sshd-hardening"
+    echo "Browse: ./presets/docker/"
+    echo "        ./presets/ufw/"
+    echo "        ./presets/sshd-hardening/"
+    echo "Then add a `use:` step to this playbook to include one."

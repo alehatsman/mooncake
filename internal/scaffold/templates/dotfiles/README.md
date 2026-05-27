@@ -15,7 +15,7 @@ mooncake plan          # preview what would change
 mooncake apply         # run it
 mooncake apply --dry-run   # same as `mooncake plan`
 mooncake last          # what did the most recent run do?
-mooncake presets list  # browse 330+ ready-made workflows
+mooncake actions list  # browse the action vocabulary
 mooncake doctor        # something off? run this
 ```
 

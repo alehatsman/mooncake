@@ -9,8 +9,9 @@
 - name: Print system summary
   shell: echo "mooncake managing {{ os }}/{{ arch }} on {{ distribution }}"
 
-- name: Suggest a starter preset
+- name: Suggest a starter component
   shell: |
-    echo "Try:  mooncake presets info zsh"
-    echo "      mooncake presets info neovim"
-    echo "      mooncake presets info tmux"
+    echo "Browse: ./presets/zsh/"
+    echo "        ./presets/neovim/"
+    echo "        ./presets/tmux/"
+    echo "Then add a `use:` step to this playbook to include one."

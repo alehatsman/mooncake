@@ -59,25 +59,28 @@ mooncake run --config config.yml --log-level debug
 
 ---
 
-## Presets
+## Modules & Components
 
 ```bash
-# List all available presets
-mooncake presets list
+# Add a remote module to your project
+mooncake mod add github.com/mooncake-modules/<name>@<v>
 
-# Install preset interactively
-mooncake presets -K
+# Inspect the module cache
+mooncake mod cache list
+mooncake mod cache clean
 
-# Install specific preset
-mooncake presets install docker
-mooncake presets install -K postgres  # with sudo
+# Browse built-in components (loaded via `use:` in a playbook)
+ls ./presets/
+```
 
-# Show preset status
-mooncake presets status
-mooncake presets status docker
+Components live under `./presets/` in your project (or in any path
+returned by `mooncake doctor` → preset search paths). Include one by
+adding a step:
 
-# Uninstall preset
-mooncake presets uninstall docker
+```yaml
+- use: docker
+  vars:
+    docker_users: ["{{ user }}"]
 ```
 
 ---

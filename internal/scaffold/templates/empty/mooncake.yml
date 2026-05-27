@@ -2,7 +2,7 @@
 # Edit freely. Preview changes with `mooncake plan`. Apply with `mooncake apply`.
 #
 # Add steps below. See `mooncake actions list` for the typed action surface,
-# or `mooncake presets list` for ready-made workflows.
+# or browse ./presets/ for ready-made components to `use:`.
 
 - name: Ensure ~/.mooncake/scratch exists
   file.write:
