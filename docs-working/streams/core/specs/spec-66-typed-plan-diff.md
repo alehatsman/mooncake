@@ -1,6 +1,6 @@
 # Spec 66: Typed plan diffs (`plan --diff` for every action category)
 
-**Status:** In progress — waves 1–5 shipped (`cc6042d0`→`9c94e315`); waves 6–8 pending
+**Status:** **Done** — all 8 waves shipped (`cc6042d0`→`1a698906`, 2026-05-27).
 **Stream:** core
 **Promotes:** [`streams/core/proposals/proposal-04-typed-plan-diff.md`](../proposals/proposal-04-typed-plan-diff.md)
 **Effort:** M (~5–7 days, rolled out incrementally — `core/diff` plumbing,
@@ -212,9 +212,9 @@ work the same way the refactor plan did.
 | ✅ 3 | `e4ba7a55` | `render_user.go` + `render_group.go` for `os.user` / `os.group`. | S |
 | ✅ 4 | `70459e5e` | `render_firewall.go` + `render_service.go` (`os.firewall` + `os.systemd`). | M |
 | ✅ 5 | `9c94e315` | `render_cron.go` + `render_mount.go` (`os.cron` + `os.mount`). | S |
-| 6 | spec-66-6 | `render_git.go` + `render_repo.go` (`git.checkout` + `git.config` + `pkg.repo`). | S |
-| 7 | spec-66-7 | `render_transaction.go` — compound diffs recursing into children. Same renderer for `try:` compounds. | M |
-| 8 | spec-66-8 | Handler audit: any remaining `Differ` implementer not yet wired produces a typed payload + has a renderer kind. | M |
+| ✅ 6 | `103bcb4d` | `render_git.go` + `render_repo.go` (`git.checkout` + `git.config` + `pkg.repo`). Shared `GitCheckoutDiff` / `GitConfigDiff` / `RepoDiff` payloads. | S |
+| ✅ 7 | `a4f5aadb` | `render_transaction.go` — compound diffs for `transaction:` + `try:` parents. `SynthesizeCompound` at the plan-render site walks sibling children by `TxnParent` / `TryParent` and produces a typed `TransactionDiff` / `TryDiff` the renderer formats as a `body:` / `on_rollback:` / `try:` / `catch:` / `finally:` tree. | M |
+| ✅ 8 | `1a698906` | Handler audit + four more renderers (`git.clone`, `os.ssh_key`, `os.sysctl`, `pkg.upgrade`). Sixteen renderers registered. Audit notes inline in the commit message; remaining gaps (file_*/copy/template/download/unarchive on the FileSnapshot path, pkg_hold/pkg_list, legacy os.service) documented as deferred. | M |
 
 Total: ~5–7 days end-to-end. Each PR independently mergeable.
 
