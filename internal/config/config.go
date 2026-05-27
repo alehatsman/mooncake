@@ -703,6 +703,7 @@ type OsSysctl struct {
 type OsSystemd struct {
 	Name           string                 `yaml:"name" json:"name"`                                   // Unit filename with suffix, e.g. myapp.service
 	State          string                 `yaml:"state" json:"state,omitempty"`                       // present|absent (default: present)
+	Scope          string                 `yaml:"scope" json:"scope,omitempty"`                       // system|user (default: system); user routes writes to ~/.config/systemd/user and passes --user to systemctl
 	Unit           map[string]interface{} `yaml:"unit" json:"unit,omitempty"`                         // [Unit] section
 	Service        map[string]interface{} `yaml:"service" json:"service,omitempty"`                   // [Service] section (for .service)
 	Timer          map[string]interface{} `yaml:"timer" json:"timer,omitempty"`                       // [Timer] section (for .timer)
@@ -711,7 +712,7 @@ type OsSystemd struct {
 	Enabled        *bool                  `yaml:"enabled" json:"enabled,omitempty"`                   // ensure enabled state (default: unmanaged)
 	Started        *bool                  `yaml:"started" json:"started,omitempty"`                   // ensure started state (default: unmanaged)
 	ReloadOnChange *bool                  `yaml:"reload_on_change" json:"reload_on_change,omitempty"` // daemon-reload on unit content drift (default: true)
-	Path           string                 `yaml:"path" json:"path,omitempty"`                         // override unit dir (default: /etc/systemd/system)
+	Path           string                 `yaml:"path" json:"path,omitempty"`                         // override unit dir (default: /etc/systemd/system, or ~/.config/systemd/user when scope=user)
 }
 
 // OsFirewall manages host firewall rules. v1 ships a ufw driver only;

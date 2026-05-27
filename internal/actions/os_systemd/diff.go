@@ -60,6 +60,7 @@ func (Handler) Diff(_ actions.Context, step *config.Step) (actions.Diff, error) 
 		After: &actions.ServiceDiff{
 			Name:     s.Name,
 			State:    state,
+			Scope:    normalizeScope(s.Scope),
 			Path:     s.Path,
 			Sections: sections,
 			Enabled:  s.Enabled,

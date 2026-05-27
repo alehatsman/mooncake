@@ -122,7 +122,13 @@ type ServiceDiff struct {
 	// State is the desired terminal state: "present" or "absent".
 	State string `json:"state,omitempty"`
 
-	// Path is the unit directory (default /etc/systemd/system).
+	// Scope is the systemd bus: "system" (default) or "user". user
+	// scope writes to ~/.config/systemd/user and routes systemctl
+	// calls through --user (no sudo).
+	Scope string `json:"scope,omitempty"`
+
+	// Path is the unit directory (default /etc/systemd/system, or
+	// ~/.config/systemd/user when Scope=user).
 	Path string `json:"path,omitempty"`
 
 	// Sections lists the unit-file sections this step populates

@@ -1894,6 +1894,13 @@
         "reload_on_change": {
           "type": "boolean"
         },
+        "scope": {
+          "type": "string",
+          "enum": [
+            "system",
+            "user"
+          ]
+        },
         "service": {
           "type": "object",
           "additionalProperties": true
