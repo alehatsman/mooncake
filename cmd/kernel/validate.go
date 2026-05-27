@@ -51,19 +51,19 @@ func validateAction(c *cli.Context) error {
 	}
 	format := c.String("format")
 
-	// Read and validate configuration
+	// F052: return cli.ExitCoder errors instead of calling os.Exit.
+	// Kernel verbs are embeddable (MCP, SDK, agent loop); a hard
+	// exit would kill the host process. urfave/cli reads the
+	// ExitCoder's code and exits the CLI process with it, so
+	// operator UX is identical.
 	_, diagnostics, err := config.ReadConfigWithValidation(configPath)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error reading config: %v\n", err)
-		os.Exit(exitCodeRuntimeError)
+		return cli.Exit(fmt.Sprintf("Error reading config: %v", err), exitCodeRuntimeError)
 	}
 
-	// Check for validation errors
 	hasErrors := config.HasErrors(diagnostics)
 
-	// Output diagnostics
 	if format == outputFormatJSON {
-		// JSON output
 		type ValidationResult struct {
 			Valid       bool                `json:"valid"`
 			Diagnostics []config.Diagnostic `json:"diagnostics,omitempty"`
@@ -75,11 +75,9 @@ func validateAction(c *cli.Context) error {
 		encoder := json.NewEncoder(os.Stdout)
 		encoder.SetIndent("", "  ")
 		if err := encoder.Encode(result); err != nil {
-			fmt.Fprintf(os.Stderr, "Error encoding JSON: %v\n", err)
-			os.Exit(exitCodeRuntimeError)
+			return cli.Exit(fmt.Sprintf("Error encoding JSON: %v", err), exitCodeRuntimeError)
 		}
 	} else {
-		// Text output
 		if len(diagnostics) > 0 {
 			fmt.Println(config.FormatDiagnosticsWithContext(diagnostics))
 		}
@@ -93,9 +91,10 @@ func validateAction(c *cli.Context) error {
 		}
 	}
 
-	// Exit with appropriate code
 	if hasErrors {
-		os.Exit(exitCodeValidationError)
+		// Diagnostics already printed above; silent ExitCoder
+		// carries only the exit code.
+		return cli.Exit("", exitCodeValidationError)
 	}
 
 	return nil
