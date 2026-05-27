@@ -80,6 +80,22 @@ func TestDetectTerminal_WithEnvironmentVariables(t *testing.T) {
 }
 
 func TestDetectTerminal_NonTerminalEnvironment(t *testing.T) {
+	// Scrub the FORCE_COLOR / CLICOLOR_FORCE overrides the detector
+	// honors — they flip SupportsANSI on even when stdout isn't a
+	// TTY (the documented ripgrep/git/fatih-color convention). When
+	// the test runs under `mcake task test`, the task runner injects
+	// FORCE_COLOR=1 into the go-test child env (see
+	// tui_detector.go:32-45 + internal/actions/shell handler.go),
+	// which trips the `!isTerminal && SupportsANSI=true` branch the
+	// assertion below was written to reject. Unsetting the
+	// overrides for this test isolates the "raw non-TTY" assertion
+	// from the harness's color-injection.
+	t.Setenv("FORCE_COLOR", "")
+	t.Setenv("CLICOLOR_FORCE", "")
+	// Also scrub NO_COLOR so it doesn't mask a regression in the
+	// FORCE_COLOR branch handling under a NO_COLOR-set harness.
+	t.Setenv("NO_COLOR", "")
+
 	// In a test environment (not a TTY), detection should handle gracefully
 	info := DetectTerminal()
 
@@ -230,6 +246,15 @@ func TestIsTUISupported_WithCIEnv(t *testing.T) {
 }
 
 func TestDetectTerminal_AllFields(t *testing.T) {
+	// Same env-scrub as TestDetectTerminal_NonTerminalEnvironment —
+	// `mcake task test` injects FORCE_COLOR=1 into the child env
+	// when the outer process is a TTY, which trips the
+	// `!IsTerminal && SupportsANSI=true` branch the "logical
+	// relationships" assertion below was written to reject.
+	t.Setenv("FORCE_COLOR", "")
+	t.Setenv("CLICOLOR_FORCE", "")
+	t.Setenv("NO_COLOR", "")
+
 	info := DetectTerminal()
 
 	// Test that all fields are set (not uninitialized)
