@@ -437,7 +437,7 @@ func TestPlanCommandWithVars(t *testing.T) {
 				Name: "plan",
 				Flags: []cli.Flag{
 					&cli.StringFlag{Name: "config", Required: true},
-					&cli.StringFlag{Name: "vars"},
+					&cli.StringSliceFlag{Name: "vars"},
 					&cli.StringFlag{Name: "format", Value: "text"},
 				},
 				Action: planAction,

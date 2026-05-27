@@ -191,6 +191,7 @@ func (f *Facts) ToMap() map[string]interface{} {
 		"hostname":              f.Hostname,
 		"username":              f.Username,
 		"user_home":             f.UserHome,
+		"home":                  f.UserHome, // alias: shorthand for {{ home }} in templates
 		"distribution":          f.Distribution,
 		"distribution_version":  f.DistributionVersion,
 		"distribution_major":    f.DistributionMajor,

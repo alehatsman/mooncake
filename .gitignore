@@ -70,3 +70,4 @@ artifacts/
 docs-working/ARCH_SNAPSHOT.md
 
 .claude/
+.dex/
