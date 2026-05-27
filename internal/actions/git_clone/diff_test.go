@@ -30,9 +30,9 @@ func TestDiff_MissingDestIsCreate(t *testing.T) {
 	if d.Before != nil {
 		t.Errorf("Before must be nil for OpCreate; got %+v", d.Before)
 	}
-	after, ok := d.After.(*GitCloneSnapshot)
+	after, ok := d.After.(*actions.GitCloneDiff)
 	if !ok {
-		t.Fatalf("After is not *GitCloneSnapshot; got %T", d.After)
+		t.Fatalf("After is not *actions.GitCloneDiff; got %T", d.After)
 	}
 	if after.Repo != "https://x/y" || after.Ref != "v1" {
 		t.Errorf("After = %+v, want repo=https://x/y ref=v1", after)

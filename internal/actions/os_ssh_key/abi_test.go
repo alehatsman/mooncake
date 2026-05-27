@@ -69,9 +69,9 @@ func TestDiff_KeyCountIncludesSingleAndMulti(t *testing.T) {
 		Key:  "ssh-ed25519 ONE",
 		Keys: []string{"ssh-ed25519 TWO", "ssh-ed25519 THREE"},
 	}})
-	after, ok := d.After.(*OsSSHKeySnapshot)
+	after, ok := d.After.(*actions.SSHKeyDiff)
 	if !ok {
-		t.Fatalf("After is not *OsSSHKeySnapshot")
+		t.Fatalf("After is not *actions.SSHKeyDiff; got %T", d.After)
 	}
 	if after.KeyCount != 3 {
 		t.Errorf("KeyCount = %d, want 3", after.KeyCount)
@@ -82,7 +82,7 @@ func TestDiff_DoesNotLeakKeyMaterial(t *testing.T) {
 	h := Handler{}
 	secret := "ssh-ed25519 SUPERSECRET_PUB_KEY"
 	d, _ := h.Diff(nil, &config.Step{OsSSHKey: &config.OsSSHKey{User: "deploy", Key: secret}})
-	after := d.After.(*OsSSHKeySnapshot)
+	after := d.After.(*actions.SSHKeyDiff)
 	// The snapshot must NOT include the key material itself — it
 	// only carries count + metadata. (Public keys aren't strictly
 	// secret, but Diff is a structural surface that may be logged
@@ -90,7 +90,7 @@ func TestDiff_DoesNotLeakKeyMaterial(t *testing.T) {
 	// conservative choice.)
 	body := after.User + after.State + after.Path
 	if strings.Contains(body, secret) {
-		t.Errorf("OsSSHKeySnapshot must not contain key material; found: %s", body)
+		t.Errorf("SSHKeyDiff must not contain key material; found: %s", body)
 	}
 	if d.Resource.Identifier == secret || strings.Contains(d.Resource.Identifier, "SUPERSECRET") {
 		t.Errorf("Identifier must not contain key material; got: %s", d.Resource.Identifier)

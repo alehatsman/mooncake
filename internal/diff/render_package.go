@@ -10,6 +10,7 @@ import (
 
 func init() {
 	Register(matchPackage)
+	Register(matchPkgUpgrade)
 }
 
 // matchPackage recognises a typed actions.Diff describing a package
@@ -141,4 +142,92 @@ func operationVerb(op actions.Operation) string {
 	default:
 		return "change"
 	}
+}
+
+// matchPkgUpgrade recognises a typed actions.Diff describing a
+// pkg.upgrade mutation. Dispatch on Attributes["kind"]=="pkg.upgrade".
+// Accepts typed pointer or JSON-decoded map shape.
+func matchPkgUpgrade(detail any) Renderer {
+	d, ok := detail.(*actions.Diff)
+	if !ok || d == nil {
+		return nil
+	}
+	if d.Resource.Attributes["kind"] != "pkg.upgrade" {
+		return nil
+	}
+	after, ok := toPkgUpgradeDiff(d.After)
+	if !ok {
+		return nil
+	}
+	return &pkgUpgradeRenderer{op: d.Operation, payload: after}
+}
+
+func toPkgUpgradeDiff(v any) (actions.PkgUpgradeDiff, bool) {
+	switch x := v.(type) {
+	case *actions.PkgUpgradeDiff:
+		if x == nil {
+			return actions.PkgUpgradeDiff{}, false
+		}
+		return *x, true
+	case actions.PkgUpgradeDiff:
+		return x, true
+	case map[string]interface{}:
+		out := actions.PkgUpgradeDiff{}
+		if names, ok := x["names"].([]interface{}); ok {
+			for _, n := range names {
+				if s, ok := n.(string); ok {
+					out.Names = append(out.Names, s)
+				}
+			}
+		}
+		if b, ok := x["autoremove"].(bool); ok {
+			out.Autoremove = b
+		}
+		if s, ok := x["manager"].(string); ok {
+			out.Manager = s
+		}
+		if b, ok := x["full_upgrade"].(bool); ok {
+			out.FullUpgrade = b
+		}
+		any := len(out.Names) > 0 || out.Autoremove || out.Manager != "" || out.FullUpgrade
+		return out, any
+	}
+	return actions.PkgUpgradeDiff{}, false
+}
+
+type pkgUpgradeRenderer struct {
+	op      actions.Operation
+	payload actions.PkgUpgradeDiff
+}
+
+func (r *pkgUpgradeRenderer) Kind() string { return "pkg.upgrade" }
+
+// Render writes a one-line summary:
+//
+//	pkg.upgrade apt: <system> [autoremove]
+//	pkg.upgrade dnf: nginx, redis
+//	pkg.upgrade: <system>
+func (r *pkgUpgradeRenderer) Render(w io.Writer, format Format) error {
+	switch format {
+	case FormatText, "":
+		mgr := ""
+		if r.payload.Manager != "" {
+			mgr = " " + r.payload.Manager
+		}
+		target := "<system>"
+		if !r.payload.FullUpgrade && len(r.payload.Names) > 0 {
+			target = strings.Join(r.payload.Names, ", ")
+		}
+		line := fmt.Sprintf("  pkg.upgrade%s: %s", mgr, target)
+		if r.payload.Autoremove {
+			line += " [autoremove]"
+		}
+		_, err := fmt.Fprintln(w, line)
+		return err
+	case FormatJSON, FormatYAML:
+		_, err := fmt.Fprintf(w, "pkg.upgrade %s: full=%t names=%d\n",
+			r.payload.Manager, r.payload.FullUpgrade, len(r.payload.Names))
+		return err
+	}
+	return fmt.Errorf("unsupported format: %s", format)
 }

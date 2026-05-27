@@ -40,9 +40,9 @@ func TestDiff_FullUpgradeIsUpdate(t *testing.T) {
 	if d.Resource.Identifier != "<system>" {
 		t.Errorf("Identifier = %s, want <system>", d.Resource.Identifier)
 	}
-	after, ok := d.After.(*PkgUpgradeSnapshot)
+	after, ok := d.After.(*actions.PkgUpgradeDiff)
 	if !ok || !after.FullUpgrade {
-		t.Errorf("After must be *PkgUpgradeSnapshot with FullUpgrade=true; got %+v", d.After)
+		t.Errorf("After must be *actions.PkgUpgradeDiff with FullUpgrade=true; got %+v", d.After)
 	}
 }
 
@@ -52,7 +52,7 @@ func TestDiff_SubsetUpgrade(t *testing.T) {
 	if d.Resource.Identifier != "nginx (+1 more)" {
 		t.Errorf("Identifier = %s, want 'nginx (+1 more)'", d.Resource.Identifier)
 	}
-	after := d.After.(*PkgUpgradeSnapshot)
+	after := d.After.(*actions.PkgUpgradeDiff)
 	if after.FullUpgrade {
 		t.Errorf("FullUpgrade must be false for subset upgrade")
 	}

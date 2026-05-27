@@ -11,6 +11,7 @@ import (
 func init() {
 	Register(matchGitCheckout)
 	Register(matchGitConfig)
+	Register(matchGitClone)
 }
 
 // matchGitCheckout recognises a typed actions.Diff describing a
@@ -262,4 +263,98 @@ func shortSHA(s string) string {
 		return s[:7]
 	}
 	return s
+}
+
+// matchGitClone recognises a typed actions.Diff describing a
+// git.clone mutation. Dispatch is on Attributes["kind"]=="git.clone".
+// Accepts the typed *actions.GitCloneDiff pointer or the JSON-
+// decoded map shape.
+func matchGitClone(detail any) Renderer {
+	d, ok := detail.(*actions.Diff)
+	if !ok || d == nil {
+		return nil
+	}
+	if d.Resource.Attributes["kind"] != "git.clone" {
+		return nil
+	}
+	after, ok := toGitCloneDiff(d.After)
+	if !ok {
+		return nil
+	}
+	before, _ := toGitCloneDiff(d.Before)
+	return &gitCloneRenderer{op: d.Operation, after: after, before: before}
+}
+
+func toGitCloneDiff(v any) (actions.GitCloneDiff, bool) {
+	switch x := v.(type) {
+	case *actions.GitCloneDiff:
+		if x == nil {
+			return actions.GitCloneDiff{}, false
+		}
+		return *x, true
+	case actions.GitCloneDiff:
+		return x, true
+	case map[string]interface{}:
+		out := actions.GitCloneDiff{}
+		if s, ok := x["dest"].(string); ok {
+			out.Dest = s
+		}
+		if s, ok := x["repo"].(string); ok {
+			out.Repo = s
+		}
+		if s, ok := x["ref"].(string); ok {
+			out.Ref = s
+		}
+		if s, ok := x["head_sha"].(string); ok {
+			out.HeadSHA = s
+		}
+		any := out.Dest != "" || out.Repo != "" || out.Ref != "" || out.HeadSHA != ""
+		return out, any
+	}
+	return actions.GitCloneDiff{}, false
+}
+
+type gitCloneRenderer struct {
+	op     actions.Operation
+	after  actions.GitCloneDiff
+	before actions.GitCloneDiff
+}
+
+func (r *gitCloneRenderer) Kind() string { return "git.clone" }
+
+// Render writes a one-line summary:
+//
+//	git.clone create /srv/app from https://github.com/x/y at main
+//	git.clone update /srv/app from https://github.com/x/y at v1.2.3 (from abc1234)
+//	git.clone noop /srv/app at v1.2.3
+func (r *gitCloneRenderer) Render(w io.Writer, format Format) error {
+	switch format {
+	case FormatText, "":
+		verb := gitCheckoutVerb(r.op) // reuse create/update/remove/noop vocab
+		dest := r.after.Dest
+		if dest == "" {
+			dest = "<unknown-dest>"
+		}
+		line := fmt.Sprintf("  git.clone %s %s", verb, dest)
+		if r.op != actions.OpNoop && r.after.Repo != "" {
+			line += " from " + r.after.Repo
+		}
+		if r.after.Ref != "" {
+			if r.op == actions.OpNoop {
+				line += " at " + r.after.Ref
+			} else {
+				line += " at " + r.after.Ref
+			}
+		}
+		if r.before.HeadSHA != "" && r.op != actions.OpNoop {
+			line += " (from " + shortSHA(r.before.HeadSHA) + ")"
+		}
+		_, err := fmt.Fprintln(w, line)
+		return err
+	case FormatJSON, FormatYAML:
+		_, err := fmt.Fprintf(w, "git.clone %s: %s <- %s @ %s\n",
+			gitCheckoutVerb(r.op), r.after.Dest, r.after.Repo, r.after.Ref)
+		return err
+	}
+	return fmt.Errorf("unsupported format: %s", format)
 }

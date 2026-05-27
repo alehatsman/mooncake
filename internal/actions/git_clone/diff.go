@@ -7,33 +7,8 @@ import (
 	"github.com/alehatsman/mooncake/internal/config"
 )
 
-// GitCloneSnapshot is the typed Before/After payload for actions.Diff
-// when the resource kind is ResourceGit. Spec-22 says each handler
-// family defines its own snapshot shape; the git equivalent of
-// FileSnapshot carries the repo URL + ref + resolved HEAD sha.
-//
-// Before is populated only when the dest is already a git repo at
-// plan time (we cheaply rev-parse HEAD); it carries the *observed*
-// HEAD sha. Before is nil when dest is missing or not a git repo.
-// After describes the user's INTENT: the requested repo URL and ref
-// the step will land on. After.HeadSHA is empty at plan time — the
-// actual resolved sha lives in the apply-time Result.
-type GitCloneSnapshot struct {
-	// Repo mirrors step.GitClone.Repo — the remote URL.
-	Repo string `json:"repo,omitempty"`
-
-	// Ref mirrors step.GitClone.Ref — the requested branch/tag/sha.
-	// Empty when the step pins no ref (then HEAD of default branch).
-	Ref string `json:"ref,omitempty"`
-
-	// HeadSHA is the observed HEAD sha. Populated in Before when
-	// dest is already a git repo; populated in After only at apply
-	// time (Diff is run pre-apply, so we don't know the resolved
-	// sha yet).
-	HeadSHA string `json:"head_sha,omitempty"`
-}
-
-// Diff implements actions.Differ for git.clone (spec-26 phase 5).
+// Diff implements actions.Differ for git.clone (spec-26 phase 5 /
+// spec-66 wave 8).
 //
 // Operation classification:
 //
@@ -48,20 +23,22 @@ type GitCloneSnapshot struct {
 // resolves. The runtime path produces the actual changed=false on
 // already-converged systems.
 //
-// Resource.Kind = ResourceGit, Resource.Identifier = dest path (raw
-// from the step, NOT path-expanded — Diff is template-string-stable
-// and Diff consumers compare by step identity, not filesystem
-// location).
+// Resource.Kind = ResourceGit, Resource.Identifier = dest path,
+// Resource.Attributes["kind"] = "git.clone" so internal/diff can
+// dispatch the render_git matcher.
 func (Handler) Diff(ctx actions.Context, step *config.Step) (actions.Diff, error) {
 	if step == nil || step.GitClone == nil {
 		return actions.Diff{}, errors.New("git.clone Diff: step has no GitClone payload")
 	}
 	g := step.GitClone
 
-	identifier := g.Dest
-	resource := actions.ResourceRef{Kind: actions.ResourceGit, Identifier: identifier}
+	resource := actions.ResourceRef{
+		Kind:       actions.ResourceGit,
+		Identifier: g.Dest,
+		Attributes: map[string]string{"kind": "git.clone"},
+	}
 
-	after := &GitCloneSnapshot{Repo: g.Repo, Ref: g.Ref}
+	after := &actions.GitCloneDiff{Dest: g.Dest, Repo: g.Repo, Ref: g.Ref}
 
 	// Best-effort cheap probe of dest state — no network, no
 	// subprocess if dest doesn't exist. We can't expand ~/foo here
@@ -87,10 +64,10 @@ func (Handler) Diff(ctx actions.Context, step *config.Step) (actions.Diff, error
 		return actions.Diff{Resource: resource, Operation: actions.OpUpdate, After: after}, nil
 	case !g.Update:
 		// Existing repo, update disabled — converged noop.
-		before := &GitCloneSnapshot{HeadSHA: state.headSHA}
+		before := &actions.GitCloneDiff{Dest: g.Dest, HeadSHA: state.headSHA}
 		return actions.Diff{Resource: resource, Operation: actions.OpNoop, Before: before, After: after}, nil
 	default:
-		before := &GitCloneSnapshot{HeadSHA: state.headSHA}
+		before := &actions.GitCloneDiff{Dest: g.Dest, HeadSHA: state.headSHA}
 		return actions.Diff{Resource: resource, Operation: actions.OpUpdate, Before: before, After: after}, nil
 	}
 }

@@ -267,6 +267,86 @@ type TransactionDiff struct {
 	RollbackChildren []string `json:"rollback_children,omitempty"`
 }
 
+// GitCloneDiff is the typed Before/After payload when an actions.Diff
+// describes a git.clone mutation. Before holds the observed HeadSHA
+// when dest is already a git repo at plan time; After holds the
+// requested repo URL + ref. After.HeadSHA is empty at plan time —
+// resolution happens at apply. Consumers dispatch on
+// Resource.Attributes["kind"] == "git.clone".
+type GitCloneDiff struct {
+	// Dest is the working-copy path (identity).
+	Dest string `json:"dest,omitempty"`
+
+	// Repo is the remote URL.
+	Repo string `json:"repo,omitempty"`
+
+	// Ref is the requested ref (branch / tag / sha). Empty when
+	// the step pins no ref — HEAD of the default branch wins.
+	Ref string `json:"ref,omitempty"`
+
+	// HeadSHA is the observed HEAD sha. Populated in Before when
+	// dest is already a git repo at plan time.
+	HeadSHA string `json:"head_sha,omitempty"`
+}
+
+// SSHKeyDiff is the typed Before/After payload when an actions.Diff
+// describes an os.ssh_key mutation. Intent-only (no authorized_keys
+// read at plan time). Key material is intentionally NOT echoed —
+// user-supplied secrets adjacent. Consumers dispatch on
+// Resource.Attributes["kind"] == "os.ssh_key".
+type SSHKeyDiff struct {
+	// User is the target account (identity).
+	User string `json:"user,omitempty"`
+
+	// State is "present" or "absent". Empty maps to "present".
+	State string `json:"state,omitempty"`
+
+	// KeyCount is the number of keys this step targets. Material
+	// itself is suppressed for security.
+	KeyCount int `json:"key_count"`
+
+	// Path, when set, is the custom authorized_keys location.
+	Path string `json:"path,omitempty"`
+
+	// Exclusive mirrors the "remove other keys" flag.
+	Exclusive bool `json:"exclusive,omitempty"`
+}
+
+// SysctlDiff is the typed Before/After payload when an actions.Diff
+// describes an os.sysctl mutation. Intent-only — no /proc/sys read
+// at plan time. Consumers dispatch on Resource.Attributes["kind"] ==
+// "os.sysctl".
+type SysctlDiff struct {
+	// Name is the sysctl key (e.g. "net.ipv4.ip_forward"; identity).
+	Name string `json:"name,omitempty"`
+
+	// State is "present" or "absent". Empty defaults to "present".
+	State string `json:"state,omitempty"`
+
+	// Value is the desired value, stringified. Empty when
+	// state=absent.
+	Value string `json:"value,omitempty"`
+}
+
+// PkgUpgradeDiff is the typed Before/After payload when an
+// actions.Diff describes a pkg.upgrade mutation. Before is nil —
+// Diff doesn't query the package manager for the per-package
+// version delta. Consumers dispatch on Resource.Attributes["kind"]
+// == "pkg.upgrade".
+type PkgUpgradeDiff struct {
+	// Names is the explicit subset; empty means full-system upgrade.
+	Names []string `json:"names,omitempty"`
+
+	// Autoremove mirrors the step flag.
+	Autoremove bool `json:"autoremove,omitempty"`
+
+	// Manager is the explicit package manager when pinned.
+	Manager string `json:"manager,omitempty"`
+
+	// FullUpgrade is true when Names is empty (system-wide).
+	FullUpgrade bool `json:"full_upgrade,omitempty"`
+}
+
 // TryDiff is the synthesized After payload for a try-parent step.
 // Same shape rationale as TransactionDiff. Consumers dispatch on
 // Resource.Attributes["kind"] == "try".

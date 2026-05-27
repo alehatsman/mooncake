@@ -33,7 +33,7 @@ func TestDiff_PresentIsUpdate(t *testing.T) {
 	if d.Operation != actions.OpUpdate {
 		t.Errorf("Operation = %s, want %s", d.Operation, actions.OpUpdate)
 	}
-	after := d.After.(*OsSysctlSnapshot)
+	after := d.After.(*actions.SysctlDiff)
 	if after.Value != "1" {
 		t.Errorf("Value = %q, want '1'", after.Value)
 	}
