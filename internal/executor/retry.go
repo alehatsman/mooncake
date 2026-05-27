@@ -1,6 +1,7 @@
 package executor
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -59,7 +60,17 @@ func scaleRetryDelay(base time.Duration, strategy string, attempt int) time.Dura
 // attemptFn returns (result, err). err == nil → success; we stop
 // retrying and return. err != nil + isRetryable(err) → keep
 // retrying. err != nil + !isRetryable(err) → fail fast.
+//
+// F053: ctx bounds the inter-attempt delay so Ctrl-C / context
+// cancel doesn't sit unresponsive for many seconds (or minutes,
+// under `backoff: exponential`) waiting for `time.Sleep` to wake.
+// Pass a non-nil ctx; the executor's caller already holds the
+// run-wide ctx on `RunServices.Ctx`. If ctx fires during a
+// retry-delay window, the function returns immediately with
+// `ctx.Err()` wrapped through the last attempt's result — caller
+// sees the cancellation and stops the run cleanly.
 func runWithRetry(
+	ctx context.Context,
 	step *config.Step,
 	log logger.Logger,
 	attemptFn func(attempt int) (actions.Result, error),
@@ -101,15 +112,43 @@ func runWithRetry(
 				if log != nil {
 					log.Debugf("  Waiting %s before retry (backoff=%s)...", delay, step.RetryBackoffStrategy())
 				}
-				time.Sleep(delay)
+				if cancelErr := sleepCtx(ctx, delay); cancelErr != nil {
+					// Caller's run ctx fired during the delay. Return the
+					// last attempt's result so any stdout/stderr captured
+					// before the cancel reaches the operator, with the
+					// ctx error as the outcome.
+					return lastResult, cancelErr
+				}
 			}
 		}
 	}
 
 	// All attempts failed; wrap with attempt count if retry was
-	// configured. Matches shell/command's pre-spec-69 message.
+	// configured. Message is action-agnostic post-spec-69: the
+	// helper used to live in shell/backoff.go ("command failed")
+	// but now runs for template / file.write / pkg.upgrade etc.
 	if step.RetryAttempts() > 0 {
-		return lastResult, fmt.Errorf("command failed after %d attempts: %w", maxAttempts, lastErr)
+		return lastResult, fmt.Errorf("step failed after %d attempts: %w", maxAttempts, lastErr)
 	}
 	return lastResult, lastErr
+}
+
+// sleepCtx blocks for `delay` or until `ctx` is cancelled, whichever
+// fires first. Returns nil on the normal timer path; returns
+// `ctx.Err()` when the caller cancelled. A nil ctx degrades to a
+// plain `time.Sleep` — defensive for tests that build a
+// RunServices without the field, not a documented contract.
+func sleepCtx(ctx context.Context, delay time.Duration) error {
+	if ctx == nil {
+		time.Sleep(delay)
+		return nil
+	}
+	timer := time.NewTimer(delay)
+	defer timer.Stop()
+	select {
+	case <-timer.C:
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
 }

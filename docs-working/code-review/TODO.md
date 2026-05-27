@@ -11,8 +11,8 @@ Queue**, produces a finding (or several), and the queue updates.
 
 | | Count |
 |---|---:|
-| ✅ Findings filed and resolved (F001–F052, F036 skipped) | **51** |
-| 🟡 Findings open (filed, not yet fixed) | **1** (F053) |
+| ✅ Findings filed and resolved (F001–F053, F036 skipped) | **52** |
+| 🟡 Findings open (filed, not yet fixed) | **0** |
 | 📋 Packages still queued for review | **0 substantive** (1 broad follow-up — see below) |
 
 **2026-05-27 cold-read pass closed the queue.** Eight package
@@ -156,7 +156,7 @@ closed — see that folder's README.
 | F050 | preset fetch unbounded body | risk | **done** | [findings/F050](../archive/code-review/findings/F050-preset-fetch-unbounded-body.md) |
 | F051 | os_* handlers context.TODO() (11 sites) | risk | **done** | [findings/F051](../archive/code-review/findings/F051-os-handlers-context-todo-cross-cutting.md) |
 | F052 | cmd/kernel/validate.go os.Exit (3 sites) | smell | **done** | [findings/F052](../archive/code-review/findings/F052-kernel-validate-os-exit-hostile-to-callers.md) |
-| F053 | executor.runWithRetry time.Sleep not cancellable | risk | **open** | [findings/F053](../archive/code-review/findings/F053-executor-retry-sleep-not-cancellable.md) |
+| F053 | executor.runWithRetry time.Sleep not cancellable | risk | **done** | [findings/F053](../archive/code-review/findings/F053-executor-retry-sleep-not-cancellable.md) |
 
 ## Still to review
 

@@ -1381,7 +1381,15 @@ func dispatchRunner(step config.Step, ec *ExecutionContext, runner actions.Runne
 		// see the cross-attempt count rather than a per-RunRaw "1".
 		// Single-attempt RunRaw can't observe its own retries.
 		lastAttempt := 0
-		result, err = runWithRetry(&step, ec.GetLogger(), func(attempt int) (actions.Result, error) {
+		// F053: pass the run-wide ctx so the inter-attempt delay
+		// respects Ctrl-C / cancel instead of blocking the whole sleep
+		// window. ec.Svc.Ctx was already plumbed onto RunServices at
+		// ExecutePlan entry (line ~1212); no new plumbing needed.
+		retryCtx := context.Background()
+		if ec.Svc != nil && ec.Svc.Ctx != nil {
+			retryCtx = ec.Svc.Ctx
+		}
+		result, err = runWithRetry(retryCtx, &step, ec.GetLogger(), func(attempt int) (actions.Result, error) {
 			lastAttempt = attempt
 			return rr.RunRaw(ec, &step)
 		}, isRetryable)

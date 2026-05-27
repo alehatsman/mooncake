@@ -5,7 +5,9 @@ severity: risk
 package: internal/executor
 file: internal/executor/retry.go
 lines: 104
-status: open
+status: done
+fixed: 2026-05-27 — `runWithRetry` now takes a `context.Context`; the delay between attempts goes through a new `sleepCtx` helper that races `time.NewTimer(delay)` against `ctx.Done()`. `dispatchRunner` passes `ec.Svc.Ctx` (already plumbed onto `RunServices` at `ExecutePlan` entry — line ~1212; no new struct plumbing needed). On cancellation `runWithRetry` returns the last attempt's result with `ctx.Err()` so callers see the cancel cleanly and any pre-cancel stdout/stderr survives. Adjacent fix: the "all attempts failed" wrap is now `"step failed after %d attempts"` (action-agnostic since spec-69 phase 2 promoted the helper out of shell/backoff.go).
+post-fix verified: 2026-05-27 — new `TestRunWithRetry_CtxCancelDuringDelay` pins the regression: a step with `delay: 30s`, ctx cancelled ~20 ms after the first failure, returns `context.Canceled` within ~20 ms and never invokes `attemptFn` again. Without the fix that test would block ~30 s. Two adjacent unit tests pin `sleepCtx` directly: `TestSleepCtx_TimerPath` (normal timer wake) and `TestSleepCtx_NilCtx` (nil-ctx defensive fallback to bare `time.Sleep` — tests construct RunServices without Ctx). All ten existing `TestRunWithRetry_*` and `TestScaleRetryDelay*` tests updated to pass `context.Background()` and still green. Full `mooncake task ci` green.
 discovered: 2026-05-27 — cold-read of internal/executor/ per PICKUP item #1. retry.go is the spec-69 phase-2 retry+override centralization promoted out of internal/actions/shell/backoff.go. The retry loop sleeps between attempts via the bare `time.Sleep(delay)` call:
 
 ```go

@@ -1,6 +1,7 @@
 package executor
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"strings"
@@ -70,7 +71,7 @@ func TestRunWithRetry_NoRetryReturnsOnFirstAttempt(t *testing.T) {
 	calls := 0
 	fakeErr := errors.New("first failure")
 
-	_, err := runWithRetry(step, nil,
+	_, err := runWithRetry(context.Background(), step, nil,
 		func(attempt int) (actions.Result, error) {
 			calls++
 			return nil, fakeErr
@@ -94,7 +95,7 @@ func TestRunWithRetry_HonorsMaxAttempts(t *testing.T) {
 		Retry: &config.RetryPolicy{Attempts: 3},
 	}
 	calls := 0
-	_, err := runWithRetry(step, nil,
+	_, err := runWithRetry(context.Background(), step, nil,
 		func(attempt int) (actions.Result, error) {
 			calls++
 			return nil, fmt.Errorf("attempt %d failed", attempt)
@@ -111,15 +112,18 @@ func TestRunWithRetry_HonorsMaxAttempts(t *testing.T) {
 
 // TestRunWithRetry_WrapsAfterNAttempts — when retry was configured
 // and every attempt failed, the returned err wraps the count in a
-// "command failed after N attempts" prefix. Several callers
-// (CI/UX, error-message tests) depend on this exact phrasing; if it
-// changes, fix downstream first.
+// "step failed after N attempts" prefix. The message used to say
+// "command failed" pre-F053 (when this helper lived in shell/
+// backoff.go); the new phrasing is action-agnostic since spec-69
+// phase 2 promoted the helper across all retryable actions.
+// Assertion is on the "after N attempts" tail, not the prefix, so
+// the test survives further message tweaks.
 func TestRunWithRetry_WrapsAfterNAttempts(t *testing.T) {
 	step := &config.Step{
 		Shell: &config.ShellAction{Cmd: "noop"},
 		Retry: &config.RetryPolicy{Attempts: 2},
 	}
-	_, err := runWithRetry(step, nil,
+	_, err := runWithRetry(context.Background(), step, nil,
 		func(attempt int) (actions.Result, error) {
 			return nil, fmt.Errorf("nope")
 		},
@@ -141,7 +145,7 @@ func TestRunWithRetry_StopsOnSuccess(t *testing.T) {
 		Retry: &config.RetryPolicy{Attempts: 5},
 	}
 	calls := 0
-	_, err := runWithRetry(step, nil,
+	_, err := runWithRetry(context.Background(), step, nil,
 		func(attempt int) (actions.Result, error) {
 			calls++
 			if attempt >= 2 {
@@ -168,7 +172,7 @@ func TestRunWithRetry_NonRetryableErrBreaks(t *testing.T) {
 	}
 	calls := 0
 	start := time.Now()
-	_, err := runWithRetry(step, nil,
+	_, err := runWithRetry(context.Background(), step, nil,
 		func(attempt int) (actions.Result, error) {
 			calls++
 			return nil, fmt.Errorf("permanent")
@@ -211,7 +215,7 @@ func TestRunWithRetry_BackoffHonored(t *testing.T) {
 			Retry: &config.RetryPolicy{Attempts: 2, Delay: "50ms", Backoff: "linear"},
 		}
 		start := time.Now()
-		_, _ = runWithRetry(step, nil,
+		_, _ = runWithRetry(context.Background(), step, nil,
 			func(int) (actions.Result, error) { return nil, fmt.Errorf("fail") },
 			nil,
 		)
@@ -228,7 +232,7 @@ func TestRunWithRetry_BackoffHonored(t *testing.T) {
 			Retry: &config.RetryPolicy{Attempts: 3, Delay: "50ms", Backoff: "exponential"},
 		}
 		start := time.Now()
-		_, _ = runWithRetry(step, nil,
+		_, _ = runWithRetry(context.Background(), step, nil,
 			func(int) (actions.Result, error) { return nil, fmt.Errorf("fail") },
 			nil,
 		)
@@ -245,7 +249,7 @@ func TestRunWithRetry_BackoffHonored(t *testing.T) {
 			Retry: &config.RetryPolicy{Attempts: 3, Delay: "50ms"},
 		}
 		start := time.Now()
-		_, _ = runWithRetry(step, nil,
+		_, _ = runWithRetry(context.Background(), step, nil,
 			func(int) (actions.Result, error) { return nil, fmt.Errorf("fail") },
 			nil,
 		)
@@ -274,7 +278,7 @@ func TestRunWithRetry_BadDelayParseFallsThrough(t *testing.T) {
 	}
 	calls := 0
 	start := time.Now()
-	_, err := runWithRetry(step, nil,
+	_, err := runWithRetry(context.Background(), step, nil,
 		func(int) (actions.Result, error) {
 			calls++
 			return nil, fmt.Errorf("fail")
@@ -305,7 +309,7 @@ func TestRunWithRetry_RetryableSeesResult(t *testing.T) {
 	calls := 0
 	var sawResult actions.Result
 	var sawErr error
-	_, _ = runWithRetry(step, nil,
+	_, _ = runWithRetry(context.Background(), step, nil,
 		func(attempt int) (actions.Result, error) {
 			calls++
 			r := NewResult()
@@ -332,5 +336,83 @@ func TestRunWithRetry_RetryableSeesResult(t *testing.T) {
 	}
 	if calls != 4 {
 		t.Errorf("expected 4 calls (1 + 3 retries since isRetryable kept returning true); got %d", calls)
+	}
+}
+
+// TestRunWithRetry_CtxCancelDuringDelay is the F053 regression: a
+// ctx cancelled mid-sleep must abort `runWithRetry` immediately
+// (~10 ms tolerance for goroutine scheduling), NOT block the full
+// retry delay. Pre-fix, `time.Sleep(delay)` was uncancellable and
+// the call sat unresponsive for the entire 30 s delay; that's the
+// UX cliff F053 closes for every spec-69-migrated action (shell/
+// cmd/download/http_request/package/os_user/os_cron/pkg_upgrade).
+//
+// We pin the contract three ways:
+//  1. Elapsed time stays well below the configured delay.
+//  2. The returned err is ctx.Err() (so callers can distinguish
+//     "cancelled" from "all attempts failed").
+//  3. No further attemptFn calls happen after the cancel — the
+//     loop drops out instead of running the next attempt.
+func TestRunWithRetry_CtxCancelDuringDelay(t *testing.T) {
+	const delay = 30 * time.Second
+	step := &config.Step{
+		Shell: &config.ShellAction{Cmd: "noop"},
+		Retry: &config.RetryPolicy{Attempts: 3, Delay: delay.String()},
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	calls := 0
+	// Cancel ctx ~20 ms after the first attempt fails — well before
+	// the 30 s sleep would expire. The retry loop must observe the
+	// cancellation via sleepCtx's select and return ctx.Err().
+	go func() {
+		time.Sleep(20 * time.Millisecond)
+		cancel()
+	}()
+
+	start := time.Now()
+	_, err := runWithRetry(ctx, step, nil,
+		func(attempt int) (actions.Result, error) {
+			calls++
+			return nil, errors.New("simulated failure")
+		},
+		nil,
+	)
+	elapsed := time.Since(start)
+
+	if !errors.Is(err, context.Canceled) {
+		t.Errorf("err = %v, want context.Canceled (so callers can distinguish cancel from failure)", err)
+	}
+	if elapsed > time.Second {
+		t.Errorf("elapsed = %v, want < 1s — ctx cancel must abort sleep, not wait for the %s delay", elapsed, delay)
+	}
+	if calls != 1 {
+		t.Errorf("calls = %d, want 1 — cancelled retry must not invoke attemptFn again", calls)
+	}
+}
+
+// TestSleepCtx_TimerPath covers the non-cancelled branch: when the
+// timer fires first, sleepCtx returns nil and the loop continues.
+func TestSleepCtx_TimerPath(t *testing.T) {
+	start := time.Now()
+	if err := sleepCtx(context.Background(), 30*time.Millisecond); err != nil {
+		t.Errorf("sleepCtx returned err on timer path: %v", err)
+	}
+	if elapsed := time.Since(start); elapsed < 25*time.Millisecond {
+		t.Errorf("sleepCtx returned too early: %v < 25ms", elapsed)
+	}
+}
+
+// TestSleepCtx_NilCtx covers the defensive fallback for callers
+// that construct a `RunServices` without `Ctx` (tests, mostly). A
+// nil ctx degrades to a plain `time.Sleep` — not a documented
+// production contract, just paranoia so the test surface keeps
+// working without retrofitting every fake RunServices.
+func TestSleepCtx_NilCtx(t *testing.T) {
+	start := time.Now()
+	if err := sleepCtx(nil, 20*time.Millisecond); err != nil {
+		t.Errorf("nil ctx should degrade to time.Sleep, got err: %v", err)
+	}
+	if elapsed := time.Since(start); elapsed < 15*time.Millisecond {
+		t.Errorf("nil-ctx fallback returned too early: %v < 15ms", elapsed)
 	}
 }
