@@ -12,7 +12,7 @@ Queue**, produces a finding (or several), and the queue updates.
 | | Count |
 |---|---:|
 | ✅ Findings filed and resolved (F001–F052, F036 skipped) | **51** |
-| 🟡 Findings open (filed, not yet fixed) | **0** |
+| 🟡 Findings open (filed, not yet fixed) | **1** (F053) |
 | 📋 Packages still queued for review | **0 substantive** (1 broad follow-up — see below) |
 
 **2026-05-27 cold-read pass closed the queue.** Eight package
@@ -29,6 +29,67 @@ fleet/bootstrap_windows_target). Two new findings filed:
 - **F052** — `cmd/kernel/validate.go` has three direct `os.Exit`
   calls. Smell; F020 shape. Mechanical fix: replace with
   `cli.Exit(msg, code)` returns.
+
+**2026-05-27 second cold-read** of `internal/executor/` (PICKUP
+item #1: top under-reviewed candidate, 4,003 LOC, only
+spot-checked previously). Read transaction.go, trycatch.go,
+retry.go, finalize.go, inspect.go, preflight.go, dryrun.go,
+scope.go, capture.go end-to-end; spot-checked `dispatchRunner` /
+`dispatchPlanMode` / `postExecuteSuccess` / `handleStepError` in
+executor.go. One finding filed:
+
+- **F053** — `runWithRetry` uses uncancellable `time.Sleep`
+  between attempts. Risk; F014/F016/F042/F051 family. Spec-69
+  phase 2 promoted the retry loop out of shell's
+  backoff.go, so every spec-69-migrated action (shell, command,
+  download, http_request, package, os_user, os_cron,
+  pkg_upgrade…) now blocks Ctrl-C / context cancel inside the
+  delay window. With `backoff: exponential` the blocked window
+  scales into many minutes. Fix is to plumb ctx into
+  `runWithRetry` and replace `time.Sleep` with
+  `select { <-timer.C; <-ctx.Done() }`.
+
+Adjacent observations from this pass (smells, not standalone findings):
+
+- **scope.Clone() omits `ApplyStartedAt`.** `scope.go:234` — the
+  Env shared-by-reference rationale in `TestMT82_EnvSharedAcrossClones`
+  applies equally to ApplyStartedAt, but it's just missing. Latent:
+  `ec.Clone()` has **zero production callers** today (search returns
+  only `mt82_env_test.go` + `executor_test.go`); preset and include
+  handlers manage scope via `savedContext` save/restore instead. If a
+  future caller reintroduces `ec.Clone()` for sub-includes or for_each
+  bodies, the cloned scope's `{{ apply_started_at }}` template variable
+  silently disappears. Fix: copy the field in `VariableScope.Clone()`.
+- **Inconsistent nil-guards on `ec.Svc.Stats.{Changed,Executed,Global}`.**
+  `executor.go:1516,1518` (`dispatchRunner`) and
+  `executor.go:564,581` (`dispatchPlanMode`) dereference the counter
+  pointers without nil-check, while
+  `executor.go:589-601` (`postExecuteSuccess`) and
+  `transaction.go:122` (`handleTxnBodyFailure`) properly guard with
+  `!= nil`. Production construction goes through
+  `NewExecutionStats()` (every pointer non-nil), so the panic is
+  unreachable today — but the convention is ambiguous and any future
+  caller building `&ExecutionStats{}` (e.g. a future test or a
+  partial-Stats scenario) panics in plan mode but not in apply
+  mode. Either guard all sites or document that
+  `NewExecutionStats()` is the only construction path.
+- **Reverse-step dispatch bypasses `step.started` / `step.completed`
+  events.** `transaction.go:179` calls `dispatchRunner` directly,
+  not through `ExecuteStep`. Consumers of those events (RunCapture,
+  console subscriber, runlog StepEntry append) never see the inverse
+  step. The operator gets a single `↺ Reverse: <name>` log line plus
+  the Stats.Reverted counter, but `mooncake history`/`explain`
+  cannot reconstruct what was undone. Could be intentional (MT-45
+  added the counter as the visibility contract; per-step events
+  during rollback would clutter the console), but the spec-22 phase 5
+  rollback-visibility design note doesn't explicitly say. Worth a
+  human read of spec-22 §5 before filing.
+- **`runWithRetry` error message hard-codes "command failed".**
+  `retry.go:112` — pre-spec-69 the helper lived in shell/backoff.go;
+  post-promotion it's used by template/file/http_request/etc. but
+  the message still says "command failed after N attempts". File
+  with the F053 fix as a one-line message change. Noted in F053's
+  "Adjacent observation" section, not a standalone finding.
 
 Everything else surfaced by the cold-read pass fell out as
 documented design intent (self_shutdown delay goroutine,
@@ -95,6 +156,7 @@ closed — see that folder's README.
 | F050 | preset fetch unbounded body | risk | **done** | [findings/F050](../archive/code-review/findings/F050-preset-fetch-unbounded-body.md) |
 | F051 | os_* handlers context.TODO() (11 sites) | risk | **done** | [findings/F051](../archive/code-review/findings/F051-os-handlers-context-todo-cross-cutting.md) |
 | F052 | cmd/kernel/validate.go os.Exit (3 sites) | smell | **done** | [findings/F052](../archive/code-review/findings/F052-kernel-validate-os-exit-hostile-to-callers.md) |
+| F053 | executor.runWithRetry time.Sleep not cancellable | risk | **open** | [findings/F053](../archive/code-review/findings/F053-executor-retry-sleep-not-cancellable.md) |
 
 ## Still to review
 
@@ -171,6 +233,7 @@ The previous 10-row queue is fully consumed:
 | 2026-05-27 | `internal/actions/{wait_file,wait_port}` | none (clean — Ticker + ctx-aware select, dial timeout bounded) |
 | 2026-05-27 | `internal/actions/{windows_firewall_rule,windows_scheduled_task}` | none (clean — proper PowerShell escaping + base64-encoded command + idempotent delete-and-recreate) |
 | 2026-05-27 | `cmd/mooncake.go` + `cmd/{kernel,fleet,step,tool,agentd}` | F052 (kernel/validate.go os.Exit — F020 shape) |
+| 2026-05-27 | `internal/executor/{transaction,trycatch,retry,finalize,inspect,preflight,dryrun,scope,capture}.go` + `executor.go` spot-check (`dispatchRunner`, `dispatchPlanMode`, `postExecuteSuccess`, `handleStepError`) | F053 (`runWithRetry time.Sleep` uncancellable). Three adjacent smells noted inline (scope.Clone omits ApplyStartedAt; Stats nil-guards inconsistent across dispatchRunner vs postExecuteSuccess; reverse-step dispatch bypasses step.started/completed events) — not standalone findings, see "at-a-glance status" block above. |
 
 ## Cross-cutting themes / patterns to track
 
@@ -185,6 +248,15 @@ Updated as the review uncovers patterns.
   Now confirmed in 9 packages. F012 proposes the cross-cutting
   fix; F014 documents the at-call-site fix for `fleet.Apply`'s
   WithoutCancel pattern.
+- **Blocking calls that don't watch `ctx.Done()`** (F014, F016,
+  F042, F051, **F053**). The family is wider than HTTP; any
+  `time.Sleep` / `exec.Command` (without `CommandContext`) /
+  pipe-read without ctx is a latent UX cliff. F053 (executor
+  retry sleeper) is the latest. The pattern audit: `grep -rn
+  'time\.Sleep' internal/` outside `_test.go` returns ~15 sites;
+  most are fine (short fixed sleeps in retry-with-cap helpers
+  for facts/observe), but each should justify why it doesn't
+  need ctx-awareness.
 - **Stale doc-strings track action / field counts** (F002 in
   CLAUDE.md, F013 in config.go). Pattern: pin the number → it
   drifts within the next sprint. Lean on `make budget-status`
