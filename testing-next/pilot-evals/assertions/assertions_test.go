@@ -157,6 +157,47 @@ steps:
 	}
 }
 
+// TestParsePlan_CompactJSON pins proposal-08's assertion-level
+// requirement: a model emitting compact JSON (the new prompt format)
+// must parse into the same step-shape map as the legacy YAML path.
+// All downstream assertions (contains_step, step_count, etc.) operate
+// on the parsed Step slice, so JSON-emitting models are exercised by
+// the same goal files with no fixture changes.
+func TestParsePlan_CompactJSON(t *testing.T) {
+	plan := `[{"name":"hi","cmd":{"argv":["echo","hi"]}},{"file_replace":{"path":"/etc/hosts","old_string":"a","new_string":"b"}}]`
+	steps, err := ParsePlan(plan)
+	if err != nil {
+		t.Fatalf("ParsePlan(compact JSON): %v", err)
+	}
+	if len(steps) != 2 {
+		t.Fatalf("expected 2 steps from JSON array, got %d", len(steps))
+	}
+	// Spot-check that the assertions grammar works against the parsed
+	// JSON-sourced steps without modification.
+	a, _ := Parse("contains_step cmd")
+	if err := a.Check(plan, steps); err != nil {
+		t.Errorf("contains_step cmd should pass on JSON plan, got: %v", err)
+	}
+	b, _ := Parse("contains_step_with file_replace path=/etc/hosts")
+	if err := b.Check(plan, steps); err != nil {
+		t.Errorf("contains_step_with should match JSON-sourced step body, got: %v", err)
+	}
+}
+
+// TestParsePlan_JSONFenced pins the fence-stripping path against
+// ```json fences too — small models love to wrap output in fences
+// even when the prompt forbids it.
+func TestParsePlan_JSONFenced(t *testing.T) {
+	plan := "```json\n[{\"name\":\"hi\",\"shell\":\"echo hi\"}]\n```\n"
+	steps, err := ParsePlan(plan)
+	if err != nil {
+		t.Fatalf("ParsePlan(```json fence): %v", err)
+	}
+	if len(steps) != 1 {
+		t.Fatalf("expected 1 step after ```json fence strip, got %d", len(steps))
+	}
+}
+
 func TestSchemaValid_RejectsGarbage(t *testing.T) {
 	// schema_valid should fail on something that isn't a valid plan.
 	a, _ := Parse("schema_valid")
