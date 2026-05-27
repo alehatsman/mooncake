@@ -1,3 +1,8 @@
+// Package task implements the `mooncake task` CLI tree — run a named
+// task from tasks.yml (or the `tasks:` block in mooncake.yml) through
+// the same planner + executor that `mooncake apply` uses. The task
+// runner is a thin client over cmd/kernel's helpers (recordOp,
+// runWithSignalCtx, plan formatters).
 package task
 
 import (
@@ -53,7 +58,7 @@ func Command() *cli.Command {
 		// --plan. Apply has --dry-run; task chose --plan deliberately
 		// (see ADR in docs-working/decisions, if added). The hint here
 		// is the only place that gap shows up to a user.
-		OnUsageError: func(c *cli.Context, err error, isSubcommand bool) error {
+		OnUsageError: func(_ *cli.Context, err error, _ bool) error {
 			if err != nil && strings.Contains(err.Error(), "dry-run") {
 				return fmt.Errorf("%w — for a preview use: mooncake task <name> --plan", err)
 			}
