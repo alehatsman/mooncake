@@ -12,7 +12,7 @@ Queue**, produces a finding (or several), and the queue updates.
 | | Count |
 |---|---:|
 | ✅ Findings filed and resolved (F001–F055, F036 skipped) | **54** |
-| 🟡 Findings open (filed, not yet fixed) | **0** |
+| 🟡 Findings open (filed, not yet fixed) | **2** (F056, F057) |
 | 📋 Packages still queued for review | **0 substantive** (1 broad follow-up — see below) |
 
 **2026-05-27 cold-read pass closed the queue.** Eight package
@@ -136,6 +136,62 @@ cmd/mooncake `TrimLeft` edge guarded by `=` check, cmd/agentd
 `absPath` inside the bearer-auth boundary). All reviewed areas
 recorded in the table below.
 
+**Plan + template cold-read** (2026-05-27 PM, follow-on to the
+round-2 executor pass — closes the last under-reviewed core
+packages from PICKUP item #1). Read `internal/plan/{plan,
+integrity,io,validate,planner_transaction,planner_trycatch}.go`
+end-to-end (~700 LOC) + `internal/template/{renderer,
+listresolver}.go` end-to-end (~620 LOC). Two findings filed:
+
+- **F056** — `plan.SavePlanToFile` writes via bare `os.Create`,
+  resulting in 0644 plan files under the typical umask 022.
+  F037 family. Plans carry secret refs + the full playbook
+  structure; on a multi-user host the contents leak. Local
+  fix: swap to `os.OpenFile(..., 0o600)`. Same shape as the
+  pilot.RunLoop perms fix from 2026-05-22.
+- **F057** — `Pongo2Renderer.Render` acquires its per-receiver
+  `r.mu` before `pongo2.FromString`, but `FromString` mutates
+  pongo2's package-level `DefaultSet`. The mutex serializes
+  one renderer's calls but doesn't synchronise two distinct
+  renderers' calls against the shared global. Latent race —
+  unreachable today under the single-worker FIFO invariant
+  (agentd/worker.go:14-17), but the mutex's presence is
+  misleading: a future maintainer adding parallelism would
+  see the lock, conclude "handled," and ship a race. Fix
+  options A (package-level mutex, 1-line change) and B
+  (per-renderer TemplateSet, larger but cleaner) documented
+  in the finding.
+
+Adjacent observations from the plan + template pass (smells,
+not standalone findings):
+
+- **plan.io.go yaml.Unmarshal is non-strict.** `LoadPlanFromFile`
+  at `internal/plan/io.go:130` decodes a plan via
+  `yaml.Unmarshal` with no KnownFields setting. F048 family
+  (`fleet.machine` non-strict YAML, fixed 2026-05-17). A
+  user-edited plan file with a typo'd field gets silently
+  dropped on read; the apply proceeds with subtly different
+  behavior than the operator typed.
+- **plan.io.go partial-write on failure.** `SavePlanToFile` at
+  `internal/plan/io.go:58` writes directly via `file.Write`
+  (no temp-file + atomic rename). A write that errors midway
+  leaves a partial/empty plan file at the destination.
+  `apply --from-plan` against that path would error with a
+  decode failure, but a `cat` would show truncated content.
+  Atomic-write pattern (write to temp, then rename) would
+  match the convention used by `internal/agentd/store.go`.
+- **validate.go AllowStale silent demotion.** Each stale-check
+  branch in `ValidateForApply` (host mismatch, hash mismatch,
+  file missing, age exceeded) has an `if !opts.AllowStale {
+  return err }` shape. When AllowStale is true, each error is
+  just swallowed — the caller has no signal which checks
+  actually fired. The docstring says "caller is responsible
+  for logging the reasons separately if desired" but provides
+  no API surface to do so. Operators running `--allow-stale`
+  want the override AND the explanation. Easy fix: return
+  `[]StaleReason` alongside the nil-when-allowed error path,
+  or accept a callback.
+
 The companion manual-test queue at
 `docs-working/archive/analysis/findings-2026-05-15/` remains
 closed — see that folder's README.
@@ -194,6 +250,8 @@ closed — see that folder's README.
 | F053 | executor.runWithRetry time.Sleep not cancellable | risk | **done** | [findings/F053](../archive/code-review/findings/F053-executor-retry-sleep-not-cancellable.md) |
 | F054 | spec-30 rollback events never implemented | smell | **done** | [findings/F054](../archive/code-review/findings/F054-rollback-events-never-implemented.md) |
 | F055 | executor `unless:` runs without ctx/timeout | risk | **done** | [findings/F055](../archive/code-review/findings/F055-idempotency-unless-no-ctx-no-timeout.md) |
+| F056 | plan.SavePlanToFile uses default umask (0644 on shared hosts) | smell | **open** | [findings/F056](../archive/code-review/findings/F056-plan-io-default-umask-perms.md) |
+| F057 | Pongo2Renderer per-renderer mutex misses pongo2's global TemplateSet | smell | **open** | [findings/F057](../archive/code-review/findings/F057-pongo2-per-renderer-mutex-misses-global-state.md) |
 
 ## Still to review
 
@@ -272,6 +330,8 @@ The previous 10-row queue is fully consumed:
 | 2026-05-27 | `cmd/mooncake.go` + `cmd/{kernel,fleet,step,tool,agentd}` | F052 (kernel/validate.go os.Exit — F020 shape) |
 | 2026-05-27 | `internal/executor/{transaction,trycatch,retry,finalize,inspect,preflight,dryrun,scope,capture}.go` + `executor.go` spot-check (`dispatchRunner`, `dispatchPlanMode`, `postExecuteSuccess`, `handleStepError`) | F053 (`runWithRetry time.Sleep` uncancellable). Three adjacent smells noted inline (scope.Clone omits ApplyStartedAt; Stats nil-guards inconsistent across dispatchRunner vs postExecuteSuccess; reverse-step dispatch bypasses step.started/completed events) — not standalone findings, see "at-a-glance status" block above. |
 | 2026-05-27 | **Round 2:** `internal/executor/{errors,reverse_registry}.go` + `result.go` ReverseData wire-encoding tail + `context.go` tail (Privileged / Performer / actions.Context impl) + `executor.go` end-to-end (`checkIdempotencyConditions`, `checkSkipConditions`, `handleWhenExpression`, `ExecuteStep`, `ExecuteSteps`, `DispatchStepAction`, `Start`, `AddGlobalVariables`, `getStepDisplayName`, `emitStepSkipped`) | F055 (idempotency `unless:` runs without ctx/timeout — same F051/F053 family). Four adjacent observations noted inline below (vars-file silent-swallow; redundant outer nil-guards × 5 sites; handleVars dead code; ec.Svc nil-guard inconsistency). |
+| 2026-05-27 | `internal/plan/{plan,integrity,io,validate,planner_transaction,planner_trycatch}.go` end-to-end (~700 LOC) | F056 (plan-file default umask perms — F037 shape). Three adjacent observations: plan.io.go yaml.Unmarshal non-strict (F048 shape); plan.io.go partial-write on `os.Create` failure leaves zero/garbage file; validate.go AllowStale silent demotion — caller has no signal which checks fired. |
+| 2026-05-27 | `internal/template/{renderer,listresolver}.go` end-to-end (~620 LOC) | F057 (pongo2 per-renderer mutex doesn't protect the global TemplateSet — latent race, unreachable today under single-worker invariant; reaches the moment anything parallelises). |
 
 ## Cross-cutting themes / patterns to track
 
