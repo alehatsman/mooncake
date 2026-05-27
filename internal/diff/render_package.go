@@ -21,12 +21,21 @@ func init() {
 //     re-loaded), where After is now a map[string]interface{}.
 //
 // Both shapes are handled by toPackageDiff below.
+//
+// Spec-66 wave 6 added a sibling pkg.repo renderer that also reports
+// Resource.Kind == ResourcePackage but discriminates via
+// Attributes["kind"] == "pkg.repo". Defer to that matcher when the
+// attribute is set; the pkg handler itself sets no kind attribute
+// (left to a future cleanup that adds it for symmetry).
 func matchPackage(detail any) Renderer {
 	d, ok := detail.(*actions.Diff)
 	if !ok || d == nil {
 		return nil
 	}
 	if d.Resource.Kind != actions.ResourcePackage {
+		return nil
+	}
+	if k := d.Resource.Attributes["kind"]; k != "" && k != "pkg" {
 		return nil
 	}
 	pd, ok := toPackageDiff(d.After)

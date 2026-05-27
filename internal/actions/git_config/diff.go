@@ -8,33 +8,8 @@ import (
 	"github.com/alehatsman/mooncake/internal/config"
 )
 
-// GitConfigSnapshot is the typed Before/After payload for actions.Diff
-// when the resource kind is ResourceGit and the underlying action is
-// git.config. Each entry mirrors one key → value pair the step
-// touches; `op` is "set" or "unset" matching the run-time drift
-// classifier.
-type GitConfigSnapshot struct {
-	// Scope mirrors step.GitConfig.Scope.
-	Scope string `json:"scope,omitempty"`
-
-	// Repo mirrors step.GitConfig.Repo (empty for global/system).
-	Repo string `json:"repo,omitempty"`
-
-	// Entries is the per-key intent: which keys will be set or
-	// unset and to what value. Sorted by Key for stable plan
-	// output. Present in After only; Before is summarized via
-	// observed values when available (see Diff comments).
-	Entries []GitConfigEntry `json:"entries,omitempty"`
-}
-
-// GitConfigEntry is one key-level intent or observed value.
-type GitConfigEntry struct {
-	Key   string `json:"key"`
-	Value string `json:"value,omitempty"`
-	Op    string `json:"op,omitempty"` // "set" | "unset"
-}
-
-// Diff implements actions.Differ for git.config (spec-26 phase 5).
+// Diff implements actions.Differ for git.config (spec-26 phase 5 /
+// spec-66 wave 6).
 //
 // Operation: OpUpdate when set/unset has at least one entry,
 // OpNoop otherwise (vacuous step). Conservative: Diff does NOT
@@ -45,10 +20,12 @@ type GitConfigEntry struct {
 // reports the *declared intent* and lets the apply path produce
 // the truthful changed=false on convergence.
 //
-// Resource.Kind = ResourceGit. Resource.Identifier is
-// "<scope>" for global/system and "<scope>:<repo>" for local.
-// Identifier shape keeps two-local-repos-on-same-host distinct
-// at the consumer level without forcing a per-scope type switch.
+// Resource.Kind = ResourceGit, Resource.Attributes["kind"] =
+// "git.config" so internal/diff can dispatch the render_git matcher.
+// Resource.Identifier is "<scope>" for global/system and
+// "<scope>:<repo>" for local — keeps two-local-repos-on-same-host
+// distinct at the consumer level without forcing a per-scope type
+// switch.
 func (Handler) Diff(_ actions.Context, step *config.Step) (actions.Diff, error) {
 	if step == nil || step.GitConfig == nil {
 		return actions.Diff{}, errors.New("git.config Diff: step has no GitConfig payload")
@@ -59,21 +36,25 @@ func (Handler) Diff(_ actions.Context, step *config.Step) (actions.Diff, error) 
 	if g.Scope == scopeLocal && g.Repo != "" {
 		identifier = g.Scope + ":" + g.Repo
 	}
-	resource := actions.ResourceRef{Kind: actions.ResourceGit, Identifier: identifier}
+	resource := actions.ResourceRef{
+		Kind:       actions.ResourceGit,
+		Identifier: identifier,
+		Attributes: map[string]string{"kind": "git.config"},
+	}
 
-	entries := make([]GitConfigEntry, 0, len(g.Set)+len(g.Unset))
+	entries := make([]actions.GitConfigEntry, 0, len(g.Set)+len(g.Unset))
 	keys := make([]string, 0, len(g.Set))
 	for k := range g.Set {
 		keys = append(keys, k)
 	}
 	sort.Strings(keys)
 	for _, k := range keys {
-		entries = append(entries, GitConfigEntry{Key: k, Value: g.Set[k], Op: "set"})
+		entries = append(entries, actions.GitConfigEntry{Key: k, Value: g.Set[k], Op: "set"})
 	}
 	unsetKeys := append([]string(nil), g.Unset...)
 	sort.Strings(unsetKeys)
 	for _, k := range unsetKeys {
-		entries = append(entries, GitConfigEntry{Key: k, Op: "unset"})
+		entries = append(entries, actions.GitConfigEntry{Key: k, Op: "unset"})
 	}
 
 	op := actions.OpUpdate
@@ -81,7 +62,7 @@ func (Handler) Diff(_ actions.Context, step *config.Step) (actions.Diff, error) 
 		op = actions.OpNoop
 	}
 
-	after := &GitConfigSnapshot{
+	after := &actions.GitConfigDiff{
 		Scope:   g.Scope,
 		Repo:    g.Repo,
 		Entries: entries,

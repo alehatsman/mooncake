@@ -180,3 +180,66 @@ type MountDiff struct {
 	// Options is the mount-options list (defaults, noatime, ...).
 	Options []string `json:"options,omitempty"`
 }
+
+// GitCheckoutDiff is the typed Before/After payload when an
+// actions.Diff describes a git.checkout mutation. Consumers
+// dispatch on Resource.Attributes["kind"] == "git.checkout".
+// Before holds the observed HeadSHA when dest is a git repo at
+// plan time; After holds the requested Ref. After.HeadSHA is
+// empty at plan time — ref resolution happens at apply.
+type GitCheckoutDiff struct {
+	// Dest is the working-copy path (identity).
+	Dest string `json:"dest,omitempty"`
+
+	// Ref is the requested ref (branch / tag / sha).
+	Ref string `json:"ref,omitempty"`
+
+	// HeadSHA is the observed HEAD sha. Populated in Before when
+	// dest is a git repo at plan time.
+	HeadSHA string `json:"head_sha,omitempty"`
+}
+
+// GitConfigDiff is the typed Before/After payload when an
+// actions.Diff describes a git.config mutation. The handler
+// reports declared intent (set / unset per key) — it does not
+// shell out to git at plan time to compare current values.
+// Consumers dispatch on Resource.Attributes["kind"] ==
+// "git.config".
+type GitConfigDiff struct {
+	// Scope is "local" | "global" | "system".
+	Scope string `json:"scope,omitempty"`
+
+	// Repo is the working-copy path for local scope; empty for
+	// global / system.
+	Repo string `json:"repo,omitempty"`
+
+	// Entries is the per-key intent: each carries Key + Value +
+	// Op ("set" | "unset"). Sorted by Key for stable plan output.
+	Entries []GitConfigEntry `json:"entries,omitempty"`
+}
+
+// GitConfigEntry is one key-level intent in a GitConfigDiff.
+type GitConfigEntry struct {
+	Key   string `json:"key"`
+	Value string `json:"value,omitempty"`
+	Op    string `json:"op,omitempty"` // "set" | "unset"
+}
+
+// RepoDiff is the typed Before/After payload when an actions.Diff
+// describes a pkg.repo mutation. The handler reports intent only
+// — reading the existing sources list and matching it to the
+// requested shape is non-trivial across managers and out of scope
+// for the cheap-Diff contract. Before stays nil. Consumers
+// dispatch on Resource.Attributes["kind"] == "pkg.repo".
+type RepoDiff struct {
+	// Name is the repo identifier (also the on-disk filename).
+	Name string `json:"name,omitempty"`
+
+	// State is "present" or "absent". Empty maps to "present"
+	// by handler convention.
+	State string `json:"state,omitempty"`
+
+	// Driver names the populated manager block: "apt" | "dnf" |
+	// "brew" | "" (none).
+	Driver string `json:"driver,omitempty"`
+}

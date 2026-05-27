@@ -52,9 +52,9 @@ func TestDiff_AfterCarriesSortedEntries(t *testing.T) {
 	}}
 
 	d, _ := h.Diff(nil, step)
-	after, ok := d.After.(*GitConfigSnapshot)
+	after, ok := d.After.(*actions.GitConfigDiff)
 	if !ok {
-		t.Fatalf("After is not *GitConfigSnapshot; got %T", d.After)
+		t.Fatalf("After is not *actions.GitConfigDiff; got %T", d.After)
 	}
 	if len(after.Entries) != 4 {
 		t.Fatalf("Entries len = %d, want 4", len(after.Entries))

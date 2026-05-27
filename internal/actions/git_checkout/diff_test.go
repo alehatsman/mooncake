@@ -37,9 +37,9 @@ func TestDiff_AfterCarriesRef(t *testing.T) {
 	step := &config.Step{GitCheckout: &config.GitCheckout{Dest: "/tmp/missing", Ref: "v1.2.3"}}
 
 	d, _ := h.Diff(nil, step)
-	after, ok := d.After.(*GitCheckoutSnapshot)
+	after, ok := d.After.(*actions.GitCheckoutDiff)
 	if !ok {
-		t.Fatalf("After is not *GitCheckoutSnapshot; got %T", d.After)
+		t.Fatalf("After is not *actions.GitCheckoutDiff; got %T", d.After)
 	}
 	if after.Ref != "v1.2.3" {
 		t.Errorf("After.Ref = %s, want v1.2.3", after.Ref)

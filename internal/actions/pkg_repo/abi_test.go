@@ -82,9 +82,9 @@ func TestDiff_AbsentIsDelete(t *testing.T) {
 func TestDiff_AfterCarriesDriver(t *testing.T) {
 	h := Handler{}
 	d, _ := h.Diff(nil, &config.Step{PkgRepo: &config.PkgRepo{Name: "x", Apt: &config.PkgRepoApt{URI: "https://x"}}})
-	after, ok := d.After.(*PkgRepoSnapshot)
+	after, ok := d.After.(*actions.RepoDiff)
 	if !ok {
-		t.Fatalf("After is not *PkgRepoSnapshot; got %T", d.After)
+		t.Fatalf("After is not *actions.RepoDiff; got %T", d.After)
 	}
 	if after.Driver != "apt" {
 		t.Errorf("Driver = %s, want apt", after.Driver)
