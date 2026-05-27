@@ -3,7 +3,6 @@
 package os_group //nolint:revive // package name follows action convention
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"os/exec"
@@ -92,7 +91,7 @@ func applyPlanDarwin(runner *security.Privileged, plan computedPlan) error {
 func createGroupDarwin(runner *security.Privileged, plan computedPlan) error {
 	base := "/Groups/" + plan.name
 
-	if err := dsclGroupRun(runner, "-create", base); err != nil {
+	if err := dscl.Run(runner, "-create", base); err != nil {
 		return err
 	}
 
@@ -100,18 +99,18 @@ func createGroupDarwin(runner *security.Privileged, plan computedPlan) error {
 	if err != nil {
 		return fmt.Errorf("os.group darwin: assign gid: %w", err)
 	}
-	if err := dsclGroupRun(runner, "-create", base, "PrimaryGroupID", strconv.Itoa(gid)); err != nil {
+	if err := dscl.Run(runner, "-create", base, "PrimaryGroupID", strconv.Itoa(gid)); err != nil {
 		return err
 	}
 
 	// RealName mirrors the group name. macOS tools (Workgroup Manager,
 	// System Settings → Users & Groups) display the RealName rather
 	// than the record key; setting it keeps the GUI in sync.
-	return dsclGroupRun(runner, "-create", base, "RealName", plan.name)
+	return dscl.Run(runner, "-create", base, "RealName", plan.name)
 }
 
 func removeGroupDarwin(runner *security.Privileged, plan computedPlan) error {
-	return dsclGroupRun(runner, "-delete", "/Groups/"+plan.name)
+	return dscl.Run(runner, "-delete", "/Groups/"+plan.name)
 }
 
 // pickGroupGID returns the GID to assign at creation time. Plan
@@ -157,22 +156,4 @@ func hasSystemFlag(args []string) bool {
 // bound" (regular-group case).
 func nextAvailableGID(minBound, maxBound int) (int, error) {
 	return dscl.NextAvailableID("/Groups", "PrimaryGroupID", "GID", minBound, maxBound)
-}
-
-// dsclGroupRun is the write-side analogue of dsclGroupField. Goes
-// through the supplied PrivilegedRunner — dscl mutations on /Groups/*
-// require root on macOS.
-func dsclGroupRun(runner *security.Privileged, args ...string) error {
-	fullArgs := append([]string{"."}, args...)
-	ctx, cancel := context.WithTimeout(context.Background(), groupCmdTimeout)
-	defer cancel()
-	out, err := runner.Run(ctx, "dscl", fullArgs...)
-	if err != nil {
-		msg := strings.TrimSpace(string(out))
-		if msg != "" {
-			return fmt.Errorf("dscl %s: %w: %s", strings.Join(args, " "), err, msg)
-		}
-		return fmt.Errorf("dscl %s: %w", strings.Join(args, " "), err)
-	}
-	return nil
 }
