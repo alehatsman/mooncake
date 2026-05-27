@@ -1,4 +1,8 @@
-package main
+// Package step implements the `mooncake step` CLI — execute a
+// single inline step (one action invocation, no plan) and return
+// a JSON result. The MCP server and the pilot agent loop drive
+// this verb to invoke handlers without going through plan/apply.
+package step
 
 import (
 	"encoding/json"
@@ -53,7 +57,7 @@ func buildStepJSON(actionType string, result *executor.Result, execErr error) ma
 	return payload
 }
 
-func stepCommand() *cli.Command {
+func Command() *cli.Command {
 	return &cli.Command{
 		Name:      "step",
 		Usage:     "Execute a single inline step and return JSON result",

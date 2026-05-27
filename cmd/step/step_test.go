@@ -1,4 +1,4 @@
-package main
+package step
 
 import (
 	"bytes"
@@ -137,7 +137,7 @@ func TestBuildStepJSON_DataDoesNotShadowSharedScalars(t *testing.T) {
 	}
 }
 
-// strictDecodeStep mirrors the decode path inside stepCommand's
+// strictDecodeStep mirrors the decode path inside Command's
 // Action func: yaml.NewDecoder with KnownFields(true) into a
 // config.Step. Exported here so the regression tests in this package
 // can assert the strict shape without rebuilding the cli.Context.
