@@ -337,11 +337,18 @@ func (ec *ExecutionContext) GetVariables() map[string]interface{} {
 
 // MergeUserVars merges the provided key-value pairs into the user variable scope.
 // Logs a warning for any key that shadows a system fact or metric.
+//
+// Drops the `if ec.Svc != nil` guard the pre-cleanup version carried —
+// every other accessor on ExecutionContext (EmitEvent, Mode, Effects,
+// Privileged, GetTemplate / Evaluator / Logger / EventPublisher) derefs
+// ec.Svc unconditionally. Svc is always non-nil in production paths
+// (Start / executePlanWithCapture sets it on every constructed context);
+// a future test that builds an EC without Svc panics here exactly the
+// same way it would in any of the peer accessors. Convention drift
+// closed.
 func (ec *ExecutionContext) MergeUserVars(vars map[string]interface{}) {
-	if ec.Svc != nil {
-		for _, k := range ec.Scope.shadowedKeys(vars) {
-			ec.Svc.Logger.Infof("[WARNING] variable %q shadows a system fact or metric and will override it", k)
-		}
+	for _, k := range ec.Scope.shadowedKeys(vars) {
+		ec.Svc.Logger.Infof("[WARNING] variable %q shadows a system fact or metric and will override it", k)
 	}
 	for k, v := range vars {
 		ec.Scope.User[k] = v

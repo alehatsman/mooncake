@@ -11,8 +11,8 @@ Queue**, produces a finding (or several), and the queue updates.
 
 | | Count |
 |---|---:|
-| ✅ Findings filed and resolved (F001–F054, F036 skipped) | **53** |
-| 🟡 Findings open (filed, not yet fixed) | **1** (F055) |
+| ✅ Findings filed and resolved (F001–F055, F036 skipped) | **54** |
+| 🟡 Findings open (filed, not yet fixed) | **0** |
 | 📋 Packages still queued for review | **0 substantive** (1 broad follow-up — see below) |
 
 **2026-05-27 cold-read pass closed the queue.** Eight package
@@ -87,55 +87,44 @@ handleWhenExpression / ExecuteStep / ExecuteSteps /
 DispatchStepAction / Start / AddGlobalVariables /
 getStepDisplayName / emitStepSkipped. One finding filed:
 
-- **F055** — `checkIdempotencyConditions` runs `unless:` shell-
-  outs without ctx/timeout (`executor.go:302`). Same F051 / F053
-  family. Risk: `unless: kubectl get nodes` (or any plausible
-  network/cluster probe) can hang indefinitely on connection
-  failure; Ctrl-C / context cancel doesn't interrupt because
-  the call uses bare `exec.Command` instead of
-  `exec.CommandContext`. The guard runs BEFORE step.started so
-  the operator gets zero visibility into the hang. Fix is local:
-  thread `ec.Svc.Ctx` into `checkIdempotencyConditions`,
-  upgrade to `exec.CommandContext`, optionally add a per-guard
-  timeout cap.
+- ~~**F055** — `checkIdempotencyConditions` runs `unless:` shell-
+  outs without ctx/timeout.~~ **Fixed.** Now uses
+  `exec.CommandContext` with `ec.Svc.Ctx` + a 10s per-guard hard
+  cap. Two regression tests in `cancel_test.go` pin both paths.
 
-Adjacent observations (not standalone findings, candidates for
-a future cleanup PR — same shape as the F053-cleanups PR that
-landed at `4efd1d68`):
+Adjacent observations (all closed in the same PR as F055 except
+#3, which was reverted as out-of-scope):
 
-- **Redundant outer nil-guards around incStat calls.** After
-  the F053 cleanups landed centralized nil-safe helpers
-  (`incStat` / `decStat` / `readStat` in `context.go`), five
-  call sites still wrap them in `if X != nil { ... }` outer
-  checks. Not harmful — just dead defensive code. Sites:
-  `executor.go:470` (Skipped), `:491` (Failed), `:589-590`
-  (Executed), `:599-600` (Changed, mixed with a real `changed`
-  conditional), `:729-730` (Global). Quick mechanical cleanup;
-  group with #2 below.
-- **`ec.Svc` deref consistency.** `EmitEvent`, `Mode()`,
-  `Effects()`, `Privileged()`, `GetTemplate`/`Evaluator`/
-  `Logger`/`EventPublisher`/`GetVariables`/`RegisterResult` all
-  deref `ec.Svc.*` without a nil-guard, while `MergeUserVars`
-  defensively checks `if ec.Svc != nil`. Either the guard is
-  dead code (Svc is always non-nil in production paths and the
-  test surface that produces nil-Svc is gone) or the others
-  should match. Convention drift. Pick one direction.
-- **`handleVars` is dead code.** `executor.go:173`, marked
-  `//nolint:unused`. Replaced by the registered `vars` action
-  handler. Same pattern as `parseFileMode` (line 1542) and
-  `shouldSkipByTags` (line 242) and `markStepFailed` (line 139)
-  and `handleVars` itself — all `//nolint:unused`. Five dead
-  functions; either delete them, or document why they're held
-  for a future restoration.
-- **Vars-file read errors silently swallowed.** `Start` at
-  `executor.go:990-994` logs a failed `config.ReadVariables`
-  call at Debug level and `continue`s. An operator explicitly
-  passing `-v secrets.yml` and hitting a typo'd path or a
-  perm-denied file would see no surfaced error — the run
-  proceeds as if the file wasn't there. Either return the error
-  (treat explicit user input as required) or escalate to a
-  Warning-level log so the operator notices. Smell; UX risk
-  if the missing file carried critical secrets.
+- ~~**Redundant outer nil-guards around incStat calls.**~~
+  **Fixed.** All 4 sites cleaned: `emitStepSkipped`,
+  `handleStepError`, `postExecuteSuccess` (Executed + Changed),
+  and the ExecuteStep global-counter site. The `incStat`/
+  `decStat`/`readStat` helpers in `context.go` are nil-safe;
+  the outer guards were dead defensive code from before the
+  F053 centralization.
+- ~~**`ec.Svc` deref consistency.**~~ **Fixed.** Dropped the
+  `if ec.Svc != nil` guard from `MergeUserVars` to match the
+  10+ peer accessors that deref unconditionally. Svc is
+  always non-nil in production (Start / executePlanWithCapture
+  always fills it).
+- **Five dead `//nolint:unused` functions** (`markStepFailed`,
+  `handleVars`, `shouldSkipByTags`, `parseFileMode`, plus the
+  re-exports in `export_test.go`). **Reverted as out-of-scope**
+  for this PR. Initial scope wanted to delete them, but each is
+  test-only — production callers are gone but `executor_test.go`
+  still exercises them (`TestHandleVars`, `TestParseFileMode`,
+  `TestShouldSkipByTags`, `TestMarkStepFailed`). Removing the
+  functions requires removing the tests too, which is a behavior-
+  loss decision worth a separate PR with explicit operator buy-in
+  ("are these tests preserving knowledge we want to keep, or
+  archeology?"). Logged as a TODO under "Cross-cutting themes"
+  below.
+- ~~**Vars-file read errors silently swallowed.**~~ **Fixed.**
+  `executor.go:967` now logs failures at `log.Infof("[WARNING] ...")`
+  (was `Debugf`). `continue` semantics preserved — failing the
+  run hard would be too aggressive for the agentd payload race-
+  condition case where a mid-deploy worker might not see a
+  freshly-published file yet.
 
 Everything else surfaced by the cold-read pass fell out as
 documented design intent (self_shutdown delay goroutine,
@@ -204,7 +193,7 @@ closed — see that folder's README.
 | F052 | cmd/kernel/validate.go os.Exit (3 sites) | smell | **done** | [findings/F052](../archive/code-review/findings/F052-kernel-validate-os-exit-hostile-to-callers.md) |
 | F053 | executor.runWithRetry time.Sleep not cancellable | risk | **done** | [findings/F053](../archive/code-review/findings/F053-executor-retry-sleep-not-cancellable.md) |
 | F054 | spec-30 rollback events never implemented | smell | **done** | [findings/F054](../archive/code-review/findings/F054-rollback-events-never-implemented.md) |
-| F055 | executor `unless:` runs without ctx/timeout | risk | **open** | [findings/F055](../archive/code-review/findings/F055-idempotency-unless-no-ctx-no-timeout.md) |
+| F055 | executor `unless:` runs without ctx/timeout | risk | **done** | [findings/F055](../archive/code-review/findings/F055-idempotency-unless-no-ctx-no-timeout.md) |
 
 ## Still to review
 
@@ -317,6 +306,21 @@ Updated as the review uncovers patterns.
   loop, not a per-spec event-set bolt-on. Defer until at least
   one more compound shape (transaction + try) makes the
   generic hook obviously worth designing.
+- **Test-only `//nolint:unused` helpers in `internal/executor/
+  executor.go`** (5 functions): `markStepFailed`, `handleVars`,
+  `shouldSkipByTags`, `parseFileMode`, plus the re-exports in
+  `export_test.go`. Production callers are gone (replaced by
+  registered action handlers, planner-side tag filtering,
+  in-handler file-mode parsing), but `executor_test.go` still
+  exercises each via the export_test seam. Either delete the
+  functions + their dedicated tests (preferred — they test
+  obsolete behavior that no production code path can reach),
+  or document why they're held for a future restoration.
+  Decision is operator-side: are the tests preserving knowledge
+  we want to keep, or archaeology? Cleanup deferred from the
+  F055 cleanups PR (2026-05-27) because the deletion turned out
+  to require coordinated test removal — bigger blast radius
+  than the same-PR cleanups absorbed.
 - **Stale doc-strings track action / field counts** (F002 in
   CLAUDE.md, F013 in config.go). Pattern: pin the number → it
   drifts within the next sprint. Lean on `make budget-status`

@@ -116,3 +116,101 @@ steps:
 		t.Errorf("err = %v, want context.Canceled or nil", err)
 	}
 }
+
+// TestF055_UnlessGuardRespectsCtxCancel pins the F055 fix: when a
+// step's `unless:` (or any of its aliases) shells out to a
+// long-running command, ctx cancel must abort the subprocess
+// instead of waiting for it to exit. Pre-fix the guard called
+// `exec.Command("sh", "-c", ...).Run()` with no ctx awareness, so
+// Ctrl-C during a hanging guard left mooncake unresponsive for the
+// entire subprocess lifetime.
+//
+// The 30-second `unless: sleep 30` would block the test for 30 s
+// without the fix; ctx cancelled at ~50 ms aborts the guard, the
+// step skips (because `unless` returned non-zero via context
+// cancel) is NOT what we assert — what we assert is that the
+// guard call itself returns quickly. We use the elapsed-time
+// bound as the regression signal.
+func TestF055_UnlessGuardRespectsCtxCancel(t *testing.T) {
+	dir := t.TempDir()
+	a := filepath.Join(dir, "a")
+
+	yaml := `version: "1.0"
+steps:
+  - file.write: { path: ` + a + `, content: A }
+    unless: "sleep 30"
+`
+	configPath := filepath.Join(dir, "config.yml")
+	if err := os.WriteFile(configPath, []byte(yaml), 0o644); err != nil {
+		t.Fatalf("write config: %v", err)
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	go func() {
+		time.Sleep(50 * time.Millisecond)
+		cancel()
+	}()
+
+	start := time.Now()
+	publisher := events.NewPublisher()
+	defer publisher.Close()
+	_ = executor.Start(ctx, executor.StartConfig{
+		ConfigFilePath: configPath,
+	}, logger.NewTestLogger(), publisher)
+	elapsed := time.Since(start)
+
+	// Pre-F055: this elapses ~30s (the `sleep 30` runs to completion
+	// because exec.Command ignores ctx). Post-F055: ~50ms (ctx
+	// cancels the unless subprocess; the 10s hard cap is the
+	// fallback). Allow a generous 5s ceiling to keep the test stable
+	// under CI load while still catching the multi-second regression.
+	if elapsed > 5*time.Second {
+		t.Errorf("unless: guard ignored ctx cancel — elapsed=%v, expected <5s (pre-fix would block ~30s)", elapsed)
+	}
+}
+
+// TestF055_UnlessGuardHardTimeout covers the safety net: even when
+// no ctx cancel fires, the per-guard timeout caps the wait. A
+// `sleep 30` on an unset ctx must return within ~10s (the cap)
+// rather than blocking 30s. This protects operators who run
+// mooncake without an outer ctx cancel path (legacy entry points,
+// tests, or simply forgetting to wire SIGINT).
+func TestF055_UnlessGuardHardTimeout(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping 10s timeout assertion in -short mode")
+	}
+	dir := t.TempDir()
+	a := filepath.Join(dir, "a")
+
+	yaml := `version: "1.0"
+steps:
+  - file.write: { path: ` + a + `, content: A }
+    unless: "sleep 30"
+`
+	configPath := filepath.Join(dir, "config.yml")
+	if err := os.WriteFile(configPath, []byte(yaml), 0o644); err != nil {
+		t.Fatalf("write config: %v", err)
+	}
+
+	start := time.Now()
+	publisher := events.NewPublisher()
+	defer publisher.Close()
+	// Background ctx — no operator-side cancel. Hard cap is the
+	// only thing protecting the run.
+	_ = executor.Start(context.Background(), executor.StartConfig{
+		ConfigFilePath: configPath,
+	}, logger.NewTestLogger(), publisher)
+	elapsed := time.Since(start)
+
+	// 10s cap + small dispatch / event-overhead headroom = 13s
+	// ceiling. Pre-F055 would block ~30s on the sleep.
+	if elapsed > 13*time.Second {
+		t.Errorf("unless: guard exceeded hard timeout cap — elapsed=%v, expected ~10s", elapsed)
+	}
+	// Sanity: the step's `unless` ran (and either timed out or got
+	// cancelled), so the file.write must have proceeded because a
+	// non-zero `unless` means "don't skip". File should exist.
+	if _, statErr := os.Stat(a); statErr != nil {
+		t.Errorf("file %s should exist (unless: sleep 30 timed out → step ran): %v", a, statErr)
+	}
+}

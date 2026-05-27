@@ -128,6 +128,14 @@ import (
 	"github.com/alehatsman/mooncake/internal/utils"
 )
 
+// idempotencyUnlessTimeout bounds the `unless:` guard's shell-out
+// in checkIdempotencyConditions. Guards by convention are cheap
+// checks (`test -f`, `pgrep`, `kubectl get …`); 10s catches genuine
+// misuse (a guard pointing at an unreachable host) without
+// breaking the common case (sub-second probes on a healthy box).
+// F055.
+const idempotencyUnlessTimeout = 10 * time.Second
+
 // generateStepID creates a unique identifier for a step
 func generateStepID(step config.Step, ec *ExecutionContext) string {
 	if step.ID != "" {
@@ -298,9 +306,31 @@ func checkIdempotencyConditions(step config.Step, ec *ExecutionContext) (bool, s
 			if err != nil {
 				return false, "", &RenderError{Field: "unless command", Cause: err}
 			}
+			// F055: run the guard via exec.CommandContext so Ctrl-C /
+			// context cancel aborts the subprocess instead of waiting
+			// for it to exit on its own. The guard runs BEFORE
+			// step.started, so without ctx awareness an `unless:
+			// kubectl get nodes` against an unreachable cluster
+			// hangs mooncake with no visible event. A 10s hard cap
+			// bounds well-behaved guards (typical `pgrep` / `test
+			// -f` / `kubectl get` complete in <1s on a healthy host)
+			// without breaking slow-but-legitimate probes; operators
+			// who genuinely need a long guard should compose it via
+			// `when:` against pre-computed facts, not a synchronous
+			// shell-out. ec.Svc.Ctx is the run-wide cancel context
+			// (set by Start / ExecutePlan); nil ctx falls back to
+			// Background so legacy callers without a service ctx
+			// still work.
+			runCtx := context.Background()
+			if ec.Svc != nil && ec.Svc.Ctx != nil {
+				runCtx = ec.Svc.Ctx
+			}
+			unlessCtx, cancel := context.WithTimeout(runCtx, idempotencyUnlessTimeout)
 			// #nosec G204 -- This is a provisioning tool designed to execute commands from user configs.
-			cmd := exec.Command("sh", "-c", command)
-			if err := cmd.Run(); err == nil {
+			cmd := exec.CommandContext(unlessCtx, "sh", "-c", command)
+			runErr := cmd.Run()
+			cancel()
+			if runErr == nil {
 				return true, fmt.Sprintf("unless: %s", command), nil
 			}
 		}
@@ -467,9 +497,7 @@ func DispatchStepAction(step config.Step, ec *ExecutionContext) error {
 }
 
 func emitStepSkipped(step config.Step, ec *ExecutionContext, stepName, skipReason string) {
-	if ec.Svc.Stats.Skipped != nil {
-		incStat(ec.Svc.Stats.Skipped)
-	}
+	incStat(ec.Svc.Stats.Skipped)
 	stepID := generateStepID(step, ec)
 	depth := 0
 	if step.LoopContext != nil {
@@ -488,9 +516,7 @@ func emitStepSkipped(step config.Step, ec *ExecutionContext, stepName, skipReaso
 }
 
 func handleStepError(step config.Step, ec *ExecutionContext, stepErr error, stepID, stepName string, depth int, stepDuration time.Duration) error {
-	if ec.Svc.Stats.Failed != nil {
-		incStat(ec.Svc.Stats.Failed)
-	}
+	incStat(ec.Svc.Stats.Failed)
 	failedData := events.StepFailedData{
 		StepID:       stepID,
 		Name:         stepName,
@@ -586,9 +612,7 @@ func dispatchPlanMode(step config.Step, ec *ExecutionContext, stepName string) (
 // stat counters, step.completed event, on_change tracking, txn snapshot, and
 // RunCapture feed. Clears ec.CurrentResult before returning.
 func postExecuteSuccess(step config.Step, ec *ExecutionContext, stepID, stepName string, depth int, stepDuration time.Duration) {
-	if ec.Svc.Stats.Executed != nil {
-		incStat(ec.Svc.Stats.Executed)
-	}
+	incStat(ec.Svc.Stats.Executed)
 
 	changed := false
 	var resultData map[string]interface{}
@@ -596,7 +620,7 @@ func postExecuteSuccess(step config.Step, ec *ExecutionContext, stepID, stepName
 		changed = ec.CurrentResult.Changed
 		resultData = ec.CurrentResult.ToMap()
 	}
-	if changed && ec.Svc.Stats.Changed != nil {
+	if changed {
 		incStat(ec.Svc.Stats.Changed)
 	}
 
@@ -726,9 +750,7 @@ func ExecuteStep(step config.Step, ec *ExecutionContext) error {
 	}
 
 	// Increment global step counter for non-skipped steps
-	if ec.Svc.Stats.Global != nil {
-		incStat(ec.Svc.Stats.Global)
-	}
+	incStat(ec.Svc.Stats.Global)
 
 	// Generate step ID and store in context for event correlation
 	stepID := generateStepID(step, ec)
@@ -989,7 +1011,17 @@ func Start(ctx context.Context, startConfig StartConfig, log logger.Logger, publ
 		log.Debugf("Reading variables from file: %v", expandedPath)
 		vars, err := config.ReadVariables(expandedPath)
 		if err != nil {
-			log.Debugf("Failed to read variables from %s: %v", expandedPath, err)
+			// Surface vars-file read failures at WARNING (was Debugf
+			// pre-cleanup). The operator explicitly passed `-v X` or
+			// `vars_files: [X]` in their agentd payload; a silent
+			// Debug-level skip on missing/perm-denied/parse-broken
+			// files meant the run proceeded as if the file wasn't
+			// there. UX risk if the missing file carried critical
+			// secrets. `continue` semantics preserved — failing the
+			// run hard would be too aggressive for the agentd payload
+			// race-condition case where a mid-deploy worker might
+			// not see a freshly-published file yet.
+			log.Infof("[WARNING] failed to read variables from %s: %v (skipping this file)", expandedPath, err)
 			continue
 		}
 		log.Debugf("Read variables: %v", vars)

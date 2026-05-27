@@ -5,7 +5,9 @@ severity: risk
 package: internal/executor
 file: internal/executor/executor.go
 lines: 302
-status: open
+status: done
+fixed: 2026-05-27 — `checkIdempotencyConditions` now reads `ec.Svc.Ctx` and shells out via `exec.CommandContext(ctx, "sh", "-c", command)`. Added a per-guard hard-timeout cap via `context.WithTimeout(runCtx, idempotencyUnlessTimeout)` where `idempotencyUnlessTimeout = 10 * time.Second` — bounds well-behaved guards (typical `test -f` / `pgrep` / `kubectl get` complete in <1s on a healthy host) without breaking slow-but-legitimate probes. Nil ctx falls back to `context.Background()` so legacy callers still work, and the timeout still applies (the cap is the safety net even without an outer ctx cancel).
+post-fix verified: 2026-05-27 — two new tests in `cancel_test.go`: `TestF055_UnlessGuardRespectsCtxCancel` (a `unless: sleep 30` step with ctx cancelled at ~50ms returns within 5s; pre-fix this blocked the full 30s) + `TestF055_UnlessGuardHardTimeout` (background ctx, `unless: sleep 30` returns within 13s thanks to the 10s cap; sanity-checks that the file.write proceeded after the unless timed out non-zero). Full `mooncake task ci` green.
 discovered: 2026-05-27 — round-2 cold-read of internal/executor/ per PICKUP item #1. `checkIdempotencyConditions` is called from `ExecuteStep` BEFORE the action's own dispatch path runs. When a step's `unless:` (or the spec-21-era equivalent `unless_command:` / `Shell.Unless`) is set, the helper shells out to evaluate it:
 
 ```go
