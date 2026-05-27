@@ -2,6 +2,17 @@
 
 **Last curated:** 2026-05-27 (refresh when the table goes stale).
 
+**Recently landed (2026-05-27):**
+cmd/ subsystem-boundary refactor complete. 16 sub-packages now stand
+under `cmd/` (agentd, cmdutil, docs, doctor, fleet, history, init,
+kernel, mcp, mod, query, schema, snapshot, step, task, tool); cmd/
+root went from 56 files to 4 (mooncake.go + 3 test files);
+`cmd/mooncake.go` from 2043 LOC to 194. Presets CLI retired
+(`2b7eee8e`); orphan packages `internal/recommend/` +
+`internal/presets/registry/` + `docs-next/presets/` deleted
+(`4db53ad6`, −5629 LOC). Doc-side `mooncake presets` references
+catalogued in proposal-07 (see item 3 below).
+
 If you have **<5 minutes**, take **item 1** (small code-review reads).
 If you have **more**, scan the table and pick the highest-rank
 entry that isn't already claimed.
@@ -20,12 +31,13 @@ entry that isn't already claimed.
 
 | # | Task | Stream | Effort | Where to read | Claim slug |
 |---|---|---|---:|---|---|
-| 1 | **Continue the code-review cold-read** — 10 package areas still unread. Top candidates: `internal/agentd/{handlers,jsonl_sink,respond,config*,self_mac,self_shutdown*}`, `internal/presets/registry/{loader,validator,expander}`, `internal/actions/text_*`, `internal/actions/os_*` (darwin parity just landed). Read cold, file `archive/code-review/findings/F<NNN>` if a smell appears. | any | S each | [`code-review/TODO.md`](./code-review/TODO.md) "Still to review" | `review-<pkg>` |
+| 1 | **Continue the code-review cold-read** — package areas still unread. Top candidates: `internal/agentd/{handlers,jsonl_sink,respond,config*,self_mac,self_shutdown*}`, `internal/actions/text_*`, `internal/actions/os_*` (darwin parity just landed), the new `cmd/kernel/` package (largest cmd/ sub-package after the 2026-05-27 boundary refactor). Read cold, file `archive/code-review/findings/F<NNN>` if a smell appears. (Note: `internal/presets/registry/` listed in the previous revision was deleted in `4db53ad6` — drop from the queue.) | any | S each | [`code-review/TODO.md`](./code-review/TODO.md) "Still to review" | `review-<pkg>` |
 | 2 | **spec-66 waves 6–8** — typed plan diff is 5/8 waves done. Remaining: `render_git` + `render_repo` (wave 6, S), `render_transaction` (wave 7, M), handler audit (wave 8, M). Wave 6 is the smallest entry point. | core | S–M | [`streams/core/specs/spec-66-typed-plan-diff.md`](./streams/core/specs/spec-66-typed-plan-diff.md), `internal/diff/` | `spec-66-w6` |
-| 3 | **proposal-08 pilot emits compact JSON** — pilot prompts still say "output YAML" (`internal/pilot/prompt.go:12,105`, `prompt_styles.go:30,33`) and `sanitize.go:25` calls `yaml.Unmarshal`. ~30% output-token savings per turn + eliminates YAML-indentation failure mode on small local models. Unblocked by `config-json-input` (`93ee3c37`). 4 prompt edits + sanitize swap to `config.DecodeAuto` + eval-fixture refresh. | agent | XS | [`streams/agent/proposals/proposal-08-pilot-emit-json.md`](./streams/agent/proposals/proposal-08-pilot-emit-json.md) | `pilot-emit-json` |
-| 4 | **spec-58 fleet drift** — highest-leverage unstarted fleet feature. Turns Mooncake from "config management tool" into "fleet operating system." Start with the `InspectPlan` periodic loop; the typed-diff and transport primitives it needs are all in master. | fleet | L | [`streams/fleet/specs/spec-58-fleet-drift.md`](./streams/fleet/specs/spec-58-fleet-drift.md) | `spec-58-w1` |
-| 5 | **proposal-16 `expect_json_schema`** — the one open piece of http.request (waves 1–3 + `expect_json_keys` shipped). Full draft-07 file-path schema validation. Deferred pending validator-library design decision; pick this up only if you want to drive that conversation. | core | S | [`streams/core/proposals/proposal-16-http-request-action.md`](./streams/core/proposals/proposal-16-http-request-action.md) | `http-expect-schema` |
-| 6 | **Draft an agent-safety spec** — policy DSL, plan signing, per-action quotas, sandbox mode, or deterministic replay. Replay has the highest "demoable win" return and is the last open piece of the unfair-advantage statement. | agent | M (draft only) | [`streams/agent/README.md`](./streams/agent/README.md) §"Open gaps" | `agent-spec-<topic>` |
+| 3 | **proposal-07 presets-CLI docs migration** — ~30 user-facing string + doc references still mention `mooncake presets …` (a command that no longer exists). 5 tiers: delete 3 obsolete guide docs (~2k LOC), rewrite 6 docs with isolated mentions, fix 4 in-binary user-facing strings (doctor fix message, first-run hint, scaffold templates), 1 round of maintainer-facing comment polish. Mostly mechanical; 3 open questions flagged for the executing agent. | dx | S | [`streams/dx/proposals/proposal-07-presets-cli-docs-migration.md`](./streams/dx/proposals/proposal-07-presets-cli-docs-migration.md) | `presets-docs-migration` |
+| 4 | **pilot feedback for non-cmd actions** — output capture (`#34`) only surfaces stdout from cmd/shell-family steps into `LastIteration.LastStepStdout`. `file.write`, `file.copy`, `pkg.*`, `os.service`, etc. complete with no signal the LLM can read, so in `--style step` the model has no positive evidence its step succeeded and tends to re-emit the same plan (`StopNoProgress` instead of `StopStepDone`). Surfaced from real Ollama + Claude testing 2026-05-27. Add per-action-type summary lines (e.g. `wrote 16 bytes to <path>`) to `LastIteration`, surface in the prompt. | agent | S | [`internal/pilot/output_capture.go`](../../internal/pilot/output_capture.go), `internal/pilot/loop.go` LastIteration build sites | `pilot-feedback-non-cmd` |
+| 5 | **spec-58 fleet drift** — highest-leverage unstarted fleet feature. Turns Mooncake from "config management tool" into "fleet operating system." Start with the `InspectPlan` periodic loop; the typed-diff and transport primitives it needs are all in master. | fleet | L | [`streams/fleet/specs/spec-58-fleet-drift.md`](./streams/fleet/specs/spec-58-fleet-drift.md) | `spec-58-w1` |
+| 6 | **proposal-16 `expect_json_schema`** — the one open piece of http.request (waves 1–3 + `expect_json_keys` shipped). Full draft-07 file-path schema validation. Deferred pending validator-library design decision; pick this up only if you want to drive that conversation. | core | S | [`streams/core/proposals/proposal-16-http-request-action.md`](./streams/core/proposals/proposal-16-http-request-action.md) | `http-expect-schema` |
+| 7 | **Draft an agent-safety spec** — policy DSL, plan signing, per-action quotas, sandbox mode, or deterministic replay. Replay has the highest "demoable win" return and is the last open piece of the unfair-advantage statement. | agent | M (draft only) | [`streams/agent/README.md`](./streams/agent/README.md) §"Open gaps" | `agent-spec-<topic>` |
 
 ---
 

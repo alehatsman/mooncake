@@ -38,14 +38,14 @@ Recent shipped specs (see commit history for the full receipts):
 - spec-22 (phases 3–7) — four-method ABI declared + MCP-wired
 - spec-23 — framework primitives (all three sections)
 - spec-30 — `transaction:` + LIFO rollback
-- spec-67 (partial) — Mooncake Pilot: rename + confirm-gate + transaction-wrap + schema-injection + eval-harness shipped; OpenAI provider / prompt cache / multi-turn / styles pending
+- spec-67 (partial) — Mooncake Pilot: rename + confirm-gate + transaction-wrap + schema-injection + eval-harness + openai-shape-provider (#32) + styles (#33) shipped; prompt cache, multi-turn, tool-use spike pending. Auxiliary improvements landed alongside: output capture for cmd-step stdout feedback (#34), JSON instead of YAML emission (#35, ~30% output-token savings + drops the YAML-indentation failure mode on small local models), Claude CLI invoked via `--output-format json` envelope (#36), plan tempfile anchored at `repoRoot` so relative-path writes honor operator cwd (#37, silent-success bug fix).
 
 ## Active specs
 
 | Spec | Topic | Why drafted |
 |---|---|---|
 | [spec-31](./specs/spec-31-tier2-plugin-model.md) | Tier-2 plugin model | Draft, not started. Tier-1 caps at ~30 actions deliberately. The next tier (`notify.*`, `container.compose`, `k8s.apply`, `db.postgres.*`) needs an extension shape that doesn't grow the main binary. Proof-of-concept domain: `notify.slack`/`webhook`/`email`/`pagerduty`. |
-| [spec-67](./specs/spec-67-mooncake-pilot.md) | Mooncake Pilot (in-binary LLM copilot) | In progress. v1 core stories shipped: rename, confirm-gate, transaction-wrap, schema-injection, eval-harness. Pending: OpenAI-shape provider, prompt cache, multi-turn, styles. |
+| [spec-67](./specs/spec-67-mooncake-pilot.md) | Mooncake Pilot (in-binary LLM copilot) | In progress. v1 core stories shipped: rename, confirm-gate, transaction-wrap, schema-injection, eval-harness, **openai-shape-provider**, **styles**. Pending: prompt cache, multi-turn, tool-use spike. |
 
 ## Open gaps (un-specced)
 

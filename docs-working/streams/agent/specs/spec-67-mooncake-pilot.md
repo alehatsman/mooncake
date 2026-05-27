@@ -1,6 +1,6 @@
 # Spec 67 — Mooncake Pilot
 
-> **Status:** In progress — v1 core stories shipped; OpenAI-shape provider, prompt cache, multi-turn, styles pending.
+> **Status:** In progress — v1 core stories + OpenAI-shape provider + styles shipped; prompt cache, multi-turn, tool-use spike pending.
 
 ## 1. Summary
 
@@ -640,7 +640,7 @@ next one whose dependencies are all `done`.
   `.mooncake/pilot/iterations/`.
 - **Deps.** None. **Land first.**
 
-### S-pilot-openai-shape-provider
+### ✅ S-pilot-openai-shape-provider (`ed575265`)
 
 - **Goal.** Add `OpenAIShapeClient` in `internal/pilot/llm/`.
   POSTs to a configurable `/v1/chat/completions` endpoint; handles
@@ -651,6 +651,7 @@ next one whose dependencies are all `done`.
   end-to-end against a local Ollama server. Test stub uses
   `httptest.Server` to assert request shape.
 - **Deps.** `S-pilot-rename`.
+- Decisions pinned in `docs-next/plan-pilot-openai-shape.md` §8.
 
 ### ✅ S-pilot-confirm-gate (`24f059fc`)
 
@@ -698,7 +699,7 @@ next one whose dependencies are all `done`.
 - **Deps.** `S-pilot-rename`. Better with `S-pilot-prompt-cache`
   (cache hit rate matters once threads grow) but not blocking.
 
-### S-pilot-styles
+### ✅ S-pilot-styles (`0fa353a8`)
 
 - **Goal.** Implement the `--style plan` (default) and `--style
   step` prompt templates (§12.3) and per-style confirm UX (§10).
@@ -707,6 +708,10 @@ next one whose dependencies are all `done`.
   confirm-gates per step, executes, feeds result back to next
   prompt. Demo on a real local model (Ollama).
 - **Deps.** `S-pilot-rename`, `S-pilot-confirm-gate`.
+- Decisions pinned in `docs-next/plan-pilot-styles.md` §8. The
+  `>1 step` contract violation rejects-and-retries (model self-
+  corrects via `LastIteration` feedback). `approve_next N` and
+  `approve_thread` ergonomic extensions are wired in step mode.
 
 ### ✅ S-pilot-eval-harness (`8bfe0fc4`)
 
