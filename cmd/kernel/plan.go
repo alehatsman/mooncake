@@ -241,6 +241,25 @@ func FormatPlanYAML(p *plan.Plan) error {
 	return encoder.Encode(p)
 }
 
+// planResourceIdentifier returns the human-readable target of the
+// step's change for surfacing in the text plan, or "" when there's
+// nothing useful to show. Handlers that don't implement Differ
+// produce nil ins.Diff and we skip them. Shell-kind targets are
+// also skipped because the reason already echoes the command.
+func planResourceIdentifier(ins plan.StepInspection) string {
+	if ins.Diff == nil {
+		return ""
+	}
+	res := ins.Diff.Resource
+	if res.Identifier == "" {
+		return ""
+	}
+	if res.Kind == actions.ResourceShell {
+		return ""
+	}
+	return res.Identifier
+}
+
 // planSymbol returns the leading symbol for a per-step plan line.
 //
 //	↑  WouldChange  — applying this step would change state
@@ -312,6 +331,16 @@ func FormatPlanText(p *plan.Plan, showOrigins bool, showDiff bool) error {
 			line = fmt.Sprintf("%-50s  %s", line, "skipped (tags)")
 		}
 		fmt.Println(line)
+
+		// Resource identifier (path / package / service unit). The
+		// JSON plan has always had this on inspection.diff.resource;
+		// the text plan was missing it, so "would create directory"
+		// gave no clue what would be created. Suppressed for actions
+		// that don't emit a Diff (log, cmd, assert) and for shell-kind
+		// targets where the reason already reads "would run: <cmd>".
+		if id := planResourceIdentifier(ins); id != "" {
+			fmt.Printf("    → %s\n", id)
+		}
 
 		// Spec-22 phase 6: show a one-line cost summary under any
 		// step that would change. Suppressed for ok/skipped to keep
