@@ -76,10 +76,15 @@ func (h *Handler) applyTool(ctx actions.Context, step *config.Step) (actions.Res
 	}
 
 	result := executor.NewResult()
+	result.Operation = executor.OpUpdate
+	result.Target = t.Name
 	result.StartTime = time.Now()
 	defer func() {
 		result.EndTime = time.Now()
 		result.Duration = result.EndTime.Sub(result.StartTime)
+		if !result.Changed && !result.WouldChange && !result.Failed {
+			result.Operation = executor.OpNoop
+		}
 	}()
 
 	backend, err := Get(t.Backend)
@@ -355,6 +360,8 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 
 	result := executor.NewResult()
 	result.Checkable = true
+	result.Operation = executor.OpUpdate
+	result.Target = t.Name
 
 	// Standard layout installDir is passed through to Locate. URL-based
 	// backends use it as their root; mise's Locate ignores it and

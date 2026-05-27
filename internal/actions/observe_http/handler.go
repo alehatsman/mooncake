@@ -89,7 +89,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 
 	if ctx.Mode() == actions.ModePlan {
 		env := actions.PlanDeferred(HTTPObservation{URL: o.URL, Method: method})
-		publish(result, env)
+		result.PublishObservation(env, o.URL)
 		result.Checkable = true
 		result.Reason = fmt.Sprintf("would observe %s %s (deferred to apply)", method, o.URL)
 		return result, nil
@@ -146,13 +146,13 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 	req, err := httputil.NewRequest(context.Background(), method, rendered, nil)
 	if err != nil {
 		obs.LatencyMs = time.Since(start).Milliseconds()
-		publish(result, actions.ObserveResult{Value: obs, AsOf: time.Now(), Error: err.Error()})
+		result.PublishObservation(actions.ObserveResult{Value: obs, AsOf: time.Now(), Error: err.Error()}, rendered)
 		return result, nil
 	}
 	resp, err := client.Do(req)
 	obs.LatencyMs = time.Since(start).Milliseconds()
 	if err != nil {
-		publish(result, actions.ObserveResult{Value: obs, AsOf: time.Now(), Error: err.Error()})
+		result.PublishObservation(actions.ObserveResult{Value: obs, AsOf: time.Now(), Error: err.Error()}, rendered)
 		return result, nil
 	}
 	defer resp.Body.Close() //nolint:errcheck
@@ -179,17 +179,8 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		found = false
 	}
 
-	publish(result, actions.ObserveResult{Found: found, Value: obs, AsOf: time.Now()})
+	result.PublishObservation(actions.ObserveResult{Found: found, Value: obs, AsOf: time.Now()}, rendered)
 	return result, nil
-}
-
-func publish(r *executor.Result, env actions.ObserveResult) {
-	r.SetData(map[string]any{
-		"found": env.Found,
-		"value": actions.ObserveValueToMap(env.Value),
-		"as_of": env.AsOf.Format(time.RFC3339),
-		"error": env.Error,
-	})
 }
 
 // --- Spec-22 ABI no-mutation specialization ---------------------------------

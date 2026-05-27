@@ -117,8 +117,15 @@ func TestBrew_PresentAlreadyTapped(t *testing.T) {
 	if len(s.calls) != 0 {
 		t.Errorf("Exec calls = %v; want none on noop", s.calls)
 	}
-	if r.Data["operation"] != "already-tapped" {
-		t.Errorf("operation = %v, want already-tapped", r.Data["operation"])
+	// brew-specific phase moved from Data["operation"] to Data["phase"]
+	// when the envelope claimed `operation` for the OpX taxonomy
+	// (create/update/delete/noop). The fine-grained "already-tapped"
+	// verb stays here for the brew-aware consumer.
+	if r.Data["phase"] != "already-tapped" {
+		t.Errorf("phase = %v, want already-tapped", r.Data["phase"])
+	}
+	if r.Operation != executor.OpNoop {
+		t.Errorf("envelope Operation = %v, want noop", r.Operation)
 	}
 }
 

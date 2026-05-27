@@ -97,6 +97,7 @@ func (h *Handler) runImpl(ctx actions.Context, step *config.Step) (actions.Resul
 
 	// Create result
 	result := executor.NewResult()
+	result.Operation = executor.OpQuery
 	result.StartTime = time.Now()
 	result.Changed = false // Tree generation never "changes" anything
 
@@ -116,6 +117,7 @@ func (h *Handler) runImpl(ctx actions.Context, step *config.Step) (actions.Resul
 	if err != nil {
 		return result, fmt.Errorf("failed to expand path: %w", err)
 	}
+	result.Target = renderedPath
 
 	// Validate path exists
 	if _, statErr := os.Stat(renderedPath); statErr != nil {

@@ -135,10 +135,15 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 
 	result := executor.NewResult()
 	result.Checkable = true
+	result.Operation = executor.OpUpdate
+	result.Target = dest
 	result.StartTime = time.Now()
 	defer func() {
 		result.EndTime = time.Now()
 		result.Duration = result.EndTime.Sub(result.StartTime)
+		if !result.Changed && !result.WouldChange && !result.Failed {
+			result.Operation = executor.OpNoop
+		}
 	}()
 
 	followSymlinks := cp.FollowSymlinks == nil || *cp.FollowSymlinks

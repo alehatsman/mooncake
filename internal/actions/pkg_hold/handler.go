@@ -197,6 +197,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 	sort.Strings(toHold)
 	sort.Strings(toUnhold)
 
+	result.Target = strings.Join(pkgs, ",")
 	result.Data = map[string]interface{}{
 		"manager":   manager,
 		"state":     state,
@@ -206,9 +207,11 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 	}
 
 	if len(toHold) == 0 && len(toUnhold) == 0 {
+		result.Operation = executor.OpNoop
 		result.Reason = fmt.Sprintf("packages already at desired state (%s)", state)
 		return result, nil
 	}
+	result.Operation = executor.OpUpdate
 
 	reason := summarize(state, toHold, toUnhold)
 	if ctx.Mode() == actions.ModePlan {

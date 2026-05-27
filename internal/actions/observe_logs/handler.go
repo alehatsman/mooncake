@@ -138,6 +138,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 	}
 
 	source, identifier := classifySource(o)
+	target := source + ":" + identifier
 
 	if ctx.Mode() == actions.ModePlan {
 		env := actions.PlanDeferred(LogObservation{
@@ -145,7 +146,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 			Identifier: identifier,
 			Window:     since.String(),
 		})
-		publish(result, env)
+		result.PublishObservation(env, target)
 		result.Checkable = true
 		result.Reason = fmt.Sprintf("would observe %s %s (deferred to apply)", source, identifier)
 		return result, nil
@@ -179,7 +180,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 	if err != nil {
 		env.Error = err.Error()
 	}
-	publish(result, env)
+	result.PublishObservation(env, target)
 	return result, nil
 }
 
@@ -228,15 +229,6 @@ func matchLines(rxs []*regexp.Regexp, patterns []string, lines []string, samples
 		}
 	}
 	return out
-}
-
-func publish(r *executor.Result, env actions.ObserveResult) {
-	r.SetData(map[string]any{
-		"found": env.Found,
-		"value": actions.ObserveValueToMap(env.Value),
-		"as_of": env.AsOf.Format(time.RFC3339),
-		"error": env.Error,
-	})
 }
 
 // --- Spec-22 ABI no-mutation specialization ---------------------------------

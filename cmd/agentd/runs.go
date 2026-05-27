@@ -332,24 +332,26 @@ func streamRunEvents(hc *http.Client, runID string) error {
 		case "run.completed":
 			sawRunCompleted = true
 			var d struct {
-				OK       int    `json:"success_steps"`
-				Changed  int    `json:"changed_steps"`
-				Skipped  int    `json:"skipped_steps"`
-				Failed   int    `json:"failed_steps"`
-				Reverted int    `json:"reverted_steps"`
-				Dur      int64  `json:"duration_ms"`
-				Success  bool   `json:"success"`
-				Error    string `json:"error_message"`
+				OK        int    `json:"success_steps"`
+				Changed   int    `json:"changed_steps"`
+				Skipped   int    `json:"skipped_steps"`
+				Failed    int    `json:"failed_steps"`
+				Reverted  int    `json:"reverted_steps"`
+				Cancelled int    `json:"cancelled_steps"`
+				Dur       int64  `json:"duration_ms"`
+				Success   bool   `json:"success"`
+				Error     string `json:"error_message"`
 			}
 			_ = json.Unmarshal(env.Data, &d)
-			var recap string
+			recap := fmt.Sprintf("RECAP  ok=%d  changed=%d  skipped=%d  failed=%d",
+				d.OK, d.Changed, d.Skipped, d.Failed)
 			if d.Reverted > 0 {
-				recap = fmt.Sprintf("RECAP  ok=%d  changed=%d  skipped=%d  failed=%d  reverted=%d  %dms",
-					d.OK, d.Changed, d.Skipped, d.Failed, d.Reverted, d.Dur)
-			} else {
-				recap = fmt.Sprintf("RECAP  ok=%d  changed=%d  skipped=%d  failed=%d  %dms",
-					d.OK, d.Changed, d.Skipped, d.Failed, d.Dur)
+				recap += fmt.Sprintf("  reverted=%d", d.Reverted)
 			}
+			if d.Cancelled > 0 {
+				recap += fmt.Sprintf("  cancelled=%d", d.Cancelled)
+			}
+			recap += fmt.Sprintf("  %dms", d.Dur)
 			if d.Success {
 				fmt.Printf("\n%s\n", color.GreenString(recap))
 			} else {

@@ -168,6 +168,8 @@ func RunRead(ctx actions.Context, rf *config.ReadFile, parse func([]byte, *any) 
 	}
 
 	result := executor.NewResult()
+	result.Operation = executor.OpQuery
+	result.Target = rf.Path
 	result.StartTime = time.Now()
 	defer func() {
 		result.EndTime = time.Now()

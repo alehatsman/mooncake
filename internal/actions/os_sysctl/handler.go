@@ -154,10 +154,11 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		return result, err
 	}
 
+	result.Operation = executor.Operation(plan.operation)
+	result.Target = rendered.name
 	result.Data = map[string]interface{}{
-		"name":      rendered.name,
-		"operation": plan.operation,
-		"path":      sysctlPaths.persistFile,
+		"name": rendered.name,
+		"path": sysctlPaths.persistFile,
 	}
 
 	if !plan.changed {

@@ -286,6 +286,8 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 
 	// Create result
 	result := executor.NewResult()
+	result.Operation = executor.OpQuery
+	result.Target = validate.ArtifactFile
 	result.Changed = false // Validation never changes state
 
 	if len(violations) > 0 {

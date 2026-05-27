@@ -70,8 +70,12 @@ func ObserveValueToMap(v any) any {
 // observe.* handler returns in plan mode by default (per spec-59 G4).
 // The shape matches a real observation so downstream templates that
 // reference {{ name.value.<field> }} don't blow up in plan mode — they
-// see a zero value of the typed Value, with Found=false and the
-// reason in Error.
+// see a zero value of the typed Value with Found=false.
+//
+// Proposal-06: Error stays empty here. A deferred observation is not
+// a probe failure — handlers carry the "would observe X (deferred)"
+// explanation in executor.Result.Reason instead, which surfaces in
+// plan output without lying about whether the step failed.
 //
 // emptyValue should be a zero-value of the handler's typed payload
 // struct, so templates that index into it still type-check.
@@ -80,6 +84,5 @@ func PlanDeferred(emptyValue any) ObserveResult {
 		Found: false,
 		Value: emptyValue,
 		AsOf:  time.Now(),
-		Error: "observation deferred to apply mode",
 	}
 }

@@ -106,10 +106,19 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 	plan := ctx.Mode() == actions.ModePlan
 	res := executor.NewResult()
 	res.Checkable = true
+	res.Target = renderedName
+	if state == stateAbsent {
+		res.Operation = executor.OpDelete
+	} else if exists {
+		res.Operation = executor.OpUpdate
+	} else {
+		res.Operation = executor.OpCreate
+	}
 
 	switch state {
 	case statePresent:
 		if exists && !img.ForcePull {
+			res.Operation = executor.OpNoop
 			res.Reason = fmt.Sprintf("image %s already present", renderedName)
 			return res, nil
 		}

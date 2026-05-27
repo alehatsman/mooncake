@@ -98,6 +98,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 	t := step.WindowsScheduledTask
 	result := executor.NewResult()
 	result.Checkable = true
+	result.Target = t.Name
 
 	if runtime.GOOS != "windows" {
 		return result, fmt.Errorf("%s: only Windows is supported; got %s", actionName, runtime.GOOS)
@@ -113,9 +114,11 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 	switch state {
 	case stateAbsent:
 		if !exists {
+			result.Operation = executor.OpNoop
 			result.Reason = "task already absent"
 			return result, nil
 		}
+		result.Operation = executor.OpDelete
 		if ctx.Mode() == actions.ModePlan {
 			result.WouldChange = true
 			result.Reason = "would remove task " + t.Name
@@ -138,8 +141,14 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 			return result, fmt.Errorf("render xml: %w", err)
 		}
 		if exists && winutil.NormaliseTaskXML(currentXML) == winutil.NormaliseTaskXML(desiredXML) {
+			result.Operation = executor.OpNoop
 			result.Reason = "task already at desired state"
 			return result, nil
+		}
+		if !exists {
+			result.Operation = executor.OpCreate
+		} else {
+			result.Operation = executor.OpUpdate
 		}
 		if ctx.Mode() == actions.ModePlan {
 			result.WouldChange = true

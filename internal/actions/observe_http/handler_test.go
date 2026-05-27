@@ -127,16 +127,20 @@ func TestRun_UnreachableHost(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Run: %v", err)
 	}
-	data := res.(*executor.Result).Data
-	if found, _ := data["found"].(bool); found {
+	r := res.(*executor.Result)
+	if found, _ := r.Data["found"].(bool); found {
 		t.Errorf("unreachable: found must be false")
 	}
-	val, _ := data["value"].(map[string]any)
+	val, _ := r.Data["value"].(map[string]any)
 	if reach, _ := val["reachable"].(bool); reach {
 		t.Errorf("unreachable: reachable must be false")
 	}
-	if errStr, _ := data["error"].(string); errStr == "" {
-		t.Errorf("unreachable: error must be non-empty")
+	// Proposal-06: transport failure surfaces on the envelope, not Data.
+	if r.Error == "" {
+		t.Errorf("unreachable: envelope Error must be non-empty")
+	}
+	if !r.Failed {
+		t.Errorf("unreachable: envelope Failed must be true")
 	}
 }
 

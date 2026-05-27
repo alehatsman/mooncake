@@ -150,11 +150,16 @@ type RunCompletedData struct {
 	// RevertedSteps counts steps whose Changed=true result was undone
 	// by a transaction's LIFO Reverse() pass. Already subtracted from
 	// ChangedSteps so callers don't double-count (MT-45).
-	RevertedSteps int    `json:"reverted_steps,omitempty"`
-	DurationMs    int64  `json:"duration_ms"`
-	Success       bool   `json:"success"`
-	ErrorMessage  string `json:"error_message,omitempty"`
-	CheckMode     bool   `json:"check_mode,omitempty"`
+	RevertedSteps int `json:"reverted_steps,omitempty"`
+	// CancelledSteps counts steps interrupted mid-execution (SIGINT,
+	// fleet kill, timeout) per proposal-02. Tracked separately from
+	// FailedSteps so the exit-code aggregator can map cancelled>0 to
+	// 130 (the SIGINT-equivalent exit) rather than a generic failure.
+	CancelledSteps int    `json:"cancelled_steps,omitempty"`
+	DurationMs     int64  `json:"duration_ms"`
+	Success        bool   `json:"success"`
+	ErrorMessage   string `json:"error_message,omitempty"`
+	CheckMode      bool   `json:"check_mode,omitempty"`
 }
 
 // StepStartedData contains data for step.started events

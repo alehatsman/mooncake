@@ -876,8 +876,31 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		packages = append(packages, expanded...)
 	}
 
+	// Proposal-01 envelope: Operation + Target derived from the
+	// requested state and the package list. Inner helpers may flip
+	// Operation to OpNoop when nothing was installed/removed; the
+	// wrapper below patches that after they return.
+	envelopeOp := executor.OpCreate
+	if state == stateLatest {
+		envelopeOp = executor.OpUpdate
+	} else if state == stateAbsent {
+		envelopeOp = executor.OpDelete
+	}
+	target := strings.Join(packages, ",")
+
+	postProcess := func(res actions.Result, err error) (actions.Result, error) {
+		if r, ok := res.(*executor.Result); ok && r != nil {
+			r.Operation = envelopeOp
+			r.Target = target
+			if !r.Changed && !r.WouldChange && err == nil && r.Operation != executor.OpNoop {
+				r.Operation = executor.OpNoop
+			}
+		}
+		return res, err
+	}
+
 	if ctx.Mode() == actions.ModePlan {
-		return h.runPlan(ec, manager, state, packages, pkg)
+		return postProcess(h.runPlan(ec, manager, state, packages, pkg))
 	}
 
 	// ModeApply — preserve the legacy Execute behavior. Upgrade and
@@ -886,7 +909,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 	result.SetChanged(false)
 
 	if pkg.Upgrade {
-		return h.executeUpgrade(ec, manager, pkg, step.ShouldBecome())
+		return postProcess(h.executeUpgrade(ec, manager, pkg, step.ShouldBecome()))
 	}
 
 	if pkg.UpdateCache {
@@ -897,9 +920,9 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 
 	switch state {
 	case statePresent, stateLatest:
-		return h.installPackages(ec, manager, packages, state == stateLatest, pkg.Cask, pkg.Extra, step.ShouldBecome())
+		return postProcess(h.installPackages(ec, manager, packages, state == stateLatest, pkg.Cask, pkg.Extra, step.ShouldBecome()))
 	case stateAbsent:
-		return h.removePackages(ec, manager, packages, pkg.Cask, pkg.Extra, step.ShouldBecome())
+		return postProcess(h.removePackages(ec, manager, packages, pkg.Cask, pkg.Extra, step.ShouldBecome()))
 	default:
 		return nil, fmt.Errorf("unsupported state: %s", state)
 	}

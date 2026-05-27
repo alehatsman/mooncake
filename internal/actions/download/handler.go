@@ -120,12 +120,17 @@ func (h *Handler) runApply(ctx actions.Context, step *config.Step) (actions.Resu
 
 	// Create result
 	result := executor.NewResult()
+	result.Operation = executor.OpCreate
+	result.Target = renderedDest
 	result.StartTime = time.Now()
 	result.Changed = false
 
 	defer func() {
 		result.EndTime = time.Now()
 		result.Duration = result.EndTime.Sub(result.StartTime)
+		if !result.Changed && !result.WouldChange && !result.Failed {
+			result.Operation = executor.OpNoop
+		}
 	}()
 
 	// Check if destination exists

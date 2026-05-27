@@ -85,7 +85,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 
 	if ctx.Mode() == actions.ModePlan {
 		env := actions.PlanDeferred(GPUObservation{})
-		publish(result, env)
+		result.PublishObservation(env, "host")
 		result.Checkable = true
 		result.Reason = "would observe GPU state (deferred to apply)"
 		return result, nil
@@ -107,7 +107,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		// Count.
 		env.Error = err.Error()
 	}
-	publish(result, env)
+	result.PublishObservation(env, "host")
 	return result, nil
 }
 
@@ -147,15 +147,6 @@ func buildObservation(in []metrics.GPUMetrics, index *int) GPUObservation {
 		out.Vendor = ""
 	}
 	return out
-}
-
-func publish(r *executor.Result, env actions.ObserveResult) {
-	r.SetData(map[string]any{
-		"found": env.Found,
-		"value": actions.ObserveValueToMap(env.Value),
-		"as_of": env.AsOf.Format(time.RFC3339),
-		"error": env.Error,
-	})
 }
 
 // --- Spec-22 ABI no-mutation specialization ---------------------------------

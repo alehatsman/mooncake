@@ -158,12 +158,20 @@ func TestRun_PlanMode_Defers(t *testing.T) {
 		t.Fatalf("expected *executor.Result; got %T", res)
 	}
 	data := er.Data
-	// Plan-mode envelope: Found=false, Error includes "deferred"
+	// Proposal-06 plan-mode envelope: Found=false, envelope.Reason
+	// carries the "would observe X (deferred)" explanation. Error stays
+	// empty — a deferred observation is not a failure.
 	if found, _ := data["found"].(bool); found {
 		t.Errorf("plan-mode Found should be false; got true")
 	}
-	if errStr, _ := data["error"].(string); errStr == "" {
-		t.Errorf("plan-mode Error should explain the defer; got empty")
+	if er.Reason == "" {
+		t.Errorf("plan-mode Reason should explain the defer; got empty")
+	}
+	if er.Error != "" {
+		t.Errorf("plan-mode envelope Error must be empty; got %q", er.Error)
+	}
+	if er.Failed {
+		t.Errorf("plan-mode Failed must be false; got true")
 	}
 	// Typed payload should still be present (zero-value PortObservation
 	// rendered as map[string]any for template-engine compat)

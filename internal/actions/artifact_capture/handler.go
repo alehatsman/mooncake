@@ -256,6 +256,8 @@ func (h *Handler) runApply(ctx actions.Context, step *config.Step) (actions.Resu
 
 	// Create result
 	result := executor.NewResult()
+	result.Operation = executor.OpCreate
+	result.Target = artifactDir
 	result.Changed = anyChanged
 	result.Stdout = fmt.Sprintf("Captured %d file changes to %s", len(fileChanges), artifactDir)
 

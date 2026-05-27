@@ -182,6 +182,12 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		reason += " (+autoremove)"
 	}
 
+	result.Operation = executor.OpUpdate
+	if len(names) > 0 {
+		result.Target = strings.Join(names, ",")
+	} else {
+		result.Target = manager
+	}
 	result.Data = map[string]interface{}{
 		"manager":    manager,
 		"attempted":  names,

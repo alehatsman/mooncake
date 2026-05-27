@@ -159,6 +159,8 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		return ni < nj
 	})
 
+	result.Operation = executor.OpQuery
+	result.Target = manager
 	result.Data = map[string]interface{}{
 		"manager":  manager,
 		"packages": pkgs,

@@ -36,17 +36,23 @@ type ExecutionStats struct {
 	// Changed at rollback time so the recap reflects net effect, not
 	// gross writes-then-undos.
 	Reverted *int
+	// Cancelled counts steps interrupted mid-execution per proposal-02
+	// (SIGINT, fleet kill, timeout). Distinct from Failed: a cancelled
+	// step didn't fail on its own merits; the exit-code aggregator
+	// maps cancelled>0 to 130, failed>0 to 1.
+	Cancelled *int
 }
 
 // NewExecutionStats creates a new ExecutionStats with all counters initialized to zero
 func NewExecutionStats() *ExecutionStats {
 	return &ExecutionStats{
-		Global:   new(int),
-		Executed: new(int),
-		Skipped:  new(int),
-		Failed:   new(int),
-		Changed:  new(int),
-		Reverted: new(int),
+		Global:    new(int),
+		Executed:  new(int),
+		Skipped:   new(int),
+		Failed:    new(int),
+		Changed:   new(int),
+		Reverted:  new(int),
+		Cancelled: new(int),
 	}
 }
 

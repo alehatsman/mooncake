@@ -227,6 +227,12 @@ func planResult(drift []driftEntry) *executor.Result {
 func apply(_ actions.Context, scope, repo string, drift []driftEntry) (actions.Result, error) {
 	result := executor.NewResult()
 	result.Checkable = true
+	result.Operation = executor.OpUpdate
+	if repo != "" {
+		result.Target = repo + ":" + scope
+	} else {
+		result.Target = scope
+	}
 	result.Data = map[string]any{
 		"scope":   scope,
 		"changes": len(drift),
@@ -234,6 +240,7 @@ func apply(_ actions.Context, scope, repo string, drift []driftEntry) (actions.R
 
 	if len(drift) == 0 {
 		result.SetChanged(false)
+		result.Operation = executor.OpNoop
 		result.Reason = "all keys already at desired state"
 		// Apply is a noop — leave ReverseData nil so Reverse
 		// returns (nil, nil) per the Reverser contract.

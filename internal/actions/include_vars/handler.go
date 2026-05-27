@@ -108,6 +108,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 	}
 
 	result := executor.NewResult()
+	result.Operation = executor.OpNoop
 	result.Changed = false
 	return result, nil
 }

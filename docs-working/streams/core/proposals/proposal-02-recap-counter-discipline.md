@@ -1,6 +1,13 @@
 # Proposal 02: Recap counter discipline — `ok / changed / skipped / failed / reverted / cancelled`
 
-**Status:** Draft proposal
+**Status:** SHIPPED (2026-05-28, worktree-result-envelope) — bundled
+with proposals 01 + 06. `cancelled` counter is in
+events.RunCompletedData + ExecutionStats + the recap renderer;
+the macro-level SIGINT-loop between-step bump is in place. Per-
+step "in-flight at cancel" attribution is a follow-up — the loop
+sees the cancel between steps, not from the in-flight handler.
+Exit code rules (failed>0 → 1, cancelled>0 → 130) are honored at
+the existing CLI signal-handler layer in cmd/kernel/apply.go.
 **Effort:** S (~2 days; mostly executor + renderer)
 **Value:** High — the recap is the user's eyeball summary AND CI's
 exit signal. Multiple findings traced to counter ambiguity. A

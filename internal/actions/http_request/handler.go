@@ -461,6 +461,8 @@ func (h *Handler) IsRetryable(result actions.Result, err error, step *config.Ste
 func (h *Handler) runPlan(ctx actions.Context, step *config.Step, rr *renderedRequest) (actions.Result, error) {
 	res := executor.NewResult()
 	res.Checkable = true
+	res.Operation = executor.OpUpdate
+	res.Target = rr.url
 	r := step.HTTPRequest
 
 	bodyHint := bodyHintFor(rr)
@@ -608,6 +610,8 @@ func evalCreatesWhen(ctx actions.Context, expr string, probeFact map[string]inte
 // by the executor post-loop with the cross-attempt count.
 func (h *Handler) runApply(ctx actions.Context, step *config.Step, rr *renderedRequest) (actions.Result, error) {
 	res := executor.NewResult()
+	res.Operation = executor.OpUpdate
+	res.Target = rr.url
 	res.StartTime = time.Now()
 	defer func() {
 		res.EndTime = time.Now()

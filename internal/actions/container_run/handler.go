@@ -124,10 +124,19 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 	plan := ctx.Mode() == actions.ModePlan
 	res := executor.NewResult()
 	res.Checkable = true
+	res.Target = name
+	if state == stateAbsent {
+		res.Operation = executor.OpDelete
+	} else if cur.Exists {
+		res.Operation = executor.OpUpdate
+	} else {
+		res.Operation = executor.OpCreate
+	}
 
 	switch state {
 	case stateAbsent:
 		if !cur.Exists {
+			res.Operation = executor.OpNoop
 			res.Reason = fmt.Sprintf("container %s already absent", name)
 			return res, nil
 		}

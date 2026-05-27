@@ -196,6 +196,8 @@ func (h *Handler) executeShellCommand(ctx actions.Context, step *config.Step, re
 func (h *Handler) executeShellCommandRaw(ctx actions.Context, step *config.Step, renderedCommand string) (actions.Result, error) {
 	// Create result
 	result := executor.NewResult()
+	result.Operation = executor.OpUpdate
+	result.Target = renderedCommand
 	result.StartTime = time.Now()
 	defer func() {
 		result.EndTime = time.Now()

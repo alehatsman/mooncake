@@ -132,10 +132,11 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 	}
 
 	plan := computePlan(current, des)
+	result.Operation = executor.Operation(plan.operation)
+	result.Target = des.name
 	result.Data = map[string]interface{}{
-		"name":      des.name,
-		"operation": plan.operation,
-		"changes":   plan.changes,
+		"name":    des.name,
+		"changes": plan.changes,
 	}
 
 	if !plan.changed {

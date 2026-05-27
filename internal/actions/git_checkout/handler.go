@@ -171,6 +171,8 @@ func planResult(currentSHA, targetSHA, ref string) *executor.Result {
 func apply(ctx actions.Context, g *config.GitCheckout, ref, targetSHA, dest, beforeSHA string) (actions.Result, error) {
 	result := executor.NewResult()
 	result.Checkable = true
+	result.Operation = executor.OpUpdate
+	result.Target = dest
 	result.Data = map[string]any{
 		"dest":         dest,
 		"ref_resolved": ref,
@@ -178,6 +180,7 @@ func apply(ctx actions.Context, g *config.GitCheckout, ref, targetSHA, dest, bef
 
 	if beforeSHA == targetSHA {
 		result.SetChanged(false)
+		result.Operation = executor.OpNoop
 		result.Data["sha"] = targetSHA
 		result.Reason = fmt.Sprintf("already at %s (%s)", shortSHA(targetSHA), ref)
 		// Apply is a noop — leave ReverseData nil so Reverse

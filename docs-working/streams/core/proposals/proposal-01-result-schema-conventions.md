@@ -1,7 +1,14 @@
 # Proposal 01: Result schema conventions — make every action's output predictable
 
-**Status:** Draft proposal
-**Effort:** M (~5 days; cross-cuts ~30 handlers)
+**Status:** SHIPPED (2026-05-28, worktree-result-envelope) — bundled
+with proposals 02 + 06. One naming divergence from the draft: the
+action-specific payload key is `data` (not `value`) at the
+operator's request — shorter, matches the pre-existing Go field
+name, no churn. Templates access typed fields as
+`register_name.data.<field>`. No dual-emit window; the registered
+shape changed in one cut.
+**Effort:** M (~5 days; cross-cuts ~30 handlers) — actual: ~one
+session including the 06 + 02 bundle.
 **Value:** High — agents and humans both consume action results.
 Today each handler returns its own shape. Conventions exist
 informally; codifying them lets agents parse without per-action

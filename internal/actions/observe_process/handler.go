@@ -86,11 +86,13 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		result.Duration = result.EndTime.Sub(result.StartTime)
 	}()
 
+	target := selectorString(o)
+
 	if ctx.Mode() == actions.ModePlan {
 		env := actions.PlanDeferred(ProcessObservation{})
-		publish(result, env)
+		result.PublishObservation(env, target)
 		result.Checkable = true
-		result.Reason = fmt.Sprintf("would observe process %s (deferred to apply)", selectorString(o))
+		result.Reason = fmt.Sprintf("would observe process %s (deferred to apply)", target)
 		return result, nil
 	}
 
@@ -107,7 +109,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 	if err != nil && !obs.Running && !errors.Is(err, errNoMatch) {
 		env.Error = err.Error()
 	}
-	publish(result, env)
+	result.PublishObservation(env, target)
 	return result, nil
 }
 
@@ -255,15 +257,6 @@ func selectorString(o *config.ObserveProcess) string {
 		return "name=" + o.Name
 	}
 	return "pattern=" + o.Pattern
-}
-
-func publish(r *executor.Result, env actions.ObserveResult) {
-	r.SetData(map[string]any{
-		"found": env.Found,
-		"value": actions.ObserveValueToMap(env.Value),
-		"as_of": env.AsOf.Format(time.RFC3339),
-		"error": env.Error,
-	})
 }
 
 // --- Spec-22 ABI no-mutation specialization ---------------------------------

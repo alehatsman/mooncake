@@ -67,12 +67,15 @@ type StepResult struct {
 // events.RunCompletedData so MCP / agent / SDK callers can map
 // 1-to-1.
 type RunSummary struct {
-	TotalSteps   int
-	Ok           int
-	Changed      int
-	Skipped      int
-	Failed       int
-	Reverted     int
+	TotalSteps int
+	Ok         int
+	Changed    int
+	Skipped    int
+	Failed     int
+	Reverted   int
+	// Cancelled counts steps interrupted mid-execution per proposal-02
+	// (SIGINT, fleet kill, timeout).
+	Cancelled    int
 	DurationMs   int64
 	Success      bool
 	ErrorMessage string

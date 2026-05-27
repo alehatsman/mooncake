@@ -94,8 +94,8 @@ func TestPlan_CreateWhenAbsent(t *testing.T) {
 		t.Fatal(err)
 	}
 	r := res.(*executor.Result)
-	if !r.WouldChange || r.Data["operation"] != "create" {
-		t.Errorf("expected create plan; reason=%q op=%v", r.Reason, r.Data["operation"])
+	if !r.WouldChange || string(r.Operation) != "create" {
+		t.Errorf("expected create plan; reason=%q op=%v", r.Reason, r.Operation)
 	}
 }
 
@@ -183,8 +183,8 @@ func TestPlan_AbsentRemovesWhenPresent(t *testing.T) {
 	step := &config.Step{OsUser: &config.OsUser{Name: "deploy", State: "absent", RemoveHome: true}}
 	res, _ := (&Handler{}).Run(newCtx(t, true), step)
 	r := res.(*executor.Result)
-	if !r.WouldChange || r.Data["operation"] != "remove" {
-		t.Errorf("expected remove plan; reason=%q op=%v", r.Reason, r.Data["operation"])
+	if !r.WouldChange || string(r.Operation) != "remove" {
+		t.Errorf("expected remove plan; reason=%q op=%v", r.Reason, r.Operation)
 	}
 }
 

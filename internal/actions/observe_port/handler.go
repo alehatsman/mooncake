@@ -110,7 +110,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 			Port:      o.Port,
 			LocalAddr: addr,
 		})
-		publish(result, envelope)
+		result.PublishObservation(envelope, addr)
 		result.Checkable = true
 		result.Reason = fmt.Sprintf("would observe %s %s (deferred to apply)", strings.ToUpper(protocol), addr)
 		return result, nil
@@ -129,7 +129,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		Value: obs,
 		AsOf:  time.Now(),
 	}
-	publish(result, envelope)
+	result.PublishObservation(envelope, addr)
 
 	ctx.GetLogger().Debugf("%s %s = open:%v", actionName, addr, obs.Open)
 	return result, nil
@@ -170,14 +170,6 @@ func resolveHost(ctx actions.Context, host string) (string, error) {
 // The typed Value is round-tripped through JSON (via
 // actions.ObserveValueToMap) so the template engine sees a nested
 // map[string]any keyed by the struct's json tags.
-func publish(r *executor.Result, env actions.ObserveResult) {
-	r.SetData(map[string]any{
-		"found": env.Found,
-		"value": actions.ObserveValueToMap(env.Value),
-		"as_of": env.AsOf.Format(time.RFC3339),
-		"error": env.Error,
-	})
-}
 
 // --- Spec-22 ABI sub-interfaces (no-mutation specialization) -----------------
 

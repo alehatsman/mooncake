@@ -187,12 +187,13 @@ func TestRun_FileSource_MissingPath(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Run: %v", err)
 	}
-	data := res.(*executor.Result).Data
-	if found, _ := data["found"].(bool); found {
+	r := res.(*executor.Result)
+	if found, _ := r.Data["found"].(bool); found {
 		t.Errorf("expected found=false for missing file")
 	}
-	if errStr, _ := data["error"].(string); errStr == "" {
-		t.Errorf("expected error message for missing file")
+	// Proposal-06: file-not-found is a probe failure → envelope Error.
+	if r.Error == "" {
+		t.Errorf("expected envelope Error for missing file")
 	}
 }
 

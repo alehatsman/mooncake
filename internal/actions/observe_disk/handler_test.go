@@ -68,12 +68,18 @@ func TestRun_BadPath(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Run: %v", err)
 	}
-	data := res.(*executor.Result).Data
-	if found, _ := data["found"].(bool); found {
+	r := res.(*executor.Result)
+	if found, _ := r.Data["found"].(bool); found {
 		t.Errorf("expected found=false for nonexistent path")
 	}
-	if errStr, _ := data["error"].(string); errStr == "" {
-		t.Errorf("expected error message for bad path")
+	// Proposal-06: probe-side failure (statfs of a missing path) lifts
+	// to envelope Error+Failed; the diagnostic no longer hides inside
+	// Data["error"].
+	if r.Error == "" {
+		t.Errorf("expected envelope Error for bad path")
+	}
+	if !r.Failed {
+		t.Errorf("expected Failed=true for probe-side failure")
 	}
 }
 

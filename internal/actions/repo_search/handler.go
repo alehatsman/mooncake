@@ -115,6 +115,7 @@ func (h *Handler) runImpl(ctx actions.Context, step *config.Step) (actions.Resul
 
 	// Create result
 	result := executor.NewResult()
+	result.Operation = executor.OpQuery
 	result.StartTime = time.Now()
 	result.Changed = false // Search operations never "change" anything
 
@@ -131,6 +132,7 @@ func (h *Handler) runImpl(ctx actions.Context, step *config.Step) (actions.Resul
 
 	// Expand and render path
 	renderedPath, err := ec.Svc.PathUtil.ExpandPath(searchPath, ec.CurrentDir, ctx.GetVariables())
+	result.Target = renderedPath
 	if err != nil {
 		return result, fmt.Errorf("failed to expand path: %w", err)
 	}

@@ -515,6 +515,69 @@ func emitStepSkipped(step config.Step, ec *ExecutionContext, stepName, skipReaso
 	})
 }
 
+// syncResultEnvelope reconciles a handler's err return with the
+// proposal-01 envelope fields on r so the JSON shape matches the
+// run-level outcome. Called once per Run from dispatchRunner.
+//
+// Two stories live here:
+//
+//   - Proposal-06 / spec-69 finding B0: many handlers (os.user,
+//     os.cron, pkg.upgrade, wait.http, os.mount, os.firewall) return
+//     (Result with Failed=false, err with diagnostic). Pre-proposal
+//     the envelope said success while the run said failure. Sync
+//     Failed / Rc / Error here so handler authors don't have to
+//     remember to set both.
+//
+//   - Proposal-02: when the run-wide context (runCtx) is cancelled at
+//     the moment the handler errors, classify as Cancelled rather
+//     than Failed. The exit-code aggregator and recap counters treat
+//     them differently — cancelled→130, failed→1. CancelledReason is
+//     derived from runCtx.Err(): DeadlineExceeded → "timeout", any
+//     other Canceled → "sigint" (the operator-facing default; fleet-
+//     kill / programmatic cancel land here too with the same reason
+//     code, which is the lossy part of the F016-without-handler-
+//     attribution compromise).
+//
+// stats may be nil for callers that don't track counters; the
+// Cancelled bump is then skipped. r must be non-nil; the typed-nil
+// guard lives at the call site.
+func syncResultEnvelope(runCtx context.Context, r *Result, err error, stats *ExecutionStats) {
+	if err == nil {
+		return
+	}
+	// Run-wide cancel takes precedence over plain failure — a step
+	// that errored because the run was being torn down isn't a
+	// handler-level fault.
+	if runCtx != nil && runCtx.Err() != nil {
+		if !r.Cancelled {
+			r.Cancelled = true
+			if stats != nil {
+				incStat(stats.Cancelled)
+			}
+		}
+		if r.CancelledReason == "" {
+			if errors.Is(runCtx.Err(), context.DeadlineExceeded) {
+				r.CancelledReason = CancelledReasonTimeout
+			} else {
+				r.CancelledReason = CancelledReasonSigint
+			}
+		}
+		if r.Error == "" {
+			r.Error = err.Error()
+		}
+		return
+	}
+	if !r.Failed {
+		r.Failed = true
+		if r.Rc == 0 {
+			r.Rc = 1
+		}
+	}
+	if r.Error == "" {
+		r.Error = err.Error()
+	}
+}
+
 func handleStepError(step config.Step, ec *ExecutionContext, stepErr error, stepID, stepName string, depth int, stepDuration time.Duration) error {
 	incStat(ec.Svc.Stats.Failed)
 	failedData := events.StepFailedData{
@@ -822,6 +885,14 @@ func ExecuteSteps(steps []config.Step, ec *ExecutionContext) error {
 	for i, step := range steps {
 		if ctx := ec.Svc.Ctx; ctx != nil {
 			if err := ctx.Err(); err != nil {
+				// Proposal-02: the cancelled counter bump happens per-step
+				// in syncResultEnvelope (dispatchRunner path) — that
+				// attributes cancellation to the handler that actually
+				// observed the cancelled runCtx, which is more accurate
+				// than this loop-level guess about which step was in
+				// flight. Between-step cancellation just terminates the
+				// loop; no step gets counted as cancelled because no
+				// step's mutation was interrupted.
 				ec.Svc.Logger.Infof("execution cancelled by context after %d/%d steps: %v", i, len(steps), err)
 				return err
 			}
@@ -1208,6 +1279,7 @@ func executePlanWithCapture(ctx context.Context, p *plan.Plan, sudoPass string, 
 	statsFailed := 0
 	statsChanged := 0
 	statsReverted := 0
+	statsCancelled := 0
 
 	// spec-72 §1: probe escalation once per run. NOPASSWD / NNP /
 	// sudo availability are stable per host (operator-configured,
@@ -1227,12 +1299,13 @@ func executePlanWithCapture(ctx context.Context, p *plan.Plan, sudoPass string, 
 		Tags:             []string{}, // tag filtering done by planner (step.Skipped)
 		Mode:             mode,
 		Stats: &ExecutionStats{
-			Global:   &globalExecuted,
-			Executed: &statsExecuted,
-			Skipped:  &statsSkipped,
-			Failed:   &statsFailed,
-			Changed:  &statsChanged,
-			Reverted: &statsReverted,
+			Global:    &globalExecuted,
+			Executed:  &statsExecuted,
+			Skipped:   &statsSkipped,
+			Failed:    &statsFailed,
+			Changed:   &statsChanged,
+			Reverted:  &statsReverted,
+			Cancelled: &statsCancelled,
 		},
 		Template:       renderer,
 		Evaluator:      evaluator,
@@ -1282,15 +1355,16 @@ func executePlanWithCapture(ctx context.Context, p *plan.Plan, sudoPass string, 
 		Type:      events.EventRunCompleted,
 		Timestamp: time.Now(),
 		Data: events.RunCompletedData{
-			TotalSteps:    len(steps),
-			SuccessSteps:  statsExecuted,
-			FailedSteps:   statsFailed,
-			SkippedSteps:  statsSkipped,
-			ChangedSteps:  statsChanged,
-			RevertedSteps: statsReverted,
-			DurationMs:    duration.Milliseconds(),
-			Success:       execErr == nil,
-			CheckMode:     mode == actions.ModePlan,
+			TotalSteps:     len(steps),
+			SuccessSteps:   statsExecuted,
+			FailedSteps:    statsFailed,
+			SkippedSteps:   statsSkipped,
+			ChangedSteps:   statsChanged,
+			RevertedSteps:  statsReverted,
+			CancelledSteps: statsCancelled,
+			DurationMs:     duration.Milliseconds(),
+			Success:        execErr == nil,
+			CheckMode:      mode == actions.ModePlan,
 			ErrorMessage: func() string {
 				if execErr != nil {
 					return execErr.Error()
@@ -1479,11 +1553,17 @@ func dispatchRunner(step config.Step, ec *ExecutionContext, runner actions.Runne
 	// Capture the result on the context whether or not Run errored,
 	// matching the existing Execute behavior so callers can read
 	// stdout/stderr from failed shell-like steps.
-	if r, ok := result.(*Result); ok {
+	//
+	// Typed-nil guard: handlers like pkg install of a missing package
+	// return (nil *Result, err) which satisfies the `(*Result)`
+	// assertion with r==nil; dereferencing would panic. T8 /
+	// RawRunnerNilResultPropagatesErr pins that path.
+	if r, ok := result.(*Result); ok && r != nil {
 		ec.CurrentResult = r
 		if preAppliedDiff != nil {
 			r.AppliedDiff = preAppliedDiff
 		}
+		syncResultEnvelope(ec.Svc.Ctx, r, err, ec.Svc.Stats)
 	} else {
 		ec.CurrentResult = NewResult()
 	}

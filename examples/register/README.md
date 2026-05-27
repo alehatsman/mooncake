@@ -39,24 +39,36 @@ mooncake run --config config.yml
 
 ### Available Fields
 
-After registering a result, you can access:
+After registering a result, the envelope shape (proposal-01) is the
+same for every action:
 
-**For shell commands:**
-- `register_name.stdout` - Standard output
-- `register_name.stderr` - Standard error
-- `register_name.rc` - Return/exit code (0 = success)
-- `register_name.failed` - Boolean, true if rc != 0
-- `register_name.changed` - Boolean, always true for shell
+**Top-level envelope (always present):**
+- `register_name.changed` - Boolean, true if the action mutated state
+- `register_name.failed` - Boolean, true if the action failed
+- `register_name.operation` - One of `create` / `update` / `delete` /
+  `noop` / `query` / `reverted` — what this step did
+- `register_name.target` - The primary thing acted on (path, package,
+  URL, etc.)
+- `register_name.error` - Diagnostic string when `failed` is true;
+  empty string when `failed` is false (proposal-06)
+- `register_name.rc` - Return/exit code (shell-family only; 0 = success)
+- `register_name.stdout` / `register_name.stderr` - Captured output
+  (shell-family only)
+- `register_name.skipped` - Boolean, true if the step did not run
+- `register_name.cancelled` - Boolean, true if the step was interrupted
+- `register_name.duration_ms` - Wall-clock time in milliseconds
+- `register_name.status` - One-word summary (`ok`, `changed`, `failed`,
+  `skipped`, `cancelled`, `reverted`)
 
-**For file operations:**
-- `register_name.rc` - 0 for success, 1 for failure
-- `register_name.failed` - Boolean, true if operation failed
-- `register_name.changed` - Boolean, true if file created/modified
+**Action-specific payload (nested under `.data`):**
+- `register_name.data.<field>` - Per-action typed fields (e.g.
+  `register_name.data.found` for `observe.process`,
+  `register_name.data.value.cores` for `observe.cpu`, etc.)
 
-**For template operations:**
-- `register_name.rc` - 0 for success, 1 for failure
-- `register_name.failed` - Boolean, true if rendering failed
-- `register_name.changed` - Boolean, true if output file changed
+Pre-proposal-01 (legacy) flattened the action-specific fields into the
+top level — `register_name.found` would have worked. The envelope
+moves them under `.data` so envelope keys can't be shadowed by
+handler-set fields.
 
 ### Using in Conditionals
 

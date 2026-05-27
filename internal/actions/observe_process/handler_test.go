@@ -112,12 +112,17 @@ func TestRun_PlanMode_Defers(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Run: %v", err)
 	}
-	data := res.(*executor.Result).Data
-	if found, _ := data["found"].(bool); found {
+	r := res.(*executor.Result)
+	if found, _ := r.Data["found"].(bool); found {
 		t.Errorf("plan-mode Found must be false")
 	}
-	if errStr, _ := data["error"].(string); errStr == "" {
-		t.Errorf("plan-mode Error must explain the defer")
+	// Proposal-06: plan-mode "deferred" message rides on Reason, not
+	// on envelope Error (which stays empty — deferred isn't failure).
+	if r.Reason == "" {
+		t.Errorf("plan-mode Reason must explain the defer")
+	}
+	if r.Error != "" {
+		t.Errorf("plan-mode envelope Error must be empty; got %q", r.Error)
 	}
 }
 

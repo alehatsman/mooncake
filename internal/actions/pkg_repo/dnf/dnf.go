@@ -78,12 +78,13 @@ func Run(ctx actions.Context, r *config.PkgRepo, result *executor.Result) (actio
 		return result, err
 	}
 
+	result.Operation = executor.Operation(plan.operation)
+	result.Target = r.Name
 	result.Data = map[string]interface{}{
-		"name":      r.Name,
-		"operation": plan.operation,
-		"repo":      plan.repoPath,
-		"keyring":   plan.keyringPath,
-		"driver":    "dnf",
+		"name":    r.Name,
+		"repo":    plan.repoPath,
+		"keyring": plan.keyringPath,
+		"driver":  "dnf",
 	}
 
 	if !plan.changed {

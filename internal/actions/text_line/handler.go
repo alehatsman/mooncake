@@ -143,9 +143,10 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		return result, err
 	}
 
+	result.Operation = executor.Operation(plan.operation)
+	result.Target = path
 	result.Data = map[string]interface{}{
-		"path":      path,
-		"operation": plan.operation,
+		"path": path,
 	}
 
 	if !plan.changed {

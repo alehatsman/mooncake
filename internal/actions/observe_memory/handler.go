@@ -72,7 +72,7 @@ func (h *Handler) Run(ctx actions.Context, _ *config.Step) (actions.Result, erro
 
 	if ctx.Mode() == actions.ModePlan {
 		env := actions.PlanDeferred(MemoryObservation{})
-		publish(result, env)
+		result.PublishObservation(env, "host")
 		result.Checkable = true
 		result.Reason = "would observe memory state (deferred to apply)"
 		return result, nil
@@ -87,7 +87,7 @@ func (h *Handler) Run(ctx actions.Context, _ *config.Step) (actions.Result, erro
 	if err != nil {
 		env.Error = err.Error()
 	}
-	publish(result, env)
+	result.PublishObservation(env, "host")
 	return result, nil
 }
 
@@ -218,15 +218,6 @@ func sysctlInt64(name string) (int64, error) {
 		return 0, fmt.Errorf("sysctl %s: %w", name, err)
 	}
 	return strconv.ParseInt(strings.TrimSpace(string(out)), 10, 64)
-}
-
-func publish(r *executor.Result, env actions.ObserveResult) {
-	r.SetData(map[string]any{
-		"found": env.Found,
-		"value": actions.ObserveValueToMap(env.Value),
-		"as_of": env.AsOf.Format(time.RFC3339),
-		"error": env.Error,
-	})
 }
 
 // --- Spec-22 ABI no-mutation specialization ---------------------------------

@@ -215,6 +215,12 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 
 	// Create preset result
 	result := executor.NewResult()
+	result.Target = name
+	if anyChanged {
+		result.Operation = executor.OpUpdate
+	} else {
+		result.Operation = executor.OpNoop
+	}
 	result.Changed = anyChanged
 	result.Stdout = fmt.Sprintf("Preset '%s' executed %d steps", name, len(fullyExpandedSteps))
 

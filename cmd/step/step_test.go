@@ -15,6 +15,11 @@ import (
 // actions (`repo.search`, `read.json`, `repo.tree`, …) populate
 // `Result.Data` via `SetData`; the prior step JSON dropped Data
 // entirely so agents got no way to consume what the action found.
+//
+// Proposal-01: Data lives nested under the top-level `data` key
+// rather than being flattened into the envelope. The MT-22 contract
+// (typed action payload round-trips) still holds — just one level
+// deeper.
 
 // makeResultWithData returns a *executor.Result mimicking what a typed
 // handler builds. Mirrors the repo.search shape from the manual-test
@@ -41,18 +46,23 @@ func TestBuildStepJSON_SurfacesActionDataMap(t *testing.T) {
 	if payload["action"] != "repo.search" {
 		t.Errorf("action = %v", payload["action"])
 	}
-	// The headline assertion: action-specific Data must round-trip.
-	if payload["total_files"] != 1 {
-		t.Errorf("total_files missing: got %v in %v", payload["total_files"], payload)
+	// The headline assertion: action-specific Data must round-trip
+	// through the nested `data` key (proposal-01 envelope).
+	data, ok := payload["data"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("data map missing or wrong type: %T %v", payload["data"], payload["data"])
 	}
-	if payload["total_matches"] != 1 {
-		t.Errorf("total_matches missing: got %v", payload["total_matches"])
+	if data["total_files"] != 1 {
+		t.Errorf("data.total_files missing: got %v in %v", data["total_files"], data)
 	}
-	results, ok := payload["results"].([]map[string]any)
+	if data["total_matches"] != 1 {
+		t.Errorf("data.total_matches missing: got %v", data["total_matches"])
+	}
+	results, ok := data["results"].([]map[string]any)
 	if !ok || len(results) != 1 {
-		t.Errorf("results[] missing or wrong type: %T %v", payload["results"], payload["results"])
+		t.Errorf("data.results[] missing or wrong type: %T %v", data["results"], data["results"])
 	}
-	// Scalars from the shared fields stay.
+	// Envelope scalars stay at the top level.
 	if payload["changed"] != false {
 		t.Errorf("changed = %v", payload["changed"])
 	}
@@ -113,27 +123,39 @@ func TestBuildStepJSON_FailedSetWhenExecErr(t *testing.T) {
 	}
 }
 
-func TestBuildStepJSON_OmitsErrorWhenNil(t *testing.T) {
+func TestBuildStepJSON_ErrorEmptyWhenNoExecErr(t *testing.T) {
+	// Proposal-06 envelope: `error` is always present at the top level
+	// and is the empty string when Failed=false. The pre-proposal
+	// contract was "key absent unless populated"; the envelope makes
+	// it always-present so consumers don't branch on key presence.
 	r := executor.NewResult()
 	r.Changed = true
 	payload := buildStepJSON("shell", r, nil)
-	if _, present := payload["error"]; present {
-		t.Errorf("error key should be absent when execErr == nil: %v", payload)
+	if got, ok := payload["error"]; !ok {
+		t.Errorf("error key should be present (empty) when execErr == nil: %v", payload)
+	} else if got != "" {
+		t.Errorf("error = %q; want empty string when execErr == nil", got)
 	}
 }
 
 func TestBuildStepJSON_DataDoesNotShadowSharedScalars(t *testing.T) {
-	// If a misbehaving handler set Data["changed"] = "yes", the shared
-	// scalar from RegisteredResult.ToMap() is built BEFORE Data merges
-	// in, so the Data entry wins. Documenting current behavior so we
-	// notice if it ever flips silently — agents may rely on the schema
-	// matching apply's, where Data also overrides via the same ToMap.
+	// Proposal-01 envelope: action-specific Data is nested under the
+	// `data` key, so it cannot collide with envelope scalars. Pre-
+	// proposal, Data{changed: "yes"} would shadow the scalar changed:
+	// because ToMap flattened. Now the two live in separate namespaces.
 	r := executor.NewResult()
 	r.Changed = false
 	r.SetData(map[string]any{"changed": "stringified"})
 	payload := buildStepJSON("custom", r, nil)
-	if payload["changed"] != "stringified" {
-		t.Errorf("expected Data override (mirroring apply's behavior), got %v", payload["changed"])
+	if payload["changed"] != false {
+		t.Errorf("envelope changed should be false; got %v", payload["changed"])
+	}
+	data, ok := payload["data"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("data missing or wrong type: %T", payload["data"])
+	}
+	if data["changed"] != "stringified" {
+		t.Errorf("data.changed = %v; want \"stringified\"", data["changed"])
 	}
 }
 

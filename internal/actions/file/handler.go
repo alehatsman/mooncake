@@ -272,6 +272,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 
 	result := executor.NewResult()
 	result.Checkable = true
+	result.Target = renderedPath
 	result.StartTime = time.Now()
 	defer func() {
 		result.EndTime = time.Now()
@@ -281,6 +282,17 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 	state := file.State
 	if state == "" {
 		state = actionTypeFile
+	}
+
+	// Proposal-01 envelope: Operation reflects what state= maps to.
+	// State=absent → OpDelete; everything else → OpUpdate (covers both
+	// fresh-create and update — Performer.Effect.Performed is the bool
+	// that distinguishes them on disk, the envelope verb stays uniform).
+	// Flipped to OpNoop below if Performed=false (file already at target).
+	if state == "absent" {
+		result.Operation = executor.OpDelete
+	} else {
+		result.Operation = executor.OpUpdate
 	}
 
 	// Capture pre-state for Reverse() (spec-22 phase 5a). Apply mode
@@ -337,6 +349,9 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 	// Execute mode: real side effects ran.
 	if primary.Performed {
 		result.Changed = true
+	} else if !result.Failed {
+		// Idempotent path — file/dir already at target state.
+		result.Operation = executor.OpNoop
 	}
 
 	// Ownership: run after primary so chown applies to the just-written target.

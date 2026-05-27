@@ -243,16 +243,20 @@ func (c *ConsoleSubscriber) renderRunCompleted(data events.RunCompletedData) {
 			data.ChangedSteps, ok, data.SkippedSteps,
 			formatDuration(data.DurationMs))
 	} else {
-		line = fmt.Sprintf("RECAP  ok=%d  changed=%d  skipped=%d  failed=%d  %s",
-			ok, data.ChangedSteps, data.SkippedSteps, data.FailedSteps,
-			formatDuration(data.DurationMs))
+		// Proposal-02 compact recap: always show the four base buckets;
+		// append reverted= / cancelled= only when non-zero so quiet runs
+		// stay readable. MT-45 (reverted) and SIGINT/timeout (cancelled)
+		// are both diagnostic — operators look for them when something
+		// went sideways.
+		line = fmt.Sprintf("RECAP  ok=%d  changed=%d  skipped=%d  failed=%d",
+			ok, data.ChangedSteps, data.SkippedSteps, data.FailedSteps)
 		if data.RevertedSteps > 0 {
-			// MT-45: surface reverted steps so transaction rollbacks
-			// don't look like silent disappearances of changes.
-			line = fmt.Sprintf("RECAP  ok=%d  changed=%d  skipped=%d  failed=%d  reverted=%d  %s",
-				ok, data.ChangedSteps, data.SkippedSteps, data.FailedSteps,
-				data.RevertedSteps, formatDuration(data.DurationMs))
+			line += fmt.Sprintf("  reverted=%d", data.RevertedSteps)
 		}
+		if data.CancelledSteps > 0 {
+			line += fmt.Sprintf("  cancelled=%d", data.CancelledSteps)
+		}
+		line += "  " + formatDuration(data.DurationMs)
 	}
 
 	if !data.Success && data.ErrorMessage != "" {

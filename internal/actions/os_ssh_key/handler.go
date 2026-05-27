@@ -172,6 +172,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		existing:  existing,
 	})
 
+	result.Target = path
 	result.Data = map[string]interface{}{
 		"path":    path,
 		"user":    username,
@@ -181,8 +182,14 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 	}
 
 	if !plan.changed {
+		result.Operation = executor.OpNoop
 		result.Reason = plan.reason
 		return result, nil
+	}
+	if plan.removed > 0 && plan.added == 0 && plan.updated == 0 {
+		result.Operation = executor.OpDelete
+	} else {
+		result.Operation = executor.OpUpdate
 	}
 
 	if ctx.Mode() == actions.ModePlan {

@@ -6,6 +6,40 @@ import (
 	"fmt"
 	"reflect"
 	"time"
+
+	"github.com/alehatsman/mooncake/internal/actions"
+)
+
+// Operation is the proposal-01 result-envelope verb describing what
+// the step did to its target. Handlers should pick the value that
+// best fits the action's lifecycle. Empty string is "unspecified" —
+// legacy handlers that haven't migrated yet.
+type Operation string
+
+const (
+	OpCreate   Operation = "create"
+	OpUpdate   Operation = "update"
+	OpDelete   Operation = "delete"
+	OpNoop     Operation = "noop"
+	OpQuery    Operation = "query"
+	OpReverted Operation = "reverted"
+)
+
+// SkippedReason / CancelledReason enum string constants (proposal-02).
+// Not Go enums (typed strings) on purpose — they're written to JSON and
+// consumed by external tooling, and the existing fields are plain
+// strings. Using bare consts keeps wire compatibility obvious.
+const (
+	SkippedReasonWhen             = "when"
+	SkippedReasonCreates          = "creates"
+	SkippedReasonUnless           = "unless"
+	SkippedReasonOnChange         = "on_change"
+	SkippedReasonTagFilter        = "tag_filter"
+	SkippedReasonTryAlreadyFailed = "try_already_failed"
+
+	CancelledReasonSigint    = "sigint"
+	CancelledReasonFleetKill = "fleet_kill"
+	CancelledReasonTimeout   = "timeout"
 )
 
 // Result represents the outcome of executing a step and can be registered
@@ -50,6 +84,10 @@ type Result struct {
 
 	// Failed indicates whether the step execution failed.
 	// Set to true when shell commands exit non-zero or when file/template operations error.
+	//
+	// Proposal-06 contract: Failed=false REQUIRES Error="". A query-style
+	// observation that returns "absent" is success, not failure — populate
+	// Data with {found: false, ...} and leave Error empty.
 	Failed bool `json:"failed"`
 
 	// Changed indicates whether the step made modifications to the system.
@@ -57,6 +95,42 @@ type Result struct {
 	// File steps: true if file/directory was created or modified.
 	// Template steps: true if output file was created or content changed.
 	Changed bool `json:"changed"`
+
+	// Operation is the proposal-01 result-envelope verb: a one-word
+	// taxonomy of what this step did. Values: create, update, delete,
+	// noop, query, reverted. Empty string is "unspecified" (legacy
+	// handlers); new code should populate it. The recap counter
+	// (proposal-02) reads this to decide which bucket the step lands in
+	// alongside Failed / Skipped / Cancelled.
+	Operation Operation `json:"operation,omitempty"`
+
+	// Target is the primary thing the action acted on — the "X" in "did
+	// Y to X" (path, package name, peer address, etc.). Per proposal-01,
+	// promoted out of the per-handler Data bag so typed-diff consumers
+	// and the recap line can read it uniformly.
+	Target string `json:"target,omitempty"`
+
+	// Error carries a single-string diagnostic when Failed is true. Per
+	// proposal-06 this field MUST be empty when Failed is false — the
+	// pre-proposal pattern of `failed: false, error: "no matching X"`
+	// (observe.process, wait.http, os.mount, os.firewall) is the bug
+	// this contract closes.
+	Error string `json:"error,omitempty"`
+
+	// Cancelled marks the step as interrupted mid-execution (SIGINT,
+	// fleet kill, timeout). Distinct from Failed — a cancelled step
+	// didn't fail on its own merits. Recap proposal-02 has its own
+	// `cancelled` bucket; exit code aggregation maps cancelled>0 to 130.
+	Cancelled bool `json:"cancelled,omitempty"`
+
+	// SkippedReason explains why a Skipped step did not run. Enum:
+	// when, creates, unless, on_change, tag_filter, try_already_failed.
+	// Required when Skipped is true.
+	SkippedReason string `json:"skipped_reason,omitempty"`
+
+	// CancelledReason explains how a Cancelled step was interrupted.
+	// Enum: sigint, fleet_kill, timeout. Required when Cancelled is true.
+	CancelledReason string `json:"cancelled_reason,omitempty"`
 
 	// WouldChange indicates that a plan-mode (non-mutating) inspection
 	// predicts the step would change the system if executed.
@@ -140,12 +214,23 @@ func NewResult() *Result {
 }
 
 // Status returns a string representation of the result status.
+//
+// Precedence (proposal-02): failed > cancelled > skipped > reverted >
+// changed > ok. Cancelled and reverted are new buckets the recap
+// counter cares about; status mirrors the same precedence so the
+// per-step text marker is consistent with the headline.
 func (r *Result) Status() string {
 	if r.Failed {
 		return "failed"
 	}
+	if r.Cancelled {
+		return "cancelled"
+	}
 	if r.Skipped {
 		return "skipped"
+	}
+	if r.Operation == OpReverted {
+		return "reverted"
 	}
 	if r.Changed {
 		return "changed"
@@ -154,6 +239,13 @@ func (r *Result) Status() string {
 }
 
 // ToMap converts Result to a map for use in template variables.
+//
+// Proposal-01 envelope: action-specific payload stays NESTED under
+// `data` rather than being flattened into the top-level map. So
+// `register: r` + `{{ r.data.cores }}` is the access path for typed
+// fields; cross-cutting envelope keys (changed, failed, operation,
+// target, error, stdout, stderr, rc, status, duration_ms, reason)
+// live at the top level.
 //
 // "reason" is included so step.completed consumers (notably the pilot
 // loop's stdoutCapture, which builds per-step summaries fed back to the
@@ -168,16 +260,28 @@ func (r *Result) ToMap() map[string]interface{} {
 		"failed":      r.Failed,
 		"changed":     r.Changed,
 		"skipped":     r.Skipped,
+		"cancelled":   r.Cancelled,
+		"operation":   string(r.Operation),
+		"target":      r.Target,
+		"error":       r.Error,
 		"duration_ms": r.Duration.Milliseconds(),
 		"status":      r.Status(),
 		"reason":      r.Reason,
 	}
+	if r.SkippedReason != "" {
+		m["skipped_reason"] = r.SkippedReason
+	}
+	if r.CancelledReason != "" {
+		m["cancelled_reason"] = r.CancelledReason
+	}
 
-	// Merge custom data fields into the map
+	// Action-specific payload — nested under `data`, not flattened.
+	// Always present (may be empty map) so templates can read
+	// `result.data.X` without nil-check gymnastics.
 	if r.Data != nil {
-		for k, v := range r.Data {
-			m[k] = v
-		}
+		m["data"] = r.Data
+	} else {
+		m["data"] = map[string]interface{}{}
 	}
 
 	return m
@@ -192,15 +296,21 @@ func (r *Result) RegisterTo(variables map[string]interface{}, name string) {
 // RegisteredResult is a snapshot of a Result stored in VariableScope.Results.
 // It is a flat copy — no pointer aliasing — so the scope can be safely cloned.
 type RegisteredResult struct {
-	Stdout     string
-	Stderr     string
-	Rc         int
-	Failed     bool
-	Changed    bool
-	Skipped    bool
-	DurationMs int64
-	Reason     string
-	Data       map[string]interface{}
+	Stdout          string
+	Stderr          string
+	Rc              int
+	Failed          bool
+	Changed         bool
+	Skipped         bool
+	Cancelled       bool
+	Operation       Operation
+	Target          string
+	Error           string
+	SkippedReason   string
+	CancelledReason string
+	DurationMs      int64
+	Reason          string
+	Data            map[string]interface{}
 }
 
 // ToRegisteredResult converts a *Result into a RegisteredResult snapshot.
@@ -213,19 +323,28 @@ func (r *Result) ToRegisteredResult() RegisteredResult {
 		}
 	}
 	return RegisteredResult{
-		Stdout:     r.Stdout,
-		Stderr:     r.Stderr,
-		Rc:         r.Rc,
-		Failed:     r.Failed,
-		Changed:    r.Changed,
-		Skipped:    r.Skipped,
-		DurationMs: r.Duration.Milliseconds(),
-		Reason:     r.Reason,
-		Data:       data,
+		Stdout:          r.Stdout,
+		Stderr:          r.Stderr,
+		Rc:              r.Rc,
+		Failed:          r.Failed,
+		Changed:         r.Changed,
+		Skipped:         r.Skipped,
+		Cancelled:       r.Cancelled,
+		Operation:       r.Operation,
+		Target:          r.Target,
+		Error:           r.Error,
+		SkippedReason:   r.SkippedReason,
+		CancelledReason: r.CancelledReason,
+		DurationMs:      r.Duration.Milliseconds(),
+		Reason:          r.Reason,
+		Data:            data,
 	}
 }
 
 // ToMap converts a RegisteredResult to map[string]interface{} for template engines.
+//
+// Mirrors Result.ToMap — proposal-01 envelope at the top level, action
+// payload nested under `data`.
 func (r RegisteredResult) ToMap() map[string]interface{} {
 	m := map[string]interface{}{
 		"stdout":      r.Stdout,
@@ -234,13 +353,113 @@ func (r RegisteredResult) ToMap() map[string]interface{} {
 		"failed":      r.Failed,
 		"changed":     r.Changed,
 		"skipped":     r.Skipped,
+		"cancelled":   r.Cancelled,
+		"operation":   string(r.Operation),
+		"target":      r.Target,
+		"error":       r.Error,
 		"duration_ms": r.DurationMs,
 		"reason":      r.Reason,
 	}
-	for k, v := range r.Data {
-		m[k] = v
+	if r.SkippedReason != "" {
+		m["skipped_reason"] = r.SkippedReason
+	}
+	if r.CancelledReason != "" {
+		m["cancelled_reason"] = r.CancelledReason
+	}
+	if r.Data != nil {
+		m["data"] = r.Data
+	} else {
+		m["data"] = map[string]interface{}{}
 	}
 	return m
+}
+
+// --- proposal-01 / proposal-06 result helpers --------------------------------
+//
+// Handlers should prefer these constructors over hand-built struct
+// literals so Operation / Target / Error stay in lockstep with the
+// envelope contract. Each helper sets Operation explicitly; callers
+// add Reason/Duration/AppliedDiff after construction.
+
+// QueryResult builds a read-only observation result (observe.*, read.*,
+// repo.search/tree, wait.* on success). Changed=false, Failed=false,
+// Error="" — per proposal-06, "absent" / "not matching" is success.
+func QueryResult(target string, data map[string]interface{}) *Result {
+	return &Result{
+		Operation: OpQuery,
+		Target:    target,
+		Data:      data,
+	}
+}
+
+// ChangedResult builds a successful mutation result. Op must be one
+// of OpCreate, OpUpdate, or OpDelete. Changed=true.
+func ChangedResult(op Operation, target string, data map[string]interface{}) *Result {
+	return &Result{
+		Operation: op,
+		Target:    target,
+		Data:      data,
+		Changed:   true,
+	}
+}
+
+// NoopResult builds an idempotent "already at target state" result.
+// Changed=false, Operation=OpNoop.
+func NoopResult(target string, data map[string]interface{}) *Result {
+	return &Result{
+		Operation: OpNoop,
+		Target:    target,
+		Data:      data,
+	}
+}
+
+// FailedResult builds a mutation-failed result (proposal-06: mutation
+// that didn't happen IS failure). Op is the operation that was
+// attempted; data may carry partial state captured before the
+// failure. Failed=true, Rc=1, Error=err.Error().
+func FailedResult(op Operation, target string, err error, data map[string]interface{}) *Result {
+	var msg string
+	if err != nil {
+		msg = err.Error()
+	}
+	return &Result{
+		Operation: op,
+		Target:    target,
+		Data:      data,
+		Failed:    true,
+		Rc:        1,
+		Error:     msg,
+	}
+}
+
+// PublishObservation lands a spec-59 ObserveResult onto this Result
+// using the proposal-01 / proposal-06 envelope conventions:
+//
+//   - Operation = "query"
+//   - Target = the caller-supplied selector ("name=foo", "host:port", …)
+//   - Data carries the typed payload (found / value / as_of)
+//   - Probe-side failures (env.Error != "") promote to envelope
+//     Failed=true + Error=env.Error so the recap counts the step
+//     correctly and consumers don't have to dig into Data["error"]
+//     to know the observation broke.
+//
+// Plan-mode handlers should leave env.Error empty; the handler's
+// Reason field is the right place for the "deferred to apply" message.
+func (r *Result) PublishObservation(env actions.ObserveResult, target string) {
+	r.Operation = OpQuery
+	r.Target = target
+	r.SetData(map[string]any{
+		"found": env.Found,
+		"value": actions.ObserveValueToMap(env.Value),
+		"as_of": env.AsOf.Format(time.RFC3339),
+	})
+	if env.Error != "" {
+		r.Failed = true
+		if r.Rc == 0 {
+			r.Rc = 1
+		}
+		r.Error = env.Error
+	}
 }
 
 // --- actions.Result interface implementation ---

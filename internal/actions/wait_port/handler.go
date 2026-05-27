@@ -97,6 +97,8 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 	elapsed := time.Since(start)
 
 	result := executor.NewResult()
+	result.Operation = executor.OpQuery
+	result.Target = address
 	result.Changed = false
 	result.Data = map[string]any{
 		"address":    address,

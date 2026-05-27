@@ -124,6 +124,8 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 	changed := applyEdits(&doc, p)
 	newBytes := doc.render()
 
+	result.Operation = executor.OpUpdate
+	result.Target = path
 	result.Data = map[string]interface{}{
 		"path": path,
 	}
@@ -134,6 +136,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 	// truth.
 	if bytesEqual(newBytes, []byte(original)) && fileExists {
 		_ = changed
+		result.Operation = executor.OpNoop
 		result.Reason = "INI file already matches desired state"
 		return result, nil
 	}

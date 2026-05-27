@@ -158,10 +158,11 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		return result, err
 	}
 
+	result.Operation = executor.Operation(plan.operation)
+	result.Target = rendered.dest
 	result.Data = map[string]interface{}{
-		"dest":      rendered.dest,
-		"operation": plan.operation,
-		"path":      mountPaths.fstab,
+		"dest": rendered.dest,
+		"path": mountPaths.fstab,
 	}
 
 	if !plan.changed {

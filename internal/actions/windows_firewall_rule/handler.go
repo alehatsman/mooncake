@@ -99,6 +99,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 	f := step.WindowsFirewallRule
 	result := executor.NewResult()
 	result.Checkable = true
+	result.Target = f.Name
 
 	if runtime.GOOS != "windows" {
 		return result, fmt.Errorf("%s: only Windows is supported; got %s", actionName, runtime.GOOS)
@@ -115,9 +116,11 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 	switch state {
 	case stateAbsent:
 		if current == nil {
+			result.Operation = executor.OpNoop
 			result.Reason = "rule already absent"
 			return result, nil
 		}
+		result.Operation = executor.OpDelete
 		if ctx.Mode() == actions.ModePlan {
 			result.WouldChange = true
 			result.Reason = "would remove rule " + f.Name
@@ -136,8 +139,14 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 			return result, err
 		}
 		if current != nil && current.Equals(desired) {
+			result.Operation = executor.OpNoop
 			result.Reason = "rule already at desired state"
 			return result, nil
+		}
+		if current == nil {
+			result.Operation = executor.OpCreate
+		} else {
+			result.Operation = executor.OpUpdate
 		}
 		if ctx.Mode() == actions.ModePlan {
 			result.WouldChange = true

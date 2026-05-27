@@ -165,6 +165,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 	}
 
 	plan := computePlan(current, desired, normalizeState(f.State))
+	result.Target = backend
 	result.Data = map[string]interface{}{
 		"backend":   backend,
 		"to_add":    len(plan.toAdd),
@@ -172,9 +173,12 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 	}
 
 	if !plan.changed() {
+		result.Operation = executor.OpNoop
 		result.Reason = "firewall rules already at desired state"
 		return result, nil
 	}
+
+	result.Operation = executor.OpUpdate
 
 	if ctx.Mode() == actions.ModePlan {
 		result.WouldChange = true

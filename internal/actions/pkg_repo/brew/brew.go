@@ -114,11 +114,21 @@ func Run(ctx actions.Context, r *config.PkgRepo, result *executor.Result) (actio
 		op = "untap"
 	}
 
+	result.Target = tap
 	result.Data = map[string]interface{}{
-		"name":      r.Name,
-		"tap":       tap,
-		"operation": op,
-		"driver":    "brew",
+		"name":   r.Name,
+		"tap":    tap,
+		"phase":  op, // brew-specific verb (tap / untap / already-tapped / already-untapped)
+		"driver": "brew",
+	}
+
+	switch op {
+	case "tap":
+		result.Operation = executor.OpCreate
+	case "untap":
+		result.Operation = executor.OpDelete
+	default:
+		result.Operation = executor.OpNoop
 	}
 
 	if op == "already-tapped" || op == "already-untapped" {

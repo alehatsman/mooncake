@@ -1,7 +1,20 @@
 # Proposal 06: Reconcile `failed: false` + `error: "..."` — query-style vs. error-style outcomes
 
-**Status:** Draft proposal
-**Effort:** S (~2 days; handler-by-handler cleanup)
+**Status:** SHIPPED (2026-05-28, worktree-result-envelope) — bundled
+with proposals 01 + 02. Two-pronged fix:
+  - Central envelope sync in `dispatchRunner` (executor.go ~L1482):
+    any handler returning `(result, err)` with err != nil now lands
+    on the envelope as Failed=true + Error=err.Error(). Catches the
+    wait.* / os.mount / os.firewall / pkg.* / container cluster
+    without touching each handler — spec-69-followups finding B0
+    closed at the same time.
+  - observe.* migration to a new `result.PublishObservation(env,
+    target)` helper that drops env.Error into Data["error"] (the
+    old shape) and instead promotes probe-side env.Error to
+    envelope Error + Failed. Plan-mode "deferred" message now
+    rides on Reason, not on a magic env.Error sentinel.
+**Effort:** S (~2 days; handler-by-handler cleanup) — actual:
+folded into the proposal-01 sweep.
 **Value:** Medium — recurring confusion across observe.* / wait.* /
 os.* actions. Fixing the convention removes a class of agent-side
 "is this really a failure?" bugs.

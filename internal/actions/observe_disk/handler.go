@@ -78,7 +78,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 
 	if ctx.Mode() == actions.ModePlan {
 		env := actions.PlanDeferred(DiskObservation{Path: abs})
-		publish(result, env)
+		result.PublishObservation(env, abs)
 		result.Checkable = true
 		result.Reason = fmt.Sprintf("would observe disk %s (deferred to apply)", abs)
 		return result, nil
@@ -93,17 +93,8 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 	if err != nil {
 		env.Error = err.Error()
 	}
-	publish(result, env)
+	result.PublishObservation(env, abs)
 	return result, nil
-}
-
-func publish(r *executor.Result, env actions.ObserveResult) {
-	r.SetData(map[string]any{
-		"found": env.Found,
-		"value": actions.ObserveValueToMap(env.Value),
-		"as_of": env.AsOf.Format(time.RFC3339),
-		"error": env.Error,
-	})
 }
 
 // --- Spec-22 ABI no-mutation specialization ---------------------------------

@@ -185,6 +185,8 @@ func (h *Handler) executeCommand(ctx actions.Context, step *config.Step, rendere
 
 	// Process result
 	result := executor.NewResult()
+	result.Operation = executor.OpUpdate
+	result.Target = strings.Join(cmd.Args, " ")
 	result.Stdout = strings.TrimSpace(stdout.String())
 	result.Stderr = strings.TrimSpace(stderr.String())
 

@@ -710,6 +710,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 
 	// Create result
 	result := executor.NewResult()
+	result.Operation = executor.OpQuery
 	result.Changed = false // Assertions never change state
 
 	if err != nil {

@@ -362,16 +362,21 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 
 	result := executor.NewResult()
 	result.Checkable = true
+	result.Operation = executor.OpUpdate
 	result.StartTime = time.Now()
 	defer func() {
 		result.EndTime = time.Now()
 		result.Duration = result.EndTime.Sub(result.StartTime)
+		if !result.Changed && !result.WouldChange && !result.Failed {
+			result.Operation = executor.OpNoop
+		}
 	}()
 
 	renderedPath, err := ec.Svc.PathUtil.ExpandPath(fpa.Path, ec.CurrentDir, ctx.GetVariables())
 	if err != nil {
 		return result, fmt.Errorf("failed to expand path: %w", err)
 	}
+	result.Target = renderedPath
 	// F033: dead-code traversal check removed (see text_patch_ini).
 
 	//nolint:dupl // patch-load idiom shared with handler.go; trivial helper not worth the indirection.

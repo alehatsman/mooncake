@@ -187,6 +187,12 @@ func planResult(state destState, repo, ref string, update bool) *executor.Result
 
 func apply(ctx actions.Context, g *config.GitClone, repo, ref, dest string, state destState, env []string) (actions.Result, error) {
 	result := executor.NewResult()
+	if state.exists {
+		result.Operation = executor.OpUpdate
+	} else {
+		result.Operation = executor.OpCreate
+	}
+	result.Target = dest
 	result.Data = map[string]any{
 		"repo": repo,
 		"dest": dest,
