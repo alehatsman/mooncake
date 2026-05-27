@@ -11,8 +11,8 @@ Queue**, produces a finding (or several), and the queue updates.
 
 | | Count |
 |---|---:|
-| ✅ Findings filed and resolved (F001–F050, F036 skipped) | **49** |
-| 🟡 Findings open (filed, not yet fixed) | **2** — F051, F052 |
+| ✅ Findings filed and resolved (F001–F052, F036 skipped) | **51** |
+| 🟡 Findings open (filed, not yet fixed) | **0** |
 | 📋 Packages still queued for review | **0 substantive** (1 broad follow-up — see below) |
 
 **2026-05-27 cold-read pass closed the queue.** Eight package
@@ -93,8 +93,8 @@ closed — see that folder's README.
 | F048 | fleet machine manifest YAML non-strict | bug | **done** | [findings/F048](../archive/code-review/findings/F048-fleet-machine-manifest-non-strict-yaml.md) |
 | F049 | pkg.Permissions not manager-aware | bug | **done** | [findings/F049](../archive/code-review/findings/F049-pkg-handler-permissions-not-manager-aware.md) |
 | F050 | preset fetch unbounded body | risk | **done** | [findings/F050](../archive/code-review/findings/F050-preset-fetch-unbounded-body.md) |
-| F051 | os_* handlers context.TODO() (11 sites) | risk | **open** | [findings/F051](../archive/code-review/findings/F051-os-handlers-context-todo-cross-cutting.md) |
-| F052 | cmd/kernel/validate.go os.Exit (3 sites) | smell | **open** | [findings/F052](../archive/code-review/findings/F052-kernel-validate-os-exit-hostile-to-callers.md) |
+| F051 | os_* handlers context.TODO() (11 sites) | risk | **done** | [findings/F051](../archive/code-review/findings/F051-os-handlers-context-todo-cross-cutting.md) |
+| F052 | cmd/kernel/validate.go os.Exit (3 sites) | smell | **done** | [findings/F052](../archive/code-review/findings/F052-kernel-validate-os-exit-hostile-to-callers.md) |
 
 ## Still to review
 

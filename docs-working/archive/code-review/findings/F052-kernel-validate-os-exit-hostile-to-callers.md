@@ -5,8 +5,10 @@ severity: smell
 package: cmd/kernel
 file: cmd/kernel/validate.go
 lines: 58, 79, 98
-status: open
+status: done
 verified: 2026-05-27 — three direct `os.Exit` calls on master @ 4db53ad6: `os.Exit(exitCodeRuntimeError)` on config-read failure (line 58) and JSON-encode failure (line 79), `os.Exit(exitCodeValidationError)` on validation-error tail (line 98). The urfave/cli action returns `nil` after the tail-exit so the error never reaches the framework's exit-code handler.
+fixed: 2026-05-27 — commit `fa05dbd7 fix(cmd/kernel): F052 — validate.go returns cli.ExitCoder instead of os.Exit`. All three `os.Exit` calls replaced with `cli.Exit(msg, code)` returns. `os.Stdout` reference retained so the `os` import stays. Operator UX (stderr message + exit code) unchanged because urfave/cli reads the `ExitCoder` chain and exits the CLI process with the encoded code.
+post-fix verified: 2026-05-27 on master @ fa05dbd7 — new `cmd/kernel/validate_test.go` pins all three paths: `TestValidate_HasErrors_ReturnsValidationExitCode` (validation errors → exitCodeValidationError=2), `TestValidate_InvalidYAML_ReturnsRuntimeExitCode` (parse failure → exitCodeRuntimeError=3), `TestValidate_Clean_ReturnsNil` (success path unchanged). All three would have killed the test binary before the fix because of the `os.Exit` calls. `mooncake task ci` green.
 related: F020 (same shape, fixed in `apply.Runner` by routing the exit code through `runWithSignalCtx`)
 ---
 

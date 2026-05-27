@@ -15,8 +15,10 @@ files:
   - internal/actions/os_mount/handler.go:573
   - internal/actions/os_mount/handler.go:586
   - internal/actions/os_ssh_key/handler.go:592
-status: open
+status: done
 verified: 2026-05-27 — `grep -rn 'context\.TODO()' internal/actions/os_*` returns 11 matches across 6 packages on master @ 4db53ad6. `actions.Context` (the per-step context passed to handlers, `internal/actions/interfaces.go:45`) does not expose a `context.Context` — handlers have no upstream cancel signal to plumb through. Same architectural gap as F016 (agentd.Worker), F014 (fleet.Apply WithoutCancel), F042 (facts.Collect, fixed) — `os_*` is the next family in the same class.
+fixed: 2026-05-27 — commit `6ae880da fix(actions/os_*): F051 — bounded context replaces context.TODO() at 11 sites`. Option 1 chosen: per-package wallclock timeout consts threaded through each existing wrapper (realMount/realUmount, realUFWRun/realUFWStatus, realSysctlApply, runLinuxCmd, dsclRun/runDarwinCmd in os_user, runLinuxCmd/dsclGroupRun in os_group, inline chown in os_ssh_key). No change to `actions.Context` — the architectural plumb-through stays under the F016 follow-up. Timeouts: `mountCmdTimeout=30s` (mount/umount NFS), `ufwCmdTimeout=10s` (netfilter lock), `userCmdTimeout=10s` and `groupCmdTimeout=10s` (sssd cache refresh), `sysctlCmdTimeout=5s`, `chownCmdTimeout=5s`. All comfortably above happy-path latency; failure-mode hangs fail with `context.DeadlineExceeded`.
+post-fix verified: 2026-05-27 on master @ 6ae880da — `grep -rn 'context\.TODO()' internal/actions/os_*` returns zero matches; `grep -rn 'context.WithTimeout.*Background.*CmdTimeout' internal/actions/os_*` returns 11. All six package test suites green (`go test ./internal/actions/os_user/... ./internal/actions/os_group/... ./internal/actions/os_mount/... ./internal/actions/os_firewall/... ./internal/actions/os_sysctl/... ./internal/actions/os_ssh_key/...`). `mooncake task ci` green. Soft-cap budget: `os_user` 1438→1454 LOC (still within 20% of cap 1500). One new informational dupl pair (14L dscl helper shared shape between os_group/platform_darwin.go and os_user/platform_darwin.go) — left intentionally split per the comment at `os_group/platform_darwin.go:50`.
 ---
 
 ## What
