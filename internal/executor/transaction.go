@@ -118,13 +118,11 @@ func (ec *ExecutionContext) handleTxnBodyFailure(failedStep config.Step) error {
 		// step's reported change. Subtract from the run-wide Changed
 		// counter and bump Reverted so the recap reflects net effect
 		// (rolled-back files no longer count as user-visible writes).
+		// decStat / incStat are nil-safe (see context.go) so the
+		// outer Stats != nil check is the only guard needed.
 		if entry.Result != nil && entry.Result.Changed && ec.Svc.Stats != nil {
-			if ec.Svc.Stats.Changed != nil && *ec.Svc.Stats.Changed > 0 {
-				*ec.Svc.Stats.Changed--
-			}
-			if ec.Svc.Stats.Reverted != nil {
-				*ec.Svc.Stats.Reverted++
-			}
+			decStat(ec.Svc.Stats.Changed)
+			incStat(ec.Svc.Stats.Reverted)
 		}
 	}
 	t.RolledBack = true

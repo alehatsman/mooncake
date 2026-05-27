@@ -133,7 +133,7 @@ func generateStepID(step config.Step, ec *ExecutionContext) string {
 	if step.ID != "" {
 		return step.ID
 	}
-	return fmt.Sprintf("step-%d", *ec.Svc.Stats.Global)
+	return fmt.Sprintf("step-%d", readStat(ec.Svc.Stats.Global))
 }
 
 func markStepFailed(result *Result, step config.Step, ec *ExecutionContext) { //nolint:unused
@@ -468,7 +468,7 @@ func DispatchStepAction(step config.Step, ec *ExecutionContext) error {
 
 func emitStepSkipped(step config.Step, ec *ExecutionContext, stepName, skipReason string) {
 	if ec.Svc.Stats.Skipped != nil {
-		*ec.Svc.Stats.Skipped++
+		incStat(ec.Svc.Stats.Skipped)
 	}
 	stepID := generateStepID(step, ec)
 	depth := 0
@@ -489,7 +489,7 @@ func emitStepSkipped(step config.Step, ec *ExecutionContext, stepName, skipReaso
 
 func handleStepError(step config.Step, ec *ExecutionContext, stepErr error, stepID, stepName string, depth int, stepDuration time.Duration) error {
 	if ec.Svc.Stats.Failed != nil {
-		*ec.Svc.Stats.Failed++
+		incStat(ec.Svc.Stats.Failed)
 	}
 	failedData := events.StepFailedData{
 		StepID:       stepID,
@@ -561,13 +561,13 @@ func dispatchPlanMode(step config.Step, ec *ExecutionContext, stepName string) (
 		if !isRunner {
 			return false, nil
 		}
-		*ec.Svc.Stats.Global++
+		incStat(ec.Svc.Stats.Global)
 		ec.CurrentStepID = generateStepID(step, ec)
 		return true, dispatchRunner(step, ec, runner)
 	}
 	// Unknown action: emit a synthetic not-checkable event so the plan
 	// formatter can still render the step rather than silently dropping it.
-	*ec.Svc.Stats.Global++
+	incStat(ec.Svc.Stats.Global)
 	stepID := generateStepID(step, ec)
 	ec.CurrentStepID = stepID
 	ec.EmitEvent(events.EventStepChecked, events.StepCheckedData{
@@ -578,7 +578,7 @@ func dispatchPlanMode(step config.Step, ec *ExecutionContext, stepName string) (
 		Reason:    "unknown action",
 		Level:     ec.Level,
 	})
-	*ec.Svc.Stats.Executed++
+	incStat(ec.Svc.Stats.Executed)
 	return true, nil
 }
 
@@ -587,7 +587,7 @@ func dispatchPlanMode(step config.Step, ec *ExecutionContext, stepName string) (
 // RunCapture feed. Clears ec.CurrentResult before returning.
 func postExecuteSuccess(step config.Step, ec *ExecutionContext, stepID, stepName string, depth int, stepDuration time.Duration) {
 	if ec.Svc.Stats.Executed != nil {
-		*ec.Svc.Stats.Executed++
+		incStat(ec.Svc.Stats.Executed)
 	}
 
 	changed := false
@@ -597,7 +597,7 @@ func postExecuteSuccess(step config.Step, ec *ExecutionContext, stepID, stepName
 		resultData = ec.CurrentResult.ToMap()
 	}
 	if changed && ec.Svc.Stats.Changed != nil {
-		*ec.Svc.Stats.Changed++
+		incStat(ec.Svc.Stats.Changed)
 	}
 
 	ec.EmitEvent(events.EventStepCompleted, events.StepCompletedData{
@@ -727,7 +727,7 @@ func ExecuteStep(step config.Step, ec *ExecutionContext) error {
 
 	// Increment global step counter for non-skipped steps
 	if ec.Svc.Stats.Global != nil {
-		*ec.Svc.Stats.Global++
+		incStat(ec.Svc.Stats.Global)
 	}
 
 	// Generate step ID and store in context for event correlation
@@ -745,7 +745,7 @@ func ExecuteStep(step config.Step, ec *ExecutionContext) error {
 		StepID:      stepID,
 		Name:        stepName,
 		Level:       ec.Level,
-		GlobalStep:  *ec.Svc.Stats.Global,
+		GlobalStep:  readStat(ec.Svc.Stats.Global),
 		Action:      step.ActionType,
 		Tags:        step.Tags,
 		When:        step.When,
@@ -1521,9 +1521,9 @@ func dispatchRunner(step config.Step, ec *ExecutionContext, runner actions.Runne
 			Level:       ec.Level,
 		})
 		if wouldChange {
-			*ec.Svc.Stats.Changed++
+			incStat(ec.Svc.Stats.Changed)
 		}
-		*ec.Svc.Stats.Executed++
+		incStat(ec.Svc.Stats.Executed)
 		// spec-37: in plan mode the bind happens only when the handler
 		// declares CaptureInPlan; captureResult enforces that internally.
 		if ec.CurrentResult != nil {

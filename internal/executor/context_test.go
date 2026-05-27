@@ -110,3 +110,44 @@ func TestNewExecutionContext(t *testing.T) {
 		t.Errorf("Mode = %v, want ModeApply", ctx.Mode())
 	}
 }
+
+// TestStatHelpers_NilSafe is the regression for the F053 cold-read
+// smell #2: pre-cleanup, dispatchRunner / dispatchPlanMode dereferenced
+// `*ec.Svc.Stats.Global` and siblings without a nil-guard while
+// postExecuteSuccess / handleTxnBodyFailure guarded their derefs.
+// `incStat` / `decStat` / `readStat` centralise the safety so future
+// callers don't have to think about it. A nil pointer is the failure
+// mode any caller building `&ExecutionStats{}` (without going through
+// NewExecutionStats) hits.
+func TestStatHelpers_NilSafe(t *testing.T) {
+	// nil pointer arguments are no-ops, not panics.
+	incStat(nil)
+	decStat(nil)
+	if got := readStat(nil); got != 0 {
+		t.Errorf("readStat(nil) = %d, want 0", got)
+	}
+
+	// Non-nil counter increments and decrements behave normally.
+	counter := 0
+	incStat(&counter)
+	incStat(&counter)
+	if counter != 2 {
+		t.Errorf("after 2 incStat: counter = %d, want 2", counter)
+	}
+	if got := readStat(&counter); got != 2 {
+		t.Errorf("readStat = %d, want 2", got)
+	}
+	decStat(&counter)
+	if counter != 1 {
+		t.Errorf("after decStat: counter = %d, want 1", counter)
+	}
+
+	// decStat clamps at zero (MT-45 invariant: a rollback of a
+	// step that didn't bump Changed shouldn't make the counter
+	// negative).
+	counter = 0
+	decStat(&counter)
+	if counter != 0 {
+		t.Errorf("decStat at zero: counter = %d, want 0 (no underflow)", counter)
+	}
+}

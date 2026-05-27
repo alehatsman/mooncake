@@ -256,5 +256,13 @@ func (s *VariableScope) Clone() *VariableScope {
 		// Metrics — to avoid copying the entire process environment on
 		// every step.
 		Env: s.Env,
+		// ApplyStartedAt is run-wide (set once by AddGlobalVariables);
+		// propagate it so clones expose `{{ apply_started_at }}` in
+		// templates. Pre-fix this field was silently dropped — caught
+		// during the F053 cold-read pass; harmless today because
+		// ec.Clone() has no production callers, but the moment a future
+		// caller introduces one (sub-include / for_each body) the
+		// missing field would surprise template authors.
+		ApplyStartedAt: s.ApplyStartedAt,
 	}
 }

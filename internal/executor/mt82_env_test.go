@@ -67,3 +67,40 @@ func TestMT82_EnvSharedAcrossClones(t *testing.T) {
 		t.Errorf("clone.Env[K] = %q, want v", got)
 	}
 }
+
+// TestScopeClone_PropagatesApplyStartedAt is the regression for the
+// F053 cold-read pass's smell #1: `ApplyStartedAt` is run-wide
+// state (set once by AddGlobalVariables) and must propagate into
+// cloned sub-scopes so `{{ apply_started_at }}` templates resolve
+// inside includes / for_each bodies if Clone ever gets reintroduced
+// into production. Pre-fix the field was silently dropped, and
+// `ToMap()` would omit the key entirely on a cloned scope.
+func TestScopeClone_PropagatesApplyStartedAt(t *testing.T) {
+	parent := NewVariableScope()
+	AddGlobalVariables(parent)
+	if parent.ApplyStartedAt.IsZero() {
+		t.Fatal("AddGlobalVariables did not set ApplyStartedAt")
+	}
+
+	clone := parent.Clone()
+	if !clone.ApplyStartedAt.Equal(parent.ApplyStartedAt) {
+		t.Errorf("clone.ApplyStartedAt = %v, want %v", clone.ApplyStartedAt, parent.ApplyStartedAt)
+	}
+
+	// Verify the propagated field surfaces in ToMap() — that's the
+	// concrete behavior templates depend on.
+	flat := clone.ToMap()
+	if _, ok := flat["apply_started_at"]; !ok {
+		t.Errorf("cloned scope's ToMap() omits apply_started_at; got keys: %v", mapKeys(flat))
+	}
+}
+
+// mapKeys returns sorted-ish keys for error-message dumps. Unused
+// production helper, kept inside the test file.
+func mapKeys(m map[string]interface{}) []string {
+	out := make([]string, 0, len(m))
+	for k := range m {
+		out = append(out, k)
+	}
+	return out
+}

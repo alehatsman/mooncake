@@ -49,30 +49,18 @@ executor.go. One finding filed:
   `runWithRetry` and replace `time.Sleep` with
   `select { <-timer.C; <-ctx.Done() }`.
 
-Adjacent observations from this pass (smells, not standalone findings):
+Adjacent observations from this pass:
 
-- **scope.Clone() omits `ApplyStartedAt`.** `scope.go:234` — the
-  Env shared-by-reference rationale in `TestMT82_EnvSharedAcrossClones`
-  applies equally to ApplyStartedAt, but it's just missing. Latent:
-  `ec.Clone()` has **zero production callers** today (search returns
-  only `mt82_env_test.go` + `executor_test.go`); preset and include
-  handlers manage scope via `savedContext` save/restore instead. If a
-  future caller reintroduces `ec.Clone()` for sub-includes or for_each
-  bodies, the cloned scope's `{{ apply_started_at }}` template variable
-  silently disappears. Fix: copy the field in `VariableScope.Clone()`.
-- **Inconsistent nil-guards on `ec.Svc.Stats.{Changed,Executed,Global}`.**
-  `executor.go:1516,1518` (`dispatchRunner`) and
-  `executor.go:564,581` (`dispatchPlanMode`) dereference the counter
-  pointers without nil-check, while
-  `executor.go:589-601` (`postExecuteSuccess`) and
-  `transaction.go:122` (`handleTxnBodyFailure`) properly guard with
-  `!= nil`. Production construction goes through
-  `NewExecutionStats()` (every pointer non-nil), so the panic is
-  unreachable today — but the convention is ambiguous and any future
-  caller building `&ExecutionStats{}` (e.g. a future test or a
-  partial-Stats scenario) panics in plan mode but not in apply
-  mode. Either guard all sites or document that
-  `NewExecutionStats()` is the only construction path.
+- ~~**scope.Clone() omits `ApplyStartedAt`.**~~ **Fixed** (2026-05-27,
+  same-day cleanup PR). `VariableScope.Clone()` now propagates the
+  field; new `TestScopeClone_PropagatesApplyStartedAt` pins it.
+- ~~**Inconsistent nil-guards on `ec.Svc.Stats.{Changed,Executed,Global}`.**~~
+  **Fixed** (2026-05-27, same-day cleanup PR). All 12 Stats deref
+  sites in `executor.go` + `transaction.go` now route through
+  `incStat` / `decStat` / `readStat` helpers in `context.go` —
+  uniformly nil-safe, no per-site guards needed. New
+  `TestStatHelpers_NilSafe` pins the contract (nil pointers are
+  no-ops, not panics; decStat clamps at zero per MT-45).
 - **Reverse-step dispatch bypasses `step.started` / `step.completed`
   events.** `transaction.go:179` calls `dispatchRunner` directly,
   not through `ExecuteStep`. Consumers of those events (RunCapture,
@@ -82,14 +70,11 @@ Adjacent observations from this pass (smells, not standalone findings):
   cannot reconstruct what was undone. Could be intentional (MT-45
   added the counter as the visibility contract; per-step events
   during rollback would clutter the console), but the spec-22 phase 5
-  rollback-visibility design note doesn't explicitly say. Worth a
-  human read of spec-22 §5 before filing.
-- **`runWithRetry` error message hard-codes "command failed".**
-  `retry.go:112` — pre-spec-69 the helper lived in shell/backoff.go;
-  post-promotion it's used by template/file/http_request/etc. but
-  the message still says "command failed after N attempts". File
-  with the F053 fix as a one-line message change. Noted in F053's
-  "Adjacent observation" section, not a standalone finding.
+  rollback-visibility design note doesn't explicitly say. **Open**.
+  Worth a human read of spec-22 §5 before filing.
+- ~~**`runWithRetry` error message hard-codes "command failed".**~~
+  **Fixed** as part of F053 (commit `c6bd27ac`). Message is now
+  action-agnostic ("step failed after N attempts").
 
 Everything else surfaced by the cold-read pass fell out as
 documented design intent (self_shutdown delay goroutine,

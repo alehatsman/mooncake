@@ -50,6 +50,42 @@ func NewExecutionStats() *ExecutionStats {
 	}
 }
 
+// incStat bumps the counter at p by one. nil-safe so callers don't
+// have to guard every increment site; the F053 cold-read pass
+// surfaced 10 unguarded `*ec.Svc.Stats.X++` sites alongside the 2
+// already-guarded ones in postExecuteSuccess / handleTxnBodyFailure
+// — the inconsistency was a panic latent in any future caller that
+// builds an `&ExecutionStats{}` literal instead of going through
+// NewExecutionStats. Centralising the guard here keeps the call
+// sites short while making the safety uniform.
+func incStat(p *int) {
+	if p != nil {
+		*p++
+	}
+}
+
+// decStat is the inverse of incStat, used by transaction.go's
+// MT-45 rollback bookkeeping (rolled-back steps subtract from the
+// run-wide Changed counter so the recap reflects net effect, not
+// gross writes-then-undos). Stays at zero rather than going
+// negative — a roll-back of a step that didn't bump Changed
+// shouldn't make the counter negative.
+func decStat(p *int) {
+	if p != nil && *p > 0 {
+		*p--
+	}
+}
+
+// readStat returns the counter at p, or zero if p is nil. Companion
+// to incStat for the two non-increment sites (generateStepID's
+// step-N label and StepStartedData.GlobalStep).
+func readStat(p *int) int {
+	if p == nil {
+		return 0
+	}
+	return *p
+}
+
 // Mode and its constants live in the actions package; re-exported here
 // for backward source compatibility during the Spec 16 migration.
 type Mode = actions.Mode
