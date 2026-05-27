@@ -335,6 +335,7 @@ export interface HttpRequestAction {
   body?: string;
   creates_when?: string;
   expect_json_keys?: string[];
+  expect_json_schema?: string;
   expect_status?: number[];
   file?: string;
   follow_redirects?: number;
@@ -359,6 +360,7 @@ export interface HttpRequestAction {
     body: string;
     creates_when: string;
     expect_json_keys: string[];
+    expect_json_schema: string;
     expect_status: number[];
     file: string;
     follow_redirects: number;
@@ -395,6 +397,7 @@ export interface HttpRequestAction {
     body: string;
     creates_when: string;
     expect_json_keys: string[];
+    expect_json_schema: string;
     expect_status: number[];
     file: string;
     follow_redirects: number;
@@ -716,6 +719,11 @@ export interface OsSystemdAction {
   name: string;
   path?: string;
   reload_on_change?: boolean;
+  /**
+   * 
+   * @values system | user
+   */
+  scope?: "system" | "user";
   service?: Record<string, any>;
   socket?: Record<string, any>;
   started?: boolean;
@@ -822,6 +830,7 @@ export interface PkgRepoAction {
     gpg_check: boolean;
     gpg_key_fingerprint: string;
     gpg_key_url: string;
+    ppa: string;
     suites: string[];
     update_cache: boolean;
     uri: string;

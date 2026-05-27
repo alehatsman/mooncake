@@ -12,6 +12,8 @@ import (
 	"time"
 
 	"golang.org/x/crypto/openpgp" //nolint:staticcheck // same vendor as fingerprint.go
+	"golang.org/x/crypto/openpgp/armor"
+	//nolint:staticcheck
 )
 
 // generateTestKey creates a small OpenPGP key entity and returns its
@@ -116,4 +118,49 @@ func TestRealVerifyKeyFingerprint_UnparseableBytes(t *testing.T) {
 	if !strings.Contains(err.Error(), "parse fetched gpg key") {
 		t.Errorf("error should name the failure source; got %q", err.Error())
 	}
+}
+
+func TestMaybeDearmor(t *testing.T) {
+	binary, _ := generateTestKey(t)
+
+	// Binary in → binary out (unchanged).
+	out, err := MaybeDearmor(binary)
+	if err != nil {
+		t.Fatalf("binary input: %v", err)
+	}
+	if !bytes.Equal(out, binary) {
+		t.Errorf("binary input should pass through unchanged")
+	}
+
+	// Armored in → binary out (matches the binary form bit-for-bit).
+	armored := armorEncode(t, binary)
+	out, err = MaybeDearmor(armored)
+	if err != nil {
+		t.Fatalf("armored input: %v", err)
+	}
+	if !bytes.Equal(out, binary) {
+		t.Errorf("dearmored output should equal binary input; got %d bytes vs %d", len(out), len(binary))
+	}
+
+	// Garbled armor surfaces an error rather than writing trash.
+	bad := []byte("-----BEGIN PGP PUBLIC KEY BLOCK-----\nnot base64 at all\n-----END PGP PUBLIC KEY BLOCK-----\n")
+	if _, err := MaybeDearmor(bad); err == nil {
+		t.Error("expected error on malformed armor; got nil")
+	}
+}
+
+func armorEncode(t *testing.T, binary []byte) []byte {
+	t.Helper()
+	var buf bytes.Buffer
+	w, err := armor.Encode(&buf, "PGP PUBLIC KEY BLOCK", nil)
+	if err != nil {
+		t.Fatalf("armor.Encode: %v", err)
+	}
+	if _, err := w.Write(binary); err != nil {
+		t.Fatalf("write: %v", err)
+	}
+	if err := w.Close(); err != nil {
+		t.Fatalf("close: %v", err)
+	}
+	return buf.Bytes()
 }

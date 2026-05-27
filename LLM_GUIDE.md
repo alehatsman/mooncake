@@ -120,7 +120,7 @@ mooncake/
 - Flat only (NO nesting - presets cannot call presets)
 - Search paths: `./presets/` → `~/.mooncake/presets/` → `/usr/local/share/mooncake/presets/` → `/usr/share/mooncake/presets/`
 - Parameter namespace: `parameters.name` (NOT just `name`)
-- BaseDir stored for relative path resolution
+- Relative paths resolve Node-style — see "Path Resolution" below
 
 **3. Planner** (`internal/plan/`)
 - Plan-time: Loop expansion, include resolution, variable loading, tag filtering
@@ -184,15 +184,21 @@ BuildPlan("/path/to/config.yml")
 
 ### Preset Flow
 
-```
-LoadPreset("kubectl")  (internal/presets/loader.go:47)
-  → Searches: ./presets/kubectl/preset.yml
-  → Sets: preset.BaseDir = "./presets/kubectl"
+A preset is just an entrypoint into ordinary include resolution.
+On entry, `CurrentDir` flips to the preset's entrypoint directory;
+from there, every include / component re-flips `CurrentDir` per file
+the same way a non-preset YAML would. There's no special "preset
+root" base — once you're inside the preset, paths are Node-style
+relative to whichever sub-file declares the step.
 
-ExpandPreset(invocation)  (internal/presets/expander.go:13)
-  → ExpandStepsWithContext(preset.Steps, params, preset.BaseDir)
-    → Planner uses preset.BaseDir as CurrentDir
-    → Include paths resolve relative to preset.BaseDir
+```
+LoadPreset("kubectl")  (internal/presets/loader.go)
+  → Searches: ./presets/kubectl/preset.yml
+
+ExpandPreset(invocation)
+  → CurrentDir flips to ./presets/kubectl/
+  → includes inside the preset re-flip CurrentDir per file
+    (identical to plain top-level include behavior)
 ```
 
 ### Practical Example
@@ -222,7 +228,10 @@ steps:
   - include: verify.yml              # → presets/kubectl/tasks/verify.yml
 ```
 
-**Why this works**: Each include updates `CurrentDir` to the included file's directory.
+**Why this works**: each include updates `CurrentDir` to the included
+file's directory; relative paths in step fields (`template.src`,
+`expect_json_schema`, etc.) all resolve against that `CurrentDir`,
+Node-style.
 
 ## Error Handling
 

@@ -150,11 +150,11 @@ func TestDetectExtraLinuxDistribution(t *testing.T) {
 		t.Skip("Skipping Linux-specific test")
 	}
 
-	name, version := detectLinuxDistribution()
+	name, version, codename := detectLinuxDistribution()
 	if name == "" {
 		t.Log("Warning: Distribution not detected")
 	} else {
-		t.Logf("Distribution: %s %s", name, version)
+		t.Logf("Distribution: %s %s (%s)", name, version, codename)
 	}
 }
 

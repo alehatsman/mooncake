@@ -28,9 +28,10 @@ type Facts struct {
 	UserHome string
 
 	// Distribution (Linux)
-	Distribution        string
-	DistributionVersion string
-	DistributionMajor   string
+	Distribution         string
+	DistributionVersion  string
+	DistributionMajor    string
+	DistributionCodename string // VERSION_CODENAME from /etc/os-release (e.g. "jammy", "bookworm")
 
 	// Network
 	IPAddresses       []string
@@ -185,14 +186,15 @@ func collectUncached() *Facts {
 func (f *Facts) ToMap() map[string]interface{} {
 	return map[string]interface{}{
 		// Basic
-		"os":                   f.OS,
-		"arch":                 f.Arch,
-		"hostname":             f.Hostname,
-		"username":             f.Username,
-		"user_home":            f.UserHome,
-		"distribution":         f.Distribution,
-		"distribution_version": f.DistributionVersion,
-		"distribution_major":   f.DistributionMajor,
+		"os":                    f.OS,
+		"arch":                  f.Arch,
+		"hostname":              f.Hostname,
+		"username":              f.Username,
+		"user_home":             f.UserHome,
+		"distribution":          f.Distribution,
+		"distribution_version":  f.DistributionVersion,
+		"distribution_major":    f.DistributionMajor,
+		"distribution_codename": f.DistributionCodename,
 
 		// Network
 		"ip_addresses":        f.IPAddresses,

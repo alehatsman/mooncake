@@ -33,6 +33,12 @@ type OsSystemdReverseInfo struct {
 	// Name is the unit name (e.g. "myapp.service").
 	Name string
 
+	// Scope is the systemd bus the forward step used: "system" or
+	// "user". Captured so the rollback step targets the same bus
+	// (proposal-17). Older snapshots without this field default to
+	// system scope, which matches pre-proposal-17 behavior.
+	Scope string
+
 	// Path is the resolved unit file path.
 	Path string
 
@@ -62,8 +68,8 @@ type OsSystemdReverseInfo struct {
 // is-enabled / is-active for the unit. All four pieces are
 // best-effort: failures to read either leave the corresponding
 // "Had..." flag false.
-func captureReverseInfo(name, path string) *OsSystemdReverseInfo {
-	info := &OsSystemdReverseInfo{Name: name, Path: path}
+func captureReverseInfo(scope, name, path string) *OsSystemdReverseInfo {
+	info := &OsSystemdReverseInfo{Name: name, Scope: scope, Path: path}
 
 	if content, exists, err := readFile(path); err == nil {
 		info.PriorExisted = exists
@@ -71,11 +77,11 @@ func captureReverseInfo(name, path string) *OsSystemdReverseInfo {
 			info.PriorContent = content
 		}
 	}
-	if enabled, err := systemctlIsEnabled(name); err == nil {
+	if enabled, err := systemctlIsEnabled(scope, name); err == nil {
 		info.PriorEnabled = enabled
 		info.HadPriorEnabled = true
 	}
-	if active, err := systemctlIsActive(name); err == nil {
+	if active, err := systemctlIsActive(scope, name); err == nil {
 		info.PriorActive = active
 		info.HadPriorActive = true
 	}
@@ -121,6 +127,7 @@ func (Handler) Reverse(_ actions.Context, step *config.Step, result actions.Resu
 			Name: "reverse: remove " + info.Name,
 			OsSystemd: &config.OsSystemd{
 				Name:  info.Name,
+				Scope: info.Scope,
 				State: "absent",
 			},
 		}, nil

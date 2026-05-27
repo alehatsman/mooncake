@@ -873,3 +873,202 @@ func TestValidate_ExpectJSONKeys_RejectsEmptyEntry(t *testing.T) {
 		t.Errorf("error should pinpoint the bad index; got: %v", err)
 	}
 }
+
+// writeSchemaFile drops a schema into a tmpdir and returns the dir
+// (used as CurrentDir) plus the bare filename the test will reference
+// in ExpectJSONSchema. Node-style resolution joins them at run time.
+func writeSchemaFile(t *testing.T, schema string) (dir, name string) {
+	t.Helper()
+	dir = t.TempDir()
+	name = "schema.json"
+	if err := os.WriteFile(filepath.Join(dir, name), []byte(schema), 0o644); err != nil {
+		t.Fatalf("write schema: %v", err)
+	}
+	return dir, name
+}
+
+// TestRun_Apply_ExpectJSONSchema_Valid — happy path: response.json
+// validates against the schema, step succeeds.
+func TestRun_Apply_ExpectJSONSchema_Valid(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"id":"abc","count":3}`))
+	}))
+	defer srv.Close()
+
+	dir, name := writeSchemaFile(t, `{
+		"type": "object",
+		"required": ["id", "count"],
+		"properties": {
+			"id":    {"type": "string"},
+			"count": {"type": "integer"}
+		}
+	}`)
+	ctx := newCtx(t, false)
+	ctx.CurrentDir = dir
+
+	step := &config.Step{HTTPRequest: &config.HTTPRequest{
+		URL:              srv.URL,
+		Timeout:          "2s",
+		ExpectJSONSchema: "./" + name,
+	}}
+	res, err := (&Handler{}).Run(ctx, step)
+	if err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	r := res.(*executor.Result)
+	if r.Failed {
+		t.Errorf("expected success; got failed result: %+v", r)
+	}
+}
+
+// TestRun_Apply_ExpectJSONSchema_Violation — response fails the
+// schema; error must call out expect_json_schema and include a
+// JSON-pointer-style instance location.
+func TestRun_Apply_ExpectJSONSchema_Violation(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		// count should be integer; sending string instead.
+		_, _ = w.Write([]byte(`{"id":"abc","count":"three"}`))
+	}))
+	defer srv.Close()
+
+	dir, name := writeSchemaFile(t, `{
+		"type": "object",
+		"required": ["id", "count"],
+		"properties": {
+			"id":    {"type": "string"},
+			"count": {"type": "integer"}
+		}
+	}`)
+	ctx := newCtx(t, false)
+	ctx.CurrentDir = dir
+
+	step := &config.Step{HTTPRequest: &config.HTTPRequest{
+		URL:              srv.URL,
+		Timeout:          "2s",
+		ExpectJSONSchema: "./" + name,
+	}}
+	_, err := (&Handler{}).Run(ctx, step)
+	if err == nil {
+		t.Fatal("expected schema violation error")
+	}
+	if !strings.Contains(err.Error(), "expect_json_schema") {
+		t.Errorf("error should mention expect_json_schema; got: %v", err)
+	}
+	if !strings.Contains(err.Error(), "/count") {
+		t.Errorf("error should pinpoint the failing field with a JSON pointer; got: %v", err)
+	}
+}
+
+// TestRun_Apply_ExpectJSONSchema_MissingFile — schema file isn't
+// present. The step must fail with a read error mentioning the
+// resolved path, BEFORE the network call is accepted (the network
+// call itself happens — we can't know the schema is needed until
+// after the response — but the response is rejected and the audit
+// trail shows the cause).
+func TestRun_Apply_ExpectJSONSchema_MissingFile(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"id":"abc"}`))
+	}))
+	defer srv.Close()
+
+	ctx := newCtx(t, false)
+	ctx.CurrentDir = t.TempDir() // dir exists; the file does NOT
+
+	step := &config.Step{HTTPRequest: &config.HTTPRequest{
+		URL:              srv.URL,
+		Timeout:          "2s",
+		ExpectJSONSchema: "./missing.json",
+	}}
+	_, err := (&Handler{}).Run(ctx, step)
+	if err == nil {
+		t.Fatal("expected error for missing schema file")
+	}
+	if !strings.Contains(err.Error(), "expect_json_schema") {
+		t.Errorf("error should mention expect_json_schema; got: %v", err)
+	}
+	if !strings.Contains(err.Error(), "missing.json") {
+		t.Errorf("error should mention the path; got: %v", err)
+	}
+}
+
+// TestRun_Apply_ExpectJSONSchema_BadSchema — schema file is
+// malformed JSON / invalid draft-07. Compile error surfaces, step
+// fails clearly.
+func TestRun_Apply_ExpectJSONSchema_BadSchema(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"id":"abc"}`))
+	}))
+	defer srv.Close()
+
+	// `type: "not-a-type"` makes draft-07 reject the schema at
+	// compile time — that's the failure mode we want to test.
+	dir, name := writeSchemaFile(t, `{"type": "not-a-type"}`)
+	ctx := newCtx(t, false)
+	ctx.CurrentDir = dir
+
+	step := &config.Step{HTTPRequest: &config.HTTPRequest{
+		URL:              srv.URL,
+		Timeout:          "2s",
+		ExpectJSONSchema: "./" + name,
+	}}
+	_, err := (&Handler{}).Run(ctx, step)
+	if err == nil {
+		t.Fatal("expected error for malformed schema")
+	}
+	if !strings.Contains(err.Error(), "expect_json_schema") {
+		t.Errorf("error should mention expect_json_schema; got: %v", err)
+	}
+}
+
+// TestRun_Apply_ExpectJSONSchema_NonJSONResponseFails — response
+// content-type isn't JSON → data["json"] is nil → explicit error,
+// not a confusing schema-mismatch message against a string body.
+func TestRun_Apply_ExpectJSONSchema_NonJSONResponseFails(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "text/plain")
+		_, _ = w.Write([]byte("plain text body"))
+	}))
+	defer srv.Close()
+
+	dir, name := writeSchemaFile(t, `{"type": "object"}`)
+	ctx := newCtx(t, false)
+	ctx.CurrentDir = dir
+
+	step := &config.Step{HTTPRequest: &config.HTTPRequest{
+		URL:              srv.URL,
+		Timeout:          "2s",
+		ExpectJSONSchema: "./" + name,
+	}}
+	_, err := (&Handler{}).Run(ctx, step)
+	if err == nil {
+		t.Fatal("expected error for non-JSON response")
+	}
+	if !strings.Contains(err.Error(), "not JSON") {
+		t.Errorf("error should explain non-JSON cause; got: %v", err)
+	}
+}
+
+// TestValidate_ExpectJSONSchema_RejectsInsideProbe ensures the
+// "probe is read-only inspection" rule extends to expect_json_schema
+// the same way it does for save_to. Misuse fails Validate, not at
+// run time.
+func TestValidate_ExpectJSONSchema_RejectsInsideProbe(t *testing.T) {
+	step := &config.Step{HTTPRequest: &config.HTTPRequest{
+		URL: "http://x",
+		Probe: &config.HTTPRequest{
+			URL:              "http://x/probe",
+			ExpectJSONSchema: "./schema.json",
+		},
+	}}
+	err := (&Handler{}).Validate(step)
+	if err == nil {
+		t.Fatal("expected Validate to reject expect_json_schema inside probe")
+	}
+	if !strings.Contains(err.Error(), "probe") || !strings.Contains(err.Error(), "expect_json_schema") {
+		t.Errorf("error should mention probe + expect_json_schema; got: %v", err)
+	}
+}

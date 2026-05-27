@@ -20,10 +20,11 @@ See **[LLM_GUIDE.md](./LLM_GUIDE.md)** for the complete project reference guide.
 - ✅ Follow definitive style guide: `docs/presets/definitive-style-guide.md`
 - ✅ No over-engineering - minimal, focused solutions only
 
-**Key Confusion Point**: Path resolution in presets
-- Relative paths resolve from **including file's directory**
-- Preset includes use `preset.BaseDir`
-- See LLM_GUIDE.md "Path Expansion Summary" for details
+**Path resolution**: Node-style throughout.
+- Relative paths resolve from the **directory of the YAML file declaring the step** (`ec.CurrentDir`, set per-file by the planner).
+- `./x` is next to the source file; `../x` walks one up; absolute paths are honored.
+- Inside a component or fetched module, the same rule applies — `CurrentDir` flips to that component's own dir, so paths are package-relative without any separate "preset root" concept.
+- See LLM_GUIDE.md "Path Expansion Summary" for details.
 
 **Architecture**: 5 core systems (Actions, Presets, Planner, Executor, Facts)
 **Status**: Production-ready, 13 actions migrated ✅

@@ -62,7 +62,11 @@ func newStubFS(t *testing.T) *stubFS {
 	s := &stubFS{
 		sourcesDir:  filepath.Join(dir, "sources.list.d"),
 		keyringsDir: filepath.Join(dir, "keyrings"),
-		keyBody:     []byte("-----BEGIN PGP PUBLIC KEY-----\nfake\n-----END PGP PUBLIC KEY-----\n"),
+		// Binary-looking bytes so the dearmor pass treats it as already-
+		// binary (no `-----BEGIN` prefix) and writes through unchanged.
+		// shared.VerifyKeyFingerprint is stubbed to no-op below, so the
+		// content doesn't have to parse as real OpenPGP.
+		keyBody: []byte{0x99, 0x01, 0x02, 'f', 'a', 'k', 'e'},
 	}
 	originalPaths := paths
 	originalFetch := shared.HTTPFetchKey

@@ -483,13 +483,21 @@ type PkgRepo struct {
 // PkgRepoApt is the apt driver block for pkg.repo. Written as DEB822
 // to /etc/apt/sources.list.d/<name>.sources with the keyring (if any)
 // at /etc/apt/keyrings/<name>.gpg.
+//
+// `ppa:` is a shorthand for launchpad PPAs (proposal-22) — when set,
+// uri/suites/components default to the launchpad layout and the
+// signing-key fingerprint is discovered from launchpad's REST API, so
+// `gpg_check: true` (the default) holds without the operator pinning
+// the key by hand. `ppa:` is mutually exclusive with `uri:` and
+// `gpg_key_url:`; the other fields stay overrideable.
 type PkgRepoApt struct {
-	URI               string   `yaml:"uri" json:"uri"`                                           // Required: repository URI
-	Suites            []string `yaml:"suites" json:"suites,omitempty"`                           // Required: suite names (e.g. [nodistro] or [jammy])
+	URI               string   `yaml:"uri" json:"uri,omitempty"`                                 // Required unless `ppa:` is set
+	PPA               string   `yaml:"ppa" json:"ppa,omitempty"`                                 // Launchpad PPA shorthand, e.g. "neovim-ppa/unstable"
+	Suites            []string `yaml:"suites" json:"suites,omitempty"`                           // Required without `ppa:`; defaults to [distribution_codename] when `ppa:` is set
 	Components        []string `yaml:"components" json:"components,omitempty"`                   // Default: [main]
 	Architectures     []string `yaml:"architectures" json:"architectures,omitempty"`             // Default: host arch
-	GPGKeyURL         string   `yaml:"gpg_key_url" json:"gpg_key_url,omitempty"`                 // URL to .gpg or .asc public key
-	GPGKeyFingerprint string   `yaml:"gpg_key_fingerprint" json:"gpg_key_fingerprint,omitempty"` // Required when gpg_check is true
+	GPGKeyURL         string   `yaml:"gpg_key_url" json:"gpg_key_url,omitempty"`                 // URL to .gpg or .asc public key (mutex with ppa)
+	GPGKeyFingerprint string   `yaml:"gpg_key_fingerprint" json:"gpg_key_fingerprint,omitempty"` // Required when gpg_check is true; auto-discovered for `ppa:`
 	GPGCheck          *bool    `yaml:"gpg_check" json:"gpg_check,omitempty"`                     // Default: true
 	UpdateCache       *bool    `yaml:"update_cache" json:"update_cache,omitempty"`               // Run apt-get update after change (default: true)
 }
@@ -703,6 +711,7 @@ type OsSysctl struct {
 type OsSystemd struct {
 	Name           string                 `yaml:"name" json:"name"`                                   // Unit filename with suffix, e.g. myapp.service
 	State          string                 `yaml:"state" json:"state,omitempty"`                       // present|absent (default: present)
+	Scope          string                 `yaml:"scope" json:"scope,omitempty"`                       // system|user (default: system); user routes writes to ~/.config/systemd/user and passes --user to systemctl
 	Unit           map[string]interface{} `yaml:"unit" json:"unit,omitempty"`                         // [Unit] section
 	Service        map[string]interface{} `yaml:"service" json:"service,omitempty"`                   // [Service] section (for .service)
 	Timer          map[string]interface{} `yaml:"timer" json:"timer,omitempty"`                       // [Timer] section (for .timer)
@@ -711,7 +720,7 @@ type OsSystemd struct {
 	Enabled        *bool                  `yaml:"enabled" json:"enabled,omitempty"`                   // ensure enabled state (default: unmanaged)
 	Started        *bool                  `yaml:"started" json:"started,omitempty"`                   // ensure started state (default: unmanaged)
 	ReloadOnChange *bool                  `yaml:"reload_on_change" json:"reload_on_change,omitempty"` // daemon-reload on unit content drift (default: true)
-	Path           string                 `yaml:"path" json:"path,omitempty"`                         // override unit dir (default: /etc/systemd/system)
+	Path           string                 `yaml:"path" json:"path,omitempty"`                         // override unit dir (default: /etc/systemd/system, or ~/.config/systemd/user when scope=user)
 }
 
 // OsFirewall manages host firewall rules. v1 ships a ufw driver only;
@@ -1537,13 +1546,38 @@ type HTTPRequest struct {
 	// listing what's missing.
 	//
 	// This is deliberately a narrower contract than the full JSON-
-	// schema validation deferred under expect_json_schema (file
-	// path → draft-07 validator). The narrow check covers the most
-	// common "I called POST /hooks, prove the server returned an id
-	// and url" assertion without taking on a JSONSchema dependency.
-	// Empty/whitespace-only entries are rejected by Validate so
-	// `expect_json_keys: [""]` doesn't silently no-op.
+	// schema validation under ExpectJSONSchema (below). The narrow
+	// check covers the most common "I called POST /hooks, prove the
+	// server returned an id and url" assertion. Empty/whitespace-only
+	// entries are rejected by Validate so `expect_json_keys: [""]`
+	// doesn't silently no-op.
 	ExpectJSONKeys []string `yaml:"expect_json_keys,omitempty" json:"expect_json_keys,omitempty"`
+
+	// ExpectJSONSchema is a path to a JSON Schema (draft-07) file
+	// that the auto-parsed response JSON must validate against.
+	// After a successful response (status accepted, JSON parsed), the
+	// handler reads the file, compiles the schema, and validates
+	// response.json against it. The first violation fails the step
+	// with a clear error including the JSON-pointer path of the
+	// failing location.
+	//
+	// Path resolution: Node-style — relative to the YAML file that
+	// declares the step (ec.CurrentDir, set per-file by the planner).
+	// `./schema.json` resolves to the same dir as the step's source
+	// file; `../schemas/hook.json` walks one dir up. Absolute paths
+	// are honored. The path is template-rendered against vars before
+	// resolution (so `{{ .schema_dir }}/hook.json` works).
+	//
+	// Compilation is run-time, not Validate-time, because the path
+	// may reference vars that aren't bound until apply. A missing
+	// file, malformed schema, or unparseable draft fails the step
+	// BEFORE the network call runs.
+	//
+	// Composes with ExpectJSONKeys: both run if both set (keys
+	// first, schema second). Rejected inside `probe:` sub-blocks
+	// (matches the SaveTo rule — probes are read-only inspection).
+	// Allowed inside `reverse:` sub-blocks.
+	ExpectJSONSchema string `yaml:"expect_json_schema,omitempty" json:"expect_json_schema,omitempty"`
 }
 
 // HTTPAuth is the one-of credential block for HTTPRequest. Set at

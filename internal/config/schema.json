@@ -865,6 +865,9 @@
             "type": "string"
           }
         },
+        "expect_json_schema": {
+          "type": "string"
+        },
         "expect_status": {
           "type": "array",
           "items": {
@@ -954,6 +957,9 @@
               "items": {
                 "type": "string"
               }
+            },
+            "expect_json_schema": {
+              "type": "string"
             },
             "expect_status": {
               "type": "array",
@@ -1093,6 +1099,9 @@
               "items": {
                 "type": "string"
               }
+            },
+            "expect_json_schema": {
+              "type": "string"
             },
             "expect_status": {
               "type": "array",
@@ -1894,6 +1903,13 @@
         "reload_on_change": {
           "type": "boolean"
         },
+        "scope": {
+          "type": "string",
+          "enum": [
+            "system",
+            "user"
+          ]
+        },
         "service": {
           "type": "object",
           "additionalProperties": true
@@ -2160,6 +2176,9 @@
             "gpg_key_url": {
               "type": "string"
             },
+            "ppa": {
+              "type": "string"
+            },
             "suites": {
               "type": "array",
               "items": {
@@ -2170,13 +2189,9 @@
               "type": "boolean"
             },
             "uri": {
-              "type": "string",
-              "minLength": 1
+              "type": "string"
             }
           },
-          "required": [
-            "uri"
-          ],
           "additionalProperties": false
         },
         "brew": {

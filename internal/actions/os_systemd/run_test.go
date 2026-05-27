@@ -46,6 +46,10 @@ func planMode(b bool) actions.Mode {
 // stub captures the systemctl calls a test triggers and lets the test
 // inject pre-canned enabled/active states. All package-level systemctl
 // hooks are redirected to its methods for the duration of the test.
+//
+// Calls are recorded with a "--user " prefix when scope=user (e.g.
+// "--user enable foo.service") so user-scope tests can assert the
+// flag propagation without parsing systemctl args separately.
 type stub struct {
 	t               *testing.T
 	enabled         map[string]bool
@@ -69,48 +73,54 @@ func newStub(t *testing.T) *stub {
 		enableActionErr: map[string]error{},
 		startActionErr:  map[string]error{},
 	}
+	tag := func(scope string) string {
+		if scope == "user" {
+			return "--user "
+		}
+		return ""
+	}
 	origDR, origIE, origE, origD, origIA, origST, origSP := systemctlDaemonReload, systemctlIsEnabled, systemctlEnable, systemctlDisable, systemctlIsActive, systemctlStart, systemctlStop
-	systemctlDaemonReload = func() error {
-		s.calls = append(s.calls, "daemon-reload")
+	systemctlDaemonReload = func(scope string) error {
+		s.calls = append(s.calls, tag(scope)+"daemon-reload")
 		return s.reloadErr
 	}
-	systemctlIsEnabled = func(name string) (bool, error) {
-		s.calls = append(s.calls, "is-enabled "+name)
+	systemctlIsEnabled = func(scope, name string) (bool, error) {
+		s.calls = append(s.calls, tag(scope)+"is-enabled "+name)
 		if err, ok := s.enableErr[name]; ok {
 			return false, err
 		}
 		return s.enabled[name], nil
 	}
-	systemctlEnable = func(name string) error {
-		s.calls = append(s.calls, "enable "+name)
+	systemctlEnable = func(scope, name string) error {
+		s.calls = append(s.calls, tag(scope)+"enable "+name)
 		if err, ok := s.enableActionErr[name]; ok {
 			return err
 		}
 		s.enabled[name] = true
 		return nil
 	}
-	systemctlDisable = func(name string) error {
-		s.calls = append(s.calls, "disable "+name)
+	systemctlDisable = func(scope, name string) error {
+		s.calls = append(s.calls, tag(scope)+"disable "+name)
 		s.enabled[name] = false
 		return nil
 	}
-	systemctlIsActive = func(name string) (bool, error) {
-		s.calls = append(s.calls, "is-active "+name)
+	systemctlIsActive = func(scope, name string) (bool, error) {
+		s.calls = append(s.calls, tag(scope)+"is-active "+name)
 		if err, ok := s.activeErr[name]; ok {
 			return false, err
 		}
 		return s.active[name], nil
 	}
-	systemctlStart = func(name string) error {
-		s.calls = append(s.calls, "start "+name)
+	systemctlStart = func(scope, name string) error {
+		s.calls = append(s.calls, tag(scope)+"start "+name)
 		if err, ok := s.startActionErr[name]; ok {
 			return err
 		}
 		s.active[name] = true
 		return nil
 	}
-	systemctlStop = func(name string) error {
-		s.calls = append(s.calls, "stop "+name)
+	systemctlStop = func(scope, name string) error {
+		s.calls = append(s.calls, tag(scope)+"stop "+name)
 		s.active[name] = false
 		return nil
 	}
@@ -130,7 +140,19 @@ func stubFS(t *testing.T) string {
 	t.Helper()
 	dir := t.TempDir()
 	original := systemdPaths
-	systemdPaths.dir = dir
+	systemdPaths.systemDir = dir
+	t.Cleanup(func() { systemdPaths = original })
+	return dir
+}
+
+// stubUserFS overrides the default user-scope unit dir so apply
+// paths under scope=user write into a tempdir instead of the real
+// $HOME/.config/systemd/user.
+func stubUserFS(t *testing.T) string {
+	t.Helper()
+	dir := t.TempDir()
+	original := systemdPaths
+	systemdPaths.userDir = dir
 	t.Cleanup(func() { systemdPaths = original })
 	return dir
 }
@@ -561,4 +583,172 @@ func contains(haystack []string, needle string) bool {
 		}
 	}
 	return false
+}
+
+// --- proposal-17: scope: user --------------------------------------
+
+func TestValidate_ScopeAcceptsUserAndSystem(t *testing.T) {
+	h := &Handler{}
+	cases := []struct {
+		scope   string
+		wantErr bool
+	}{
+		{"", false},
+		{"system", false},
+		{"user", false},
+		{"USER", false},   // case-insensitive
+		{"global", true},  // unknown
+		{"invalid", true}, // unknown
+	}
+	for _, c := range cases {
+		t.Run(c.scope, func(t *testing.T) {
+			err := h.Validate(&config.Step{OsSystemd: &config.OsSystemd{
+				Name:    "x.service",
+				Scope:   c.scope,
+				Service: map[string]interface{}{"ExecStart": "/bin/true"},
+			}})
+			if (err != nil) != c.wantErr {
+				t.Errorf("scope=%q err=%v wantErr=%v", c.scope, err, c.wantErr)
+			}
+		})
+	}
+}
+
+func TestPermissions_UserScopeDropsSudo(t *testing.T) {
+	h := Handler{}
+	ps := h.Permissions(&config.Step{OsSystemd: &config.OsSystemd{
+		Name:  "mcsearch-tunnel.service",
+		Scope: "user",
+	}})
+	if ps.Sudo {
+		t.Errorf("scope=user must not require sudo; got %+v", ps)
+	}
+	if len(ps.FilesystemWrite) != 1 ||
+		!strings.HasSuffix(ps.FilesystemWrite[0], "/.config/systemd/user/mcsearch-tunnel.service") {
+		t.Errorf("FilesystemWrite should resolve under user dir; got %v", ps.FilesystemWrite)
+	}
+}
+
+func TestApply_UserScopeWritesToUserDirAndPassesUserFlag(t *testing.T) {
+	if runtime.GOOS != "linux" {
+		t.Skip("Linux only")
+	}
+	dir := stubUserFS(t)
+	st := newStub(t)
+	step := &config.Step{OsSystemd: &config.OsSystemd{
+		Name:    "mcsearch-tunnel.service",
+		Scope:   "user",
+		Service: map[string]interface{}{"ExecStart": "/usr/bin/ssh -N tunnel"},
+		Enabled: boolPtr(true),
+		Started: boolPtr(true),
+	}}
+	r := mustRun(t, false, step)
+	if !r.Changed {
+		t.Fatalf("expected change; reason=%q", r.Reason)
+	}
+	// Unit file landed in the user dir (stubUserFS-injected tempdir),
+	// not in /etc/systemd/system.
+	if _, err := os.Stat(filepath.Join(dir, "mcsearch-tunnel.service")); err != nil {
+		t.Errorf("expected unit at user dir %s: %v", dir, err)
+	}
+	// Every systemctl call must have the --user prefix.
+	for _, c := range st.calls {
+		if !strings.HasPrefix(c, "--user ") {
+			t.Errorf("scope=user must prefix systemctl with --user; saw %q in %v", c, st.calls)
+		}
+	}
+	if !contains(st.calls, "--user enable mcsearch-tunnel.service") {
+		t.Errorf("expected --user enable; calls=%v", st.calls)
+	}
+	if !contains(st.calls, "--user start mcsearch-tunnel.service") {
+		t.Errorf("expected --user start; calls=%v", st.calls)
+	}
+	if !contains(st.calls, "--user daemon-reload") {
+		t.Errorf("expected --user daemon-reload; calls=%v", st.calls)
+	}
+}
+
+func TestApply_UserScopeAbsentTargetsUserBus(t *testing.T) {
+	if runtime.GOOS != "linux" {
+		t.Skip("Linux only")
+	}
+	dir := stubUserFS(t)
+	st := newStub(t)
+	step := &config.Step{OsSystemd: &config.OsSystemd{
+		Name:    "mcsearch-tunnel.service",
+		Scope:   "user",
+		Service: map[string]interface{}{"ExecStart": "/usr/bin/ssh -N tunnel"},
+		Enabled: boolPtr(true),
+		Started: boolPtr(true),
+	}}
+	_ = mustRun(t, false, step)
+	st.calls = nil
+
+	// Flip to absent — should stop + disable + remove on the user
+	// bus, never on system.
+	step.OsSystemd.State = "absent"
+	step.OsSystemd.Enabled = nil
+	step.OsSystemd.Started = nil
+	_ = mustRun(t, false, step)
+
+	if _, err := os.Stat(filepath.Join(dir, "mcsearch-tunnel.service")); !os.IsNotExist(err) {
+		t.Errorf("user-scope absent must remove the unit; stat err=%v", err)
+	}
+	if !contains(st.calls, "--user stop mcsearch-tunnel.service") {
+		t.Errorf("expected --user stop; calls=%v", st.calls)
+	}
+	if !contains(st.calls, "--user disable mcsearch-tunnel.service") {
+		t.Errorf("expected --user disable; calls=%v", st.calls)
+	}
+	for _, c := range st.calls {
+		if strings.HasPrefix(c, "stop ") || strings.HasPrefix(c, "disable ") || strings.HasPrefix(c, "enable ") || strings.HasPrefix(c, "start ") || c == "daemon-reload" {
+			t.Errorf("scope=user must never emit a system-bus systemctl call; saw %q", c)
+		}
+	}
+}
+
+func TestRender_UserScopeDefaultDir(t *testing.T) {
+	if runtime.GOOS != "linux" {
+		t.Skip("Linux only")
+	}
+	// Don't stub systemdPaths.userDir — exercise the $HOME fallback.
+	t.Setenv("HOME", t.TempDir())
+	_ = newStub(t)
+	step := &config.Step{OsSystemd: &config.OsSystemd{
+		Name:    "x.service",
+		Scope:   "user",
+		Service: map[string]interface{}{"ExecStart": "/bin/true"},
+	}}
+	_ = mustRun(t, false, step)
+	want := filepath.Join(os.Getenv("HOME"), ".config/systemd/user/x.service")
+	if _, err := os.Stat(want); err != nil {
+		t.Errorf("expected unit at default user dir %s: %v", want, err)
+	}
+}
+
+func TestReverse_UserScopePropagatesScope(t *testing.T) {
+	h := Handler{}
+	r := executor.NewResult()
+	r.ReverseData = &OsSystemdReverseInfo{
+		Name:         "mcsearch-tunnel.service",
+		Scope:        "user",
+		Path:         "/home/user/.config/systemd/user/mcsearch-tunnel.service",
+		PriorExisted: false,
+	}
+	rev, err := h.Reverse(nil, &config.Step{OsSystemd: &config.OsSystemd{
+		Name:  "mcsearch-tunnel.service",
+		Scope: "user",
+	}}, r)
+	if err != nil {
+		t.Fatalf("Reverse: %v", err)
+	}
+	if rev == nil || rev.OsSystemd == nil {
+		t.Fatal("Reverse must return an os.systemd step")
+	}
+	if rev.OsSystemd.Scope != "user" {
+		t.Errorf("Scope = %q, want user (so rollback hits the same bus)", rev.OsSystemd.Scope)
+	}
+	if rev.OsSystemd.State != "absent" {
+		t.Errorf("State = %q, want absent", rev.OsSystemd.State)
+	}
 }
