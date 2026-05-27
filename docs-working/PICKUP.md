@@ -11,7 +11,7 @@ root went from 56 files to 4 (mooncake.go + 3 test files);
 (`2b7eee8e`); orphan packages `internal/recommend/` +
 `internal/presets/registry/` + `docs-next/presets/` deleted
 (`4db53ad6`, −5629 LOC). Doc-side `mooncake presets` references
-catalogued in proposal-07 (see item 3 below).
+catalogued in proposal-07 (see item 2 below).
 
 Code-review cold-read queue **cleared and both findings fixed**
 (2026-05-27): 8 package areas read cold; F051 (os_* ctx.TODO)
@@ -24,9 +24,11 @@ landed `6ae880da`, F052 (kernel/validate os.Exit) landed
 renderers registered. `mooncake plan --diff` now shows typed
 output for every common action category.
 
-If you have **<5 minutes**, take **item 1** (small code-review reads).
-If you have **more**, scan the table and pick the highest-rank
-entry that isn't already claimed.
+If you have **<5 minutes**, take **item 3** (cold-read of one
+under-reviewed package). If you have **more**, scan the table
+and pick the highest-rank entry that isn't already claimed —
+**item 1 (`pilot-feedback-non-cmd`)** is the highest-leverage
+small task open right now.
 
 > **Before you start any item below**, check `~/.mooncake/claims.jsonl`:
 > ```
@@ -42,13 +44,12 @@ entry that isn't already claimed.
 
 | # | Task | Stream | Effort | Where to read | Claim slug |
 |---|---|---|---:|---|---|
-| 1 | **Continue the code-review cold-read** — queue empty as of 2026-05-27. Pick a package not in `code-review/TODO.md`'s "Reviewed (done)" table and read it cold. Top under-reviewed candidates: `internal/executor/` (4003 LOC, only spot-checked), `internal/plan/` (planner.go covered; the rest unread), `internal/template/` (clean per quick check but no formal pass). | any | S each | [`code-review/TODO.md`](./code-review/TODO.md) "Reviewed (done)" table for what's covered | `review-<pkg>` |
-| 2 | ~~**spec-66 waves 6–8**~~ — **DONE** 2026-05-27 (`103bcb4d`→`1a698906`). All 8 waves shipped; 16 renderers registered. See `streams/core/specs/spec-66-typed-plan-diff.md`. Drop to a new item next refresh. | core | — | — | — |
-| 3 | **proposal-07 presets-CLI docs migration** — ~30 user-facing string + doc references still mention `mooncake presets …` (a command that no longer exists). 5 tiers: delete 3 obsolete guide docs (~2k LOC), rewrite 6 docs with isolated mentions, fix 4 in-binary user-facing strings (doctor fix message, first-run hint, scaffold templates), 1 round of maintainer-facing comment polish. Mostly mechanical; 3 open questions flagged for the executing agent. | dx | S | [`streams/dx/proposals/proposal-07-presets-cli-docs-migration.md`](./streams/dx/proposals/proposal-07-presets-cli-docs-migration.md) | `presets-docs-migration` |
-| 4 | **pilot feedback for non-cmd actions** — output capture (`#34`) only surfaces stdout from cmd/shell-family steps into `LastIteration.LastStepStdout`. `file.write`, `file.copy`, `pkg.*`, `os.service`, etc. complete with no signal the LLM can read, so in `--style step` the model has no positive evidence its step succeeded and tends to re-emit the same plan (`StopNoProgress` instead of `StopStepDone`). Surfaced from real Ollama + Claude testing 2026-05-27. Add per-action-type summary lines (e.g. `wrote 16 bytes to <path>`) to `LastIteration`, surface in the prompt. | agent | S | [`internal/pilot/output_capture.go`](../../internal/pilot/output_capture.go), `internal/pilot/loop.go` LastIteration build sites | `pilot-feedback-non-cmd` |
-| 5 | **spec-58 fleet drift** — highest-leverage unstarted fleet feature. Turns Mooncake from "config management tool" into "fleet operating system." Start with the `InspectPlan` periodic loop; the typed-diff and transport primitives it needs are all in master. | fleet | L | [`streams/fleet/specs/spec-58-fleet-drift.md`](./streams/fleet/specs/spec-58-fleet-drift.md) | `spec-58-w1` |
-| 6 | **proposal-16 `expect_json_schema`** — the one open piece of http.request (waves 1–3 + `expect_json_keys` shipped). Full draft-07 file-path schema validation. Deferred pending validator-library design decision; pick this up only if you want to drive that conversation. | core | S | [`streams/core/proposals/proposal-16-http-request-action.md`](./streams/core/proposals/proposal-16-http-request-action.md) | `http-expect-schema` |
-| 7 | **Draft an agent-safety spec** — policy DSL, plan signing, per-action quotas, sandbox mode, or deterministic replay. Replay has the highest "demoable win" return and is the last open piece of the unfair-advantage statement. | agent | M (draft only) | [`streams/agent/README.md`](./streams/agent/README.md) §"Open gaps" | `agent-spec-<topic>` |
+| 1 | **pilot feedback for non-cmd actions** — output capture (`#34`) only surfaces stdout from cmd/shell-family steps into `LastIteration.LastStepStdout`. `file.write`, `file.copy`, `pkg.*`, `os.service`, etc. complete with no signal the LLM can read, so in `--style step` the model has no positive evidence its step succeeded and tends to re-emit the same plan (`StopNoProgress` instead of `StopStepDone`). Surfaced from real Ollama + Claude testing 2026-05-27. Add per-action-type summary lines (e.g. `wrote 16 bytes to <path>`) to `LastIteration`, surface in the prompt. | agent | S | [`internal/pilot/output_capture.go`](../../internal/pilot/output_capture.go), `internal/pilot/loop.go` LastIteration build sites | `pilot-feedback-non-cmd` |
+| 2 | **proposal-07 presets-CLI docs migration** — ~30 user-facing string + doc references still mention `mooncake presets …` (a command that no longer exists). 5 tiers: delete 3 obsolete guide docs (~2k LOC), rewrite 6 docs with isolated mentions, fix 4 in-binary user-facing strings (doctor fix message, first-run hint, scaffold templates), 1 round of maintainer-facing comment polish. Mostly mechanical; 3 open questions flagged for the executing agent. | dx | S | [`streams/dx/proposals/proposal-07-presets-cli-docs-migration.md`](./streams/dx/proposals/proposal-07-presets-cli-docs-migration.md) | `presets-docs-migration` |
+| 3 | **Continue the code-review cold-read** — queue empty as of 2026-05-27. Pick a package not in `code-review/TODO.md`'s "Reviewed (done)" table and read it cold. Top under-reviewed candidates: `internal/executor/` (4003 LOC, only spot-checked), `internal/plan/` (planner.go covered; the rest unread), `internal/template/` (clean per quick check but no formal pass). | any | S each | [`code-review/TODO.md`](./code-review/TODO.md) "Reviewed (done)" table for what's covered | `review-<pkg>` |
+| 4 | **spec-58 fleet drift** — highest-leverage unstarted fleet feature. Turns Mooncake from "config management tool" into "fleet operating system." Start with the `InspectPlan` periodic loop; the typed-diff and transport primitives it needs are all in master. | fleet | L | [`streams/fleet/specs/spec-58-fleet-drift.md`](./streams/fleet/specs/spec-58-fleet-drift.md) | `spec-58-w1` |
+| 5 | **proposal-16 `expect_json_schema`** — the one open piece of http.request (waves 1–3 + `expect_json_keys` shipped). Full draft-07 file-path schema validation. Deferred pending validator-library design decision; pick this up only if you want to drive that conversation. | core | S | [`streams/core/proposals/proposal-16-http-request-action.md`](./streams/core/proposals/proposal-16-http-request-action.md) | `http-expect-schema` |
+| 6 | **Draft an agent-safety spec** — policy DSL, plan signing, per-action quotas, sandbox mode, or deterministic replay. Replay has the highest "demoable win" return and is the last open piece of the unfair-advantage statement. | agent | M (draft only) | [`streams/agent/README.md`](./streams/agent/README.md) §"Open gaps" | `agent-spec-<topic>` |
 
 ---
 

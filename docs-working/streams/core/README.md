@@ -49,7 +49,7 @@ Recent shipped specs (see commit history for the full receipts):
 | Spec | Topic | Why drafted |
 |---|---|---|
 | [spec-65](./specs/spec-65-module-system-phase-1.md) | Module system — Phase 1 (loader + cache + `use:`) | Replaces dropped in-tree presets dir with Git-native versioned modules. Foundation for `mooncake share`, agent-authored modules, future curated module org. Source brief: GitHub issue #24. Not started. |
-| [spec-66](./specs/spec-66-typed-plan-diff.md) | Typed plan diffs for every action category | Waves 1–5 shipped (file/package/user/group/firewall/service/cron/mount). Waves 6–8 pending: `render_git`, `render_repo`, `render_transaction`, handler audit. |
+| [spec-66](./specs/spec-66-typed-plan-diff.md) | Typed plan diffs for every action category | **Done 2026-05-27.** All 8 waves shipped; 16 renderers registered (file, package, pkg.upgrade, user, group, firewall, service, cron, mount, git.checkout, git.config, git.clone, pkg.repo, os.ssh_key, os.sysctl, transaction, try). `mooncake plan --diff` now shows typed output for every common action category. Deferred per audit: file_*/copy/template/download/unarchive (FileSnapshot path; content already covered via render_file), pkg_hold/pkg_list (rare flows), legacy os.service (separate refactor). |
 
 ## Open gaps
 
