@@ -1,6 +1,6 @@
 # Request — `pkg.repo apt:` `ppa:` shorthand
 
-**Status**: Draft proposal
+**Status**: **Shipped** 2026-05-27 (`0fa0d32e`) — `pkg.repo: apt: { ppa: <owner>/<repo> }` derives the launchpad URI + binary keyring from `keyserver.ubuntu.com`; `DistributionCodename` fact added. Default-pinned by fingerprint. Adjacent bugfix: `shared.MaybeDearmor` now handles ASCII-armored `gpg_key_url`. Docker e2e verified on ubuntu:22.04 with neovim-ppa/unstable.
 **Filed**: 2026-05-17 by aleh (from main_pc / WSL, while revisiting dotfiles `nvim/ubuntu_install.yml`)
 **Related**: existing pkg.repo apt driver. This is a UX shorthand, not a new driver.
 

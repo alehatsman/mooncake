@@ -1,6 +1,6 @@
 # Request — `os.systemd`: user-scope (`systemctl --user`) support
 
-**Status**: Draft proposal
+**Status**: **Shipped** 2026-05-27 (`498a651c`) — `os.systemd` gained `scope: user` (default `system`). User-scope writes to `~/.config/systemd/user/`, runs `systemctl --user`, never escalates. Diff + reverse updated.
 **Filed**: 2026-05-17 by aleh (from main_pc / WSL, while migrating dotfiles `mcsearch` component)
 **Related**: spec-69 phase 5a (which migrated the SYSTEM-scope handlers; user-scope was explicitly out of scope)
 
