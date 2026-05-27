@@ -136,7 +136,7 @@ func run(c *cli.Context) error {
 		if c.String("from-plan") != "" {
 			return fmt.Errorf("--dry-run is incompatible with --from-plan: the plan was already produced; just run `mooncake apply --from-plan <file>` to apply it, or `mooncake plan -c <config>` to re-preview")
 		}
-		return PlanAction(c)
+		return planAction(c)
 	}
 
 	// Check if running from plan

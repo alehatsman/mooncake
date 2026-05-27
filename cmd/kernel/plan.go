@@ -85,11 +85,11 @@ func PlanCommand() *cli.Command {
 			&cli.BoolFlag{Name: "ask-become-pass", Aliases: []string{"K"}, Usage: "Prompt for sudo password interactively"},
 			&cli.BoolFlag{Name: "insecure-sudo-pass", Usage: "Allow --sudo-pass flag (WARNING: visible in shell history)"},
 		},
-		Action: PlanAction,
+		Action: planAction,
 	}
 }
 
-func PlanAction(c *cli.Context) error {
+func planAction(c *cli.Context) error {
 	configPath, err := cmdutil.ResolveConfigPath(c)
 	if err != nil {
 		if cmdutil.PrintNoConfigHintAndExit(err, "plan") {
