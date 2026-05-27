@@ -12,7 +12,7 @@ Queue**, produces a finding (or several), and the queue updates.
 | | Count |
 |---|---:|
 | ✅ Findings filed and resolved (F001–F054, F036 skipped) | **53** |
-| 🟡 Findings open (filed, not yet fixed) | **0** |
+| 🟡 Findings open (filed, not yet fixed) | **1** (F055) |
 | 📋 Packages still queued for review | **0 substantive** (1 broad follow-up — see below) |
 
 **2026-05-27 cold-read pass closed the queue.** Eight package
@@ -77,6 +77,65 @@ Adjacent observations from this pass:
 - ~~**`runWithRetry` error message hard-codes "command failed".**~~
   **Fixed** as part of F053 (commit `c6bd27ac`). Message is now
   action-agnostic ("step failed after N attempts").
+
+**Round-2 cold-read** (2026-05-27 PM) covered the remaining
+executor surface: errors.go, reverse_registry.go, result.go's
+ReverseData wire-encoding tail, context.go's Privileged /
+Performer / actions.Context impl, and executor.go's
+checkSkipConditions / checkIdempotencyConditions /
+handleWhenExpression / ExecuteStep / ExecuteSteps /
+DispatchStepAction / Start / AddGlobalVariables /
+getStepDisplayName / emitStepSkipped. One finding filed:
+
+- **F055** — `checkIdempotencyConditions` runs `unless:` shell-
+  outs without ctx/timeout (`executor.go:302`). Same F051 / F053
+  family. Risk: `unless: kubectl get nodes` (or any plausible
+  network/cluster probe) can hang indefinitely on connection
+  failure; Ctrl-C / context cancel doesn't interrupt because
+  the call uses bare `exec.Command` instead of
+  `exec.CommandContext`. The guard runs BEFORE step.started so
+  the operator gets zero visibility into the hang. Fix is local:
+  thread `ec.Svc.Ctx` into `checkIdempotencyConditions`,
+  upgrade to `exec.CommandContext`, optionally add a per-guard
+  timeout cap.
+
+Adjacent observations (not standalone findings, candidates for
+a future cleanup PR — same shape as the F053-cleanups PR that
+landed at `4efd1d68`):
+
+- **Redundant outer nil-guards around incStat calls.** After
+  the F053 cleanups landed centralized nil-safe helpers
+  (`incStat` / `decStat` / `readStat` in `context.go`), five
+  call sites still wrap them in `if X != nil { ... }` outer
+  checks. Not harmful — just dead defensive code. Sites:
+  `executor.go:470` (Skipped), `:491` (Failed), `:589-590`
+  (Executed), `:599-600` (Changed, mixed with a real `changed`
+  conditional), `:729-730` (Global). Quick mechanical cleanup;
+  group with #2 below.
+- **`ec.Svc` deref consistency.** `EmitEvent`, `Mode()`,
+  `Effects()`, `Privileged()`, `GetTemplate`/`Evaluator`/
+  `Logger`/`EventPublisher`/`GetVariables`/`RegisterResult` all
+  deref `ec.Svc.*` without a nil-guard, while `MergeUserVars`
+  defensively checks `if ec.Svc != nil`. Either the guard is
+  dead code (Svc is always non-nil in production paths and the
+  test surface that produces nil-Svc is gone) or the others
+  should match. Convention drift. Pick one direction.
+- **`handleVars` is dead code.** `executor.go:173`, marked
+  `//nolint:unused`. Replaced by the registered `vars` action
+  handler. Same pattern as `parseFileMode` (line 1542) and
+  `shouldSkipByTags` (line 242) and `markStepFailed` (line 139)
+  and `handleVars` itself — all `//nolint:unused`. Five dead
+  functions; either delete them, or document why they're held
+  for a future restoration.
+- **Vars-file read errors silently swallowed.** `Start` at
+  `executor.go:990-994` logs a failed `config.ReadVariables`
+  call at Debug level and `continue`s. An operator explicitly
+  passing `-v secrets.yml` and hitting a typo'd path or a
+  perm-denied file would see no surfaced error — the run
+  proceeds as if the file wasn't there. Either return the error
+  (treat explicit user input as required) or escalate to a
+  Warning-level log so the operator notices. Smell; UX risk
+  if the missing file carried critical secrets.
 
 Everything else surfaced by the cold-read pass fell out as
 documented design intent (self_shutdown delay goroutine,
@@ -145,6 +204,7 @@ closed — see that folder's README.
 | F052 | cmd/kernel/validate.go os.Exit (3 sites) | smell | **done** | [findings/F052](../archive/code-review/findings/F052-kernel-validate-os-exit-hostile-to-callers.md) |
 | F053 | executor.runWithRetry time.Sleep not cancellable | risk | **done** | [findings/F053](../archive/code-review/findings/F053-executor-retry-sleep-not-cancellable.md) |
 | F054 | spec-30 rollback events never implemented | smell | **done** | [findings/F054](../archive/code-review/findings/F054-rollback-events-never-implemented.md) |
+| F055 | executor `unless:` runs without ctx/timeout | risk | **open** | [findings/F055](../archive/code-review/findings/F055-idempotency-unless-no-ctx-no-timeout.md) |
 
 ## Still to review
 
@@ -222,6 +282,7 @@ The previous 10-row queue is fully consumed:
 | 2026-05-27 | `internal/actions/{windows_firewall_rule,windows_scheduled_task}` | none (clean — proper PowerShell escaping + base64-encoded command + idempotent delete-and-recreate) |
 | 2026-05-27 | `cmd/mooncake.go` + `cmd/{kernel,fleet,step,tool,agentd}` | F052 (kernel/validate.go os.Exit — F020 shape) |
 | 2026-05-27 | `internal/executor/{transaction,trycatch,retry,finalize,inspect,preflight,dryrun,scope,capture}.go` + `executor.go` spot-check (`dispatchRunner`, `dispatchPlanMode`, `postExecuteSuccess`, `handleStepError`) | F053 (`runWithRetry time.Sleep` uncancellable). Three adjacent smells noted inline (scope.Clone omits ApplyStartedAt; Stats nil-guards inconsistent across dispatchRunner vs postExecuteSuccess; reverse-step dispatch bypasses step.started/completed events) — not standalone findings, see "at-a-glance status" block above. |
+| 2026-05-27 | **Round 2:** `internal/executor/{errors,reverse_registry}.go` + `result.go` ReverseData wire-encoding tail + `context.go` tail (Privileged / Performer / actions.Context impl) + `executor.go` end-to-end (`checkIdempotencyConditions`, `checkSkipConditions`, `handleWhenExpression`, `ExecuteStep`, `ExecuteSteps`, `DispatchStepAction`, `Start`, `AddGlobalVariables`, `getStepDisplayName`, `emitStepSkipped`) | F055 (idempotency `unless:` runs without ctx/timeout — same F051/F053 family). Four adjacent observations noted inline below (vars-file silent-swallow; redundant outer nil-guards × 5 sites; handleVars dead code; ec.Svc nil-guard inconsistency). |
 
 ## Cross-cutting themes / patterns to track
 
