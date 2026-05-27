@@ -69,6 +69,16 @@ type IterationSummary struct {
 	// Empty when the iteration ran no cmd/shell steps or produced no
 	// stdout (e.g. only file/template actions).
 	LastStepStdout string
+	// StepSummaries holds one short line per step that completed during
+	// this iteration's apply, regardless of action type. Closes the
+	// "non-cmd/shell actions produce no LLM-visible signal" gap that
+	// made --style step loops re-propose the same file.write / pkg.* /
+	// os.service step (PICKUP item #1, 2026-05-27): for those actions
+	// LastStepStdout stays empty, so without these summaries the
+	// prompt's LAST ITERATION block has nothing positive to show.
+	// Each line is independently capped (~240 B); the slice is capped
+	// at 30 entries with a trailing "... N more" sentinel.
+	StepSummaries []string
 }
 
 type StopReason string

@@ -183,6 +183,65 @@ func TestBuildSystemPrompt_StyleStep_LastStdoutHint(t *testing.T) {
 	mustContain(t, got, "do not re-propose the same diagnostic step")
 }
 
+// TestBuildPrompt_StepSummaries_Rendered confirms the user message
+// includes the per-step "Step Outcomes:" block when LastIteration
+// carries StepSummaries. This is the prompt-side half of the
+// pilot-feedback-non-cmd fix: without rendering, summarizeStep'd lines
+// captured for file.write / pkg.* / os.service never reach the model
+// and step-style loops keep re-proposing the same step.
+func TestBuildPrompt_StepSummaries_Rendered(t *testing.T) {
+	_, userPrompt, err := BuildPrompt(PlanInput{
+		Goal:     "create greeting file",
+		Snapshot: []byte(`{}`),
+		LastIteration: &IterationSummary{
+			Iteration: 1,
+			PlanHash:  "abc",
+			Status:    "success",
+			StepSummaries: []string{
+				"changed file.write[create greeting]: wrote 16 bytes to /tmp/hello",
+				"ok pkg.install[install jq]: already at desired version",
+			},
+		},
+		Style: StyleStep,
+	})
+	if err != nil {
+		t.Fatalf("BuildPrompt: %v", err)
+	}
+	if !strings.Contains(userPrompt, "Step Outcomes:") {
+		t.Errorf("user prompt missing Step Outcomes header; got:\n%s", userPrompt)
+	}
+	if !strings.Contains(userPrompt, "wrote 16 bytes to /tmp/hello") {
+		t.Errorf("user prompt should embed file.write summary; got:\n%s", userPrompt)
+	}
+	if !strings.Contains(userPrompt, "already at desired version") {
+		t.Errorf("user prompt should embed pkg.install summary; got:\n%s", userPrompt)
+	}
+}
+
+// TestBuildPrompt_StepSummaries_OmittedWhenEmpty pins the absence
+// path. A nil/empty StepSummaries slice must not render an orphan
+// "Step Outcomes:" header — the model would see an empty list and
+// treat it as "no steps ran".
+func TestBuildPrompt_StepSummaries_OmittedWhenEmpty(t *testing.T) {
+	_, userPrompt, err := BuildPrompt(PlanInput{
+		Goal:     "do thing",
+		Snapshot: []byte(`{}`),
+		LastIteration: &IterationSummary{
+			Iteration: 1,
+			PlanHash:  "abc",
+			Status:    "success",
+			// StepSummaries intentionally nil.
+		},
+		Style: StyleStep,
+	})
+	if err != nil {
+		t.Fatalf("BuildPrompt: %v", err)
+	}
+	if strings.Contains(userPrompt, "Step Outcomes:") {
+		t.Errorf("empty StepSummaries should not render the block; got:\n%s", userPrompt)
+	}
+}
+
 // TestBuildSystemPrompt_StylePlan_NoLastStdoutHint pins the deliberate
 // asymmetry: plan-style emits the whole plan in one turn, so per-
 // iteration stdout isn't part of its mental model and the hint must

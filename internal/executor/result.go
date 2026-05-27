@@ -154,6 +154,12 @@ func (r *Result) Status() string {
 }
 
 // ToMap converts Result to a map for use in template variables.
+//
+// "reason" is included so step.completed consumers (notably the pilot
+// loop's stdoutCapture, which builds per-step summaries fed back to the
+// LLM) can see the handler's own one-liner without reaching into the
+// executor.Result struct. Handlers that leave Reason empty get an empty
+// string here — pilot's summarizer falls back to action+status.
 func (r *Result) ToMap() map[string]interface{} {
 	m := map[string]interface{}{
 		"stdout":      r.Stdout,
@@ -164,6 +170,7 @@ func (r *Result) ToMap() map[string]interface{} {
 		"skipped":     r.Skipped,
 		"duration_ms": r.Duration.Milliseconds(),
 		"status":      r.Status(),
+		"reason":      r.Reason,
 	}
 
 	// Merge custom data fields into the map
@@ -192,6 +199,7 @@ type RegisteredResult struct {
 	Changed    bool
 	Skipped    bool
 	DurationMs int64
+	Reason     string
 	Data       map[string]interface{}
 }
 
@@ -212,6 +220,7 @@ func (r *Result) ToRegisteredResult() RegisteredResult {
 		Changed:    r.Changed,
 		Skipped:    r.Skipped,
 		DurationMs: r.Duration.Milliseconds(),
+		Reason:     r.Reason,
 		Data:       data,
 	}
 }
@@ -226,6 +235,7 @@ func (r RegisteredResult) ToMap() map[string]interface{} {
 		"changed":     r.Changed,
 		"skipped":     r.Skipped,
 		"duration_ms": r.DurationMs,
+		"reason":      r.Reason,
 	}
 	for k, v := range r.Data {
 		m[k] = v

@@ -99,6 +99,21 @@ func BuildPrompt(input PlanInput) (string, string, error) {
 				b.WriteString(fmt.Sprintf("  %s\n", line))
 			}
 		}
+		// Per-step outcomes for every action type — closes the
+		// non-cmd/shell signal gap. file.write / pkg.install /
+		// os.service etc. produce no stdout but still need to confirm
+		// to the model "yes, this step ran and did X". Each summary
+		// is already truncated and newline-collapsed at capture time
+		// (see output_capture.go summarizeStep); printed verbatim
+		// here in step.completed order.
+		if len(input.LastIteration.StepSummaries) > 0 {
+			b.WriteString("- Step Outcomes:\n")
+			for _, line := range input.LastIteration.StepSummaries {
+				b.WriteString("  - ")
+				b.WriteString(line)
+				b.WriteString("\n")
+			}
+		}
 		// Surface the captured stdout from the last cmd/shell step so
 		// the model can decide whether the goal is already answered.
 		// Without this block step-style pilot loops re-propose the same

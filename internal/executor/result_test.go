@@ -110,6 +110,20 @@ func TestResult_ToMap_IncludesTiming(t *testing.T) {
 	if status, ok := m["status"].(string); !ok || status != "changed" {
 		t.Errorf("ToMap() status = %v, want 'changed'", m["status"])
 	}
+
+	// Check reason field (empty by default; populated when the handler
+	// sets r.Reason — see TestResult_ToMap_IncludesReason for that path).
+	if _, ok := m["reason"]; !ok {
+		t.Error("ToMap() should include reason key")
+	}
+}
+
+func TestResult_ToMap_IncludesReason(t *testing.T) {
+	r := Result{Reason: "wrote 16 bytes to /tmp/hello"}
+	m := r.ToMap()
+	if reason, ok := m["reason"].(string); !ok || reason != "wrote 16 bytes to /tmp/hello" {
+		t.Errorf("ToMap() reason = %v, want 'wrote 16 bytes to /tmp/hello'", m["reason"])
+	}
 }
 
 func TestResult_RegisterTo_WithTiming(t *testing.T) {

@@ -285,6 +285,7 @@ func RunLoop(opts RunOptions) (*LoopResult, error) {
 				ChangedFiles:   changedFiles,
 				ErrorMessage:   execErr.Error(),
 				LastStepStdout: outcome.LastStepStdout,
+				StepSummaries:  outcome.StepSummaries,
 			}
 			continue
 		}
@@ -312,6 +313,7 @@ func RunLoop(opts RunOptions) (*LoopResult, error) {
 			Status:         "success",
 			ChangedFiles:   changedFiles,
 			LastStepStdout: outcome.LastStepStdout,
+			StepSummaries:  outcome.StepSummaries,
 		}
 	}
 
@@ -418,6 +420,12 @@ type iterationOutcome struct {
 	// model sees the result of the action it proposed. Empty when the
 	// plan ran no cmd/shell steps or those steps produced no stdout.
 	LastStepStdout string
+	// StepSummaries is the per-step summary list from stdoutCapture
+	// — one line per completed step, all action types. Forwarded into
+	// IterationSummary so the next prompt renders a "Step Outcomes:"
+	// block under LAST ITERATION. Nil/empty when the plan ran nothing
+	// captureable (validation-only / pre-gate-reject iterations).
+	StepSummaries []string
 }
 
 // planGate is the callback applyPlanIteration invokes between
@@ -508,6 +516,7 @@ func applyPlanIteration(wrappedBytes []byte, repoRoot string, log logger.Logger,
 	}, log, publisher)
 	publisher.Close()
 	out.LastStepStdout = capture.Last()
+	out.StepSummaries = capture.Summaries()
 
 	out.ChangedFiles, _ = CollectChangedFiles(repoRoot)
 	out.DiffStat, _ = CollectDiffStat(repoRoot)

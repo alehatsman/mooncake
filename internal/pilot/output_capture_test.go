@@ -219,6 +219,176 @@ func TestStdoutCapture_PrintsCmdOutput(t *testing.T) {
 	}
 }
 
+// emitCompletedWithDetail builds a step.completed event with caller-
+// chosen action name, changed flag, and Result map. Used by the
+// per-step summary tests where the cmd/shell path isn't relevant.
+func emitStartedNamed(c *stdoutCapture, stepID, name, action string) {
+	c.OnEvent(events.Event{
+		Type:      events.EventStepStarted,
+		Timestamp: time.Now(),
+		Data: events.StepStartedData{
+			StepID: stepID,
+			Name:   name,
+			Action: action,
+		},
+	})
+}
+
+func emitCompletedDetail(c *stdoutCapture, stepID string, changed bool, result map[string]interface{}) {
+	c.OnEvent(events.Event{
+		Type:      events.EventStepCompleted,
+		Timestamp: time.Now(),
+		Data: events.StepCompletedData{
+			StepID:  stepID,
+			Name:    stepID,
+			Changed: changed,
+			Result:  result,
+		},
+	})
+}
+
+// TestStdoutCapture_SummariesAllActionTypes covers the core gap that
+// motivated this work (PICKUP item #1): non-cmd/shell actions complete
+// with no signal the LLM can read. Summaries() must produce one line
+// per completed step regardless of action — file.write, pkg.install,
+// os.service, etc. all need to appear in the next prompt's
+// LAST ITERATION block.
+func TestStdoutCapture_SummariesAllActionTypes(t *testing.T) {
+	c := newStdoutCapture(nil)
+
+	// file.write — handler-set Reason carries the bytes-written detail.
+	emitStartedNamed(c, "s1", "write greeting", "file.write")
+	emitCompletedDetail(c, "s1", true, map[string]interface{}{
+		"status": "changed",
+		"reason": "wrote 16 bytes to /tmp/hello",
+	})
+
+	// pkg.install — no Reason, fall back to status + action.
+	emitStartedNamed(c, "s2", "install jq", "pkg.install")
+	emitCompletedDetail(c, "s2", true, map[string]interface{}{
+		"status": "changed",
+	})
+
+	// os.service — no-op (already in desired state).
+	emitStartedNamed(c, "s3", "ensure sshd running", "os.service")
+	emitCompletedDetail(c, "s3", false, map[string]interface{}{
+		"status": "ok",
+		"reason": "service already in desired state",
+	})
+
+	got := c.Summaries()
+	if len(got) != 3 {
+		t.Fatalf("Summaries() len = %d, want 3 (one per completed step)", len(got))
+	}
+	if !strings.Contains(got[0], "file.write") || !strings.Contains(got[0], "wrote 16 bytes") {
+		t.Errorf("file.write summary missing handler Reason; got %q", got[0])
+	}
+	if !strings.Contains(got[1], "pkg.install") || !strings.Contains(got[1], "changed") {
+		t.Errorf("pkg.install summary missing status fallback; got %q", got[1])
+	}
+	if !strings.Contains(got[2], "os.service") || !strings.Contains(got[2], "already in desired state") {
+		t.Errorf("os.service summary missing handler Reason; got %q", got[2])
+	}
+}
+
+// TestStdoutCapture_SummariesCap covers the pilotStepSummariesMax
+// bound: a runaway plan must not push the LAST ITERATION block past
+// the model's per-message budget. Past the cap, completions are
+// dropped and a single "... N more" sentinel is appended.
+func TestStdoutCapture_SummariesCap(t *testing.T) {
+	c := newStdoutCapture(nil)
+	for i := 0; i < pilotStepSummariesMax+5; i++ {
+		stepID := "step" + string(rune('a'+i%26))
+		emitStartedNamed(c, stepID, "s", "file.write")
+		emitCompletedDetail(c, stepID, true, map[string]interface{}{
+			"status": "changed",
+			"reason": "wrote 4 bytes",
+		})
+	}
+	got := c.Summaries()
+	// Expect pilotStepSummariesMax real lines + 1 sentinel.
+	if len(got) != pilotStepSummariesMax+1 {
+		t.Fatalf("Summaries() len = %d, want %d", len(got), pilotStepSummariesMax+1)
+	}
+	if !strings.Contains(got[len(got)-1], "more step") {
+		t.Errorf("missing trailing 'more steps' sentinel; got %q", got[len(got)-1])
+	}
+}
+
+// TestSummarizeStep_ReasonWins pins the priority order: a handler-set
+// Reason always wins over the generic status fallback.
+func TestSummarizeStep_ReasonWins(t *testing.T) {
+	got := summarizeStep("file.write", "create greeting", true, map[string]interface{}{
+		"status": "changed",
+		"reason": "wrote 5 bytes to /tmp/x",
+	})
+	if !strings.Contains(got, "wrote 5 bytes to /tmp/x") {
+		t.Errorf("Reason should win; got %q", got)
+	}
+	if !strings.Contains(got, "file.write") {
+		t.Errorf("action should appear in summary; got %q", got)
+	}
+}
+
+// TestSummarizeStep_ShellStdoutFallback covers the cmd/shell branch
+// where the handler set no Reason but stdout has a usable first line
+// (e.g. `git status -s` clean tree -> empty; non-clean -> first file).
+func TestSummarizeStep_ShellStdoutFallback(t *testing.T) {
+	got := summarizeStep("cmd", "git status", true, map[string]interface{}{
+		"status": "changed",
+		"stdout": " M internal/foo.go\n M internal/bar.go\n",
+	})
+	if !strings.Contains(got, "M internal/foo.go") {
+		t.Errorf("cmd fallback should use first non-empty stdout line; got %q", got)
+	}
+}
+
+// TestSummarizeStep_GenericFallback covers actions that set neither
+// Reason nor stdout — the model still needs a non-empty line so it
+// sees the step ran.
+func TestSummarizeStep_GenericFallback(t *testing.T) {
+	got := summarizeStep("vars", "set env", false, map[string]interface{}{
+		"status": "ok",
+	})
+	if got == "" {
+		t.Fatal("generic fallback must return a non-empty line")
+	}
+	if !strings.Contains(got, "vars") {
+		t.Errorf("generic fallback missing action; got %q", got)
+	}
+}
+
+// TestSummarizeStep_LineCap pins the per-line length bound. A
+// handler that dumps a multi-line diff into Reason (template,
+// file_replace) must still come out as one dense line so a 30-step
+// plan's LAST ITERATION block doesn't blow the prompt budget.
+func TestSummarizeStep_LineCap(t *testing.T) {
+	hugeReason := strings.Repeat("LONG-LINE ", 100) // ~1000 chars
+	got := summarizeStep("template", "render config", true, map[string]interface{}{
+		"status": "changed",
+		"reason": hugeReason,
+	})
+	if len(got) > pilotStepSummaryLineBytes {
+		t.Errorf("line not clamped: len=%d, cap=%d", len(got), pilotStepSummaryLineBytes)
+	}
+}
+
+// TestSummarizeStep_CollapsesNewlines pins the multi-line collapse
+// rule: handler Reasons that include diff-style \n separators come
+// out as one dense " | "-separated line.
+func TestSummarizeStep_CollapsesNewlines(t *testing.T) {
+	got := summarizeStep("file.replace", "edit", true, map[string]interface{}{
+		"status": "changed",
+		"reason": "old: foo\nnew: bar",
+	})
+	if strings.Contains(got, "\n") {
+		t.Errorf("summary should not contain literal newline; got %q", got)
+	}
+	if !strings.Contains(got, "old: foo | new: bar") {
+		t.Errorf("multi-line Reason not collapsed with separator; got %q", got)
+	}
+}
+
 // TestStdoutCapture_DoesNotDoublePrintShellOutput pins the asymmetry
 // in the printer: shell-action stdout already streamed through the
 // ConsoleSubscriber as per-line step.stdout events, so reprinting it
