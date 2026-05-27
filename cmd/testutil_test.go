@@ -6,6 +6,23 @@ import (
 	"testing"
 )
 
+// Output-format tokens for cmd/cmd_test.go's table-driven tests.
+// Authoritative copies live in cmd/kernel/shell.go; these
+// duplicates exist so tests in package main don't have to qualify
+// every reference as kernel.OutputFormatJSON.
+const (
+	outputFormatJSON = "json"
+	outputFormatText = "text"
+	outputFormatYAML = "yaml"
+
+	defaultMaxOutputBytes = 1048576 // 1 MiB; mirrors cmd/kernel/shell.go.
+	defaultMaxOutputLines = 1000    // mirrors cmd/kernel/shell.go.
+	yamlIndentSpaces      = 2       // mirrors cmd/kernel/shell.go.
+
+	exitCodeValidationError = 2 // mirrors cmd/kernel/shell.go and cmdutil.ExitCodeValidationError.
+	exitCodeRuntimeError    = 3 // mirrors cmd/kernel/shell.go.
+)
+
 // captureStdout runs fn, capturing what it writes to os.Stdout, and
 // returns the captured bytes. Lives in cmd/ root so any *_test.go in
 // package main can use it — the original definition in cmd/tool was

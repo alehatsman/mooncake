@@ -1,4 +1,4 @@
-package main
+package kernel
 
 import (
 	"encoding/json"
@@ -15,8 +15,8 @@ import (
 	"github.com/alehatsman/mooncake/internal/explain"
 )
 
-// explainCommand returns the `mooncake explain` cli.Command.
-func explainCommand() *cli.Command {
+// ExplainCommand returns the `mooncake explain` cli.Command.
+func ExplainCommand() *cli.Command {
 	return &cli.Command{
 		Name:      "explain",
 		Usage:     "Look up typed information about a mooncake noun (action verb, run, resource, op)",

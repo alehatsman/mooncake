@@ -1471,7 +1471,7 @@ func recommendPresetsAction(c *cli.Context) error {
 
 	names := recommend.Recommend(profile, known, c.Int("limit"))
 
-	if c.String("format") == outputFormatJSON {
+	if c.String("format") == "json" {
 		out := struct {
 			Profile     recommend.Profile `json:"profile"`
 			Recommended []string          `json:"recommended"`

@@ -1,4 +1,4 @@
-package main
+package kernel
 
 import (
 	"encoding/json"
@@ -12,8 +12,8 @@ import (
 	"github.com/alehatsman/mooncake/internal/factsfmt"
 )
 
-// factsCommand returns the `mooncake facts` cli.Command.
-func factsCommand() *cli.Command {
+// FactsCommand returns the `mooncake facts` cli.Command.
+func FactsCommand() *cli.Command {
 	return &cli.Command{
 		Name:  "facts",
 		Usage: "Display system facts",
@@ -30,11 +30,11 @@ func factsCommand() *cli.Command {
 				Usage:   "Query a specific fact by dot-path key (e.g. go.version). Repeatable.",
 			},
 		},
-		Action: factsAction,
+		Action: FactsAction,
 	}
 }
 
-func factsAction(c *cli.Context) error {
+func FactsAction(c *cli.Context) error {
 	// Collect facts (cached)
 	f := facts.Collect()
 
@@ -61,14 +61,14 @@ func factsAction(c *cli.Context) error {
 	}
 }
 
-// writeFactsJSON is preserved for cmd/cmd_test.go's coverage of the
+// WriteFactsJSON is preserved for cmd/cmd_test.go's coverage of the
 // snake_case marshal pattern. The live caller moved to
-// internal/apply/runner.go's writeFactsJSON in R1.1a; this cmd-side
+// internal/apply/runner.go's WriteFactsJSON in R1.1a; this cmd-side
 // copy stays so the existing TestWriteFactsJSON* suite keeps pinning
 // the contract.
 //
 //nolint:unused // covered by cmd/cmd_test.go; lint runs with tests:false.
-func writeFactsJSON(f *facts.Facts, path string) error {
+func WriteFactsJSON(f *facts.Facts, path string) error {
 	// MT-74: marshal via ToMap() so keys are snake_case, matching the
 	// daemon's /v1/facts endpoint and the template scope (`{{ os }}`).
 	// Direct json.Marshal(*Facts) would emit PascalCase Go field names.

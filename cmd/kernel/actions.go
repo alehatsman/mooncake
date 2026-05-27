@@ -1,4 +1,4 @@
-package main
+package kernel
 
 import (
 	"encoding/json"
@@ -15,9 +15,9 @@ import (
 	"github.com/alehatsman/mooncake/internal/schemagen"
 )
 
-// actionsCommand returns the `mooncake actions` parent with its
+// ActionsCommand returns the `mooncake actions` parent with its
 // list / show subcommands.
-func actionsCommand() *cli.Command {
+func ActionsCommand() *cli.Command {
 	return &cli.Command{
 		Name:  "actions",
 		Usage: "Manage and inspect actions",

@@ -1,4 +1,4 @@
-package main
+package kernel
 
 import (
 	"fmt"
@@ -10,9 +10,9 @@ import (
 	"github.com/alehatsman/mooncake/internal/pilot"
 )
 
-// pilotCommand returns the `mooncake pilot` parent with its single
+// PilotCommand returns the `mooncake pilot` parent with its single
 // `run` subcommand.
-func pilotCommand() *cli.Command {
+func PilotCommand() *cli.Command {
 	return &cli.Command{
 		Name:  "pilot",
 		Usage: "Pilot operations",

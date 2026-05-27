@@ -1,4 +1,4 @@
-package main
+package task
 
 import (
 	"context"
@@ -11,6 +11,7 @@ import (
 	"text/tabwriter"
 
 	"github.com/alehatsman/mooncake/cmd/cmdutil"
+	"github.com/alehatsman/mooncake/cmd/kernel"
 	"github.com/alehatsman/mooncake/internal/apply"
 	"github.com/alehatsman/mooncake/internal/config"
 	"github.com/alehatsman/mooncake/internal/executor"
@@ -20,7 +21,7 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-// taskCommand registers `mooncake task`. Bare invocation lists every
+// Command registers `mooncake task`. Bare invocation lists every
 // task defined in the discovered config; `mooncake task <name>` runs
 // the named task through the regular plan→apply pipeline by setting
 // apply.Config.TaskName.
@@ -31,7 +32,7 @@ import (
 // config also has a tasks: block, the tasks file wins and a stderr
 // warning names the shadowed apply-config so the user knows their
 // definitions are being ignored.
-func taskCommand() *cli.Command {
+func Command() *cli.Command {
 	return &cli.Command{
 		Name:      "task",
 		Usage:     "Run a named task from tasks.yml (or `tasks:` in mooncake.yml)",
@@ -56,7 +57,7 @@ func taskCommand() *cli.Command {
 			if err != nil && strings.Contains(err.Error(), "dry-run") {
 				return fmt.Errorf("%w — for a preview use: mooncake task <name> --plan", err)
 			}
-			return quietUsageError(c, err, isSubcommand)
+			return err // quiet-usage-error: don't print help dump on flag-parse error
 		},
 		Action: func(c *cli.Context) error {
 			if c.NArg() == 0 {
@@ -176,7 +177,7 @@ func listTasksAction(c *cli.Context) error {
 		var nfe *config.ErrNoConfigFound
 		if errors.As(err, &nfe) {
 			fmt.Fprint(os.Stderr, config.HintNoConfigFound(nfe, "task"))
-			os.Exit(exitCodeValidationError)
+			os.Exit(cmdutil.ExitCodeValidationError)
 			return nil
 		}
 		return err
@@ -226,7 +227,7 @@ func runTaskAction(c *cli.Context, name string) error {
 		var nfe *config.ErrNoConfigFound
 		if errors.As(err, &nfe) {
 			fmt.Fprint(os.Stderr, config.HintNoConfigFound(nfe, "task"))
-			os.Exit(exitCodeValidationError)
+			os.Exit(cmdutil.ExitCodeValidationError)
 			return nil
 		}
 		return err
@@ -326,11 +327,11 @@ func renderTaskPlan(c *cli.Context, planData *plan.Plan) error {
 	format := c.String("format")
 	switch format {
 	case "json":
-		return formatPlanJSON(planData)
+		return kernel.FormatPlanJSON(planData)
 	case "yaml":
-		return formatPlanYAML(planData)
+		return kernel.FormatPlanYAML(planData)
 	case "text", "":
-		return formatPlanText(planData, c.Bool("show-origins"), c.Bool("diff"))
+		return kernel.FormatPlanText(planData, c.Bool("show-origins"), c.Bool("diff"))
 	default:
 		return fmt.Errorf("unsupported --format: %s (use text, json, or yaml)", format)
 	}
@@ -348,10 +349,10 @@ func executeTaskPlan(c *cli.Context, configPath, name string, planData *plan.Pla
 		// from LogLevel so users can keep --log-level info to avoid
 		// the executor's internal debug traces.
 		StreamStepOutput: true,
-		OpID:             recordOp("task "+name, configPath, false),
+		OpID:             kernel.RecordOp("task "+name, configPath, false),
 		RootFile:         configPath,
 	}
-	return runWithSignalCtx(c.Context, func(ctx context.Context) error {
+	return kernel.RunWithSignalCtx(c.Context, func(ctx context.Context) error {
 		_, runErr := apply.NewRunnerFromInMemoryPlan(planData, opts).Run(ctx)
 		return runErr
 	})

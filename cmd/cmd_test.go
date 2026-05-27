@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/alehatsman/mooncake/cmd/cmdutil"
+	"github.com/alehatsman/mooncake/cmd/kernel"
 	"github.com/alehatsman/mooncake/internal/facts"
 	"github.com/urfave/cli/v2"
 )
@@ -67,7 +68,7 @@ func TestParseTags(t *testing.T) {
 	}
 }
 
-// TestWriteFactsJSON tests the writeFactsJSON function
+// TestWriteFactsJSON tests the kernel.WriteFactsJSON function
 func TestWriteFactsJSON(t *testing.T) {
 	tmpDir := t.TempDir()
 	testPath := filepath.Join(tmpDir, "facts.json")
@@ -80,14 +81,14 @@ func TestWriteFactsJSON(t *testing.T) {
 	}
 
 	// Test successful write
-	err := writeFactsJSON(f, testPath)
+	err := kernel.WriteFactsJSON(f, testPath)
 	if err != nil {
-		t.Errorf("writeFactsJSON() error = %v, expected nil", err)
+		t.Errorf("kernel.WriteFactsJSON() error = %v, expected nil", err)
 	}
 
 	// Verify file exists
 	if _, err := os.Stat(testPath); os.IsNotExist(err) {
-		t.Errorf("writeFactsJSON() did not create file")
+		t.Errorf("kernel.WriteFactsJSON() did not create file")
 	}
 
 	// Verify file content. MT-74: keys are snake_case (matching the
@@ -100,7 +101,7 @@ func TestWriteFactsJSON(t *testing.T) {
 
 	var result map[string]any
 	if err := json.Unmarshal(data, &result); err != nil {
-		t.Errorf("writeFactsJSON() produced invalid JSON: %v", err)
+		t.Errorf("kernel.WriteFactsJSON() produced invalid JSON: %v", err)
 	}
 
 	if got := result["os"]; got != f.OS {
@@ -118,16 +119,16 @@ func TestWriteFactsJSON(t *testing.T) {
 
 	// Test invalid path
 	invalidPath := filepath.Join(tmpDir, "nonexistent", "facts.json")
-	err = writeFactsJSON(f, invalidPath)
+	err = kernel.WriteFactsJSON(f, invalidPath)
 	if err == nil {
-		t.Errorf("writeFactsJSON() with invalid path should return error")
+		t.Errorf("kernel.WriteFactsJSON() with invalid path should return error")
 	}
 }
 
-// TestFormatPlanJSON tests the formatPlanJSON function (indirectly)
+// TestFormatPlanJSON tests the kernel.FormatPlanJSON function (indirectly)
 func TestFormatPlanJSONIndirect(t *testing.T) {
 	// Test that we can create the plan structure and it marshals correctly
-	// This is a smoke test since formatPlanJSON writes to stdout
+	// This is a smoke test since kernel.FormatPlanJSON writes to stdout
 	tmpDir := t.TempDir()
 	testConfig := filepath.Join(tmpDir, "test.yml")
 
@@ -141,9 +142,9 @@ func TestFormatPlanJSONIndirect(t *testing.T) {
 	}
 
 	// This tests that the plan structure is valid for JSON marshaling
-	// (indirect test of formatPlanJSON functionality)
+	// (indirect test of kernel.FormatPlanJSON functionality)
 	t.Run("plan json structure", func(t *testing.T) {
-		// The actual formatPlanJSON writes to stdout, which is hard to test
+		// The actual kernel.FormatPlanJSON writes to stdout, which is hard to test
 		// But we can verify the structure is JSON-serializable
 		// This test passes if it compiles and runs without error
 	})
@@ -506,7 +507,7 @@ func TestFactsCommandInvalidFormat(t *testing.T) {
 				Flags: []cli.Flag{
 					&cli.StringFlag{Name: "format", Value: "text"},
 				},
-				Action: factsAction,
+				Action: kernel.FactsAction,
 			},
 		},
 	}
@@ -886,9 +887,9 @@ func TestWriteFactsJSONFilePermissions(t *testing.T) {
 		Arch: "amd64",
 	}
 
-	err := writeFactsJSON(f, testPath)
+	err := kernel.WriteFactsJSON(f, testPath)
 	if err != nil {
-		t.Fatalf("writeFactsJSON() error = %v", err)
+		t.Fatalf("kernel.WriteFactsJSON() error = %v", err)
 	}
 
 	// Check file permissions
@@ -964,7 +965,7 @@ func TestFactsCommandValidFormats(t *testing.T) {
 						Flags: []cli.Flag{
 							&cli.StringFlag{Name: "format", Value: "text"},
 						},
-						Action: factsAction,
+						Action: kernel.FactsAction,
 					},
 				},
 			}
@@ -1001,7 +1002,7 @@ func TestPlanCommandInvalidFormatHandling(t *testing.T) {
 					&cli.StringFlag{Name: "config", Required: true},
 					&cli.StringFlag{Name: "format", Value: "text"},
 				},
-				Action: planAction,
+				Action: kernel.PlanAction,
 			},
 		},
 	}
@@ -1060,7 +1061,7 @@ func TestPlanCommandValidFormats(t *testing.T) {
 							&cli.StringFlag{Name: "config", Required: true},
 							&cli.StringFlag{Name: "format", Value: "text"},
 						},
-						Action: planAction,
+						Action: kernel.PlanAction,
 					},
 				},
 			}
@@ -1099,7 +1100,7 @@ func TestPlanCommandWithTags(t *testing.T) {
 					&cli.StringFlag{Name: "format", Value: "text"},
 					&cli.StringFlag{Name: "tags"},
 				},
-				Action: planAction,
+				Action: kernel.PlanAction,
 			},
 		},
 	}
@@ -1159,7 +1160,7 @@ func TestPlanCommandWithOutput(t *testing.T) {
 					&cli.StringFlag{Name: "format", Value: "text"},
 					&cli.StringFlag{Name: "output"},
 				},
-				Action: planAction,
+				Action: kernel.PlanAction,
 			},
 		},
 	}
@@ -1327,7 +1328,7 @@ func TestInstallPresetActionWithArg(t *testing.T) {
 	}
 }
 
-// TestFormatPlanTextWithLoopContext tests formatPlanText with loop context
+// TestFormatPlanTextWithLoopContext tests kernel.FormatPlanText with loop context
 func TestFormatPlanTextWithLoopContext(t *testing.T) {
 	tmpDir := t.TempDir()
 	testConfig := filepath.Join(tmpDir, "test.yml")
@@ -1360,7 +1361,7 @@ steps:
 					&cli.StringFlag{Name: "format", Value: "text"},
 					&cli.BoolFlag{Name: "show-origins"},
 				},
-				Action: planAction,
+				Action: kernel.PlanAction,
 			},
 		},
 	}
@@ -1403,7 +1404,7 @@ func TestPlanCommandWithVars(t *testing.T) {
 					&cli.StringFlag{Name: "vars"},
 					&cli.StringFlag{Name: "format", Value: "text"},
 				},
-				Action: planAction,
+				Action: kernel.PlanAction,
 			},
 		},
 	}
@@ -1438,7 +1439,7 @@ func TestPlanCommandInvalidVarsFile(t *testing.T) {
 					&cli.StringSliceFlag{Name: "vars"},
 					&cli.StringFlag{Name: "format", Value: "text"},
 				},
-				Action: planAction,
+				Action: kernel.PlanAction,
 			},
 		},
 	}
@@ -1485,7 +1486,7 @@ func TestPlanCommand_MultipleVarsFiles(t *testing.T) {
 					&cli.StringFlag{Name: "output"},
 					&cli.StringFlag{Name: "format", Value: "json"},
 				},
-				Action: planAction,
+				Action: kernel.PlanAction,
 			},
 		},
 	}
@@ -1532,7 +1533,7 @@ func TestPlanCommandInvalidConfigFile(t *testing.T) {
 					&cli.StringFlag{Name: "config", Required: true},
 					&cli.StringFlag{Name: "format", Value: "text"},
 				},
-				Action: planAction,
+				Action: kernel.PlanAction,
 			},
 		},
 	}
@@ -1554,7 +1555,7 @@ func TestFactsCommandJSONOutput(t *testing.T) {
 				Flags: []cli.Flag{
 					&cli.StringFlag{Name: "format", Value: "text"},
 				},
-				Action: factsAction,
+				Action: kernel.FactsAction,
 			},
 		},
 	}
@@ -1566,7 +1567,7 @@ func TestFactsCommandJSONOutput(t *testing.T) {
 	}
 }
 
-// TestWriteFactsJSONMarshalCheck tests writeFactsJSON marshaling
+// TestWriteFactsJSONMarshalCheck tests kernel.WriteFactsJSON marshaling
 func TestWriteFactsJSONMarshalCheck(t *testing.T) {
 	tmpDir := t.TempDir()
 	testPath := filepath.Join(tmpDir, "facts.json")
@@ -1582,9 +1583,9 @@ func TestWriteFactsJSONMarshalCheck(t *testing.T) {
 		MemoryTotalMB: 16384,
 	}
 
-	err := writeFactsJSON(f, testPath)
+	err := kernel.WriteFactsJSON(f, testPath)
 	if err != nil {
-		t.Errorf("writeFactsJSON() error = %v", err)
+		t.Errorf("kernel.WriteFactsJSON() error = %v", err)
 	}
 
 	// Verify JSON content. MT-74: keys are snake_case (matching the
@@ -1596,7 +1597,7 @@ func TestWriteFactsJSONMarshalCheck(t *testing.T) {
 
 	var result map[string]any
 	if err := json.Unmarshal(data, &result); err != nil {
-		t.Errorf("writeFactsJSON() produced invalid JSON: %v", err)
+		t.Errorf("kernel.WriteFactsJSON() produced invalid JSON: %v", err)
 	}
 
 	if got := result["os"]; got != f.OS {
@@ -1733,7 +1734,7 @@ func TestListPresetsActionSuccess(t *testing.T) {
 	}
 }
 
-// TestFormatPlanTextAllActionTypes tests formatPlanText with different action types
+// TestFormatPlanTextAllActionTypes tests kernel.FormatPlanText with different action types
 func TestFormatPlanTextAllActionTypes(t *testing.T) {
 	tmpDir := t.TempDir()
 	testConfig := filepath.Join(tmpDir, "test.yml")
@@ -1769,7 +1770,7 @@ func TestFormatPlanTextAllActionTypes(t *testing.T) {
 					&cli.StringFlag{Name: "format", Value: "text"},
 					&cli.BoolFlag{Name: "show-origins"},
 				},
-				Action: planAction,
+				Action: kernel.PlanAction,
 			},
 		},
 	}
@@ -2137,7 +2138,7 @@ func TestPresetsSubcommandActions(t *testing.T) {
 	}
 }
 
-// TestFormatPlanYAMLIndent tests that formatPlanYAML uses correct indentation
+// TestFormatPlanYAMLIndent tests that kernel.FormatPlanYAML uses correct indentation
 func TestFormatPlanYAMLIndent(t *testing.T) {
 	tmpDir := t.TempDir()
 	testConfig := filepath.Join(tmpDir, "test.yml")
@@ -2159,7 +2160,7 @@ func TestFormatPlanYAMLIndent(t *testing.T) {
 					&cli.StringFlag{Name: "config", Required: true},
 					&cli.StringFlag{Name: "format", Value: "text"},
 				},
-				Action: planAction,
+				Action: kernel.PlanAction,
 			},
 		},
 	}
@@ -2197,7 +2198,7 @@ func TestPresetsSubcommandUsage(t *testing.T) {
 	}
 }
 
-// TestFormatPlanTextWithOriginAndChain tests formatPlanText with include chain
+// TestFormatPlanTextWithOriginAndChain tests kernel.FormatPlanText with include chain
 func TestFormatPlanTextWithOriginAndChain(t *testing.T) {
 	tmpDir := t.TempDir()
 	mainConfig := filepath.Join(tmpDir, "main.yml")
@@ -2232,7 +2233,7 @@ func TestFormatPlanTextWithOriginAndChain(t *testing.T) {
 					&cli.StringFlag{Name: "format", Value: "text"},
 					&cli.BoolFlag{Name: "show-origins"},
 				},
-				Action: planAction,
+				Action: kernel.PlanAction,
 			},
 		},
 	}
@@ -2271,7 +2272,7 @@ func TestPlanCommandWithSkippedSteps(t *testing.T) {
 					&cli.StringFlag{Name: "format", Value: "text"},
 					&cli.StringFlag{Name: "tags"},
 				},
-				Action: planAction,
+				Action: kernel.PlanAction,
 			},
 		},
 	}
@@ -2348,14 +2349,14 @@ func TestContainsHelper(t *testing.T) {
 	}
 }
 
-// TestWriteFactsJSONErrorPaths tests error handling in writeFactsJSON
+// TestWriteFactsJSONErrorPaths tests error handling in kernel.WriteFactsJSON
 func TestWriteFactsJSONErrorPaths(t *testing.T) {
 	// Test with invalid path (directory doesn't exist)
 	f := &facts.Facts{OS: "linux"}
-	err := writeFactsJSON(f, "/nonexistent/dir/facts.json")
+	err := kernel.WriteFactsJSON(f, "/nonexistent/dir/facts.json")
 
 	if err == nil {
-		t.Error("writeFactsJSON with invalid path should return error")
+		t.Error("kernel.WriteFactsJSON with invalid path should return error")
 	}
 
 	// Verify error message contains useful info
@@ -2374,7 +2375,7 @@ func TestFactsCommandDefaultFormat(t *testing.T) {
 				Flags: []cli.Flag{
 					&cli.StringFlag{Name: "format", Value: "text"},
 				},
-				Action: factsAction,
+				Action: kernel.FactsAction,
 			},
 		},
 	}
@@ -2422,7 +2423,7 @@ func TestPlanCommandWithComplexConfig(t *testing.T) {
 					&cli.StringFlag{Name: "config", Required: true},
 					&cli.StringFlag{Name: "format", Value: "text"},
 				},
-				Action: planAction,
+				Action: kernel.PlanAction,
 			},
 		},
 	}
@@ -2457,7 +2458,7 @@ func TestFormatPlanJSONWithComplexPlan(t *testing.T) {
 					&cli.StringFlag{Name: "config", Required: true},
 					&cli.StringFlag{Name: "format", Value: "text"},
 				},
-				Action: planAction,
+				Action: kernel.PlanAction,
 			},
 		},
 	}
@@ -2493,7 +2494,7 @@ func TestPlanCommandOutputToFileYAML(t *testing.T) {
 					&cli.StringFlag{Name: "format", Value: "text"},
 					&cli.StringFlag{Name: "output"},
 				},
-				Action: planAction,
+				Action: kernel.PlanAction,
 			},
 		},
 	}

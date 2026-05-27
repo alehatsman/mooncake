@@ -1,4 +1,4 @@
-package main
+package kernel
 
 import (
 	"os/exec"
@@ -26,7 +26,7 @@ func TestIssue87_SIGINTExitsCleanly(t *testing.T) {
 	// Build a one-off binary. The test runs from cmd/, so build .
 	// to produce a binary against the same package.
 	bin := t.TempDir() + "/mooncake-test"
-	build := exec.Command("go", "build", "-o", bin, ".")
+	build := exec.Command("go", "build", "-o", bin, "..")
 	if out, err := build.CombinedOutput(); err != nil {
 		t.Fatalf("build: %v\n%s", err, out)
 	}
@@ -84,7 +84,7 @@ func TestIssue87_SIGTERMExitsCleanly(t *testing.T) {
 	}
 
 	bin := t.TempDir() + "/mooncake-test"
-	build := exec.Command("go", "build", "-o", bin, ".")
+	build := exec.Command("go", "build", "-o", bin, "..")
 	if out, err := build.CombinedOutput(); err != nil {
 		t.Fatalf("build: %v\n%s", err, out)
 	}

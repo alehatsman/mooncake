@@ -1,4 +1,4 @@
-package main
+package kernel
 
 import (
 	"encoding/json"
@@ -12,8 +12,8 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-// metricsCommand returns the `mooncake metrics` cli.Command.
-func metricsCommand() *cli.Command {
+// MetricsCommand returns the `mooncake metrics` cli.Command.
+func MetricsCommand() *cli.Command {
 	return &cli.Command{
 		Name:  "metrics",
 		Usage: "Display live system metrics (CPU/GPU/memory/load/network)",

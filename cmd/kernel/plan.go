@@ -1,4 +1,4 @@
-package main
+package kernel
 
 import (
 	"encoding/json"
@@ -19,8 +19,8 @@ import (
 	"github.com/alehatsman/mooncake/internal/security"
 )
 
-// planCommand returns the `mooncake plan` cli.Command.
-func planCommand() *cli.Command {
+// PlanCommand returns the `mooncake plan` cli.Command.
+func PlanCommand() *cli.Command {
 	return &cli.Command{
 		Name:  "plan",
 		Usage: "Generate and display execution plan (dry-run)",
@@ -85,11 +85,11 @@ func planCommand() *cli.Command {
 			&cli.BoolFlag{Name: "ask-become-pass", Aliases: []string{"K"}, Usage: "Prompt for sudo password interactively"},
 			&cli.BoolFlag{Name: "insecure-sudo-pass", Usage: "Allow --sudo-pass flag (WARNING: visible in shell history)"},
 		},
-		Action: planAction,
+		Action: PlanAction,
 	}
 }
 
-func planAction(c *cli.Context) error {
+func PlanAction(c *cli.Context) error {
 	configPath, err := cmdutil.ResolveConfigPath(c)
 	if err != nil {
 		if cmdutil.PrintNoConfigHintAndExit(err, "plan") {
@@ -201,23 +201,23 @@ func planAction(c *cli.Context) error {
 	// Format and display plan
 	switch format {
 	case outputFormatJSON:
-		return formatPlanJSON(planData)
+		return FormatPlanJSON(planData)
 	case outputFormatYAML:
-		return formatPlanYAML(planData)
+		return FormatPlanYAML(planData)
 	case outputFormatText:
-		return formatPlanText(planData, showOrigins, showDiff)
+		return FormatPlanText(planData, showOrigins, showDiff)
 	default:
 		return fmt.Errorf("unsupported format: %s (use text, json, or yaml)", format)
 	}
 }
 
-func formatPlanJSON(p *plan.Plan) error {
+func FormatPlanJSON(p *plan.Plan) error {
 	encoder := json.NewEncoder(os.Stdout)
 	encoder.SetIndent("", "  ")
 	return encoder.Encode(p)
 }
 
-func formatPlanYAML(p *plan.Plan) error {
+func FormatPlanYAML(p *plan.Plan) error {
 	encoder := yaml.NewEncoder(os.Stdout)
 	encoder.SetIndent(yamlIndentSpaces)
 	defer func() {
@@ -246,7 +246,7 @@ func planSymbol(ins plan.StepInspection, stepSkipped bool) string {
 	}
 }
 
-func formatPlanText(p *plan.Plan, showOrigins bool, showDiff bool) error {
+func FormatPlanText(p *plan.Plan, showOrigins bool, showDiff bool) error {
 	fmt.Printf("Plan: %s\n", p.RootFile)
 	hostBits := []string{}
 	if p.GeneratedOn.OsFamily != "" {

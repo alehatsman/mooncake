@@ -1,4 +1,4 @@
-package main
+package kernel
 
 import (
 	"context"
@@ -13,8 +13,8 @@ import (
 	"github.com/alehatsman/mooncake/internal/apply"
 )
 
-// applyCommand returns the `mooncake apply` cli.Command.
-func applyCommand() *cli.Command {
+// ApplyCommand returns the `mooncake apply` cli.Command.
+func ApplyCommand() *cli.Command {
 	return &cli.Command{
 		Name:   "apply",
 		Usage:  "Apply a playbook or saved plan. Use --dry-run to preview without changes.",
@@ -136,7 +136,7 @@ func run(c *cli.Context) error {
 		if c.String("from-plan") != "" {
 			return fmt.Errorf("--dry-run is incompatible with --from-plan: the plan was already produced; just run `mooncake apply --from-plan <file>` to apply it, or `mooncake plan -c <config>` to re-preview")
 		}
-		return planAction(c)
+		return PlanAction(c)
 	}
 
 	// Check if running from plan

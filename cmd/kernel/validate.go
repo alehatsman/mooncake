@@ -1,4 +1,4 @@
-package main
+package kernel
 
 import (
 	"encoding/json"
@@ -11,8 +11,8 @@ import (
 	"github.com/alehatsman/mooncake/internal/config"
 )
 
-// validateCommand returns the `mooncake validate` cli.Command.
-func validateCommand() *cli.Command {
+// ValidateCommand returns the `mooncake validate` cli.Command.
+func ValidateCommand() *cli.Command {
 	return &cli.Command{
 		Name:  "validate",
 		Usage: "Validate configuration file without executing",
