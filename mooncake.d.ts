@@ -1267,6 +1267,25 @@ export interface WindowsFirewallRuleAction {
 }
 
 /**
+ * Manage Windows Hyper-V Firewall rules (WSL2 mirrored networking)
+ * 
+ * @platforms windows
+ * @category system
+ */
+export interface WindowsHypervFirewallRuleAction {
+  action?: string;
+  description?: string;
+  direction?: string;
+  enabled?: boolean;
+  local_port?: string[];
+  name: string;
+  protocol?: string;
+  remote_port?: string[];
+  state?: string;
+  vm_creator_id?: string;
+}
+
+/**
  * Manage Windows Task Scheduler entries
  * 
  * @platforms windows
@@ -1654,6 +1673,10 @@ export interface Step {
    * Manage Windows Firewall inbound/outbound rules
    */
   "windows.firewall_rule"?: WindowsFirewallRuleAction;
+  /**
+   * Manage Windows Hyper-V Firewall rules (WSL2 mirrored networking)
+   */
+  "windows.hyperv_firewall_rule"?: WindowsHypervFirewallRuleAction;
   /**
    * Manage Windows Task Scheduler entries
    */

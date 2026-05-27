@@ -10,7 +10,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/alehatsman/mooncake/internal/actions"
+	"github.com/alehatsman/mooncake/internal/security"
 )
 
 func init() {

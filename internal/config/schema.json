@@ -3008,6 +3008,10 @@
           "description": "Manage Windows Firewall inbound/outbound rules",
           "$ref": "#/definitions/windows.firewall_rule"
         },
+        "windows.hyperv_firewall_rule": {
+          "description": "Manage Windows Hyper-V Firewall rules (WSL2 mirrored networking)",
+          "$ref": "#/definitions/windows.hyperv_firewall_rule"
+        },
         "windows.scheduled_task": {
           "description": "Manage Windows Task Scheduler entries",
           "$ref": "#/definitions/windows.scheduled_task"
@@ -3343,6 +3347,11 @@
               {
                 "required": [
                   "windows.firewall_rule"
+                ]
+              },
+              {
+                "required": [
+                  "windows.hyperv_firewall_rule"
                 ]
               },
               {
@@ -3686,6 +3695,11 @@
               },
               {
                 "required": [
+                  "windows.hyperv_firewall_rule"
+                ]
+              },
+              {
+                "required": [
                   "windows.scheduled_task"
                 ]
               }
@@ -4021,6 +4035,11 @@
               {
                 "required": [
                   "windows.firewall_rule"
+                ]
+              },
+              {
+                "required": [
+                  "windows.hyperv_firewall_rule"
                 ]
               },
               {
@@ -4364,6 +4383,11 @@
               },
               {
                 "required": [
+                  "windows.hyperv_firewall_rule"
+                ]
+              },
+              {
+                "required": [
                   "windows.scheduled_task"
                 ]
               }
@@ -4699,6 +4723,11 @@
               {
                 "required": [
                   "windows.firewall_rule"
+                ]
+              },
+              {
+                "required": [
+                  "windows.hyperv_firewall_rule"
                 ]
               },
               {
@@ -5042,6 +5071,11 @@
               },
               {
                 "required": [
+                  "windows.hyperv_firewall_rule"
+                ]
+              },
+              {
+                "required": [
                   "windows.scheduled_task"
                 ]
               }
@@ -5377,6 +5411,11 @@
               {
                 "required": [
                   "windows.firewall_rule"
+                ]
+              },
+              {
+                "required": [
+                  "windows.hyperv_firewall_rule"
                 ]
               },
               {
@@ -5720,6 +5759,11 @@
               },
               {
                 "required": [
+                  "windows.hyperv_firewall_rule"
+                ]
+              },
+              {
+                "required": [
                   "windows.scheduled_task"
                 ]
               }
@@ -6055,6 +6099,11 @@
               {
                 "required": [
                   "windows.firewall_rule"
+                ]
+              },
+              {
+                "required": [
+                  "windows.hyperv_firewall_rule"
                 ]
               },
               {
@@ -6398,6 +6447,11 @@
               },
               {
                 "required": [
+                  "windows.hyperv_firewall_rule"
+                ]
+              },
+              {
+                "required": [
                   "windows.scheduled_task"
                 ]
               }
@@ -6733,6 +6787,11 @@
               {
                 "required": [
                   "windows.firewall_rule"
+                ]
+              },
+              {
+                "required": [
+                  "windows.hyperv_firewall_rule"
                 ]
               },
               {
@@ -7076,6 +7135,11 @@
               },
               {
                 "required": [
+                  "windows.hyperv_firewall_rule"
+                ]
+              },
+              {
+                "required": [
                   "windows.scheduled_task"
                 ]
               }
@@ -7411,6 +7475,11 @@
               {
                 "required": [
                   "windows.firewall_rule"
+                ]
+              },
+              {
+                "required": [
+                  "windows.hyperv_firewall_rule"
                 ]
               },
               {
@@ -7754,6 +7823,11 @@
               },
               {
                 "required": [
+                  "windows.hyperv_firewall_rule"
+                ]
+              },
+              {
+                "required": [
                   "windows.scheduled_task"
                 ]
               }
@@ -8089,6 +8163,11 @@
               {
                 "required": [
                   "windows.firewall_rule"
+                ]
+              },
+              {
+                "required": [
+                  "windows.hyperv_firewall_rule"
                 ]
               },
               {
@@ -8432,6 +8511,11 @@
               },
               {
                 "required": [
+                  "windows.hyperv_firewall_rule"
+                ]
+              },
+              {
+                "required": [
                   "windows.scheduled_task"
                 ]
               }
@@ -8767,6 +8851,11 @@
               {
                 "required": [
                   "windows.firewall_rule"
+                ]
+              },
+              {
+                "required": [
+                  "windows.hyperv_firewall_rule"
                 ]
               },
               {
@@ -9110,6 +9199,11 @@
               },
               {
                 "required": [
+                  "windows.hyperv_firewall_rule"
+                ]
+              },
+              {
+                "required": [
                   "windows.scheduled_task"
                 ]
               }
@@ -9445,6 +9539,11 @@
               {
                 "required": [
                   "windows.firewall_rule"
+                ]
+              },
+              {
+                "required": [
+                  "windows.hyperv_firewall_rule"
                 ]
               },
               {
@@ -9788,6 +9887,11 @@
               },
               {
                 "required": [
+                  "windows.hyperv_firewall_rule"
+                ]
+              },
+              {
+                "required": [
                   "windows.scheduled_task"
                 ]
               }
@@ -10123,6 +10227,11 @@
               {
                 "required": [
                   "windows.firewall_rule"
+                ]
+              },
+              {
+                "required": [
+                  "windows.hyperv_firewall_rule"
                 ]
               },
               {
@@ -10466,6 +10575,11 @@
               },
               {
                 "required": [
+                  "windows.hyperv_firewall_rule"
+                ]
+              },
+              {
+                "required": [
                   "windows.scheduled_task"
                 ]
               }
@@ -10801,6 +10915,11 @@
               {
                 "required": [
                   "windows.firewall_rule"
+                ]
+              },
+              {
+                "required": [
+                  "windows.hyperv_firewall_rule"
                 ]
               },
               {
@@ -11144,6 +11263,11 @@
               },
               {
                 "required": [
+                  "windows.hyperv_firewall_rule"
+                ]
+              },
+              {
+                "required": [
                   "windows.scheduled_task"
                 ]
               }
@@ -11479,6 +11603,11 @@
               {
                 "required": [
                   "windows.firewall_rule"
+                ]
+              },
+              {
+                "required": [
+                  "windows.hyperv_firewall_rule"
                 ]
               },
               {
@@ -11822,6 +11951,11 @@
               },
               {
                 "required": [
+                  "windows.hyperv_firewall_rule"
+                ]
+              },
+              {
+                "required": [
                   "windows.scheduled_task"
                 ]
               }
@@ -12157,6 +12291,11 @@
               {
                 "required": [
                   "windows.firewall_rule"
+                ]
+              },
+              {
+                "required": [
+                  "windows.hyperv_firewall_rule"
                 ]
               },
               {
@@ -12500,6 +12639,11 @@
               },
               {
                 "required": [
+                  "windows.hyperv_firewall_rule"
+                ]
+              },
+              {
+                "required": [
                   "windows.scheduled_task"
                 ]
               }
@@ -12835,6 +12979,11 @@
               {
                 "required": [
                   "windows.firewall_rule"
+                ]
+              },
+              {
+                "required": [
+                  "windows.hyperv_firewall_rule"
                 ]
               },
               {
@@ -13178,6 +13327,11 @@
               },
               {
                 "required": [
+                  "windows.hyperv_firewall_rule"
+                ]
+              },
+              {
+                "required": [
                   "windows.scheduled_task"
                 ]
               }
@@ -13513,6 +13667,11 @@
               {
                 "required": [
                   "windows.firewall_rule"
+                ]
+              },
+              {
+                "required": [
+                  "windows.hyperv_firewall_rule"
                 ]
               },
               {
@@ -13856,6 +14015,11 @@
               },
               {
                 "required": [
+                  "windows.hyperv_firewall_rule"
+                ]
+              },
+              {
+                "required": [
                   "windows.scheduled_task"
                 ]
               }
@@ -14191,6 +14355,11 @@
               {
                 "required": [
                   "windows.firewall_rule"
+                ]
+              },
+              {
+                "required": [
+                  "windows.hyperv_firewall_rule"
                 ]
               },
               {
@@ -14534,6 +14703,11 @@
               },
               {
                 "required": [
+                  "windows.hyperv_firewall_rule"
+                ]
+              },
+              {
+                "required": [
                   "windows.scheduled_task"
                 ]
               }
@@ -14869,6 +15043,11 @@
               {
                 "required": [
                   "windows.firewall_rule"
+                ]
+              },
+              {
+                "required": [
+                  "windows.hyperv_firewall_rule"
                 ]
               },
               {
@@ -15212,6 +15391,11 @@
               },
               {
                 "required": [
+                  "windows.hyperv_firewall_rule"
+                ]
+              },
+              {
+                "required": [
                   "windows.scheduled_task"
                 ]
               }
@@ -15547,6 +15731,11 @@
               {
                 "required": [
                   "windows.firewall_rule"
+                ]
+              },
+              {
+                "required": [
+                  "windows.hyperv_firewall_rule"
                 ]
               },
               {
@@ -15890,6 +16079,11 @@
               },
               {
                 "required": [
+                  "windows.hyperv_firewall_rule"
+                ]
+              },
+              {
+                "required": [
                   "windows.scheduled_task"
                 ]
               }
@@ -16225,6 +16419,11 @@
               {
                 "required": [
                   "windows.firewall_rule"
+                ]
+              },
+              {
+                "required": [
+                  "windows.hyperv_firewall_rule"
                 ]
               },
               {
@@ -16568,6 +16767,11 @@
               },
               {
                 "required": [
+                  "windows.hyperv_firewall_rule"
+                ]
+              },
+              {
+                "required": [
                   "windows.scheduled_task"
                 ]
               }
@@ -16903,6 +17107,11 @@
               {
                 "required": [
                   "windows.firewall_rule"
+                ]
+              },
+              {
+                "required": [
+                  "windows.hyperv_firewall_rule"
                 ]
               },
               {
@@ -17246,6 +17455,11 @@
               },
               {
                 "required": [
+                  "windows.hyperv_firewall_rule"
+                ]
+              },
+              {
+                "required": [
                   "windows.scheduled_task"
                 ]
               }
@@ -17581,6 +17795,11 @@
               {
                 "required": [
                   "windows.firewall_rule"
+                ]
+              },
+              {
+                "required": [
+                  "windows.hyperv_firewall_rule"
                 ]
               },
               {
@@ -17924,6 +18143,11 @@
               },
               {
                 "required": [
+                  "windows.hyperv_firewall_rule"
+                ]
+              },
+              {
+                "required": [
                   "windows.scheduled_task"
                 ]
               }
@@ -18259,6 +18483,11 @@
               {
                 "required": [
                   "windows.firewall_rule"
+                ]
+              },
+              {
+                "required": [
+                  "windows.hyperv_firewall_rule"
                 ]
               },
               {
@@ -18609,6 +18838,11 @@
               },
               {
                 "required": [
+                  "windows.hyperv_firewall_rule"
+                ]
+              },
+              {
+                "required": [
                   "windows.scheduled_task"
                 ]
               }
@@ -18944,6 +19178,11 @@
               {
                 "required": [
                   "windows.firewall_rule"
+                ]
+              },
+              {
+                "required": [
+                  "windows.hyperv_firewall_rule"
                 ]
               },
               {
@@ -19287,6 +19526,11 @@
               },
               {
                 "required": [
+                  "windows.hyperv_firewall_rule"
+                ]
+              },
+              {
+                "required": [
                   "windows.scheduled_task"
                 ]
               }
@@ -19622,6 +19866,11 @@
               {
                 "required": [
                   "windows.firewall_rule"
+                ]
+              },
+              {
+                "required": [
+                  "windows.hyperv_firewall_rule"
                 ]
               },
               {
@@ -19965,6 +20214,11 @@
               },
               {
                 "required": [
+                  "windows.hyperv_firewall_rule"
+                ]
+              },
+              {
+                "required": [
                   "windows.scheduled_task"
                 ]
               }
@@ -20300,6 +20554,11 @@
               {
                 "required": [
                   "windows.firewall_rule"
+                ]
+              },
+              {
+                "required": [
+                  "windows.hyperv_firewall_rule"
                 ]
               },
               {
@@ -20643,6 +20902,11 @@
               },
               {
                 "required": [
+                  "windows.hyperv_firewall_rule"
+                ]
+              },
+              {
+                "required": [
                   "windows.scheduled_task"
                 ]
               }
@@ -20978,6 +21242,11 @@
               {
                 "required": [
                   "windows.firewall_rule"
+                ]
+              },
+              {
+                "required": [
+                  "windows.hyperv_firewall_rule"
                 ]
               },
               {
@@ -21321,6 +21590,11 @@
               },
               {
                 "required": [
+                  "windows.hyperv_firewall_rule"
+                ]
+              },
+              {
+                "required": [
                   "windows.scheduled_task"
                 ]
               }
@@ -21656,6 +21930,11 @@
               {
                 "required": [
                   "windows.firewall_rule"
+                ]
+              },
+              {
+                "required": [
+                  "windows.hyperv_firewall_rule"
                 ]
               },
               {
@@ -21997,6 +22276,11 @@
               },
               {
                 "required": [
+                  "windows.hyperv_firewall_rule"
+                ]
+              },
+              {
+                "required": [
                   "windows.scheduled_task"
                 ]
               }
@@ -22330,6 +22614,11 @@
               {
                 "required": [
                   "windows.firewall_rule"
+                ]
+              },
+              {
+                "required": [
+                  "windows.hyperv_firewall_rule"
                 ]
               },
               {
@@ -22673,6 +22962,11 @@
               },
               {
                 "required": [
+                  "windows.hyperv_firewall_rule"
+                ]
+              },
+              {
+                "required": [
                   "windows.scheduled_task"
                 ]
               }
@@ -23008,6 +23302,11 @@
               {
                 "required": [
                   "windows.firewall_rule"
+                ]
+              },
+              {
+                "required": [
+                  "windows.hyperv_firewall_rule"
                 ]
               },
               {
@@ -23351,6 +23650,11 @@
               },
               {
                 "required": [
+                  "windows.hyperv_firewall_rule"
+                ]
+              },
+              {
+                "required": [
                   "windows.scheduled_task"
                 ]
               }
@@ -23686,6 +23990,11 @@
               {
                 "required": [
                   "windows.firewall_rule"
+                ]
+              },
+              {
+                "required": [
+                  "windows.hyperv_firewall_rule"
                 ]
               },
               {
@@ -24029,6 +24338,11 @@
               },
               {
                 "required": [
+                  "windows.hyperv_firewall_rule"
+                ]
+              },
+              {
+                "required": [
                   "windows.scheduled_task"
                 ]
               }
@@ -24364,6 +24678,11 @@
               {
                 "required": [
                   "windows.firewall_rule"
+                ]
+              },
+              {
+                "required": [
+                  "windows.hyperv_firewall_rule"
                 ]
               },
               {
@@ -24707,6 +25026,11 @@
               },
               {
                 "required": [
+                  "windows.hyperv_firewall_rule"
+                ]
+              },
+              {
+                "required": [
                   "windows.scheduled_task"
                 ]
               }
@@ -25042,6 +25366,355 @@
               {
                 "required": [
                   "wait.port"
+                ]
+              },
+              {
+                "required": [
+                  "windows.hyperv_firewall_rule"
+                ]
+              },
+              {
+                "required": [
+                  "windows.scheduled_task"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "required": [
+            "windows.hyperv_firewall_rule"
+          ],
+          "properties": {
+            "windows.hyperv_firewall_rule": {
+              "$ref": "#/definitions/windows.hyperv_firewall_rule"
+            }
+          },
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "artifact.capture"
+                ]
+              },
+              {
+                "required": [
+                  "artifact.validate"
+                ]
+              },
+              {
+                "required": [
+                  "assert"
+                ]
+              },
+              {
+                "required": [
+                  "cmd"
+                ]
+              },
+              {
+                "required": [
+                  "container"
+                ]
+              },
+              {
+                "required": [
+                  "container.image"
+                ]
+              },
+              {
+                "required": [
+                  "file.copy"
+                ]
+              },
+              {
+                "required": [
+                  "file.download"
+                ]
+              },
+              {
+                "required": [
+                  "file.template"
+                ]
+              },
+              {
+                "required": [
+                  "file.unarchive"
+                ]
+              },
+              {
+                "required": [
+                  "file.write"
+                ]
+              },
+              {
+                "required": [
+                  "git.checkout"
+                ]
+              },
+              {
+                "required": [
+                  "git.clone"
+                ]
+              },
+              {
+                "required": [
+                  "git.config"
+                ]
+              },
+              {
+                "required": [
+                  "http.request"
+                ]
+              },
+              {
+                "required": [
+                  "import"
+                ]
+              },
+              {
+                "required": [
+                  "log"
+                ]
+              },
+              {
+                "required": [
+                  "observe.cpu"
+                ]
+              },
+              {
+                "required": [
+                  "observe.disk"
+                ]
+              },
+              {
+                "required": [
+                  "observe.gpu"
+                ]
+              },
+              {
+                "required": [
+                  "observe.http"
+                ]
+              },
+              {
+                "required": [
+                  "observe.logs"
+                ]
+              },
+              {
+                "required": [
+                  "observe.memory"
+                ]
+              },
+              {
+                "required": [
+                  "observe.port"
+                ]
+              },
+              {
+                "required": [
+                  "observe.process"
+                ]
+              },
+              {
+                "required": [
+                  "observe.service"
+                ]
+              },
+              {
+                "required": [
+                  "os.cron"
+                ]
+              },
+              {
+                "required": [
+                  "os.firewall"
+                ]
+              },
+              {
+                "required": [
+                  "os.group"
+                ]
+              },
+              {
+                "required": [
+                  "os.mount"
+                ]
+              },
+              {
+                "required": [
+                  "os.service"
+                ]
+              },
+              {
+                "required": [
+                  "os.ssh_key"
+                ]
+              },
+              {
+                "required": [
+                  "os.sysctl"
+                ]
+              },
+              {
+                "required": [
+                  "os.systemd"
+                ]
+              },
+              {
+                "required": [
+                  "os.user"
+                ]
+              },
+              {
+                "required": [
+                  "pkg"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.hold"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.list"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.repo"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.upgrade"
+                ]
+              },
+              {
+                "required": [
+                  "read.json"
+                ]
+              },
+              {
+                "required": [
+                  "read.yaml"
+                ]
+              },
+              {
+                "required": [
+                  "repo.patch"
+                ]
+              },
+              {
+                "required": [
+                  "repo.search"
+                ]
+              },
+              {
+                "required": [
+                  "repo.tree"
+                ]
+              },
+              {
+                "required": [
+                  "shell"
+                ]
+              },
+              {
+                "required": [
+                  "text.delete_range"
+                ]
+              },
+              {
+                "required": [
+                  "text.insert"
+                ]
+              },
+              {
+                "required": [
+                  "text.line"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.ini"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.json"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.yaml"
+                ]
+              },
+              {
+                "required": [
+                  "text.replace"
+                ]
+              },
+              {
+                "required": [
+                  "tool"
+                ]
+              },
+              {
+                "required": [
+                  "transaction"
+                ]
+              },
+              {
+                "required": [
+                  "try"
+                ]
+              },
+              {
+                "required": [
+                  "use"
+                ]
+              },
+              {
+                "required": [
+                  "vars"
+                ]
+              },
+              {
+                "required": [
+                  "vars.load"
+                ]
+              },
+              {
+                "required": [
+                  "wait.command"
+                ]
+              },
+              {
+                "required": [
+                  "wait.file"
+                ]
+              },
+              {
+                "required": [
+                  "wait.http"
+                ]
+              },
+              {
+                "required": [
+                  "wait.port"
+                ]
+              },
+              {
+                "required": [
+                  "windows.firewall_rule"
                 ]
               },
               {
@@ -25386,6 +26059,11 @@
               {
                 "required": [
                   "windows.firewall_rule"
+                ]
+              },
+              {
+                "required": [
+                  "windows.hyperv_firewall_rule"
                 ]
               }
             ]
@@ -26047,6 +26725,60 @@
           }
         },
         "state": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "additionalProperties": false,
+      "x-platforms": [
+        "windows"
+      ],
+      "x-implements-check": true,
+      "x-category": "system",
+      "x-supports-dry-run": true,
+      "x-version": "1.0.0"
+    },
+    "windows.hyperv_firewall_rule": {
+      "type": "object",
+      "description": "Manage Windows Hyper-V Firewall rules (WSL2 mirrored networking)",
+      "properties": {
+        "action": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "direction": {
+          "type": "string"
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "local_port": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "protocol": {
+          "type": "string"
+        },
+        "remote_port": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "state": {
+          "type": "string"
+        },
+        "vm_creator_id": {
           "type": "string"
         }
       },
