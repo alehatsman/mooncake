@@ -69,6 +69,9 @@ func TestToMap(t *testing.T) {
 	if m["user_home"] != "/home/user" {
 		t.Errorf("user_home = %v, want /home/user", m["user_home"])
 	}
+	if m["home"] != "/home/user" {
+		t.Errorf("home alias = %v, want /home/user", m["home"])
+	}
 	if m["distribution"] != "Ubuntu" {
 		t.Errorf("distribution = %v, want Ubuntu", m["distribution"])
 	}
@@ -153,7 +156,7 @@ func TestToMap_AllFields(t *testing.T) {
 
 	// Verify all fields are present
 	requiredFields := []string{
-		"os", "arch", "hostname", "username", "user_home",
+		"os", "arch", "hostname", "username", "user_home", "home",
 		"distribution", "distribution_version", "distribution_major",
 		"ip_addresses", "ip_addresses_string", "cpu_cores",
 		"memory_total_mb", "python_version", "package_manager",
