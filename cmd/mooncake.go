@@ -46,7 +46,6 @@ func createApp() *cli.App {
 		Commands: []*cli.Command{
 			initcmd.Command(),
 			doctorcmd.Command(),
-			presetsCommand(),
 			modcmd.Command(),
 			docscmd.Command(),
 			schemacmd.Command(),
