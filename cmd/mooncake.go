@@ -14,6 +14,7 @@ import (
 	agentdcmd "github.com/alehatsman/mooncake/cmd/agentd"
 	fleetcmd "github.com/alehatsman/mooncake/cmd/fleet"
 	modcmd "github.com/alehatsman/mooncake/cmd/mod"
+	querycmd "github.com/alehatsman/mooncake/cmd/query"
 	schemacmd "github.com/alehatsman/mooncake/cmd/schema"
 	stepcmd "github.com/alehatsman/mooncake/cmd/step"
 	toolcmd "github.com/alehatsman/mooncake/cmd/tool"
@@ -194,7 +195,7 @@ func createApp() *cli.App {
 			stepcmd.Command(),
 			taskCommand(),
 			toolcmd.Command(),
-			queryCommand(),
+			querycmd.Command(),
 			applyCommand(),
 			planCommand(),
 			factsCommand(),

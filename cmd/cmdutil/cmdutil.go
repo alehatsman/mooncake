@@ -2,16 +2,10 @@
 // sub-packages (cmd/fleet, cmd/agentd, …). Anything that two or more
 // sub-packages need to call belongs here; anything specific to one
 // sub-package stays inside it.
-//
-// Three helpers live here today:
-//
-//   - ParseTags splits a comma-separated --tags flag value.
-//   - ResolveConfigPath honors an explicit --config or auto-discovers.
-//   - PrintNoConfigHintAndExit renders the no-config-found hint and
-//     exits with the standard validation exit code.
 package cmdutil
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -72,4 +66,87 @@ func PrintNoConfigHintAndExit(err error, cmdName string) bool {
 	fmt.Fprint(os.Stderr, config.HintNoConfigFound(nfe, cmdName))
 	os.Exit(ExitCodeValidationError)
 	return true
+}
+
+// QueryMap looks up one or more dot-path keys in a flat ToMap() and
+// prints the results. Shared by `mooncake facts --query` and
+// `mooncake metrics --query`.
+//
+// Key normalization: dots in the query are replaced with underscores to
+// match the ToMap() key naming convention (e.g. `go.version` →
+// `go_version`, `cpu.usage_pct` → `cpu_usage_pct`).
+//
+// Exits with code 1 (via cli.Exit) if any key is missing or empty.
+func QueryMap(m map[string]interface{}, queries []string) error {
+	multi := len(queries) > 1
+	missing := false
+
+	for _, q := range queries {
+		key := strings.ReplaceAll(q, ".", "_")
+		val, ok := m[key]
+		if !ok || val == nil || val == "" || val == false {
+			if multi {
+				fmt.Printf("%s=\n", q)
+			}
+			missing = true
+			continue
+		}
+
+		var out string
+		switch v := val.(type) {
+		case string:
+			out = v
+		case bool:
+			out = "true"
+		case int, int64, float64:
+			out = fmt.Sprintf("%v", v)
+		default:
+			b, err := json.Marshal(v)
+			if err != nil {
+				out = fmt.Sprintf("%v", v)
+			} else {
+				out = string(b)
+			}
+		}
+
+		if multi {
+			fmt.Printf("%s=%s\n", q, out)
+		} else {
+			fmt.Println(out)
+		}
+	}
+
+	if missing {
+		return cli.Exit("", 1)
+	}
+	return nil
+}
+
+// QueryMapJSON is the JSON counterpart to QueryMap: emits a single JSON
+// object keyed by the original query strings (dot-form preserved) so the
+// caller can `jq .cpu_usage_pct` regardless of how many keys were asked
+// for. Missing keys yield a null value rather than being omitted, so the
+// shape of the response is stable across invocations.
+func QueryMapJSON(m map[string]interface{}, queries []string) error {
+	missing := false
+	out := make(map[string]interface{}, len(queries))
+	for _, q := range queries {
+		key := strings.ReplaceAll(q, ".", "_")
+		val, ok := m[key]
+		if !ok || val == nil {
+			out[q] = nil
+			missing = true
+			continue
+		}
+		out[q] = val
+	}
+	enc := json.NewEncoder(os.Stdout)
+	enc.SetIndent("", "  ")
+	if err := enc.Encode(out); err != nil {
+		return err
+	}
+	if missing {
+		return cli.Exit("", 1)
+	}
+	return nil
 }

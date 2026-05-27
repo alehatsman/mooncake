@@ -7,6 +7,7 @@ import (
 
 	"github.com/urfave/cli/v2"
 
+	"github.com/alehatsman/mooncake/cmd/cmdutil"
 	"github.com/alehatsman/mooncake/internal/facts"
 	"github.com/alehatsman/mooncake/internal/factsfmt"
 )
@@ -39,7 +40,7 @@ func factsAction(c *cli.Context) error {
 
 	// --query mode: print specific values and exit
 	if queries := c.StringSlice("query"); len(queries) > 0 {
-		return queryMap(f.ToMap(), queries)
+		return cmdutil.QueryMap(f.ToMap(), queries)
 	}
 
 	format := c.String("format")

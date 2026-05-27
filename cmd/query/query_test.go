@@ -1,4 +1,4 @@
-package main
+package query
 
 import (
 	"bytes"
@@ -162,7 +162,7 @@ func TestRunQuery_E2E(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 			app := &cli.App{
-				Commands: []*cli.Command{queryCommand()},
+				Commands: []*cli.Command{Command()},
 				// urfave/cli writes ExitCoder messages to ErrWriter;
 				// silence them so test output stays clean.
 				ErrWriter: io.Discard,

@@ -1,6 +1,6 @@
-// Package main — `mooncake query` top-level subcommand (epic-read-and-
-// report D4). One-shot inspection of a JSON or YAML file by dotted path,
-// without writing a plan.
+// Package query implements the `mooncake query` top-level subcommand
+// (epic-read-and-report D4). One-shot inspection of a JSON or YAML
+// file by dotted path, without writing a plan.
 //
 // Behavior:
 //
@@ -12,7 +12,7 @@
 // --as. Scalar values print raw; structured values print compact JSON
 // (--pretty for indented). Exit codes are agent-friendly: 0 found,
 // 1 path-miss, 2 parse error.
-package main
+package query
 
 import (
 	"encoding/json"
@@ -29,8 +29,8 @@ import (
 // "this file is too big to slurp into memory" cases.
 const defaultQueryMaxBytes int64 = 4 << 20
 
-// queryCommand registers `mooncake query <file> <path>`.
-func queryCommand() *cli.Command {
+// Command registers `mooncake query <file> <path>`.
+func Command() *cli.Command {
 	return &cli.Command{
 		Name:      "query",
 		Usage:     "Read a JSON/YAML file and extract a value by dotted path",

@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/alehatsman/mooncake/cmd/cmdutil"
 	"github.com/alehatsman/mooncake/internal/metrics"
 	"github.com/urfave/cli/v2"
 )
@@ -68,9 +69,9 @@ func metricsAction(c *cli.Context) error {
 	// from a flag pair that works on `--fields`.
 	if queries := c.StringSlice("query"); len(queries) > 0 {
 		if c.String("format") == outputFormatJSON {
-			return queryMapJSON(mm, queries)
+			return cmdutil.QueryMapJSON(mm, queries)
 		}
-		return queryMap(mm, queries)
+		return cmdutil.QueryMap(mm, queries)
 	}
 
 	// Build the output payload (full map, or fields-filtered).
