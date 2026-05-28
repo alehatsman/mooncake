@@ -1,6 +1,7 @@
 package brew
 
 import (
+	"context"
 	"errors"
 	"strings"
 	"testing"
@@ -54,13 +55,13 @@ func installStubBrew(t *testing.T, s *stubBrew) {
 	t.Helper()
 	origList := ListTaps
 	origExec := Exec
-	ListTaps = func() ([]string, error) {
+	ListTaps = func(_ context.Context) ([]string, error) {
 		if s.listErr != nil {
 			return nil, s.listErr
 		}
 		return append([]string{}, s.taps...), nil
 	}
-	Exec = func(args ...string) error {
+	Exec = func(_ context.Context, args ...string) error {
 		s.calls = append(s.calls, append([]string{}, args...))
 		if s.execErr != nil {
 			return s.execErr

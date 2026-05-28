@@ -55,7 +55,8 @@ func init() {
 // local; 60s covers slow networks without inviting indefinite waits.
 const cmdTimeout = 60 * time.Second
 
-// Package-level hooks for tests to override.
+// Package-level hooks for tests to override. F2: both accept ctx so
+// SIGINT / fleet kill / MCP shutdown cancels in-flight brew subprocesses.
 var (
 	// ListTaps returns the current set of tapped repositories (one
 	// per line from `brew tap`, lowercased).
@@ -89,7 +90,7 @@ func Run(ctx actions.Context, r *config.PkgRepo, result *executor.Result) (actio
 	}
 	tap = strings.ToLower(tap)
 
-	current, err := ListTaps()
+	current, err := ListTaps(ctx.Ctx())
 	if err != nil {
 		return result, fmt.Errorf("pkg.repo.brew: list taps: %w", err)
 	}
@@ -152,7 +153,7 @@ func Run(ctx actions.Context, r *config.PkgRepo, result *executor.Result) (actio
 	}
 
 	args := []string{op, tap}
-	if err := Exec(args...); err != nil {
+	if err := Exec(ctx.Ctx(), args...); err != nil {
 		return result, fmt.Errorf("pkg.repo.brew: %s %s: %w", op, tap, err)
 	}
 
@@ -172,8 +173,11 @@ func Run(ctx actions.Context, r *config.PkgRepo, result *executor.Result) (actio
 // realListTaps runs `brew tap` and returns the current set of
 // tapped repositories, one per line. Wired into the ListTaps
 // package var by default; tests substitute their own.
-func realListTaps() ([]string, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), cmdTimeout)
+//
+// F2: the parent ctx is the run-wide cancellation surface; cmdTimeout
+// chains on top so a wedged remote still can't hang the apply.
+func realListTaps(parent context.Context) ([]string, error) {
+	ctx, cancel := context.WithTimeout(parent, cmdTimeout)
 	defer cancel()
 	cmd := exec.CommandContext(ctx, "brew", "tap")
 	var stdout, stderr bytes.Buffer
@@ -197,8 +201,11 @@ func realListTaps() ([]string, error) {
 // by default; tests substitute their own. Stderr is folded into the
 // error so a misconfigured tap surfaces the brew message verbatim
 // instead of the bare exit status.
-func realExec(args ...string) error {
-	ctx, cancel := context.WithTimeout(context.Background(), cmdTimeout)
+//
+// F2: the parent ctx is the run-wide cancellation surface; cmdTimeout
+// chains on top.
+func realExec(parent context.Context, args ...string) error {
+	ctx, cancel := context.WithTimeout(parent, cmdTimeout)
 	defer cancel()
 	cmd := exec.CommandContext(ctx, "brew", args...)
 	var stderr bytes.Buffer
