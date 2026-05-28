@@ -1,6 +1,15 @@
 # Proposal 11: `assert` action + on-fail `heal:` handler — self-healing as a primitive
 
-**Status:** Partially shipped — the `assert` action exists at `internal/actions/assert/` (multiple sub-fields: command, file_exists, file_sha256, git-clean / git-diff). **Open:** the on-fail `heal:` handler — the kernel-level primitive that turns assert-failure into a self-correcting step. Stays in `proposals/` (not `done/`) until the heal handler ships.
+**Status:** Vertical slice landed (2026-05-28). Three kernel pieces ship:
+- `assert` action (pre-existing) — `internal/actions/assert/`.
+- `heal:` field on `Step` (proposal-11) — `internal/config/config.go`; executor seam in `internal/executor/executor.go` (`tryHeal`); new run-wide `HealedSteps` counter wired through `events.RunCompletedData` → CLI recap + agentd recap.
+- Planner-time preview of heal children — `internal/plan/planner.go` expands heal children as siblings tagged `HealParent` so `mooncake plan` shows their diff/perms/risk alongside the parent assert. At apply mode these siblings silent-skip (no event, no counter bump); the actual heal execution still flows through the parent's nested `step.Heal` via `tryHeal`.
+
+Slice scope: heal is only valid on `assert` steps. The `mooncake maintain --interval` driver is **explicitly out of scope** — the proposal's own "the maintain loop is just apply in a for" line means cron + `mooncake apply` covers it without a new verb.
+
+Open follow-ups (not in this slice):
+1. Generalise heal to other check-like actions (wait.*, observe.*).
+2. `max_heals_per_window` (rate-limiting heal flap) — pair with future quota proposal.
 **Effort:** M (~1 week — action + executor change)
 **Value:** High — turns mooncake from "apply state once" into
 "maintain state", which is the kernel-level primitive underneath
@@ -140,8 +149,10 @@ one declarative step. The maintain loop is just `apply` in a `for`.
 ## Field-budget impact
 
 One new universal field on `Step`: `heal:` (sibling to existing
-`assert:` field). One new step type: `assert:`. Current count 36 →
-37; well under the 40 cap.
+`assert:` field). Field count moved 36/37 → 38 (verified with
+`mooncake task budget-status`); still under the 40 cap. The
+soft-cap policy doesn't restrict the `assert:` step type — only
+the per-`Step` universal fields.
 
 The alternative — keep `heal:` inside an `assert:`-only block — is
 tempting but limits reuse: `heal:` is useful on any check-like

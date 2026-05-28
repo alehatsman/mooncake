@@ -86,7 +86,10 @@ type RunSummary struct {
 	Reverted int
 	// Cancelled counts steps interrupted mid-execution per proposal-02
 	// (SIGINT, fleet kill, timeout).
-	Cancelled    int
+	Cancelled int
+	// Healed counts assert steps that failed, ran their heal: child
+	// plan, and passed the re-check (proposal-11).
+	Healed       int
 	DurationMs   int64
 	Success      bool
 	ErrorMessage string

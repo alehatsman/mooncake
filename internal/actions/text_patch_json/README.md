@@ -1,6 +1,7 @@
 ---
 action: text.patch.json
 ---
+<!-- mooncake:stub -->
 # text.patch.json
 
 Apply structural set/delete/merge edits to a JSON file with order + indent preservation
@@ -8,5 +9,5 @@ Apply structural set/delete/merge edits to a JSON file with order + indent prese
 See generated reference: `dist/docs/actions/text_patch_json.md`
 
 > Stub README. Add caveats, common pitfalls, or background context
-> here. The generated action card on the docs site picks up this
-> file's body when present.
+> here, and remove the `<!-- mooncake:stub -->` marker above so the
+> generated action card picks the body up as a Notes section.

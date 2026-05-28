@@ -275,6 +275,7 @@ func assembleResult(capture *executor.RunCapture, tail *captureSubscriber, execE
 			Skipped:      runData.SkippedSteps,
 			Failed:       runData.FailedSteps,
 			Reverted:     runData.RevertedSteps,
+			Healed:       runData.HealedSteps,
 			Cancelled:    runData.CancelledSteps,
 			DurationMs:   runData.DurationMs,
 			Success:      runData.Success,

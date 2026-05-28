@@ -261,6 +261,9 @@ func (c *ConsoleSubscriber) renderRunCompleted(data events.RunCompletedData) {
 		if data.CancelledSteps > 0 {
 			line += fmt.Sprintf("  cancelled=%d", data.CancelledSteps)
 		}
+		if data.HealedSteps > 0 {
+			line += fmt.Sprintf("  healed=%d", data.HealedSteps)
+		}
 		line += "  " + formatDuration(data.DurationMs)
 	}
 

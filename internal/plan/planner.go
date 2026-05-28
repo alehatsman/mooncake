@@ -428,6 +428,13 @@ func (p *Planner) expandStep(step config.Step, ctx *ExpansionContext, plan *Plan
 	// entries). The linkage survives via the children's TriggeredBy.
 	onChange := planStep.OnChange
 	planStep.OnChange = nil
+
+	// proposal-11: heal children get expanded as preview siblings so
+	// `mooncake plan` shows their diff/perms/risk alongside the
+	// parent assert. We do NOT clear planStep.Heal — the apply-mode
+	// executor still reads the nested Heal via tryHeal. Siblings are
+	// for plan output only and silent-skip at apply.
+	healChildren := planStep.Heal
 	plan.Steps = append(plan.Steps, planStep)
 
 	if len(onChange) > 0 {
@@ -437,6 +444,17 @@ func (p *Planner) expandStep(step config.Step, ctx *ExpansionContext, plan *Plan
 			child.TriggeredBy = parentID
 			if err := p.expandStep(child, ctx, plan, 0); err != nil {
 				return fmt.Errorf("expand on_change child %d of %q: %w", ci, step.Name, err)
+			}
+		}
+	}
+
+	if len(healChildren) > 0 {
+		parentID := planStep.ID
+		for ci := range healChildren {
+			child := healChildren[ci]
+			child.HealParent = parentID
+			if err := p.expandStep(child, ctx, plan, 0); err != nil {
+				return fmt.Errorf("expand heal child %d of %q: %w", ci, step.Name, err)
 			}
 		}
 	}

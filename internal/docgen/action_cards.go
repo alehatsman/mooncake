@@ -33,6 +33,13 @@ func (g *Generator) writeActionCards(outDir string) ([]string, error) {
 		propsByName[p.Name] = p
 	}
 
+	// Load per-action READMEs once. Missing dir is non-fatal — the
+	// rendered cards still ship without the Notes section.
+	notes, err := loadActionReadmes("internal/actions")
+	if err != nil {
+		return nil, fmt.Errorf("load action READMEs: %w", err)
+	}
+
 	var written []string
 	for _, a := range g.getActions() {
 		path := filepath.Join(actionDir, safeActionFilename(a.Name)+".md")
@@ -40,7 +47,7 @@ func (g *Generator) writeActionCards(outDir string) ([]string, error) {
 		if err != nil {
 			return nil, fmt.Errorf("create %s: %w", path, err)
 		}
-		err = g.writeActionCard(f, a, propsByName[a.Name])
+		err = g.writeActionCard(f, a, propsByName[a.Name], notes[a.Name])
 		if cerr := f.Close(); cerr != nil && err == nil {
 			err = cerr
 		}
@@ -51,6 +58,95 @@ func (g *Generator) writeActionCards(outDir string) ([]string, error) {
 	}
 	sort.Strings(written)
 	return written, nil
+}
+
+// stubMarker tells the action_cards emitter that a README is still
+// boilerplate and should not be inlined into the rendered card. When
+// real prose is added, the author deletes this marker; the README's
+// body then shows up as a "Notes" section on the action page.
+const stubMarker = "<!-- mooncake:stub -->"
+
+// loadActionReadmes walks internal/actions/<dir>/README.md, parses the
+// `action: <name>` front matter, and returns a map[action.Name]body —
+// where body is the README contents with YAML front matter and the
+// stub marker stripped. Files containing the stub marker are skipped
+// entirely (treated as "no notes available").
+//
+// Returns an empty map (no error) if the actions root is missing —
+// callers can still render cards without notes.
+func loadActionReadmes(actionsRoot string) (map[string]string, error) {
+	out := map[string]string{}
+
+	entries, err := os.ReadDir(actionsRoot)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return out, nil
+		}
+		return nil, err
+	}
+
+	for _, e := range entries {
+		if !e.IsDir() {
+			continue
+		}
+		readme := filepath.Join(actionsRoot, e.Name(), "README.md")
+		data, err := os.ReadFile(readme) // #nosec G304 -- enumerated from actionsRoot
+		if err != nil {
+			if os.IsNotExist(err) {
+				continue
+			}
+			return nil, err
+		}
+		body := string(data)
+		if strings.Contains(body, stubMarker) {
+			continue
+		}
+		name, payload := splitReadme(body)
+		if name == "" {
+			continue
+		}
+		out[name] = payload
+	}
+	return out, nil
+}
+
+// splitReadme parses a README body: pulls the `action: <name>` value
+// out of the YAML front-matter block, strips both the front matter
+// and the README's own H1 title (which would duplicate the rendered
+// card's title), and returns (name, remaining-body).
+//
+// Returns ("", "") when the file has no front matter or no action key.
+func splitReadme(body string) (name, payload string) {
+	if !strings.HasPrefix(body, "---\n") {
+		return "", ""
+	}
+	rest := body[len("---\n"):]
+	end := strings.Index(rest, "\n---\n")
+	if end < 0 {
+		return "", ""
+	}
+	header := rest[:end]
+	payload = strings.TrimLeft(rest[end+len("\n---\n"):], "\n")
+
+	for _, line := range strings.Split(header, "\n") {
+		line = strings.TrimSpace(line)
+		if !strings.HasPrefix(line, "action:") {
+			continue
+		}
+		name = strings.TrimSpace(strings.TrimPrefix(line, "action:"))
+		break
+	}
+	if name == "" {
+		return "", ""
+	}
+
+	// Drop the first H1 — it duplicates the action card's own title.
+	if strings.HasPrefix(payload, "# ") {
+		if nl := strings.Index(payload, "\n"); nl >= 0 {
+			payload = strings.TrimLeft(payload[nl+1:], "\n")
+		}
+	}
+	return name, payload
 }
 
 // writeActionCard renders a single action card.
@@ -71,7 +167,7 @@ func (g *Generator) writeActionCards(outDir string) ([]string, error) {
 //	## Platform Support
 //	## Events Emitted
 //	<!-- generated metadata footer -->
-func (g *Generator) writeActionCard(w io.Writer, meta actions.ActionMetadata, props ActionProperties) error {
+func (g *Generator) writeActionCard(w io.Writer, meta actions.ActionMetadata, props ActionProperties, notes string) error {
 	platforms := meta.SupportedPlatforms
 	if len(platforms) == 0 {
 		// Empty SupportedPlatforms means "all" — list the canonical set
@@ -149,6 +245,13 @@ func (g *Generator) writeActionCard(w io.Writer, meta actions.ActionMetadata, pr
 		}
 	}
 
+	// Author-written notes from internal/actions/<dir>/README.md. Empty
+	// for stub READMEs (skipped at load time). The body has its front
+	// matter and H1 already stripped — render verbatim.
+	if trimmed := strings.TrimSpace(notes); trimmed != "" {
+		write(w, "## Notes\n\n%s\n\n", trimmed)
+	}
+
 	// Platform support — flat list mirroring the front matter.
 	write(w, "## Platform Support\n\n")
 	write(w, "%s\n\n", strings.Join(platforms, ", "))
@@ -163,13 +266,7 @@ func (g *Generator) writeActionCard(w io.Writer, meta actions.ActionMetadata, pr
 		write(w, "\n")
 	}
 
-	// Footer is the same as other generated pages so the drift-check
-	// regex in scripts/docs-check.sh strips it consistently.
-	write(w, "<!-- Generated by mooncake docs generate -->\n")
-	write(w, "<!-- Version: %s | Generated: %s -->\n",
-		g.Version,
-		g.Timestamp.Format("2006-01-02 15:04:05 MST"))
-
+	g.stamp(w)
 	return nil
 }
 

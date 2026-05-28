@@ -2737,6 +2737,17 @@
           "description": "Idempotently manage git config keys at local, global, or system scope",
           "$ref": "#/definitions/git.config"
         },
+        "heal": {
+          "type": "array",
+          "description": "Remediation steps that run when an assert step fails. The assert is re-checked after heal; on success the failure is suppressed and the run-wide healed counter bumps (proposal-11).",
+          "items": {
+            "$ref": "#/definitions/step"
+          }
+        },
+        "heal_parent": {
+          "type": "string",
+          "description": "(plan metadata) Parent assert step ID when expanded from a heal child (proposal-11)"
+        },
         "http.request": {
           "description": "Issue an HTTP request; capture the response as a registered fact",
           "$ref": "#/definitions/http.request"

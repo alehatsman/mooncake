@@ -49,6 +49,13 @@ type ExecutionStats struct {
 	// step didn't fail on its own merits; the exit-code aggregator
 	// maps cancelled>0 to 130, failed>0 to 1.
 	Cancelled *int
+	// Healed counts assert steps that failed on first dispatch, ran
+	// their declared heal: child plan, and passed the re-check
+	// (proposal-11). Distinct from Failed (assert never passed) and
+	// Changed (heal children's own changes are counted separately).
+	// A non-zero Healed means the system drifted and was restored
+	// in-band — the kernel-level self-healing signal.
+	Healed *int
 }
 
 // NewExecutionStats creates a new ExecutionStats with all counters initialized to zero
@@ -62,6 +69,7 @@ func NewExecutionStats() *ExecutionStats {
 		OK:        new(int),
 		Reverted:  new(int),
 		Cancelled: new(int),
+		Healed:    new(int),
 	}
 }
 

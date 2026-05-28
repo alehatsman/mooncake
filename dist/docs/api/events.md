@@ -536,11 +536,18 @@ type RunCompletedData struct {
     // fleet kill, timeout) per proposal-02. Tracked separately from
     // FailedSteps so the exit-code aggregator can map cancelled>0 to
     // 130 (the SIGINT-equivalent exit) rather than a generic failure.
-    CancelledSteps int    `json:"cancelled_steps,omitempty"`
-    DurationMs     int64  `json:"duration_ms"`
-    Success        bool   `json:"success"`
-    ErrorMessage   string `json:"error_message,omitempty"`
-    CheckMode      bool   `json:"check_mode,omitempty"`
+    CancelledSteps int `json:"cancelled_steps,omitempty"`
+    // HealedSteps counts assert steps that failed on first dispatch,
+    // ran their declared heal: child plan, and passed the re-check
+    // (proposal-11). Distinct from FailedSteps and ChangedSteps —
+    // the assert step itself never changes state, but a non-zero
+    // HealedSteps means the system was drifting and was restored
+    // in-band.
+    HealedSteps  int    `json:"healed_steps,omitempty"`
+    DurationMs   int64  `json:"duration_ms"`
+    Success      bool   `json:"success"`
+    ErrorMessage string `json:"error_message,omitempty"`
+    CheckMode    bool   `json:"check_mode,omitempty"`
 }
 ```
 

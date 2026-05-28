@@ -2199,6 +2199,18 @@ type Step struct {
     // plans that mix in a `shell:` step fail loudly at plan time.
     AllowIrreversible bool `yaml:"allow_irreversible,omitempty" json:"allow_irreversible,omitempty"`
 
+    // Heal (proposal-11) declares a remediation plan to run when the
+    // step's primary action reports failure. Vertical-slice scope:
+    // only valid on `assert` steps. On assert-fail the executor runs
+    // the heal children sequentially, then re-evaluates the assert.
+    // If the re-check passes, the step's outcome flips from failed to
+    // `healed` (counted separately in the recap). If the re-check
+    // still fails, the original assert error propagates.
+    //
+    // Heal children execute as a child plan in the same context as
+    // the parent (same vars, same CurrentDir).
+    Heal []Step `yaml:"heal,omitempty" json:"heal,omitempty"`
+
     // Plan metadata (populated during plan expansion, omitted in config files)
     ID             string       `yaml:"id,omitempty" json:"id,omitempty"`
     ActionType     string       `yaml:"action_type,omitempty" json:"action_type,omitempty"`
@@ -2219,6 +2231,17 @@ type Step struct {
     // shape; populated by the planner. Used by the executor to track
     // which steps belong to which open transaction.
     TxnParent string `yaml:"txn_parent,omitempty" json:"txn_parent,omitempty"`
+
+    // HealParent carries the ID of the parent assert Step when this
+    // Step was expanded from a heal: child (proposal-11). Populated
+    // by the planner so the operator's `mooncake plan` output shows
+    // the heal children's diff/perms/risk alongside the parent
+    // assert. The executor silent-skips these siblings at apply time
+    // because the actual heal execution flows through the parent's
+    // nested step.Heal via dispatchStepAction's tryHeal seam.
+    //
+    // Mirrors TriggeredBy / TxnParent shape; planner-metadata only.
+    HealParent string `yaml:"heal_parent,omitempty" json:"heal_parent,omitempty"`
 
     // TxnRole tags an expanded child with its role inside the parent
     // transaction. Populated by the planner; one of:

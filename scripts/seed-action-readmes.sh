@@ -72,10 +72,15 @@ for handler in "$ACTIONS_DIR"/*/handler.go; do
   fi
 
   slug="$(echo "$name" | tr '.' '_')"
+  # The <!-- mooncake:stub --> marker tells the docgen action_cards
+  # emitter to skip inlining this file's body into the rendered card.
+  # Delete the marker when adding real prose; the body then shows up
+  # as a "Notes" section under the action's properties table.
   cat > "$readme" <<EOF
 ---
 action: $name
 ---
+<!-- mooncake:stub -->
 # $name
 
 $desc
@@ -83,8 +88,8 @@ $desc
 See generated reference: \`dist/docs/actions/$slug.md\`
 
 > Stub README. Add caveats, common pitfalls, or background context
-> here. The generated action card on the docs site picks up this
-> file's body when present.
+> here, and remove the \`<!-- mooncake:stub -->\` marker above so the
+> generated action card picks the body up as a Notes section.
 EOF
 
   echo "  + seeded $readme"
