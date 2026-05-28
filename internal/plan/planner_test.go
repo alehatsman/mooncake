@@ -1230,3 +1230,76 @@ func TestExpandVars_ResolvesSecretMarker(t *testing.T) {
 		t.Errorf("PLAIN = %q, want %q (non-secret values must survive)", got, "no marker here")
 	}
 }
+
+// TestPlanner_ForEach_WithUse_LocalComponent pins spec-67 open-question #3:
+// `for_each:` composed with `use: ./local.yml` must iterate, and each
+// iteration's `props:` must render against that iteration's `item`.
+//
+// Mechanics this test guards: with `props.x: "{{ item }}"`, the per-iteration
+// template only resolves if the renderer sees `item` in scope BEFORE props
+// expansion. The planner's tryExpandUse path defers when props still carry
+// unresolved templates (planner.go:585), falling through to expandWithItems,
+// which then per-iteration calls compilePlanStep → renderActionTemplates
+// (planner.go:994) with itemCtx populated. Regression would surface as either
+// a literal "{{ item }}" leaking into the plan or as a single non-iterated step.
+func TestPlanner_ForEach_WithUse_LocalComponent(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	componentPath := filepath.Join(tmpDir, "component.yml")
+	componentContent := `name: greet-user
+props:
+  who: { type: string, required: true }
+steps:
+  - name: greet
+    log: "hello {{ props.who }}"
+`
+	if err := os.WriteFile(componentPath, []byte(componentContent), 0o644); err != nil {
+		t.Fatalf("write component: %v", err)
+	}
+
+	configPath := filepath.Join(tmpDir, "playbook.yml")
+	configContent := `version: "1.0"
+steps:
+  - name: per-user
+    use: ./component.yml
+    props:
+      who: "{{ item }}"
+    for_each: [alice, bob, carol]
+`
+	if err := os.WriteFile(configPath, []byte(configContent), 0o644); err != nil {
+		t.Fatalf("write playbook: %v", err)
+	}
+
+	planner, err := NewPlanner()
+	if err != nil {
+		t.Fatalf("NewPlanner: %v", err)
+	}
+	plan, err := planner.BuildPlan(PlannerConfig{ConfigPath: configPath})
+	if err != nil {
+		t.Fatalf("BuildPlan: %v", err)
+	}
+
+	want := []string{"alice", "bob", "carol"}
+	if len(plan.Steps) != len(want) {
+		t.Fatalf("expected %d steps (one per item), got %d", len(want), len(plan.Steps))
+	}
+
+	for i, step := range plan.Steps {
+		if step.Use != "./component.yml" {
+			t.Errorf("step %d: Use = %q, want %q", i, step.Use, "./component.yml")
+		}
+		if step.LoopContext == nil {
+			t.Fatalf("step %d: missing LoopContext (for_each did not iterate)", i)
+		}
+		if got, _ := step.LoopContext.Item.(string); got != want[i] {
+			t.Errorf("step %d: LoopContext.Item = %v, want %s", i, step.LoopContext.Item, want[i])
+		}
+		got, _ := step.Props["who"].(string)
+		if got != want[i] {
+			t.Errorf("step %d: props.who = %q, want %q (template did not resolve against item)", i, got, want[i])
+		}
+		if strings.Contains(got, "{{") {
+			t.Errorf("step %d: props.who still contains an unresolved template: %q", i, got)
+		}
+	}
+}

@@ -46,14 +46,12 @@ Recent shipped specs (see commit history for the full receipts):
 
 ## Active specs
 
-| Spec | Topic | Why drafted |
-|---|---|---|
-| [spec-65](./specs/spec-65-module-system-phase-1.md) | Module system — Phase 1 (loader + cache + `use:`) | Replaces dropped in-tree presets dir with Git-native versioned modules. Foundation for `mooncake share`, agent-authored modules, future curated module org. Source brief: GitHub issue #24. Not started. Superseded by spec-67-module-system-revised (kept until the revised design lands). |
-| [spec-67](./specs/spec-67-module-system-revised.md) | Module system — revised (supersedes spec-65) | `index.yml` manifest + `props:` + local `use: ./component.yml`. |
+_None._ Module-system phase 2 (lockfile + `mod tidy` + `parameters:` hard-remove + scaffolding) is not yet drafted — see `docs-working/streams/core/proposals/` when work begins.
 
 Recently shipped (now in [`archive/streams/core/specs/done/`](../../archive/streams/core/specs/done/)):
 
 - spec-66 — Typed plan diffs (2026-05-27, all 8 waves; 16 renderers registered).
+- spec-67 — Module system phase 1 (2026-05-21, `index.yml` + `props:` + local `use:` + `mooncake mod add/cache`). Supersedes spec-65, which was archived undelivered.
 
 ## Open gaps
 
