@@ -14,6 +14,7 @@ package os_user
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"os/exec"
 	"runtime"
@@ -126,7 +127,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		return result, err
 	}
 
-	current, err := lookupUser(des.name)
+	current, err := lookupUser(ctx.Ctx(), des.name)
 	if err != nil {
 		return result, fmt.Errorf("os.user: lookup %s: %w", des.name, err)
 	}
@@ -164,7 +165,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 	// admin elevation is a separate mechanism.
 	runner := ctx.Privileged()
 
-	if err := applyPlan(runner, plan, current, des); err != nil {
+	if err := applyPlan(ctx.Ctx(), runner, plan, current, des); err != nil {
 		return result, err
 	}
 	result.Changed = true
@@ -174,12 +175,13 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 }
 
 // lookupUser and applyPlan are set by platform-specific init() functions
-// in platform_linux.go and platform_darwin.go.
-var lookupUser func(string) (*userState, error) = func(string) (*userState, error) {
+// in platform_linux.go and platform_darwin.go. F2: ctx is the run-wide
+// cancel so getent / dscl / powershell shell-outs respect SIGINT.
+var lookupUser func(context.Context, string) (*userState, error) = func(context.Context, string) (*userState, error) {
 	return nil, fmt.Errorf("os.user: not implemented on %s", runtime.GOOS)
 }
 
-var applyPlan func(runner *security.Privileged, plan computedPlan, current *userState, d desired) error = func(*security.Privileged, computedPlan, *userState, desired) error {
+var applyPlan func(ctx context.Context, runner *security.Privileged, plan computedPlan, current *userState, d desired) error = func(context.Context, *security.Privileged, computedPlan, *userState, desired) error {
 	return fmt.Errorf("os.user: not implemented on %s", runtime.GOOS)
 }
 

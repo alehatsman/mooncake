@@ -2,6 +2,7 @@
 package os_group
 
 import (
+	"context"
 	"runtime"
 	"strings"
 	"testing"
@@ -45,7 +46,7 @@ func planMode(b bool) actions.Mode {
 func stubLookup(t *testing.T, table map[string]*groupState) {
 	t.Helper()
 	orig := lookupGroup
-	lookupGroup = func(name string) (*groupState, error) {
+	lookupGroup = func(_ context.Context, name string) (*groupState, error) {
 		if s, ok := table[name]; ok {
 			return s, nil
 		}

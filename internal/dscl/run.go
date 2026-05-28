@@ -17,10 +17,11 @@ const cmdTimeout = 10 * time.Second
 // the PrivilegedRunner. dscl writes to /Local/Default need root; the
 // runner takes care of the sudo wrap when mooncake isn't already
 // running as root. Empty stderr on success; non-zero exit surfaces
-// with the captured output for diagnosis.
-func Run(runner *security.Privileged, args ...string) error {
+// with the captured output for diagnosis. F2: the parent ctx is the
+// run-wide cancel; the 10s cmdTimeout chains on top.
+func Run(parent context.Context, runner *security.Privileged, args ...string) error {
 	fullArgs := append([]string{"."}, args...)
-	ctx, cancel := context.WithTimeout(context.Background(), cmdTimeout)
+	ctx, cancel := context.WithTimeout(parent, cmdTimeout)
 	defer cancel()
 	out, err := runner.Run(ctx, "dscl", fullArgs...)
 	if err != nil {

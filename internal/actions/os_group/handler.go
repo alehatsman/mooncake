@@ -12,6 +12,7 @@ package os_group
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"os/exec"
 	"runtime"
@@ -119,7 +120,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		return result, err
 	}
 
-	current, err := lookupGroup(desired.name)
+	current, err := lookupGroup(ctx.Ctx(), desired.name)
 	if err != nil {
 		return result, fmt.Errorf("os.group: lookup %s: %w", desired.name, err)
 	}
@@ -158,7 +159,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 	}
 	result.ReverseData = info
 
-	if err := applyPlan(runner, plan); err != nil {
+	if err := applyPlan(ctx.Ctx(), runner, plan); err != nil {
 		return result, err
 	}
 
@@ -211,11 +212,12 @@ type groupState struct {
 // Tests override these to inject deterministic state without shelling
 // out. On unsupported GOOS, the default implementations return a
 // clear error rather than a panic.
-var lookupGroup func(string) (*groupState, error) = func(string) (*groupState, error) {
+var lookupGroup func(context.Context, string) (*groupState, error) = func(context.Context, string) (*groupState, error) {
 	return nil, fmt.Errorf("os.group: not implemented on %s", runtime.GOOS)
 }
 
-var applyPlan = func(runner *security.Privileged, plan computedPlan) error {
+var applyPlan = func(ctx context.Context, runner *security.Privileged, plan computedPlan) error {
+	_ = ctx
 	_ = runner
 	_ = plan
 	return fmt.Errorf("os.group: not implemented on %s", runtime.GOOS)

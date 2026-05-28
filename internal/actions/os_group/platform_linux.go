@@ -20,8 +20,8 @@ func init() {
 // lookupGroupViaGetent shells out to `getent group <name>` and parses
 // the `:`-separated record. getent exits 2 for "not found" — that's
 // the only non-error miss; other exit codes propagate.
-func lookupGroupViaGetent(name string) (*groupState, error) {
-	out, err := capture(exec.Command("getent", "group", name))
+func lookupGroupViaGetent(ctx context.Context, name string) (*groupState, error) {
+	out, err := capture(exec.CommandContext(ctx, "getent", "group", name))
 	if err != nil {
 		if ee, ok := err.(*exec.ExitError); ok && ee.ExitCode() == 2 {
 			return &groupState{exists: false}, nil
@@ -48,20 +48,20 @@ func lookupGroupViaGetent(name string) (*groupState, error) {
 
 // applyPlanLinux dispatches to groupadd/groupmod/groupdel. Argument
 // validation already ran in computePlan; this is just the spawn.
-func applyPlanLinux(runner *security.Privileged, plan computedPlan) error {
+func applyPlanLinux(ctx context.Context, runner *security.Privileged, plan computedPlan) error {
 	switch plan.operation {
 	case "create":
-		return runLinuxCmd(runner, "groupadd", plan.createArgs...)
+		return runLinuxCmd(ctx, runner, "groupadd", plan.createArgs...)
 	case "remove":
-		return runLinuxCmd(runner, "groupdel", plan.removeArgs...)
+		return runLinuxCmd(ctx, runner, "groupdel", plan.removeArgs...)
 	}
 	return nil
 }
 
 // runLinuxCmd shells out via the PrivilegedRunner. Bounded by
-// groupCmdTimeout (F051).
-func runLinuxCmd(runner *security.Privileged, bin string, args ...string) error {
-	ctx, cancel := context.WithTimeout(context.Background(), groupCmdTimeout)
+// groupCmdTimeout (F051). F2: the parent ctx is the run-wide cancel.
+func runLinuxCmd(parent context.Context, runner *security.Privileged, bin string, args ...string) error {
+	ctx, cancel := context.WithTimeout(parent, groupCmdTimeout)
 	defer cancel()
 	out, err := runner.Run(ctx, bin, args...)
 	if err != nil {

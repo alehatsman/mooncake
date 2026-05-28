@@ -18,8 +18,8 @@ func init() {
 	applyPlan = applyPlanLinux
 }
 
-func lookupUserViaGetent(name string) (*userState, error) {
-	out, err := capture(exec.Command("getent", "passwd", name))
+func lookupUserViaGetent(ctx context.Context, name string) (*userState, error) {
+	out, err := capture(exec.CommandContext(ctx, "getent", "passwd", name))
 	if err != nil {
 		// getent returns exit code 2 when the entry doesn't exist.
 		if ee, ok := err.(*exec.ExitError); ok && ee.ExitCode() == 2 {
@@ -46,7 +46,7 @@ func lookupUserViaGetent(name string) (*userState, error) {
 		shell:   fields[6],
 	}
 
-	gout, err := capture(exec.Command("id", "-nG", name))
+	gout, err := capture(exec.CommandContext(ctx, "id", "-nG", name))
 	if err != nil {
 		return nil, fmt.Errorf("id -nG: %w", err)
 	}
@@ -58,14 +58,14 @@ func lookupUserViaGetent(name string) (*userState, error) {
 	return state, nil
 }
 
-func applyPlanLinux(runner *security.Privileged, plan computedPlan, _ *userState, _ desired) error {
+func applyPlanLinux(ctx context.Context, runner *security.Privileged, plan computedPlan, _ *userState, _ desired) error {
 	switch plan.operation {
 	case "create":
-		return runLinuxCmd(runner, "useradd", plan.createArgs...)
+		return runLinuxCmd(ctx, runner, "useradd", plan.createArgs...)
 	case "modify":
-		return runLinuxCmd(runner, "usermod", plan.modifyArgs...)
+		return runLinuxCmd(ctx, runner, "usermod", plan.modifyArgs...)
 	case "remove":
-		return runLinuxCmd(runner, "userdel", plan.removeArgs...)
+		return runLinuxCmd(ctx, runner, "userdel", plan.removeArgs...)
 	}
 	return nil
 }
@@ -76,8 +76,8 @@ func applyPlanLinux(runner *security.Privileged, plan computedPlan, _ *userState
 // shape used by os_group/platform_linux.go's runLinuxCmd. Mirrors the
 // spec-69 "tests can pass nil and still get a usable runner" pattern.
 // Bounded by userCmdTimeout (F051).
-func runLinuxCmd(runner *security.Privileged, bin string, args ...string) error {
-	ctx, cancel := context.WithTimeout(context.Background(), userCmdTimeout)
+func runLinuxCmd(parent context.Context, runner *security.Privileged, bin string, args ...string) error {
+	ctx, cancel := context.WithTimeout(parent, userCmdTimeout)
 	defer cancel()
 	out, err := runner.Run(ctx, bin, args...)
 	if err != nil {

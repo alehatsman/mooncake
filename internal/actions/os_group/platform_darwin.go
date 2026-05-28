@@ -3,6 +3,7 @@
 package os_group //nolint:revive // package name follows action convention
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os/exec"
@@ -22,8 +23,8 @@ func init() {
 // node. dscl exits non-zero when the record is missing — we
 // distinguish that from real errors via exec.ExitError, matching the
 // Linux getent exit-2 convention.
-func lookupGroupViaDscl(name string) (*groupState, error) {
-	if _, err := capture(exec.Command("dscl", ".", "-read", "/Groups/"+name, "PrimaryGroupID")); err != nil {
+func lookupGroupViaDscl(ctx context.Context, name string) (*groupState, error) {
+	if _, err := capture(exec.CommandContext(ctx, "dscl", ".", "-read", "/Groups/"+name, "PrimaryGroupID")); err != nil {
 		var ee *exec.ExitError
 		if errors.As(err, &ee) {
 			return &groupState{exists: false}, nil
@@ -31,10 +32,10 @@ func lookupGroupViaDscl(name string) (*groupState, error) {
 		return nil, fmt.Errorf("dscl read: %w", err)
 	}
 	state := &groupState{exists: true}
-	if v, err := dsclGroupField(name, "PrimaryGroupID"); err == nil {
+	if v, err := dsclGroupField(ctx, name, "PrimaryGroupID"); err == nil {
 		state.gid, _ = strconv.Atoi(v)
 	}
-	if v, err := dsclGroupField(name, "GroupMembership"); err == nil && v != "" {
+	if v, err := dsclGroupField(ctx, name, "GroupMembership"); err == nil && v != "" {
 		// GroupMembership is space-separated on darwin (vs comma on
 		// Linux's /etc/group). Splitting on whitespace via Fields
 		// handles single-or-multi-space output and empty cases.
@@ -48,8 +49,8 @@ func lookupGroupViaDscl(name string) (*groupState, error) {
 // on two when the value is empty or wraps. Mirrors os_user's
 // dsclField — kept package-local rather than shared because the
 // two action packages are intentionally independent.
-func dsclGroupField(name, key string) (string, error) {
-	out, err := capture(exec.Command("dscl", ".", "-read", "/Groups/"+name, key))
+func dsclGroupField(ctx context.Context, name, key string) (string, error) {
+	out, err := capture(exec.CommandContext(ctx, "dscl", ".", "-read", "/Groups/"+name, key))
 	if err != nil {
 		return "", err
 	}
@@ -67,12 +68,12 @@ func dsclGroupField(name, key string) (string, error) {
 // createArgs/removeArgs are shaped for Linux (groupadd flags) and
 // not consumed verbatim here — we re-derive the dscl operations
 // from the plan's structured fields (name, gid, system).
-func applyPlanDarwin(runner *security.Privileged, plan computedPlan) error {
+func applyPlanDarwin(ctx context.Context, runner *security.Privileged, plan computedPlan) error {
 	switch plan.operation {
 	case "create":
-		return createGroupDarwin(runner, plan)
+		return createGroupDarwin(ctx, runner, plan)
 	case "remove":
-		return removeGroupDarwin(runner, plan)
+		return removeGroupDarwin(ctx, runner, plan)
 	case "modify":
 		// computePlan refuses GID renumbering (the only modify case
 		// Linux would attempt). If a future modify reason lands,
@@ -88,10 +89,10 @@ func applyPlanDarwin(runner *security.Privileged, plan computedPlan) error {
 // we always set one — either the operator-pinned gid or the next
 // available one in the appropriate range (system: 1–499, regular:
 // 500+).
-func createGroupDarwin(runner *security.Privileged, plan computedPlan) error {
+func createGroupDarwin(ctx context.Context, runner *security.Privileged, plan computedPlan) error {
 	base := "/Groups/" + plan.name
 
-	if err := dscl.Run(runner, "-create", base); err != nil {
+	if err := dscl.Run(ctx, runner, "-create", base); err != nil {
 		return err
 	}
 
@@ -99,18 +100,18 @@ func createGroupDarwin(runner *security.Privileged, plan computedPlan) error {
 	if err != nil {
 		return fmt.Errorf("os.group darwin: assign gid: %w", err)
 	}
-	if err := dscl.Run(runner, "-create", base, "PrimaryGroupID", strconv.Itoa(gid)); err != nil {
+	if err := dscl.Run(ctx, runner, "-create", base, "PrimaryGroupID", strconv.Itoa(gid)); err != nil {
 		return err
 	}
 
 	// RealName mirrors the group name. macOS tools (Workgroup Manager,
 	// System Settings → Users & Groups) display the RealName rather
 	// than the record key; setting it keeps the GUI in sync.
-	return dscl.Run(runner, "-create", base, "RealName", plan.name)
+	return dscl.Run(ctx, runner, "-create", base, "RealName", plan.name)
 }
 
-func removeGroupDarwin(runner *security.Privileged, plan computedPlan) error {
-	return dscl.Run(runner, "-delete", "/Groups/"+plan.name)
+func removeGroupDarwin(ctx context.Context, runner *security.Privileged, plan computedPlan) error {
+	return dscl.Run(ctx, runner, "-delete", "/Groups/"+plan.name)
 }
 
 // pickGroupGID returns the GID to assign at creation time. Plan

@@ -2,6 +2,7 @@
 package os_user
 
 import (
+	"context"
 	"runtime"
 	"strings"
 	"testing"
@@ -45,7 +46,7 @@ func planMode(b bool) actions.Mode {
 func stubLookup(t *testing.T, state *userState) {
 	t.Helper()
 	original := lookupUser
-	lookupUser = func(string) (*userState, error) { return state, nil }
+	lookupUser = func(context.Context, string) (*userState, error) { return state, nil }
 	t.Cleanup(func() { lookupUser = original })
 }
 

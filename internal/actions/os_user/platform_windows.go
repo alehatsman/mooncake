@@ -3,6 +3,7 @@
 package os_user //nolint:revive // package name follows action convention
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -59,7 +60,7 @@ func init() {
 // password should follow up with a `command:` step that runs
 // `net user <name> <password>` after this action.
 
-func lookupUserViaPowerShell(name string) (*userState, error) {
+func lookupUserViaPowerShell(ctx context.Context, name string) (*userState, error) {
 	// Get-LocalUser -ErrorAction SilentlyContinue: exits 0 with
 	// empty stdout when the user doesn't exist; emits JSON when
 	// present. Avoids parsing stderr to disambiguate "missing"
@@ -69,7 +70,7 @@ func lookupUserViaPowerShell(name string) (*userState, error) {
 			"if ($u) { $u | Select-Object Name,FullName,Description,Enabled | ConvertTo-Json -Compress }",
 		quotePS(name),
 	)
-	out, err := runPowerShellCapture(script)
+	out, err := runPowerShellCapture(ctx, script)
 	if err != nil {
 		return nil, fmt.Errorf("powershell Get-LocalUser: %w", err)
 	}
@@ -137,7 +138,7 @@ func listUserLocalGroups(name string) ([]string, error) {
 		"}\n" +
 		"$out -join '" + sep + "'\n"
 	script := fmt.Sprintf(scriptTmpl, quotePS(name))
-	out, err := runPowerShellCapture(script)
+	out, err := runPowerShellCapture(ctx, script)
 	if err != nil {
 		return nil, err
 	}
@@ -158,7 +159,7 @@ func listUserLocalGroups(name string) ([]string, error) {
 // this action. `security.PrivilegedRunner.Run` on Windows would
 // return ErrBecomeUnsupported, so threading the runner through here
 // would break the existing PS-cmdlet path.
-func applyPlanWindows(_ *security.Privileged, plan computedPlan, current *userState, d desired) error {
+func applyPlanWindows(ctx context.Context, _ *security.Privileged, plan computedPlan, current *userState, d desired) error {
 	switch plan.operation {
 	case "create":
 		return createUserWindows(d)
@@ -183,7 +184,7 @@ func createUserWindows(d desired) error {
 		args = append(args, "-HomeDirectory", quotePS(d.home))
 	}
 	script := "New-LocalUser " + strings.Join(args, " ")
-	if err := runPowerShell(script); err != nil {
+	if err := runPowerShell(ctx, script); err != nil {
 		return fmt.Errorf("New-LocalUser %s: %w", d.name, err)
 	}
 	if err := applyGroupsWindows(d.name, nil, d.groups, d.appendGroups); err != nil {
@@ -209,7 +210,7 @@ func modifyUserWindows(current *userState, d desired) error {
 	}
 	if changed {
 		script := "Set-LocalUser " + strings.Join(setArgs, " ")
-		if err := runPowerShell(script); err != nil {
+		if err := runPowerShell(ctx, script); err != nil {
 			return fmt.Errorf("Set-LocalUser %s: %w", d.name, err)
 		}
 	}
@@ -223,7 +224,7 @@ func modifyUserWindows(current *userState, d desired) error {
 
 func removeUserWindows(d desired) error {
 	script := fmt.Sprintf("Remove-LocalUser -Name %s", quotePS(d.name))
-	if err := runPowerShell(script); err != nil {
+	if err := runPowerShell(ctx, script); err != nil {
 		return fmt.Errorf("Remove-LocalUser %s: %w", d.name, err)
 	}
 	if d.removeHome {
@@ -236,7 +237,7 @@ func removeUserWindows(d desired) error {
 			"if (Test-Path %s) { Remove-Item -Recurse -Force %s }",
 			quotePS(conventional), quotePS(conventional),
 		)
-		if err := runPowerShell(script); err != nil {
+		if err := runPowerShell(ctx, script); err != nil {
 			return fmt.Errorf("Remove-Item %s: %w", conventional, err)
 		}
 	}
@@ -259,7 +260,7 @@ func applyGroupsWindows(username string, currentGroups, desiredGroups []string, 
 					"Remove-LocalGroupMember -Group %s -Member %s -ErrorAction SilentlyContinue",
 					quotePS(g), quotePS(username),
 				)
-				_ = runPowerShell(script) // best-effort, matches darwin's parity
+				_ = runPowerShell(ctx, script) // best-effort, matches darwin's parity
 			}
 		}
 	}
@@ -272,7 +273,7 @@ func applyGroupsWindows(username string, currentGroups, desiredGroups []string, 
 			"Add-LocalGroupMember -Group %s -Member %s",
 			quotePS(g), quotePS(username),
 		)
-		if err := runPowerShell(script); err != nil {
+		if err := runPowerShell(ctx, script); err != nil {
 			return fmt.Errorf("Add-LocalGroupMember %s -> %s: %w", username, g, err)
 		}
 	}
@@ -283,10 +284,10 @@ func applyGroupsWindows(username string, currentGroups, desiredGroups []string, 
 // powershell.exe surface. -NoProfile keeps the call fast +
 // hermetic; -Command takes the script as a single string.
 // stderr is captured and surfaced on failure.
-func runPowerShell(script string) error {
+func runPowerShell(ctx context.Context, script string) error {
 	// #nosec G204 -- script is built from validated config fields
 	// + cmdlet names; user-input components go through quotePS.
-	cmd := exec.Command("powershell", "-NoProfile", "-NonInteractive", "-Command", script)
+	cmd := exec.CommandContext(ctx, "powershell", "-NoProfile", "-NonInteractive", "-Command", script)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		var ee *exec.ExitError
@@ -301,9 +302,9 @@ func runPowerShell(script string) error {
 // runPowerShellCapture is the read-side variant: captures stdout
 // for parsing, stderr only on error. Used by Get-LocalUser /
 // Get-LocalGroupMember probes.
-func runPowerShellCapture(script string) (string, error) {
+func runPowerShellCapture(ctx context.Context, script string) (string, error) {
 	// #nosec G204 -- same rationale as runPowerShell.
-	cmd := exec.Command("powershell", "-NoProfile", "-NonInteractive", "-Command", script)
+	cmd := exec.CommandContext(ctx, "powershell", "-NoProfile", "-NonInteractive", "-Command", script)
 	stdout, err := cmd.Output()
 	if err != nil {
 		var ee *exec.ExitError
