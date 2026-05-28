@@ -232,9 +232,14 @@ func (c *ConsoleSubscriber) renderStepSkipped(data events.StepSkippedData) {
 
 // renderRunCompleted renders a run.completed event as a single compact recap line.
 func (c *ConsoleSubscriber) renderRunCompleted(data events.RunCompletedData) {
-	ok := data.SuccessSteps - data.ChangedSteps
-	if ok < 0 {
-		ok = 0
+	// F6: OkSteps is a first-class field on the event now; read it
+	// directly. Fall back to the legacy subtraction only when the
+	// producer is pre-F6 (OkSteps==0 but SuccessSteps>ChangedSteps)
+	// so external SSE consumers from an older daemon still render
+	// a sensible recap.
+	ok := data.OkSteps
+	if ok == 0 && data.SuccessSteps > data.ChangedSteps {
+		ok = data.SuccessSteps - data.ChangedSteps
 	}
 
 	var line string

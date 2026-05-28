@@ -31,6 +31,14 @@ type ExecutionStats struct {
 	Failed *int
 	// Changed counts steps that resulted in a system change
 	Changed *int
+	// OK counts steps that completed successfully without changing the
+	// system (F6 / proposal-02). Mutually exclusive with Changed at each
+	// step decision site — a step is either "ran and did nothing" (OK)
+	// or "ran and mutated" (Changed). Invariant: OK + Changed == Executed
+	// for every successful step. Lifts the renderer-side derivation
+	// (`ok := SuccessSteps - ChangedSteps`) onto a first-class field so
+	// downstream consumers (agentd, MCP, SDK) read it directly.
+	OK *int
 	// Reverted counts steps whose changes were undone by a transaction's
 	// LIFO Reverse() pass (MT-45). Reverted steps are subtracted from
 	// Changed at rollback time so the recap reflects net effect, not
@@ -51,6 +59,7 @@ func NewExecutionStats() *ExecutionStats {
 		Skipped:   new(int),
 		Failed:    new(int),
 		Changed:   new(int),
+		OK:        new(int),
 		Reverted:  new(int),
 		Cancelled: new(int),
 	}

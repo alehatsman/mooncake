@@ -27,9 +27,11 @@ func writeEnrichedRunlog(configBasename, opID, runID string, tail *captureSubscr
 	totals := tail.run
 	tail.mu.Unlock()
 
-	okCount := totals.SuccessSteps - totals.ChangedSteps
-	if okCount < 0 {
-		okCount = 0
+	// F6: prefer the first-class OkSteps field; fall back to the
+	// subtraction only when the producer is pre-F6.
+	okCount := totals.OkSteps
+	if okCount == 0 && totals.SuccessSteps > totals.ChangedSteps {
+		okCount = totals.SuccessSteps - totals.ChangedSteps
 	}
 
 	entry := runlog.Entry{

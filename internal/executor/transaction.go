@@ -166,6 +166,14 @@ func (ec *ExecutionContext) handleTxnBodyFailure(failedStep config.Step) error {
 		// outer Stats != nil check is the only guard needed.
 		if entry.Result != nil && entry.Result.Changed && ec.Svc.Stats != nil {
 			decStat(ec.Svc.Stats.Changed)
+			// F6: keep OK+Changed==Executed across rollback. The step
+			// is still counted in Executed (rollback doesn't unrun
+			// it); moving it from the Changed bucket to OK preserves
+			// the invariant. Reverted is bumped in parallel as the
+			// rollback-specific subcategory — it overlaps OK the way
+			// the existing recap line ("ok=N reverted=M") already
+			// reads, just no longer via subtraction.
+			incStat(ec.Svc.Stats.OK)
 			incStat(ec.Svc.Stats.Reverted)
 		}
 	}
