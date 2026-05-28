@@ -327,7 +327,7 @@ steps:
 		t.Fatalf("write config: %v", err)
 	}
 
-	var seen []events.EventType
+	var seen []events.Type
 	var beginData *events.TransactionRollbackBeginData
 	var reversed []events.TransactionStepReversedData
 	var completeData *events.TransactionRollbackCompleteData
@@ -387,7 +387,7 @@ steps:
 
 	// Sequence: begin → reversed → reversed → complete. Drop any
 	// interleaved non-rollback events; we already filtered above.
-	wantSeq := []events.EventType{
+	wantSeq := []events.Type{
 		events.EventTransactionRollbackBegin,
 		events.EventTransactionStepReversed,
 		events.EventTransactionStepReversed,

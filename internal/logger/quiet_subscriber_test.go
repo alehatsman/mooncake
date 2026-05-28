@@ -23,7 +23,7 @@ func captureQuiet(fn func()) string {
 	return string(out)
 }
 
-func makeEvent(typ events.EventType, data interface{}) events.Event {
+func makeEvent(typ events.Type, data interface{}) events.Event {
 	return events.Event{Type: typ, Timestamp: time.Now(), Data: data}
 }
 

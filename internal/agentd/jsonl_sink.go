@@ -14,10 +14,10 @@ import (
 // seqEvent is the on-disk and on-wire form of an event: the original event
 // fields plus a monotonic seq counter for replay→tail coordination.
 type seqEvent struct {
-	Seq       int64            `json:"seq"`
-	Type      events.EventType `json:"type"`
-	Timestamp time.Time        `json:"timestamp"`
-	Data      interface{}      `json:"data,omitempty"`
+	Seq       int64       `json:"seq"`
+	Type      events.Type `json:"type"`
+	Timestamp time.Time   `json:"timestamp"`
+	Data      interface{} `json:"data,omitempty"`
 }
 
 // RunEventSink is the per-run events.Subscriber that bridges the publisher,

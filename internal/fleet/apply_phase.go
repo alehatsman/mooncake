@@ -35,7 +35,7 @@ type ApplyPhaseInput struct {
 // switch inside fleetApplyAction's aggregate block.
 //
 // PerPeer carries the typed per-peer ApplyResults (R2.1c) for callers
-// that want to compose fleet.FleetKernelResult.Peers without re-running
+// that want to compose fleet.KernelResult.Peers without re-running
 // Apply. Ordered to match ApplyPhaseInput.Peers; len(PerPeer) ==
 // len(input.Peers) post-RunApplyPhase. Nil entries indicate a peer that
 // errored before Apply could return (shouldn't happen — Apply always

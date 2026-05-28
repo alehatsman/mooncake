@@ -465,7 +465,7 @@ func fleetApplyAction(c *cli.Context) error {
 		Writer:          c.App.Writer,
 	}
 
-	// R2.1b: Orchestrator.Run returns a typed *FleetKernelResult (the
+	// R2.1b: Orchestrator.Run returns a typed *KernelResult (the
 	// fleet-scope kernel shape from vision/kernel.md). On failure with a
 	// CLI exit code, err is a *fleet.ExitError carrying ExitCode +
 	// Message; other errors flow through unchanged. The recap renderer

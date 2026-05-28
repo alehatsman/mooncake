@@ -296,7 +296,7 @@ func (ec *ExecutionContext) Clone() ExecutionContext {
 }
 
 // EmitEvent publishes an event to all subscribers
-func (ec *ExecutionContext) EmitEvent(eventType events.EventType, data interface{}) {
+func (ec *ExecutionContext) EmitEvent(eventType events.Type, data interface{}) {
 	if ec.Svc.EventPublisher != nil {
 		ec.Svc.EventPublisher.Publish(events.Event{
 			Type:      eventType,

@@ -10,7 +10,7 @@ import (
 
 // stepOutputEvent builds a step.stdout / step.stderr Event for
 // driving the subscriber.
-func stepOutputEvent(et events.EventType, line string) events.Event {
+func stepOutputEvent(et events.Type, line string) events.Event {
 	return events.Event{
 		Type:      et,
 		Timestamp: time.Now(),

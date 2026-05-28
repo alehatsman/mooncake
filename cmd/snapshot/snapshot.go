@@ -67,7 +67,7 @@ func Command() *cli.Command {
 				if err != nil {
 					return err
 				}
-				d := snapshot.Diff(prev, curr)
+				d := snapshot.Compare(prev, curr)
 				switch format {
 				case outputFormatJSON:
 					data, err := snapshot.RenderDiffJSON(d)

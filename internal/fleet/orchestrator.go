@@ -71,7 +71,7 @@ func NewOrchestrator(cfg *ApplyConfig) *Orchestrator {
 // RunApplyPhase (single-phase) or RunMachineApply (multi-phase machine
 // manifest).
 //
-// Returns a *FleetKernelResult (the typed fleet-scope kernel shape from
+// Returns a *KernelResult (the typed fleet-scope kernel shape from
 // vision/kernel.md §"renderings, not products") and an error. On
 // success, error is nil. On failure with a CLI-relevant exit code, the
 // returned error is a *fleet.ExitError carrying ExitCode + Message; the
@@ -84,8 +84,8 @@ func NewOrchestrator(cfg *ApplyConfig) *Orchestrator {
 // carry RunID + Status + Sync stats + EventsCount but the
 // apply.KernelResult tail per peer is NIL — the SSE wire schema
 // doesn't surface typed Steps + ReverseData back to the controller
-// yet. See FleetKernelResult.Reverse() for the implication.
-func (o *Orchestrator) Run(ctx context.Context) (*FleetKernelResult, error) {
+// yet. See KernelResult.Reverse() for the implication.
+func (o *Orchestrator) Run(ctx context.Context) (*KernelResult, error) {
 	planAbs, planDir, machine, machineManifest, setupErr := o.resolvePlan()
 	if setupErr != nil {
 		return nil, setupErr
@@ -116,9 +116,9 @@ func (o *Orchestrator) Run(ctx context.Context) (*FleetKernelResult, error) {
 		// Multi-phase: per-phase peers live inside RunMachineApply;
 		// fleet-scope KernelResult collapses to Summary only. Plan is
 		// nil because there is no single plan.Plan that spans phases.
-		result := &FleetKernelResult{
+		result := &KernelResult{
 			Peers: map[PeerID]*PeerResult{},
-			Summary: FleetSummary{
+			Summary: Summary{
 				FailedNames: mr.PhaseFailures,
 			},
 		}
@@ -259,10 +259,10 @@ func (o *Orchestrator) installSignalHandler(applyCtx context.Context, cancel con
 // runSinglePhase handles the non-machine-manifest path: split
 // SelectedPeers into agentd-transport and skipped, bail out if none
 // remain, run one phase via RunApplyPhase, assemble the per-peer
-// outcomes into a *FleetKernelResult, and translate aggregate outcome
+// outcomes into a *KernelResult, and translate aggregate outcome
 // to an error (typed *ExitError with cli-exit semantics or wrapped
 // FirstErr).
-func (o *Orchestrator) runSinglePhase(applyCtx context.Context, w io.Writer, useColor bool, planAbs, planDir string, varsAbs []string, controllerID string) (*FleetKernelResult, error) {
+func (o *Orchestrator) runSinglePhase(applyCtx context.Context, w io.Writer, useColor bool, planAbs, planDir string, varsAbs []string, controllerID string) (*KernelResult, error) {
 	agentdPeers := make([]Peer, 0, len(o.cfg.SelectedPeers))
 	var skippedPeers []Peer
 	for _, p := range o.cfg.SelectedPeers {
@@ -294,7 +294,7 @@ func (o *Orchestrator) runSinglePhase(applyCtx context.Context, w io.Writer, use
 	// R2.1c: RunApplyPhase surfaces the per-peer ApplyResult slice via
 	// out.PerPeer. Each carries the daemon's typed apply.KernelResult
 	// fetched via GET /v1/runs/{id}/result, plus RunID / Status / Sync /
-	// Events. Map them into PeerResult so fleet.FleetKernelResult.Reverse()
+	// Events. Map them into PeerResult so fleet.KernelResult.Reverse()
 	// composes against typed Steps from each peer.
 	peers := make(map[PeerID]*PeerResult, len(agentdPeers))
 	for i, p := range agentdPeers {
@@ -310,9 +310,9 @@ func (o *Orchestrator) runSinglePhase(applyCtx context.Context, w io.Writer, use
 			KernelResult: r.KernelResult,
 		}
 	}
-	result := &FleetKernelResult{
+	result := &KernelResult{
 		Peers: peers,
-		Summary: FleetSummary{
+		Summary: Summary{
 			TotalPeers:  len(agentdPeers),
 			OK:          out.OK,
 			RunFailed:   out.RunFailed,

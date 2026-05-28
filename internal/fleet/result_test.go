@@ -13,7 +13,7 @@ import (
 // expected state TODAY because the SSE wire schema doesn't carry the
 // daemon's full KernelResult tail back to the controller.
 func TestFleetKernelResult_Reverse_WireGap(t *testing.T) {
-	r := &FleetKernelResult{
+	r := &KernelResult{
 		Peers: map[PeerID]*PeerResult{
 			"main_pc": {RunID: "r1", Status: "success"},
 			"laptop":  {RunID: "r2", Status: "success"},
@@ -31,12 +31,12 @@ func TestFleetKernelResult_Reverse_WireGap(t *testing.T) {
 // TestFleetKernelResult_Reverse_ComposesPopulatedPeers covers the
 // forward-compatible algorithm: when at least one peer DOES carry a
 // populated apply.KernelResult (the future wire shape), Reverse
-// composes a FleetPlan with one entry per populated peer. We use
+// composes a Plan with one entry per populated peer. We use
 // synthetic empty KernelResults here — the inner Reverse() returns
 // an empty inverse plan, but the assembly + per-peer key shape is
 // what's under test.
 func TestFleetKernelResult_Reverse_ComposesPopulatedPeers(t *testing.T) {
-	r := &FleetKernelResult{
+	r := &KernelResult{
 		Peers: map[PeerID]*PeerResult{
 			"main_pc": {
 				RunID:        "r1",
@@ -60,15 +60,15 @@ func TestFleetKernelResult_Reverse_ComposesPopulatedPeers(t *testing.T) {
 		t.Fatalf("Reverse: %v", err)
 	}
 	if got == nil {
-		t.Fatal("expected non-nil FleetPlan")
+		t.Fatal("expected non-nil Plan")
 	}
 	// Two populated peers → two entries; vps-1 (no KernelResult) skipped.
 	if len(got.ByPeer) != 2 {
-		t.Errorf("FleetPlan.ByPeer = %d entries, want 2 (skipping vps-1)", len(got.ByPeer))
+		t.Errorf("Plan.ByPeer = %d entries, want 2 (skipping vps-1)", len(got.ByPeer))
 	}
 	for _, want := range []PeerID{"main_pc", "laptop"} {
 		if _, ok := got.ByPeer[want]; !ok {
-			t.Errorf("FleetPlan.ByPeer missing %q", want)
+			t.Errorf("Plan.ByPeer missing %q", want)
 		}
 	}
 }
@@ -77,7 +77,7 @@ func TestFleetKernelResult_Reverse_ComposesPopulatedPeers(t *testing.T) {
 // dereference; frontends might call Reverse on a nil result if an
 // upstream error path returned nil.
 func TestFleetKernelResult_Reverse_NilReceiver(t *testing.T) {
-	var r *FleetKernelResult
+	var r *KernelResult
 	_, err := r.Reverse()
 	if err == nil {
 		t.Fatal("expected error on nil receiver")

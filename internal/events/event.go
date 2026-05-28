@@ -9,102 +9,102 @@ import (
 
 // Event represents a single event in the execution lifecycle
 type Event struct {
-	Type      EventType   `json:"type"`
+	Type      Type        `json:"type"`
 	Timestamp time.Time   `json:"timestamp"`
 	Data      interface{} `json:"data"`
 }
 
-// EventType identifies the type of event
-type EventType string
+// Type identifies the type of event
+type Type string
 
 // Event types for run lifecycle
 const (
-	EventRunStarted   EventType = "run.started"
-	EventPlanLoaded   EventType = "plan.loaded"
-	EventRunCompleted EventType = "run.completed"
+	EventRunStarted   Type = "run.started"
+	EventPlanLoaded   Type = "plan.loaded"
+	EventRunCompleted Type = "run.completed"
 )
 
 // Event types for step lifecycle
 const (
-	EventStepStarted   EventType = "step.started"
-	EventStepCompleted EventType = "step.completed"
-	EventStepSkipped   EventType = "step.skipped"
-	EventStepFailed    EventType = "step.failed"
-	EventStepChecked   EventType = "step.checked"
+	EventStepStarted   Type = "step.started"
+	EventStepCompleted Type = "step.completed"
+	EventStepSkipped   Type = "step.skipped"
+	EventStepFailed    Type = "step.failed"
+	EventStepChecked   Type = "step.checked"
 )
 
 // Event types for output streaming
 const (
-	EventStepStdout EventType = "step.stdout"
-	EventStepStderr EventType = "step.stderr"
-	EventStepDebug  EventType = "step.debug"
+	EventStepStdout Type = "step.stdout"
+	EventStepStderr Type = "step.stderr"
+	EventStepDebug  Type = "step.debug"
 )
 
 // Event types for file operations
 const (
-	EventFileCreated        EventType = "file.created"
-	EventFileUpdated        EventType = "file.updated"
-	EventFileRemoved        EventType = "file.removed"
-	EventFileCopied         EventType = "file.copied"
-	EventFileDownloaded     EventType = "file.downloaded"
-	EventHTTPRequested      EventType = "http.requested"
-	EventDirCreated         EventType = "directory.created"
-	EventDirRemoved         EventType = "directory.removed"
-	EventLinkCreated        EventType = "link.created"
-	EventPermissionsChanged EventType = "permissions.changed"
-	EventTemplateRender     EventType = "template.rendered"
-	EventArchiveExtracted   EventType = "archive.extracted"
+	EventFileCreated        Type = "file.created"
+	EventFileUpdated        Type = "file.updated"
+	EventFileRemoved        Type = "file.removed"
+	EventFileCopied         Type = "file.copied"
+	EventFileDownloaded     Type = "file.downloaded"
+	EventHTTPRequested      Type = "http.requested"
+	EventDirCreated         Type = "directory.created"
+	EventDirRemoved         Type = "directory.removed"
+	EventLinkCreated        Type = "link.created"
+	EventPermissionsChanged Type = "permissions.changed"
+	EventTemplateRender     Type = "template.rendered"
+	EventArchiveExtracted   Type = "archive.extracted"
 )
 
 // Event types for variables
 const (
-	EventVarsSet    EventType = "variables.set"
-	EventVarsLoaded EventType = "variables.loaded"
+	EventVarsSet    Type = "variables.set"
+	EventVarsLoaded Type = "variables.loaded"
 )
 
 // Event types for service management
 const (
-	EventServiceManaged EventType = "service.managed"
+	EventServiceManaged Type = "service.managed"
 )
 
 // Event types for package management
 const (
-	EventPackageManaged EventType = "package.managed"
+	EventPackageManaged Type = "package.managed"
 )
 
 // Event types for assertions
 const (
-	EventAssertPassed EventType = "assert.passed"
-	EventAssertFailed EventType = "assert.failed"
+	EventAssertPassed Type = "assert.passed"
+	EventAssertFailed Type = "assert.failed"
 )
 
 // Event types for presets
 const (
-	EventPresetExpanded  EventType = "preset.expanded"
-	EventPresetCompleted EventType = "preset.completed"
+	EventPresetExpanded  Type = "preset.expanded"
+	EventPresetCompleted Type = "preset.completed"
 )
 
 // Event types for agent loop
 const (
-	EventAgentIterationStarted EventType = "agent.iteration.started"
-	EventAgentPlanGenerated    EventType = "agent.plan.generated"
-	EventAgentPlanValidating   EventType = "agent.plan.validating"
-	EventAgentPlanValid        EventType = "agent.plan.valid"
-	EventAgentPlanInvalid      EventType = "agent.plan.invalid"
-	EventAgentPlanExecuting    EventType = "agent.plan.executing"
-	EventAgentIterationDone    EventType = "agent.iteration.done"
-	EventAgentLoopComplete     EventType = "agent.loop.complete"
+	EventAgentIterationStarted Type = "agent.iteration.started"
+	EventAgentPlanGenerated    Type = "agent.plan.generated"
+	EventAgentPlanValidating   Type = "agent.plan.validating"
+	EventAgentPlanValid        Type = "agent.plan.valid"
+	EventAgentPlanInvalid      Type = "agent.plan.invalid"
+	EventAgentPlanExecuting    Type = "agent.plan.executing"
+	EventAgentIterationDone    Type = "agent.iteration.done"
+	EventAgentLoopComplete     Type = "agent.loop.complete"
 )
 
 // Event types for artifact capture
 const (
-	EventArtifactCaptureStart    EventType = "artifact_capture.start"
-	EventArtifactCaptureComplete EventType = "artifact_capture.complete"
+	EventArtifactCaptureStart    Type = "artifact_capture.start"
+	EventArtifactCaptureComplete Type = "artifact_capture.complete"
 )
 
 // Event types for print
 const (
-	EventPrintMessage EventType = "print.message"
+	EventPrintMessage Type = "print.message"
 )
 
 // Event types for transaction rollback (F054 / spec-30).
@@ -119,10 +119,10 @@ const (
 // compound-parent step.started semantics that don't exist yet —
 // deferred until the executor exposes per-compound-parent lifecycle.
 const (
-	EventTransactionRollbackBegin    EventType = "transaction.rollback_begin"
-	EventTransactionStepReversed     EventType = "transaction.step_reversed"
-	EventTransactionRollbackComplete EventType = "transaction.rollback_complete"
-	EventTransactionRollbackFailed   EventType = "transaction.rollback_failed"
+	EventTransactionRollbackBegin    Type = "transaction.rollback_begin"
+	EventTransactionStepReversed     Type = "transaction.step_reversed"
+	EventTransactionRollbackComplete Type = "transaction.rollback_complete"
+	EventTransactionRollbackFailed   Type = "transaction.rollback_failed"
 )
 
 // RunStartedData contains data for run.started events

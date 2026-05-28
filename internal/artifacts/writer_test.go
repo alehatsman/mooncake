@@ -255,7 +255,7 @@ func TestWriter_OnEvent_StepOutput(t *testing.T) {
 
 	tests := []struct {
 		name      string
-		eventType events.EventType
+		eventType events.Type
 		line      string
 	}{
 		{"stdout", events.EventStepStdout, "output line 1"},
@@ -318,7 +318,7 @@ func TestWriter_OnEvent_FileOperations(t *testing.T) {
 
 	tests := []struct {
 		name      string
-		eventType events.EventType
+		eventType events.Type
 		path      string
 		operation string
 	}{

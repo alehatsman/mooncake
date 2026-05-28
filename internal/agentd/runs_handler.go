@@ -160,7 +160,7 @@ func (s *Server) getRunHandler(w http.ResponseWriter, r *http.Request) {
 // runResultHandler serves the daemon's serialised apply.KernelResult
 // for a terminal run. Frontend: controller-side fleet.Apply (R2.1c)
 // fetches this after the SSE stream ends, so a fleet apply can
-// compose a typed fleet.FleetKernelResult with per-peer KernelResults.
+// compose a typed fleet.KernelResult with per-peer KernelResults.
 //
 // Responses:
 //   - 404 run_not_found: no such run id.

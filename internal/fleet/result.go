@@ -2,20 +2,20 @@ package fleet
 
 // result.go materialises the fleet-scope kernel surface promised by
 // docs-working-v2/vision/kernel.md §"The frontends — renderings, not
-// products". FleetKernelResult is to fleet apply what
+// products". KernelResult is to fleet apply what
 // apply.KernelResult (R1.1b) is to local apply: a typed shape that
 // frontends (CLI, MCP, future drift-remediation) consume directly
 // without re-deriving orchestration in cmd.
 //
 // The locked API contract (R2.1b prompt) is:
 //
-//	type FleetKernelResult struct {
+//	type KernelResult struct {
 //	    Plan    *plan.Plan
 //	    Peers   map[PeerID]*apply.KernelResult
-//	    Summary FleetSummary
+//	    Summary Summary
 //	}
 //
-//	func (r *FleetKernelResult) Reverse() (*FleetPlan, error)
+//	func (r *KernelResult) Reverse() (*Plan, error)
 //
 // We honor the SHAPE. We can't honor the *populated* per-peer
 // *apply.KernelResult yet because the controller-side SSE wire
@@ -37,7 +37,7 @@ import (
 // branch on the map shape without re-importing fleet.Peer.
 type PeerID = string
 
-// FleetKernelResult is the fleet-scope analog of apply.KernelResult.
+// KernelResult is the fleet-scope analog of apply.KernelResult.
 // Returned from Orchestrator.Run; consumed by recap renderers, MCP
 // fleet tools, and any future fleet-scope Reverse / explain logic.
 //
@@ -45,7 +45,7 @@ type PeerID = string
 // dispatched (single-phase). In multi-phase machine-mode, Plan is
 // nil and the per-peer/per-phase Plans live inside the daemon — see
 // the Reverse() doc for the implication.
-type FleetKernelResult struct {
+type KernelResult struct {
 	// Plan is the typed plan dispatched in single-phase mode, or
 	// nil in machine-manifest mode (each phase ships its own plan
 	// to its own peer; the multi-phase composition lives on the
@@ -61,7 +61,7 @@ type FleetKernelResult struct {
 	// unreachable / total) plus the failing peer names. Mirrors
 	// what cmd's old switch on out.Unreachable / out.RunFailed
 	// produced; recap renderers read this directly.
-	Summary FleetSummary
+	Summary Summary
 }
 
 // PeerResult is the per-peer outcome of a fleet apply. Carries
@@ -90,11 +90,11 @@ type PeerResult struct {
 	KernelResult *apply.KernelResult
 }
 
-// FleetSummary aggregates fleet-wide peer outcome counts. The four
+// Summary aggregates fleet-wide peer outcome counts. The four
 // counters partition the peer set: TotalPeers = OK + RunFailed +
 // Unreachable + (any peers skipped before submit, which the
 // orchestrator filters out before populating this).
-type FleetSummary struct {
+type Summary struct {
 	TotalPeers  int
 	OK          int
 	RunFailed   int
@@ -102,17 +102,17 @@ type FleetSummary struct {
 	FailedNames []string // peers that failed or were unreachable
 }
 
-// FleetPlan is the inverse-plan shape Reverse() returns: one plan
+// Plan is the inverse-plan shape Reverse() returns: one plan
 // per peer that, if applied to that peer, would restore its
-// pre-mutation state. The map shape mirrors FleetKernelResult.Peers
+// pre-mutation state. The map shape mirrors KernelResult.Peers
 // so callers can iterate in any order without coordinating ordering
 // with the original apply.
-type FleetPlan struct {
+type Plan struct {
 	ByPeer map[PeerID]*plan.Plan
 }
 
 // ErrPerPeerKernelResultNotWired is the typed sentinel
-// FleetKernelResult.Reverse() returns when no peer carries a
+// KernelResult.Reverse() returns when no peer carries a
 // populated apply.KernelResult. Callers can check via errors.Is to
 // distinguish "wire gap" (a peer's daemon didn't surface its
 // KernelResult — pre-R2.1c version, or a daemon that hasn't
@@ -122,7 +122,7 @@ var ErrPerPeerKernelResultNotWired = errors.New(
 		"this typically means the daemon hasn't surfaced its " +
 		"apply.KernelResult yet (run not terminal, or pre-R2.1c daemon)")
 
-// Reverse composes a FleetPlan by calling Reverse() on each peer's
+// Reverse composes a Plan by calling Reverse() on each peer's
 // populated KernelResult and assembling the results.
 //
 // Wire state today (R2.1c phase 1+2 landed): each PeerResult.KernelResult
@@ -138,13 +138,13 @@ var ErrPerPeerKernelResultNotWired = errors.New(
 // "no ReverseData captured" refusal surfaces per-step, which is
 // the same shape as a true wire-gap.
 //
-// If any per-peer Reverse fails, the partial FleetPlan up to that
+// If any per-peer Reverse fails, the partial Plan up to that
 // point is discarded and the error is wrapped with the peer name.
 // This matches apply.KernelResult.Reverse's "fail loud, don't
 // silently truncate" semantics.
-func (r *FleetKernelResult) Reverse() (*FleetPlan, error) {
+func (r *KernelResult) Reverse() (*Plan, error) {
 	if r == nil {
-		return nil, errors.New("fleet: Reverse on nil FleetKernelResult")
+		return nil, errors.New("fleet: Reverse on nil KernelResult")
 	}
 
 	populated := 0
@@ -168,7 +168,7 @@ func (r *FleetKernelResult) Reverse() (*FleetPlan, error) {
 		}
 		byPeer[id] = inv
 	}
-	return &FleetPlan{ByPeer: byPeer}, nil
+	return &Plan{ByPeer: byPeer}, nil
 }
 
 // ExitError carries the cli.Exit semantics across the orchestrator

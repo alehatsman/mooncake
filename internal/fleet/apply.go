@@ -75,7 +75,7 @@ type ApplyResult struct {
 	// after the run reaches a terminal state via GET /v1/runs/{id}/result.
 	// nil when the daemon predates R2.1c, the run didn't reach terminal
 	// state, or the fetch failed (logged as a KindError banner, not
-	// fatal). Frontends that need the typed kernel tail (fleet.FleetKernelResult.Reverse)
+	// fatal). Frontends that need the typed kernel tail (fleet.KernelResult.Reverse)
 	// check non-nil before relying.
 	KernelResult *apply.KernelResult
 }
@@ -222,7 +222,7 @@ func Apply(ctx context.Context, opts ApplyOptions) (ApplyResult, error) {
 			}
 
 			// R2.1c: fetch the daemon's typed apply.KernelResult so
-			// fleet.FleetKernelResult composes per-peer. Best-effort: a
+			// fleet.KernelResult composes per-peer. Best-effort: a
 			// daemon that predates this endpoint returns 404 (we surface
 			// nothing), a not-ready result is silently skipped, other
 			// errors emit a banner but don't fail the apply.

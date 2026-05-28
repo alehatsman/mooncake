@@ -502,7 +502,7 @@ func TestConsoleSubscriber_OnEvent_Text_OutputEvents(t *testing.T) {
 
 	tests := []struct {
 		name      string
-		eventType events.EventType
+		eventType events.Type
 	}{
 		{"stdout event", events.EventStepStdout},
 		{"stderr event", events.EventStepStderr},
@@ -539,7 +539,7 @@ func TestConsoleSubscriber_OnEvent_Text_UnknownEvent(t *testing.T) {
 	// Test with various event types that should not produce output
 	tests := []struct {
 		name      string
-		eventType events.EventType
+		eventType events.Type
 	}{
 		{"file created", events.EventFileCreated},
 		{"file updated", events.EventFileUpdated},
@@ -616,7 +616,7 @@ func TestConsoleSubscriber_InvalidEventData(t *testing.T) {
 
 	tests := []struct {
 		name      string
-		eventType events.EventType
+		eventType events.Type
 		data      interface{}
 	}{
 		{

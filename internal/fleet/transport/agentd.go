@@ -295,7 +295,7 @@ func (c *Client) GetRun(ctx context.Context, runID string) (*RunRecord, error) {
 
 // GetRunResult fetches the daemon's apply.KernelResult for a terminal
 // run from /v1/runs/{id}/result. Used by fleet.Apply (R2.1c) to surface
-// per-peer KernelResults up to fleet.FleetKernelResult so the
+// per-peer KernelResults up to fleet.KernelResult so the
 // fleet-scope Reverse() composition has typed Steps to walk.
 //
 // Returns ErrRunResultNotReady when the daemon responds 404

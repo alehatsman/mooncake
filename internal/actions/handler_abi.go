@@ -28,9 +28,9 @@ import "github.com/alehatsman/mooncake/internal/config"
 // mooncake plan --format json, the agent SDK, and (later) the policy /
 // transaction layers.
 //
-// Diff is intentionally distinct from snapshot.SnapshotDiff (which
+// Diff is intentionally distinct from snapshot.Diff (which
 // compares two full system snapshots). A Diff describes ONE step's
-// predicted change to ONE resource; SnapshotDiff describes the
+// predicted change to ONE resource; Diff describes the
 // before/after of an entire box.
 type Diff struct {
 	// Resource identifies the thing being changed: a file path, a

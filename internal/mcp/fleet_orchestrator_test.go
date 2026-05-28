@@ -13,8 +13,8 @@ import (
 //  1. internal/mcp can import internal/fleet without a circular
 //     dependency on internal/apply or internal/executor.
 //  2. The fleet.Orchestrator construct → Run() signature matches the
-//     locked R2.1b contract: (*FleetKernelResult, error).
-//  3. *fleet.FleetKernelResult exposes Plan / Peers / Summary and a
+//     locked R2.1b contract: (*KernelResult, error).
+//  3. *fleet.KernelResult exposes Plan / Peers / Summary and a
 //     Reverse() method that returns a typed sentinel error in the
 //     wire-gap state (Option B).
 //
@@ -32,13 +32,13 @@ func TestFleetKernelResult_UsableFromMCP(t *testing.T) {
 	}
 
 	// Assert the locked shape directly: a frontend code path that
-	// expects (*FleetKernelResult, error) can use it as such. This
+	// expects (*KernelResult, error) can use it as such. This
 	// block compiles iff the contract holds.
-	result := &fleet.FleetKernelResult{
+	result := &fleet.KernelResult{
 		Peers: map[fleet.PeerID]*fleet.PeerResult{
 			"smoke-peer": {RunID: "r1", Status: "success"},
 		},
-		Summary: fleet.FleetSummary{TotalPeers: 1, OK: 1},
+		Summary: fleet.Summary{TotalPeers: 1, OK: 1},
 	}
 	if result.Summary.TotalPeers != 1 {
 		t.Errorf("Summary.TotalPeers = %d, want 1", result.Summary.TotalPeers)

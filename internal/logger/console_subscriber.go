@@ -180,7 +180,7 @@ func (c *ConsoleSubscriber) renderStepCompleted(data events.StepCompletedData) {
 // step. Indented under the step marker and prefixed with a dim "|" so it
 // reads as inline output rather than a separate event. Only called at
 // debug log level.
-func (c *ConsoleSubscriber) renderStepOutput(data events.StepOutputData, et events.EventType) {
+func (c *ConsoleSubscriber) renderStepOutput(data events.StepOutputData, et events.Type) {
 	prefix := color.New(color.Faint).Sprint("|")
 	if et == events.EventStepStderr {
 		prefix = color.RedString("|")

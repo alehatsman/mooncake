@@ -8,8 +8,8 @@ import (
 	"strings"
 )
 
-// SnapshotDiff holds the difference between two SystemSnapshot values.
-type SnapshotDiff struct {
+// Diff holds the difference between two SystemSnapshot values.
+type Diff struct {
 	Tools    *MapDiff           `json:"tools,omitempty"`
 	HW       map[string]ValDiff `json:"hw,omitempty"`
 	Services *SliceDiff         `json:"services_failed,omitempty"`
@@ -36,7 +36,7 @@ type SliceDiff struct {
 }
 
 // Empty returns true when the diff contains no changes.
-func (d *SnapshotDiff) Empty() bool {
+func (d *Diff) Empty() bool {
 	if d.Tools != nil && (len(d.Tools.Added) > 0 || len(d.Tools.Changed) > 0 || len(d.Tools.Removed) > 0) {
 		return false
 	}
@@ -52,9 +52,9 @@ func (d *SnapshotDiff) Empty() bool {
 	return true
 }
 
-// Diff computes the difference between prev and curr snapshots.
-func Diff(prev, curr *SystemSnapshot) *SnapshotDiff {
-	d := &SnapshotDiff{}
+// Compare computes the difference between prev and curr snapshots.
+func Compare(prev, curr *SystemSnapshot) *Diff {
+	d := &Diff{}
 
 	// Tools
 	d.Tools = diffStringMap(prev.Tools, curr.Tools)
@@ -141,8 +141,8 @@ func diffStringSlice(prev, curr []string) *SliceDiff {
 	return sd
 }
 
-// RenderDiffText renders a SnapshotDiff as human-readable text.
-func RenderDiffText(d *SnapshotDiff) string {
+// RenderDiffText renders a Diff as human-readable text.
+func RenderDiffText(d *Diff) string {
 	if d.Empty() {
 		return "no changes"
 	}
@@ -201,8 +201,8 @@ func RenderDiffText(d *SnapshotDiff) string {
 	return strings.TrimRight(sb.String(), "\n")
 }
 
-// RenderDiffJSON renders a SnapshotDiff as JSON bytes.
-func RenderDiffJSON(d *SnapshotDiff) ([]byte, error) {
+// RenderDiffJSON renders a Diff as JSON bytes.
+func RenderDiffJSON(d *Diff) ([]byte, error) {
 	return json.MarshalIndent(d, "", "  ")
 }
 

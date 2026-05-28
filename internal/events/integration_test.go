@@ -96,7 +96,7 @@ func TestEventSystemIntegration(t *testing.T) {
 	}
 
 	// Verify event types in order
-	expectedTypes := []EventType{
+	expectedTypes := []Type{
 		EventRunStarted,
 		EventPlanLoaded,
 		EventStepStarted,

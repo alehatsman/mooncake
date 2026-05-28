@@ -376,7 +376,7 @@ func TestTUISubscriber_OnEvent_InvalidData(t *testing.T) {
 
 	tests := []struct {
 		name      string
-		eventType events.EventType
+		eventType events.Type
 		data      interface{}
 	}{
 		{
@@ -427,7 +427,7 @@ func TestTUISubscriber_OnEvent_UnknownEventType(t *testing.T) {
 	}
 
 	// Test with various unknown event types
-	unknownEvents := []events.EventType{
+	unknownEvents := []events.Type{
 		events.EventFileCreated,
 		events.EventFileUpdated,
 		events.EventDirCreated,
