@@ -39,12 +39,11 @@ echo "[4/9] govulncheck"
 govulncheck "$PKG"
 
 echo "[5/9] regen docs + schema, then verify clean"
-"$BIN" docs generate --section all                --output docs-next/generated/actions.md    >/dev/null
-"$BIN" docs generate --section schema             --output docs-next/generated/schema.md     >/dev/null
-"$BIN" docs generate --section action-properties  --output docs-next/generated/properties.md >/dev/null
-"$BIN" schema generate --format json       --output internal/config/schema.json --strict     >/dev/null
-"$BIN" schema generate --format typescript --output internal/config/schema.d                 >/dev/null
-"$BIN" schema generate --format typescript --output mooncake.d.ts                            >/dev/null
+rm -rf dist/docs && mkdir -p dist/docs
+"$BIN" docs generate --section all-into-dir --output dist/docs                                >/dev/null
+"$BIN" schema generate --format json       --output internal/config/schema.json --strict      >/dev/null
+"$BIN" schema generate --format typescript --output internal/config/schema.d                  >/dev/null
+"$BIN" schema generate --format typescript --output mooncake.d.ts                             >/dev/null
 BIN="$BIN" bash ./scripts/docs-check.sh
 BIN="$BIN" bash ./scripts/schema-check.sh
 
