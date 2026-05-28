@@ -279,7 +279,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		}
 	}()
 
-	renderedPath, err := ec.Svc.PathUtil.ExpandPath(fi.Path, ec.CurrentDir, ctx.GetVariables())
+	renderedPath, err := ec.Svc.PathUtil.ExpandPath(fi.Path, ec.CurrentDir, ctx.Variables())
 	if err != nil {
 		return result, fmt.Errorf("failed to expand path: %w", err)
 	}
@@ -292,11 +292,11 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		return result, fmt.Errorf("failed to read file %s: %w", renderedPath, err)
 	}
 
-	renderedAnchor, err := ctx.GetTemplate().Render(fi.Anchor, ctx.GetVariables())
+	renderedAnchor, err := ctx.Template().Render(fi.Anchor, ctx.Variables())
 	if err != nil {
 		return result, fmt.Errorf("failed to render anchor: %w", err)
 	}
-	renderedContent, err := ctx.GetTemplate().Render(fi.Content, ctx.GetVariables())
+	renderedContent, err := ctx.Template().Render(fi.Content, ctx.Variables())
 	if err != nil {
 		return result, fmt.Errorf("failed to render content: %w", err)
 	}
@@ -339,9 +339,9 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 	}
 
 	result.Changed = true
-	ctx.GetLogger().Infof("  Inserted content at %d location(s) in %s", insertionCount, renderedPath)
+	ctx.Logger().Infof("  Inserted content at %d location(s) in %s", insertionCount, renderedPath)
 
-	if pub := ctx.GetEventPublisher(); pub != nil {
+	if pub := ctx.EventPublisher(); pub != nil {
 		pub.Publish(events.Event{
 			Type: events.EventFileUpdated,
 			Data: events.FileOperationData{

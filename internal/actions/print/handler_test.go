@@ -36,7 +36,7 @@ type mockContext struct {
 	mode      actions.Mode // zero-value = ModeApply (Mode is int-typed)
 }
 
-func (m *mockContext) GetVariables() map[string]interface{} {
+func (m *mockContext) Variables() map[string]interface{} {
 	return m.variables
 }
 
@@ -44,26 +44,26 @@ func (m *mockContext) SetVariable(key string, value interface{}) {
 	m.variables[key] = value
 }
 
-func (m *mockContext) GetTemplate() template.Renderer {
+func (m *mockContext) Template() template.Renderer {
 	return m.tmpl
 }
 
-func (m *mockContext) GetEventPublisher() events.Publisher {
+func (m *mockContext) EventPublisher() events.Publisher {
 	return m.publisher
 }
 
-func (m *mockContext) GetLogger() logger.Logger {
+func (m *mockContext) Logger() logger.Logger {
 	return m.log
 }
 
-func (m *mockContext) GetCurrentStepID() string {
+func (m *mockContext) StepID() string {
 	if m.stepID == "" {
 		return "step-1"
 	}
 	return m.stepID
 }
 
-func (m *mockContext) GetEvaluator() expression.Evaluator {
+func (m *mockContext) Evaluator() expression.Evaluator {
 	return expression.NewExprEvaluator()
 }
 

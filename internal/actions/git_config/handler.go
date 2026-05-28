@@ -314,8 +314,8 @@ func renderSet(ctx actions.Context, set map[string]string) (map[string]string, e
 	if len(set) == 0 {
 		return nil, nil
 	}
-	tmpl := ctx.GetTemplate()
-	vars := ctx.GetVariables()
+	tmpl := ctx.Template()
+	vars := ctx.Variables()
 	out := make(map[string]string, len(set))
 	for k, v := range set {
 		renderedKey, err := tmpl.Render(k, vars)
@@ -335,8 +335,8 @@ func renderUnset(ctx actions.Context, unset []string) ([]string, error) {
 	if len(unset) == 0 {
 		return nil, nil
 	}
-	tmpl := ctx.GetTemplate()
-	vars := ctx.GetVariables()
+	tmpl := ctx.Template()
+	vars := ctx.Variables()
 	out := make([]string, 0, len(unset))
 	for _, k := range unset {
 		rendered, err := tmpl.Render(k, vars)
@@ -381,9 +381,9 @@ func ensureGitRepo(repo string) error {
 
 func expandRepo(ctx actions.Context, repo string) (string, error) {
 	if ec, ok := ctx.(*executor.ExecutionContext); ok {
-		return ec.Svc.PathUtil.ExpandPath(repo, ec.CurrentDir, ctx.GetVariables())
+		return ec.Svc.PathUtil.ExpandPath(repo, ec.CurrentDir, ctx.Variables())
 	}
-	return ctx.GetTemplate().Render(repo, ctx.GetVariables())
+	return ctx.Template().Render(repo, ctx.Variables())
 }
 
 func runGit(ctx context.Context, args ...string) error {

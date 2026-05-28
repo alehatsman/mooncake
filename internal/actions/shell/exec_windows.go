@@ -71,7 +71,7 @@ func (h *Handler) buildCommand(
 	command := exec.CommandContext(cmdCtx, interpreter, args...)
 
 	if step.Shell.Stdin != "" {
-		renderedStdin, err := ctx.GetTemplate().Render(step.Shell.Stdin, ctx.GetVariables())
+		renderedStdin, err := ctx.Template().Render(step.Shell.Stdin, ctx.Variables())
 		if err != nil {
 			return nil, fmt.Errorf("failed to render stdin: %w", err)
 		}

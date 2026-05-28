@@ -106,7 +106,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"time"
 
@@ -125,7 +124,6 @@ import (
 	"github.com/alehatsman/mooncake/internal/secrets/resolver"
 	"github.com/alehatsman/mooncake/internal/security"
 	"github.com/alehatsman/mooncake/internal/template"
-	"github.com/alehatsman/mooncake/internal/utils"
 )
 
 // idempotencyUnlessTimeout bounds the `unless:` guard's shell-out
@@ -142,12 +140,6 @@ func generateStepID(step config.Step, ec *ExecutionContext) string {
 		return step.ID
 	}
 	return fmt.Sprintf("step-%d", readStat(ec.Svc.Stats.Global))
-}
-
-func markStepFailed(result *Result, step config.Step, ec *ExecutionContext) { //nolint:unused
-	result.Failed = true
-	result.Rc = 1
-	captureResult(ec, step, result.ToRegisteredResult())
 }
 
 // AddGlobalVariables populates scope.Facts, scope.Metrics, and scope.Env
@@ -178,43 +170,10 @@ func AddGlobalVariables(scope *VariableScope) {
 	scope.ApplyStartedAt = time.Now()
 }
 
-func handleVars(step config.Step, ec *ExecutionContext) error { //nolint:unused
-	ec.Svc.Logger.Debugf("Handling vars: %+v", step.Vars)
-
-	if step.Vars == nil {
-		return fmt.Errorf("vars is nil in step")
-	}
-
-	vars := step.Vars
-
-	for k, v := range *vars {
-		ec.Svc.Logger.Debugf("  %v: %v", k, v)
-	}
-
-	if ec.Mode() == actions.ModePlan {
-		NewDryRunLogger(ec.Svc.Logger).LogVariableSet(len(*vars))
-	}
-
-	ec.MergeUserVars(*vars)
-
-	// Emit variables.set event
-	keys := make([]string, 0, len(*vars))
-	for k := range *vars {
-		keys = append(keys, k)
-	}
-	ec.EmitEvent(events.EventVarsSet, events.VarsSetData{
-		Count:  len(*vars),
-		Keys:   keys,
-		DryRun: ec.Mode() == actions.ModePlan,
-	})
-
-	return nil
-}
-
 func handleWhenExpression(step config.Step, ec *ExecutionContext) (bool, error) {
 	whenString := strings.Trim(step.When, " ")
 
-	vars := ec.GetVariables()
+	vars := ec.Variables()
 	ec.Svc.Logger.Debugf("variables: %v", vars)
 
 	whenExpression, err := ec.Svc.Template.Render(whenString, vars)
@@ -247,12 +206,8 @@ func handleWhenExpression(step config.Step, ec *ExecutionContext) (bool, error) 
 	return !boolResult, nil
 }
 
-func shouldSkipByTags(step config.Step, ec *ExecutionContext) bool { //nolint:unused
-	return !utils.MatchesTags(step.Tags, ec.Svc.Tags)
-}
-
 func checkIdempotencyConditions(step config.Step, ec *ExecutionContext) (bool, string, error) {
-	vars := ec.GetVariables()
+	vars := ec.Variables()
 
 	// Collect (creates, unless) pairs from both step-level fields and the
 	// shell-action-level guards. Shell-level guards mirror the universal
@@ -404,7 +359,7 @@ func checkSkipConditions(step config.Step, ec *ExecutionContext) (bool, string, 
 }
 
 func getStepDisplayName(step config.Step, ec *ExecutionContext) (string, bool) {
-	vars := ec.GetVariables()
+	vars := ec.Variables()
 	// For with_filetree, show hierarchical structure
 	if item, ok := vars["item"].(filetree.Item); ok {
 		// For directories, show as headers with trailing slash
@@ -532,7 +487,7 @@ func DispatchStepAction(step config.Step, ec *ExecutionContext) error {
 // failure. The original error wins; the heal failure shows up in the
 // child step's own event stream.
 func tryHeal(step config.Step, ec *ExecutionContext, handler actions.Runner, origErr error) bool {
-	logger := ec.GetLogger()
+	logger := ec.Logger()
 	if logger != nil {
 		logger.Debugf("  assert failed, running heal (%d child step(s))", len(step.Heal))
 	}
@@ -1624,7 +1579,7 @@ func dispatchRunner(step config.Step, ec *ExecutionContext, runner actions.Runne
 		if ec.Svc != nil && ec.Svc.Ctx != nil {
 			retryCtx = ec.Svc.Ctx
 		}
-		result, err = runWithRetry(retryCtx, &step, ec.GetLogger(), func(attempt int) (actions.Result, error) {
+		result, err = runWithRetry(retryCtx, &step, ec.Logger(), func(attempt int) (actions.Result, error) {
 			lastAttempt = attempt
 			return rr.RunRaw(ec, &step)
 		}, isRetryable)
@@ -1784,18 +1739,4 @@ func dispatchRunner(step config.Step, ec *ExecutionContext, runner actions.Runne
 		captureResult(ec, step, ec.CurrentResult.ToRegisteredResult())
 	}
 	return nil
-}
-
-func parseFileMode(modeStr string, defaultMode os.FileMode) os.FileMode { //nolint:unused
-	if modeStr == "" {
-		return defaultMode
-	}
-
-	// Parse as octal
-	mode, err := strconv.ParseUint(modeStr, 8, 32)
-	if err != nil {
-		return defaultMode
-	}
-
-	return os.FileMode(mode)
 }

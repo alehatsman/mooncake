@@ -77,7 +77,7 @@ func Read(ctx actions.Context, opts Opts) (Output, error) {
 		return Output{}, fmt.Errorf("read_common: context is not an ExecutionContext")
 	}
 
-	resolved, err := ec.Svc.PathUtil.ExpandPath(opts.Path, ec.CurrentDir, ctx.GetVariables())
+	resolved, err := ec.Svc.PathUtil.ExpandPath(opts.Path, ec.CurrentDir, ctx.Variables())
 	if err != nil {
 		return Output{}, fmt.Errorf("read_common: expand path: %w", err)
 	}

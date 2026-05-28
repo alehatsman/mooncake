@@ -144,20 +144,18 @@ func TestCaptureResult_ApplyModeAlwaysBinds(t *testing.T) {
 }
 
 // TestCaptureResult_FailedStepBindsInApplyMode covers spec-37 test #7.
-// markStepFailed → captureResult must still publish in apply mode.
+// A failed step's captureResult must still publish in apply mode.
 func TestCaptureResult_FailedStepBindsInApplyMode(t *testing.T) {
 	ec, _ := makeECWithMode(actions.ModeApply)
 	withCaptureInPlan(t, func(string) bool { return false })
 
 	step := config.Step{ID: "step-0001", Name: "n", As: "x"}
 	result := NewResult()
-	markStepFailed(result, step, ec)
+	result.Failed = true
+	captureResult(ec, step, result.ToRegisteredResult())
 
 	if _, ok := ec.Scope.Results["x"]; !ok {
 		t.Error("failed-step write must still happen in apply mode")
-	}
-	if !result.Failed {
-		t.Error("markStepFailed must mark Failed=true")
 	}
 }
 
@@ -168,7 +166,9 @@ func TestCaptureResult_FailedStepRespectsGateInPlanMode(t *testing.T) {
 		withCaptureInPlan(t, func(string) bool { return false })
 
 		step := config.Step{ID: "step-0001", As: "x"}
-		markStepFailed(NewResult(), step, ec)
+		result := NewResult()
+		result.Failed = true
+		captureResult(ec, step, result.ToRegisteredResult())
 		if _, ok := ec.Scope.Results["x"]; ok {
 			t.Error("plan-mode failed-step write must be gated out when CaptureInPlan=false")
 		}
@@ -178,7 +178,9 @@ func TestCaptureResult_FailedStepRespectsGateInPlanMode(t *testing.T) {
 		withCaptureInPlan(t, func(string) bool { return true })
 
 		step := config.Step{ID: "step-0002", As: "x"}
-		markStepFailed(NewResult(), step, ec)
+		result := NewResult()
+		result.Failed = true
+		captureResult(ec, step, result.ToRegisteredResult())
 		if _, ok := ec.Scope.Results["x"]; !ok {
 			t.Error("plan-mode failed-step write must happen when CaptureInPlan=true")
 		}

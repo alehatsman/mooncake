@@ -236,7 +236,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		}
 	}()
 
-	renderedPath, err := ec.Svc.PathUtil.ExpandPath(fdr.Path, ec.CurrentDir, ctx.GetVariables())
+	renderedPath, err := ec.Svc.PathUtil.ExpandPath(fdr.Path, ec.CurrentDir, ctx.Variables())
 	if err != nil {
 		return result, fmt.Errorf("failed to expand path: %w", err)
 	}
@@ -249,11 +249,11 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		return result, fmt.Errorf("failed to read file %s: %w", renderedPath, err)
 	}
 
-	renderedStartAnchor, err := ctx.GetTemplate().Render(fdr.StartAnchor, ctx.GetVariables())
+	renderedStartAnchor, err := ctx.Template().Render(fdr.StartAnchor, ctx.Variables())
 	if err != nil {
 		return result, fmt.Errorf("failed to render start_anchor: %w", err)
 	}
-	renderedEndAnchor, err := ctx.GetTemplate().Render(fdr.EndAnchor, ctx.GetVariables())
+	renderedEndAnchor, err := ctx.Template().Render(fdr.EndAnchor, ctx.Variables())
 	if err != nil {
 		return result, fmt.Errorf("failed to render end_anchor: %w", err)
 	}
@@ -295,9 +295,9 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 	}
 
 	result.Changed = true
-	ctx.GetLogger().Infof("  Deleted %d line(s) from %s", deletedLines, renderedPath)
+	ctx.Logger().Infof("  Deleted %d line(s) from %s", deletedLines, renderedPath)
 
-	if pub := ctx.GetEventPublisher(); pub != nil {
+	if pub := ctx.EventPublisher(); pub != nil {
 		pub.Publish(events.Event{
 			Type: events.EventFileUpdated,
 			Data: events.FileOperationData{

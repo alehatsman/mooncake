@@ -56,7 +56,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 	}
 	w := step.WaitCommand
 
-	cmd, err := ctx.GetTemplate().Render(w.Cmd, ctx.GetVariables())
+	cmd, err := ctx.Template().Render(w.Cmd, ctx.Variables())
 	if err != nil {
 		return nil, &executor.RenderError{Field: "wait.command.cmd", Cause: err}
 	}
@@ -81,7 +81,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		return nil, err
 	}
 
-	ctx.GetLogger().Infof("Waiting for command %q (timeout: %s, interval: %s, expect_exit: %d)",
+	ctx.Logger().Infof("Waiting for command %q (timeout: %s, interval: %s, expect_exit: %d)",
 		cmd, timeout, interval, w.ExpectExit)
 
 	// F2: poll ctx inherits the run-wide ctx so SIGINT / fleet kill /
@@ -137,7 +137,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		return result, err
 	}
 
-	ctx.GetLogger().Infof("Command satisfied after %s (%d attempts)", elapsed.Round(time.Millisecond), iterations)
+	ctx.Logger().Infof("Command satisfied after %s (%d attempts)", elapsed.Round(time.Millisecond), iterations)
 	return result, nil
 }
 

@@ -97,7 +97,7 @@ func (h *Handler) Diff(ctx actions.Context, step *config.Step) (actions.Diff, er
 // against the unexpanded path than to error.
 func resolveDiffPath(ctx actions.Context, file *config.File) string {
 	if ec, ok := ctx.(*executor.ExecutionContext); ok && ec.Svc != nil && ec.Svc.PathUtil != nil {
-		if expanded, err := ec.Svc.PathUtil.ExpandPath(file.Path, ec.CurrentDir, ctx.GetVariables()); err == nil {
+		if expanded, err := ec.Svc.PathUtil.ExpandPath(file.Path, ec.CurrentDir, ctx.Variables()); err == nil {
 			return expanded
 		}
 	}
@@ -185,7 +185,7 @@ func HashFile(path string) (string, error) {
 
 // diffFile handles state=file: write content to a regular file.
 func (h *Handler) diffFile(ctx actions.Context, file *config.File, path string, mode os.FileMode, before *FileSnapshot) (actions.Diff, error) {
-	rendered, err := ctx.GetTemplate().Render(file.Content, ctx.GetVariables())
+	rendered, err := ctx.Template().Render(file.Content, ctx.Variables())
 	if err != nil {
 		return actions.Diff{}, fmt.Errorf("file.write Diff: render content: %w", err)
 	}
@@ -407,7 +407,7 @@ func ExpandPath(ctx actions.Context, raw string) string {
 		return ""
 	}
 	if ec, ok := ctx.(*executor.ExecutionContext); ok && ec.Svc != nil && ec.Svc.PathUtil != nil {
-		if expanded, err := ec.Svc.PathUtil.ExpandPath(raw, ec.CurrentDir, ctx.GetVariables()); err == nil {
+		if expanded, err := ec.Svc.PathUtil.ExpandPath(raw, ec.CurrentDir, ctx.Variables()); err == nil {
 			return expanded
 		}
 	}

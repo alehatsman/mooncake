@@ -120,7 +120,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		return result, fmt.Errorf("failed to render log: %w", err)
 	}
 
-	if publisher := ctx.GetEventPublisher(); publisher != nil {
+	if publisher := ctx.EventPublisher(); publisher != nil {
 		publisher.Publish(events.Event{
 			Type:      events.EventPrintMessage,
 			Timestamp: time.Now(),
@@ -143,7 +143,7 @@ func render(ctx actions.Context, la *config.PrintAction) (string, error) {
 	var parts []string
 
 	if la.Msg != "" {
-		m, err := ctx.GetTemplate().Render(la.Msg, ctx.GetVariables())
+		m, err := ctx.Template().Render(la.Msg, ctx.Variables())
 		if err != nil {
 			return "", fmt.Errorf("render msg: %w", err)
 		}
@@ -151,7 +151,7 @@ func render(ctx actions.Context, la *config.PrintAction) (string, error) {
 	}
 
 	if la.Title != "" {
-		t, err := ctx.GetTemplate().Render(la.Title, ctx.GetVariables())
+		t, err := ctx.Template().Render(la.Title, ctx.Variables())
 		if err != nil {
 			return "", fmt.Errorf("render title: %w", err)
 		}

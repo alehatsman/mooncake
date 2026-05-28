@@ -226,7 +226,7 @@ func TestHandler_Execute(t *testing.T) {
 			}
 			pathExpander := pathutil.NewPathExpander(renderer)
 			mockCtx := testutil.NewMockContext()
-			mockCtx.Variables = tt.existingVars
+			mockCtx.Vars = tt.existingVars
 
 			scope := executor.NewVariableScope()
 			for k, v := range tt.existingVars {
@@ -269,7 +269,7 @@ func TestHandler_Execute(t *testing.T) {
 
 			// Check variables were loaded correctly
 			for key, want := range tt.wantVars {
-				got, exists := ctx.GetVariables()[key]
+				got, exists := ctx.Variables()[key]
 				if !exists {
 					t.Errorf("Variable %q not loaded", key)
 					continue
@@ -370,7 +370,7 @@ func TestHandler_Execute_PathExpansion(t *testing.T) {
 			}
 			pathExpander := pathutil.NewPathExpander(renderer)
 			mockCtx := testutil.NewMockContext()
-			mockCtx.Variables = tt.setupVars
+			mockCtx.Vars = tt.setupVars
 
 			scope := executor.NewVariableScope()
 			for k, v := range tt.setupVars {
@@ -412,7 +412,7 @@ func TestHandler_Execute_PathExpansion(t *testing.T) {
 			}
 
 			// Verify variable was loaded
-			if got, exists := ctx.GetVariables()["test"]; !exists || got != "value" {
+			if got, exists := ctx.Variables()["test"]; !exists || got != "value" {
 				t.Errorf("Variable 'test' = %v, want 'value'", got)
 			}
 
@@ -591,7 +591,7 @@ func TestHandler_Execute_NoPublisher(t *testing.T) {
 	}
 
 	// Check variable was still loaded
-	if got, exists := ctx.GetVariables()["foo"]; !exists || got != "bar" {
+	if got, exists := ctx.Variables()["foo"]; !exists || got != "bar" {
 		t.Errorf("Variable 'foo' = %v, want 'bar'", got)
 	}
 }

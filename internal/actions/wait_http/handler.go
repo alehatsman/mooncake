@@ -73,7 +73,7 @@ func (h *Handler) Validate(step *config.Step) error {
 
 func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, error) {
 	w := step.WaitHTTP
-	url, err := ctx.GetTemplate().Render(w.URL, ctx.GetVariables())
+	url, err := ctx.Template().Render(w.URL, ctx.Variables())
 	if err != nil {
 		return nil, &executor.RenderError{Field: "wait.http.url", Cause: err}
 	}
@@ -88,7 +88,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		accepted = []int{http.StatusOK}
 	}
 
-	bodyContains, err := ctx.GetTemplate().Render(w.BodyContains, ctx.GetVariables())
+	bodyContains, err := ctx.Template().Render(w.BodyContains, ctx.Variables())
 	if err != nil {
 		return nil, &executor.RenderError{Field: "wait.http.body_contains", Cause: err}
 	}
@@ -97,7 +97,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 	// iteration re-uses the same string (a fresh strings.NewReader is
 	// fine to re-create per request — the underlying bytes are
 	// shared).
-	body, err := ctx.GetTemplate().Render(w.Body, ctx.GetVariables())
+	body, err := ctx.Template().Render(w.Body, ctx.Variables())
 	if err != nil {
 		return nil, &executor.RenderError{Field: "wait.http.body", Cause: err}
 	}
@@ -129,7 +129,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		return nil, err
 	}
 
-	ctx.GetLogger().Infof("Waiting for HTTP %s %s (timeout: %s, interval: %s)", method, url, timeout, interval)
+	ctx.Logger().Infof("Waiting for HTTP %s %s (timeout: %s, interval: %s)", method, url, timeout, interval)
 
 	client := &http.Client{Timeout: requestTimeout}
 	pollCtx, cancel := context.WithTimeout(context.Background(), timeout)
@@ -192,7 +192,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		return result, err
 	}
 
-	ctx.GetLogger().Infof("HTTP %s ready after %s (%d attempts)", url, elapsed.Round(time.Millisecond), iterations)
+	ctx.Logger().Infof("HTTP %s ready after %s (%d attempts)", url, elapsed.Round(time.Millisecond), iterations)
 	return result, nil
 }
 
@@ -202,7 +202,7 @@ func renderHeaders(ctx actions.Context, in map[string]string) (map[string]string
 	}
 	out := make(map[string]string, len(in))
 	for k, v := range in {
-		rendered, err := ctx.GetTemplate().Render(v, ctx.GetVariables())
+		rendered, err := ctx.Template().Render(v, ctx.Variables())
 		if err != nil {
 			return nil, &executor.RenderError{Field: "wait.http.headers." + k, Cause: err}
 		}

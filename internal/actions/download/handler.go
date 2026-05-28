@@ -107,13 +107,13 @@ func (h *Handler) runApply(ctx actions.Context, step *config.Step) (actions.Resu
 	}
 
 	// Render URL
-	renderedURL, err := ctx.GetTemplate().Render(downloadAction.URL, ctx.GetVariables())
+	renderedURL, err := ctx.Template().Render(downloadAction.URL, ctx.Variables())
 	if err != nil {
 		return nil, fmt.Errorf("failed to render URL: %w", err)
 	}
 
 	// Render destination path
-	renderedDest, err := ec.Svc.PathUtil.ExpandPath(downloadAction.Dest, ec.CurrentDir, ctx.GetVariables())
+	renderedDest, err := ec.Svc.PathUtil.ExpandPath(downloadAction.Dest, ec.CurrentDir, ctx.Variables())
 	if err != nil {
 		return nil, fmt.Errorf("failed to expand dest path: %w", err)
 	}
@@ -143,11 +143,11 @@ func (h *Handler) runApply(ctx actions.Context, step *config.Step) (actions.Resu
 		// Verify existing file checksum for idempotency
 		matches, checksumErr := utils.VerifyChecksum(renderedDest, downloadAction.Checksum)
 		if checksumErr != nil {
-			ctx.GetLogger().Debugf("  Unable to verify checksum of existing file: %v", checksumErr)
+			ctx.Logger().Debugf("  Unable to verify checksum of existing file: %v", checksumErr)
 			needsDownload = true
 		} else if matches {
 			// File exists with correct checksum, skip download
-			ctx.GetLogger().Debugf("  File already exists with correct checksum: %s", renderedDest)
+			ctx.Logger().Debugf("  File already exists with correct checksum: %s", renderedDest)
 			needsDownload = false
 		} else {
 			// File exists but checksum doesn't match, re-download
@@ -171,20 +171,20 @@ func (h *Handler) runApply(ctx actions.Context, step *config.Step) (actions.Resu
 
 	// Create backup if requested and dest exists
 	if downloadAction.Backup && destExists {
-		ctx.GetLogger().Debugf("  Creating backup of: %s", renderedDest)
+		ctx.Logger().Debugf("  Creating backup of: %s", renderedDest)
 		backupPath, err := utils.CreateBackup(renderedDest)
 		if err != nil {
 			result.Failed = true
 			return result, fmt.Errorf("failed to create backup: %w", err)
 		}
-		ctx.GetLogger().Debugf("  Backup created: %s", backupPath)
+		ctx.Logger().Debugf("  Backup created: %s", backupPath)
 	}
 
 	// Single attempt — retry is owned by the executor's runWithRetry
 	// when the user sets a step-level `retry:` block. Every error is
 	// retryable by default (no Retryable impl); the action-local
 	// `retries:` / `retry_delay:` fields were removed.
-	ctx.GetLogger().Debugf("  Downloading: %s -> %s", renderedURL, renderedDest)
+	ctx.Logger().Debugf("  Downloading: %s -> %s", renderedURL, renderedDest)
 	downloadedSize, downloadErr := h.downloadFile(renderedURL, renderedDest, downloadAction, mode, step, ctx)
 	if downloadErr != nil {
 		result.Failed = true
@@ -193,7 +193,7 @@ func (h *Handler) runApply(ctx actions.Context, step *config.Step) (actions.Resu
 
 	// Verify checksum if provided
 	if downloadAction.Checksum != "" {
-		ctx.GetLogger().Debugf("  Verifying checksum: %s", downloadAction.Checksum)
+		ctx.Logger().Debugf("  Verifying checksum: %s", downloadAction.Checksum)
 		matches, err := utils.VerifyChecksum(renderedDest, downloadAction.Checksum)
 		if err != nil {
 			result.Failed = true
@@ -206,7 +206,7 @@ func (h *Handler) runApply(ctx actions.Context, step *config.Step) (actions.Resu
 	}
 
 	// Emit event
-	publisher := ctx.GetEventPublisher()
+	publisher := ctx.EventPublisher()
 	if publisher != nil {
 		publisher.Publish(events.Event{
 			Type: events.EventFileDownloaded,
@@ -284,7 +284,7 @@ func (h *Handler) downloadFile(url, dest string, action *config.Download, mode o
 	}
 	defer func() {
 		if closeErr := resp.Body.Close(); closeErr != nil {
-			ctx.GetLogger().Debugf("Failed to close response body: %v", closeErr)
+			ctx.Logger().Debugf("Failed to close response body: %v", closeErr)
 		}
 	}()
 
@@ -310,12 +310,12 @@ func (h *Handler) downloadFile(url, dest string, action *config.Download, mode o
 	defer func() {
 		if !tmpFileClosed {
 			if closeErr := tmpFile.Close(); closeErr != nil {
-				ctx.GetLogger().Debugf("Failed to close temp file: %v", closeErr)
+				ctx.Logger().Debugf("Failed to close temp file: %v", closeErr)
 			}
 		}
 		if !tmpFileMoved {
 			if removeErr := os.Remove(tmpPath); removeErr != nil && !os.IsNotExist(removeErr) {
-				ctx.GetLogger().Debugf("Failed to remove temp file %s: %v", tmpPath, removeErr)
+				ctx.Logger().Debugf("Failed to remove temp file %s: %v", tmpPath, removeErr)
 			}
 		}
 	}()
@@ -441,7 +441,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 	result := executor.NewResult()
 	result.Checkable = true
 
-	renderedDest, err := ec.Svc.PathUtil.ExpandPath(d.Dest, ec.CurrentDir, ctx.GetVariables())
+	renderedDest, err := ec.Svc.PathUtil.ExpandPath(d.Dest, ec.CurrentDir, ctx.Variables())
 	if err != nil {
 		return result, fmt.Errorf("failed to expand dest path: %w", err)
 	}

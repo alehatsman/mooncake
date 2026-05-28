@@ -188,10 +188,10 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 
 	result.Changed = true
 	result.Reason = plan.reason
-	ctx.GetLogger().Infof("  os.mount: %s (%s)", rendered.dest, plan.operation)
+	ctx.Logger().Infof("  os.mount: %s (%s)", rendered.dest, plan.operation)
 
 	if plan.touchesFstab {
-		if pub := ctx.GetEventPublisher(); pub != nil {
+		if pub := ctx.EventPublisher(); pub != nil {
 			pub.Publish(events.Event{
 				Type: events.EventFileUpdated,
 				Data: events.FileOperationData{Path: mountPaths.fstab, Changed: true},
@@ -215,8 +215,8 @@ type renderedMount struct {
 }
 
 func renderMount(ctx actions.Context, m *config.OsMount) (renderedMount, error) {
-	tmpl := ctx.GetTemplate()
-	vars := ctx.GetVariables()
+	tmpl := ctx.Template()
+	vars := ctx.Variables()
 
 	render := func(s string) (string, error) {
 		if s == "" {

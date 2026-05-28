@@ -78,7 +78,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		return nil, fmt.Errorf("context is not an ExecutionContext")
 	}
 
-	expandedPath, err := ec.Svc.PathUtil.ExpandPath(*includeVars, ec.CurrentDir, ctx.GetVariables())
+	expandedPath, err := ec.Svc.PathUtil.ExpandPath(*includeVars, ec.CurrentDir, ctx.Variables())
 	if err != nil {
 		return nil, fmt.Errorf("failed to expand path: %w", err)
 	}
@@ -95,7 +95,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		keys = append(keys, k)
 	}
 
-	if publisher := ctx.GetEventPublisher(); publisher != nil {
+	if publisher := ctx.EventPublisher(); publisher != nil {
 		publisher.Publish(events.Event{
 			Type: events.EventVarsLoaded,
 			Data: events.VarsLoadedData{

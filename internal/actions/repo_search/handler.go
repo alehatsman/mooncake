@@ -131,7 +131,7 @@ func (h *Handler) runImpl(ctx actions.Context, step *config.Step) (actions.Resul
 	}
 
 	// Expand and render path
-	renderedPath, err := ec.Svc.PathUtil.ExpandPath(searchPath, ec.CurrentDir, ctx.GetVariables())
+	renderedPath, err := ec.Svc.PathUtil.ExpandPath(searchPath, ec.CurrentDir, ctx.Variables())
 	result.Target = renderedPath
 	if err != nil {
 		return result, fmt.Errorf("failed to expand path: %w", err)
@@ -143,7 +143,7 @@ func (h *Handler) runImpl(ctx actions.Context, step *config.Step) (actions.Resul
 	}
 
 	// Render pattern (support template variables)
-	renderedPattern, err := ctx.GetTemplate().Render(rs.Pattern, ctx.GetVariables())
+	renderedPattern, err := ctx.Template().Render(rs.Pattern, ctx.Variables())
 	if err != nil {
 		return result, fmt.Errorf("failed to render pattern: %w", err)
 	}
@@ -156,7 +156,7 @@ func (h *Handler) runImpl(ctx actions.Context, step *config.Step) (actions.Resul
 
 	// Write output to file if specified
 	if rs.OutputFile != "" {
-		outputPath, err := ec.Svc.PathUtil.ExpandPath(rs.OutputFile, ec.CurrentDir, ctx.GetVariables())
+		outputPath, err := ec.Svc.PathUtil.ExpandPath(rs.OutputFile, ec.CurrentDir, ctx.Variables())
 		if err != nil {
 			return result, fmt.Errorf("failed to expand output_file path: %w", err)
 		}
@@ -177,7 +177,7 @@ func (h *Handler) runImpl(ctx actions.Context, step *config.Step) (actions.Resul
 			return result, fmt.Errorf("failed to write output file: %w", err)
 		}
 
-		ctx.GetLogger().Infof("  Wrote %d results to %s", output.TotalMatches, outputPath)
+		ctx.Logger().Infof("  Wrote %d results to %s", output.TotalMatches, outputPath)
 	}
 
 	// Set result data
@@ -187,7 +187,7 @@ func (h *Handler) runImpl(ctx actions.Context, step *config.Step) (actions.Resul
 		"results":       output.Results,
 	})
 
-	ctx.GetLogger().Infof("  Found %d matches in %d files", output.TotalMatches, output.TotalFiles)
+	ctx.Logger().Infof("  Found %d matches in %d files", output.TotalMatches, output.TotalFiles)
 
 	return result, nil
 }
@@ -230,7 +230,7 @@ func (h *Handler) performSearch(rootPath, pattern string, rs *config.RepoSearch,
 	err = filepath.Walk(rootPath, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			// Log but continue on permission errors
-			ctx.GetLogger().Debugf("  Warning: %v", err)
+			ctx.Logger().Debugf("  Warning: %v", err)
 			return nil
 		}
 
@@ -269,7 +269,7 @@ func (h *Handler) performSearch(rootPath, pattern string, rs *config.RepoSearch,
 		// Read file content
 		content, err := os.ReadFile(path) // #nosec G304,G122 - path is validated via filepath.Walk
 		if err != nil {
-			ctx.GetLogger().Debugf("  Warning: Failed to read %s: %v", path, err)
+			ctx.Logger().Debugf("  Warning: Failed to read %s: %v", path, err)
 			return nil
 		}
 

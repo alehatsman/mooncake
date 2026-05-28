@@ -159,7 +159,7 @@ func RunBecomeAware(ec *executor.ExecutionContext, what, program string, args ..
 func RenderTemplateOrContent(srcTemplate, inlineContent, fieldPrefix string, ec *executor.ExecutionContext) (string, error) {
 	if srcTemplate != "" {
 		// Expand and render template file
-		srcPath, expandErr := ec.Svc.PathUtil.ExpandPath(srcTemplate, ec.CurrentDir, ec.GetVariables())
+		srcPath, expandErr := ec.Svc.PathUtil.ExpandPath(srcTemplate, ec.CurrentDir, ec.Variables())
 		if expandErr != nil {
 			return "", &executor.RenderError{Field: fieldPrefix + ".src_template", Cause: expandErr}
 		}
@@ -177,7 +177,7 @@ func RenderTemplateOrContent(srcTemplate, inlineContent, fieldPrefix string, ec 
 		}
 
 		// Render template
-		content, renderErr := ec.Svc.Template.Render(string(templateData), ec.GetVariables())
+		content, renderErr := ec.Svc.Template.Render(string(templateData), ec.Variables())
 		if renderErr != nil {
 			return "", &executor.RenderError{Field: fieldPrefix + ".src_template", Cause: renderErr}
 		}
@@ -186,7 +186,7 @@ func RenderTemplateOrContent(srcTemplate, inlineContent, fieldPrefix string, ec 
 
 	if inlineContent != "" {
 		// Render inline content
-		content, renderErr := ec.Svc.Template.Render(inlineContent, ec.GetVariables())
+		content, renderErr := ec.Svc.Template.Render(inlineContent, ec.Variables())
 		if renderErr != nil {
 			return "", &executor.RenderError{Field: fieldPrefix + ".content", Cause: renderErr}
 		}

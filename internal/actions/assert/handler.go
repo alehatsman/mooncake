@@ -99,7 +99,7 @@ func (h *Handler) Validate(step *config.Step) error {
 // executeAssertCommand executes a command assertion.
 func (h *Handler) executeAssertCommand(assertCmd *config.AssertCommand, ec *executor.ExecutionContext) (string, string, error) {
 	// Render command with variables
-	cmd, err := ec.Svc.Template.Render(assertCmd.Cmd, ec.GetVariables())
+	cmd, err := ec.Svc.Template.Render(assertCmd.Cmd, ec.Variables())
 	if err != nil {
 		return "", "", &executor.RenderError{Field: "assert.command.cmd", Cause: err}
 	}
@@ -153,13 +153,13 @@ func (h *Handler) executeAssertCommand(assertCmd *config.AssertCommand, ec *exec
 // executeAssertFile executes a file assertion.
 func (h *Handler) executeAssertFile(assertFile *config.AssertFile, ec *executor.ExecutionContext) (string, string, error) {
 	// Render path with variables
-	path, err := ec.Svc.Template.Render(assertFile.Path, ec.GetVariables())
+	path, err := ec.Svc.Template.Render(assertFile.Path, ec.Variables())
 	if err != nil {
 		return "", "", &executor.RenderError{Field: "assert.file.path", Cause: err}
 	}
 
 	// Expand path (handle ~ and relative paths)
-	expandedPath, expandErr := ec.Svc.PathUtil.ExpandPath(path, ec.CurrentDir, ec.GetVariables())
+	expandedPath, expandErr := ec.Svc.PathUtil.ExpandPath(path, ec.CurrentDir, ec.Variables())
 	if expandErr != nil {
 		return "", "", &executor.FileOperationError{
 			Operation: "expand path",
@@ -218,7 +218,7 @@ func (h *Handler) executeAssertFile(assertFile *config.AssertFile, ec *executor.
 			}
 		}
 
-		expectedSubstr, renderErr := ec.Svc.Template.Render(*assertFile.Contains, ec.GetVariables())
+		expectedSubstr, renderErr := ec.Svc.Template.Render(*assertFile.Contains, ec.Variables())
 		if renderErr != nil {
 			return "", "", &executor.RenderError{Field: "assert.file.contains", Cause: renderErr}
 		}
@@ -248,7 +248,7 @@ func (h *Handler) executeAssertFile(assertFile *config.AssertFile, ec *executor.
 			}
 		}
 
-		expectedContent, renderErr := ec.Svc.Template.Render(*assertFile.Content, ec.GetVariables())
+		expectedContent, renderErr := ec.Svc.Template.Render(*assertFile.Content, ec.Variables())
 		if renderErr != nil {
 			return "", "", &executor.RenderError{Field: "assert.file.content", Cause: renderErr}
 		}
@@ -325,7 +325,7 @@ func (h *Handler) executeAssertFile(assertFile *config.AssertFile, ec *executor.
 // executeAssertHTTP executes an HTTP assertion.
 func (h *Handler) executeAssertHTTP(assertHTTP *config.AssertHTTP, ec *executor.ExecutionContext) (string, string, error) {
 	// Render URL with variables
-	url, err := ec.Svc.Template.Render(assertHTTP.URL, ec.GetVariables())
+	url, err := ec.Svc.Template.Render(assertHTTP.URL, ec.Variables())
 	if err != nil {
 		return "", "", &executor.RenderError{Field: "assert.http.url", Cause: err}
 	}
@@ -364,7 +364,7 @@ func (h *Handler) executeAssertHTTP(assertHTTP *config.AssertHTTP, ec *executor.
 	// Create request body if provided
 	var bodyReader io.Reader
 	if assertHTTP.Body != nil {
-		body, bodyErr := ec.Svc.Template.Render(*assertHTTP.Body, ec.GetVariables())
+		body, bodyErr := ec.Svc.Template.Render(*assertHTTP.Body, ec.Variables())
 		if bodyErr != nil {
 			return "", "", &executor.RenderError{Field: "assert.http.body", Cause: bodyErr}
 		}
@@ -384,7 +384,7 @@ func (h *Handler) executeAssertHTTP(assertHTTP *config.AssertHTTP, ec *executor.
 
 	// Add headers
 	for key, value := range assertHTTP.Headers {
-		renderedValue, headerErr := ec.Svc.Template.Render(value, ec.GetVariables())
+		renderedValue, headerErr := ec.Svc.Template.Render(value, ec.Variables())
 		if headerErr != nil {
 			return "", "", &executor.RenderError{Field: fmt.Sprintf("assert.http.headers.%s", key), Cause: headerErr}
 		}
@@ -433,7 +433,7 @@ func (h *Handler) executeAssertHTTP(assertHTTP *config.AssertHTTP, ec *executor.
 
 	// Check body contains
 	if assertHTTP.Contains != nil {
-		expectedSubstr, containsErr := ec.Svc.Template.Render(*assertHTTP.Contains, ec.GetVariables())
+		expectedSubstr, containsErr := ec.Svc.Template.Render(*assertHTTP.Contains, ec.Variables())
 		if containsErr != nil {
 			return "", "", &executor.RenderError{Field: "assert.http.contains", Cause: containsErr}
 		}
@@ -454,7 +454,7 @@ func (h *Handler) executeAssertHTTP(assertHTTP *config.AssertHTTP, ec *executor.
 
 	// Check exact body match
 	if assertHTTP.BodyEquals != nil {
-		expectedBody, bodyEqualsErr := ec.Svc.Template.Render(*assertHTTP.BodyEquals, ec.GetVariables())
+		expectedBody, bodyEqualsErr := ec.Svc.Template.Render(*assertHTTP.BodyEquals, ec.Variables())
 		if bodyEqualsErr != nil {
 			return "", "", &executor.RenderError{Field: "assert.http.body_equals", Cause: bodyEqualsErr}
 		}
@@ -489,13 +489,13 @@ func (h *Handler) executeAssertHTTP(assertHTTP *config.AssertHTTP, ec *executor.
 // executeAssertFileSHA256 verifies a file's SHA256 checksum.
 func (h *Handler) executeAssertFileSHA256(assertSHA *config.AssertFileSHA256, ec *executor.ExecutionContext) (string, string, error) {
 	// Render path with variables
-	path, err := ec.Svc.Template.Render(assertSHA.Path, ec.GetVariables())
+	path, err := ec.Svc.Template.Render(assertSHA.Path, ec.Variables())
 	if err != nil {
 		return "", "", &executor.RenderError{Field: "assert.file_sha256.path", Cause: err}
 	}
 
 	// Expand path (handle ~ and relative paths)
-	expandedPath, expandErr := ec.Svc.PathUtil.ExpandPath(path, ec.CurrentDir, ec.GetVariables())
+	expandedPath, expandErr := ec.Svc.PathUtil.ExpandPath(path, ec.CurrentDir, ec.Variables())
 	if expandErr != nil {
 		return "", "", &executor.FileOperationError{
 			Operation: "expand path",
@@ -505,7 +505,7 @@ func (h *Handler) executeAssertFileSHA256(assertSHA *config.AssertFileSHA256, ec
 	}
 
 	// Render expected checksum with variables
-	expectedChecksum, err := ec.Svc.Template.Render(assertSHA.Checksum, ec.GetVariables())
+	expectedChecksum, err := ec.Svc.Template.Render(assertSHA.Checksum, ec.Variables())
 	if err != nil {
 		return "", "", &executor.RenderError{Field: "assert.file_sha256.checksum", Cause: err}
 	}
@@ -611,7 +611,7 @@ func (h *Handler) executeAssertGitClean(assertGit *config.AssertGitClean, ec *ex
 // executeAssertGitDiff verifies the git diff matches expected output.
 func (h *Handler) executeAssertGitDiff(assertDiff *config.AssertGitDiff, ec *executor.ExecutionContext) (string, string, error) {
 	// Render expected diff with variables
-	expectedDiff, err := ec.Svc.Template.Render(assertDiff.ExpectedDiff, ec.GetVariables())
+	expectedDiff, err := ec.Svc.Template.Render(assertDiff.ExpectedDiff, ec.Variables())
 	if err != nil {
 		return "", "", &executor.RenderError{Field: "assert.git_diff.expected_diff", Cause: err}
 	}
@@ -645,7 +645,7 @@ func (h *Handler) executeAssertGitDiff(assertDiff *config.AssertGitDiff, ec *exe
 
 	// Add file filter if specified
 	if assertDiff.Files != nil {
-		files, renderErr := ec.Svc.Template.Render(*assertDiff.Files, ec.GetVariables())
+		files, renderErr := ec.Svc.Template.Render(*assertDiff.Files, ec.Variables())
 		if renderErr != nil {
 			return "", "", &executor.RenderError{Field: "assert.git_diff.files", Cause: renderErr}
 		}

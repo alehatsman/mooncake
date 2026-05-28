@@ -113,7 +113,7 @@ func (h *Handler) runImpl(ctx actions.Context, step *config.Step) (actions.Resul
 	}
 
 	// Expand and render path
-	renderedPath, err := ec.Svc.PathUtil.ExpandPath(rootPath, ec.CurrentDir, ctx.GetVariables())
+	renderedPath, err := ec.Svc.PathUtil.ExpandPath(rootPath, ec.CurrentDir, ctx.Variables())
 	if err != nil {
 		return result, fmt.Errorf("failed to expand path: %w", err)
 	}
@@ -164,7 +164,7 @@ func (h *Handler) runImpl(ctx actions.Context, step *config.Step) (actions.Resul
 
 	// Write output to file if specified
 	if rt.OutputFile != "" {
-		outputPath, err := ec.Svc.PathUtil.ExpandPath(rt.OutputFile, ec.CurrentDir, ctx.GetVariables())
+		outputPath, err := ec.Svc.PathUtil.ExpandPath(rt.OutputFile, ec.CurrentDir, ctx.Variables())
 		if err != nil {
 			return result, fmt.Errorf("failed to expand output_file path: %w", err)
 		}
@@ -185,7 +185,7 @@ func (h *Handler) runImpl(ctx actions.Context, step *config.Step) (actions.Resul
 			return result, fmt.Errorf("failed to write output file: %w", err)
 		}
 
-		ctx.GetLogger().Infof("  Wrote tree to %s", outputPath)
+		ctx.Logger().Infof("  Wrote tree to %s", outputPath)
 	}
 
 	// Set result data
@@ -195,7 +195,7 @@ func (h *Handler) runImpl(ctx actions.Context, step *config.Step) (actions.Resul
 		"tree":        output.Tree,
 	})
 
-	ctx.GetLogger().Infof("  Generated tree: %d directories, %d files", output.TotalDirs, output.TotalFiles)
+	ctx.Logger().Infof("  Generated tree: %d directories, %d files", output.TotalDirs, output.TotalFiles)
 
 	return result, nil
 }
@@ -249,7 +249,7 @@ func (h *Handler) buildTree(
 	entries, err := os.ReadDir(absPath)
 	if err != nil {
 		// Log but continue on permission errors
-		ctx.GetLogger().Debugf("  Warning: Failed to read directory %s: %v", absPath, err)
+		ctx.Logger().Debugf("  Warning: Failed to read directory %s: %v", absPath, err)
 		return node, nil
 	}
 
@@ -285,7 +285,7 @@ func (h *Handler) buildTree(
 			ctx,
 		)
 		if err != nil {
-			ctx.GetLogger().Debugf("  Warning: Failed to process %s: %v", childAbsPath, err)
+			ctx.Logger().Debugf("  Warning: Failed to process %s: %v", childAbsPath, err)
 			continue
 		}
 

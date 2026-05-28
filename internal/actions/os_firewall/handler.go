@@ -203,7 +203,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 
 	result.Changed = true
 	result.Reason = plan.reason()
-	ctx.GetLogger().Infof("  os.firewall: +%d -%d", len(plan.toAdd), len(plan.toRemove))
+	ctx.Logger().Infof("  os.firewall: +%d -%d", len(plan.toAdd), len(plan.toRemove))
 	return result, nil
 }
 
@@ -219,8 +219,8 @@ type rule struct {
 }
 
 func renderDesired(ctx actions.Context, f *config.OsFirewall) ([]rule, error) {
-	tmpl := ctx.GetTemplate()
-	vars := ctx.GetVariables()
+	tmpl := ctx.Template()
+	vars := ctx.Variables()
 	render := func(s string) (string, error) {
 		if s == "" {
 			return "", nil

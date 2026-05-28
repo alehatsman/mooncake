@@ -114,7 +114,7 @@ func (h *Handler) runApply(ctx actions.Context, step *config.Step) (actions.Resu
 	if err != nil {
 		return nil, fmt.Errorf("failed to create planner: %w", err)
 	}
-	expandedSteps, err := planner.ExpandStepsWithContext(capture.Steps, ec.GetVariables(), ec.CurrentDir)
+	expandedSteps, err := planner.ExpandStepsWithContext(capture.Steps, ec.Variables(), ec.CurrentDir)
 	if err != nil {
 		return nil, fmt.Errorf("failed to expand artifact_capture steps: %w", err)
 	}

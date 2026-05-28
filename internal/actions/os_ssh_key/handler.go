@@ -145,7 +145,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 	performer := ctx.Effects()
 	runner := ctx.Privileged()
 
-	username, err := ctx.GetTemplate().Render(k.User, ctx.GetVariables())
+	username, err := ctx.Template().Render(k.User, ctx.Variables())
 	if err != nil {
 		return result, fmt.Errorf("os.ssh_key: render user: %w", err)
 	}
@@ -231,9 +231,9 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 
 	result.Changed = true
 	result.Reason = plan.reason
-	ctx.GetLogger().Infof("  os.ssh_key: %s (+%d -%d ~%d)", path, plan.added, plan.removed, plan.updated)
+	ctx.Logger().Infof("  os.ssh_key: %s (+%d -%d ~%d)", path, plan.added, plan.removed, plan.updated)
 
-	if pub := ctx.GetEventPublisher(); pub != nil {
+	if pub := ctx.EventPublisher(); pub != nil {
 		pub.Publish(events.Event{
 			Type: events.EventFileUpdated,
 			Data: events.FileOperationData{Path: path, Changed: true},
@@ -248,9 +248,9 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 func resolveAuthorizedKeysPath(ctx actions.Context, ec *executor.ExecutionContext, k *config.OsSSHKey, username string) (string, error) {
 	if k.Path != "" {
 		if ec != nil {
-			return ec.Svc.PathUtil.ExpandPath(k.Path, ec.CurrentDir, ctx.GetVariables())
+			return ec.Svc.PathUtil.ExpandPath(k.Path, ec.CurrentDir, ctx.Variables())
 		}
-		return ctx.GetTemplate().Render(k.Path, ctx.GetVariables())
+		return ctx.Template().Render(k.Path, ctx.Variables())
 	}
 	u, err := user.Lookup(username)
 	if err != nil {
@@ -277,8 +277,8 @@ func allKeys(k *config.OsSSHKey) []string {
 }
 
 func renderKeys(ctx actions.Context, k *config.OsSSHKey) ([]parsedKey, []string, error) {
-	tmpl := ctx.GetTemplate()
-	vars := ctx.GetVariables()
+	tmpl := ctx.Template()
+	vars := ctx.Variables()
 	keys := make([]parsedKey, 0, len(allKeys(k)))
 	for _, raw := range allKeys(k) {
 		rendered, err := tmpl.Render(raw, vars)

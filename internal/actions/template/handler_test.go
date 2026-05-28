@@ -16,7 +16,7 @@ import (
 // Helper to create ExecutionContext for testing
 func newTestExecutionContext(ctx *testutil.MockContext, tmpDir string) *executor.ExecutionContext {
 	scope := executor.NewVariableScope()
-	for k, v := range ctx.Variables {
+	for k, v := range ctx.Vars {
 		scope.User[k] = v
 	}
 	return &executor.ExecutionContext{
@@ -29,7 +29,7 @@ func newTestExecutionContext(ctx *testutil.MockContext, tmpDir string) *executor
 		},
 		Scope:         scope,
 		CurrentDir:    tmpDir,
-		CurrentStepID: ctx.StepID,
+		CurrentStepID: ctx.CurrentStepID,
 	}
 }
 
@@ -264,7 +264,7 @@ func TestHandler_Run(t *testing.T) {
 
 			// Setup context
 			ctx := testutil.NewMockContext()
-			ctx.Variables = tt.variables
+			ctx.Vars = tt.variables
 
 			// Create ExecutionContext
 			execCtx := newTestExecutionContext(ctx, tmpDir)
@@ -377,7 +377,7 @@ func TestHandler_Run_Idempotency(t *testing.T) {
 
 	// Setup context
 	ctx := testutil.NewMockContext()
-	ctx.Variables = map[string]interface{}{
+	ctx.Vars = map[string]interface{}{
 		"name": "World",
 	}
 
@@ -618,7 +618,7 @@ func TestHandler_Run_PlanMode(t *testing.T) {
 
 			// Setup context
 			ctx := testutil.NewMockContext()
-			ctx.Variables = tt.variables
+			ctx.Vars = tt.variables
 			ctx.CurrentMode = actions.ModePlan
 
 			execCtx := newTestExecutionContext(ctx, tmpDir)

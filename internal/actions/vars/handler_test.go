@@ -189,7 +189,7 @@ func TestHandler_Execute(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := testutil.NewMockContext()
-			ctx.Variables = tt.existingVars
+			ctx.Vars = tt.existingVars
 
 			result, err := h.Run(ctx, tt.step)
 			if (err != nil) != tt.wantErr {
@@ -213,7 +213,7 @@ func TestHandler_Execute(t *testing.T) {
 
 			// Check variables were set correctly
 			for key, want := range tt.wantVars {
-				got, exists := ctx.Variables[key]
+				got, exists := ctx.Vars[key]
 				if !exists {
 					t.Errorf("Variable %q not set", key)
 					continue
@@ -293,7 +293,7 @@ func TestHandler_Execute_NoPublisher(t *testing.T) {
 	}
 
 	// Check variable was still set
-	if got, exists := ctx.Variables["foo"]; !exists || got != "bar" {
+	if got, exists := ctx.Vars["foo"]; !exists || got != "bar" {
 		t.Errorf("Variable 'foo' = %v, want 'bar'", got)
 	}
 }

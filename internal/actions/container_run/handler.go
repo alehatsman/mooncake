@@ -86,11 +86,11 @@ func (h *Handler) RunRaw(ctx actions.Context, step *config.Step) (actions.Result
 func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, error) {
 	c := step.Container
 
-	name, err := ctx.GetTemplate().Render(c.Name, ctx.GetVariables())
+	name, err := ctx.Template().Render(c.Name, ctx.Variables())
 	if err != nil {
 		return nil, fmt.Errorf("render container.name: %w", err)
 	}
-	image, err := ctx.GetTemplate().Render(c.Image, ctx.GetVariables())
+	image, err := ctx.Template().Render(c.Image, ctx.Variables())
 	if err != nil {
 		return nil, fmt.Errorf("render container.image: %w", err)
 	}
@@ -145,7 +145,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 			res.Reason = fmt.Sprintf("would remove container %s", name)
 			return res, nil
 		}
-		ctx.GetLogger().Infof("  Removing container %s via %s", name, rt.Name())
+		ctx.Logger().Infof("  Removing container %s via %s", name, rt.Name())
 		if err := rt.ContainerRemove(bg, name, true); err != nil {
 			return nil, err
 		}
@@ -181,7 +181,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 
 		// Recreate: drop the existing container before creating.
 		if cur.Exists && recreate {
-			ctx.GetLogger().Infof("  Recreating container %s via %s", name, rt.Name())
+			ctx.Logger().Infof("  Recreating container %s via %s", name, rt.Name())
 			if err := rt.ContainerRemove(bg, name, true); err != nil {
 				return nil, err
 			}
@@ -197,7 +197,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		// early-return above. The only remaining missing-container
 		// case is `state: running`: create+start.
 		if !cur.Exists {
-			ctx.GetLogger().Infof("  Creating container %s (image=%s) via %s", name, image, rt.Name())
+			ctx.Logger().Infof("  Creating container %s (image=%s) via %s", name, image, rt.Name())
 			if err := rt.ContainerCreate(bg, spec); err != nil {
 				return nil, err
 			}
@@ -207,7 +207,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 
 		// Container exists; bring it to the desired running flag.
 		if wantRunning && !cur.Running {
-			ctx.GetLogger().Infof("  Starting container %s via %s", name, rt.Name())
+			ctx.Logger().Infof("  Starting container %s via %s", name, rt.Name())
 			if err := rt.ContainerStart(bg, name); err != nil {
 				return nil, err
 			}
@@ -215,7 +215,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 			return res, nil
 		}
 		if !wantRunning && cur.Running {
-			ctx.GetLogger().Infof("  Stopping container %s via %s", name, rt.Name())
+			ctx.Logger().Infof("  Stopping container %s via %s", name, rt.Name())
 			if err := rt.ContainerStop(bg, name); err != nil {
 				return nil, err
 			}
@@ -240,7 +240,7 @@ func renderStepEnv(ctx actions.Context, env map[string]string) (map[string]strin
 	}
 	out := make(map[string]string, len(env))
 	for k, v := range env {
-		rendered, err := ctx.GetTemplate().Render(v, ctx.GetVariables())
+		rendered, err := ctx.Template().Render(v, ctx.Variables())
 		if err != nil {
 			return nil, fmt.Errorf("render env %s: %w", k, err)
 		}
@@ -292,7 +292,7 @@ func renderScalar(ctx actions.Context, v, field string) (string, error) {
 	if v == "" {
 		return "", nil
 	}
-	out, err := ctx.GetTemplate().Render(v, ctx.GetVariables())
+	out, err := ctx.Template().Render(v, ctx.Variables())
 	if err != nil {
 		return "", fmt.Errorf("render container.%s: %w", field, err)
 	}
@@ -305,7 +305,7 @@ func renderStringSlice(ctx actions.Context, vals []string, field string) ([]stri
 	}
 	out := make([]string, len(vals))
 	for i, v := range vals {
-		rendered, err := ctx.GetTemplate().Render(v, ctx.GetVariables())
+		rendered, err := ctx.Template().Render(v, ctx.Variables())
 		if err != nil {
 			return nil, fmt.Errorf("render container.%s[%d]: %w", field, i, err)
 		}
@@ -320,7 +320,7 @@ func renderStringMap(ctx actions.Context, m map[string]string, field string) (ma
 	}
 	out := make(map[string]string, len(m))
 	for k, v := range m {
-		rendered, err := ctx.GetTemplate().Render(v, ctx.GetVariables())
+		rendered, err := ctx.Template().Render(v, ctx.Variables())
 		if err != nil {
 			return nil, fmt.Errorf("render container.%s[%s]: %w", field, k, err)
 		}

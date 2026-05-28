@@ -33,19 +33,19 @@ func credentialEnv(ctx actions.Context, creds *config.GitCredentials) ([]string,
 		return nil, func() {}, nil
 	}
 
-	username, err := ctx.GetTemplate().Render(creds.Username, ctx.GetVariables())
+	username, err := ctx.Template().Render(creds.Username, ctx.Variables())
 	if err != nil {
 		return nil, func() {}, fmt.Errorf("render username: %w", err)
 	}
-	password, err := ctx.GetTemplate().Render(creds.Password, ctx.GetVariables())
+	password, err := ctx.Template().Render(creds.Password, ctx.Variables())
 	if err != nil {
 		return nil, func() {}, fmt.Errorf("render password: %w", err)
 	}
-	sshKey, err := ctx.GetTemplate().Render(creds.SSHKey, ctx.GetVariables())
+	sshKey, err := ctx.Template().Render(creds.SSHKey, ctx.Variables())
 	if err != nil {
 		return nil, func() {}, fmt.Errorf("render ssh_key: %w", err)
 	}
-	sshOpts, err := ctx.GetTemplate().Render(creds.SSHOptions, ctx.GetVariables())
+	sshOpts, err := ctx.Template().Render(creds.SSHOptions, ctx.Variables())
 	if err != nil {
 		return nil, func() {}, fmt.Errorf("render ssh_options: %w", err)
 	}

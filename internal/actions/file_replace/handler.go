@@ -228,7 +228,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		}
 	}()
 
-	renderedPath, err := ec.Svc.PathUtil.ExpandPath(fr.Path, ec.CurrentDir, ctx.GetVariables())
+	renderedPath, err := ec.Svc.PathUtil.ExpandPath(fr.Path, ec.CurrentDir, ctx.Variables())
 	if err != nil {
 		return result, fmt.Errorf("failed to expand path: %w", err)
 	}
@@ -241,11 +241,11 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		return result, fmt.Errorf("failed to read file %s: %w", renderedPath, err)
 	}
 
-	renderedPattern, err := ctx.GetTemplate().Render(fr.Pattern, ctx.GetVariables())
+	renderedPattern, err := ctx.Template().Render(fr.Pattern, ctx.Variables())
 	if err != nil {
 		return result, fmt.Errorf("failed to render pattern: %w", err)
 	}
-	renderedReplace, err := ctx.GetTemplate().Render(fr.Replace, ctx.GetVariables())
+	renderedReplace, err := ctx.Template().Render(fr.Replace, ctx.Variables())
 	if err != nil {
 		return result, fmt.Errorf("failed to render replacement: %w", err)
 	}
@@ -286,9 +286,9 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 	}
 
 	result.Changed = true
-	ctx.GetLogger().Infof("  Replaced %d occurrence(s) in %s", replacementCount, renderedPath)
+	ctx.Logger().Infof("  Replaced %d occurrence(s) in %s", replacementCount, renderedPath)
 
-	if pub := ctx.GetEventPublisher(); pub != nil {
+	if pub := ctx.EventPublisher(); pub != nil {
 		pub.Publish(events.Event{
 			Type: events.EventFileUpdated,
 			Data: events.FileOperationData{

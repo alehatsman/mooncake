@@ -114,7 +114,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 	result := executor.NewResult()
 	result.Checkable = true
 
-	path, err := ec.Svc.PathUtil.ExpandPath(tl.Path, ec.CurrentDir, ctx.GetVariables())
+	path, err := ec.Svc.PathUtil.ExpandPath(tl.Path, ec.CurrentDir, ctx.Variables())
 	if err != nil {
 		return result, fmt.Errorf("text.line: expand path: %w", err)
 	}
@@ -184,9 +184,9 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 
 	result.Changed = true
 	result.Reason = plan.reason
-	ctx.GetLogger().Infof("  text.line: %s (%s)", path, plan.operation)
+	ctx.Logger().Infof("  text.line: %s (%s)", path, plan.operation)
 
-	if pub := ctx.GetEventPublisher(); pub != nil {
+	if pub := ctx.EventPublisher(); pub != nil {
 		pub.Publish(events.Event{
 			Type: events.EventFileUpdated,
 			Data: events.FileOperationData{
@@ -211,8 +211,8 @@ type resolved struct {
 func renderFields(ctx actions.Context, tl *config.TextLine) (resolved, error) {
 	r := resolved{state: normalizeState(tl.State)}
 
-	tr := ctx.GetTemplate()
-	vars := ctx.GetVariables()
+	tr := ctx.Template()
+	vars := ctx.Variables()
 	var err error
 	r.line, err = tr.Render(tl.Line, vars)
 	if err != nil {

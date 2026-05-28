@@ -131,7 +131,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 	}
 	result.PublishObservation(envelope, addr)
 
-	ctx.GetLogger().Debugf("%s %s = open:%v", actionName, addr, obs.Open)
+	ctx.Logger().Debugf("%s %s = open:%v", actionName, addr, obs.Open)
 	return result, nil
 }
 
@@ -155,7 +155,7 @@ func resolveHost(ctx actions.Context, host string) (string, error) {
 	if host == "" {
 		return "localhost", nil
 	}
-	rendered, err := ctx.GetTemplate().Render(host, ctx.GetVariables())
+	rendered, err := ctx.Template().Render(host, ctx.Variables())
 	if err != nil {
 		return "", &executor.RenderError{Field: actionName + ".host", Cause: err}
 	}

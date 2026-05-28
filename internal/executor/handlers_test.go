@@ -3,100 +3,10 @@ package executor
 import (
 	"testing"
 
-	"github.com/alehatsman/mooncake/internal/actions"
 	"github.com/alehatsman/mooncake/internal/config"
 	"github.com/alehatsman/mooncake/internal/expression"
 	"github.com/alehatsman/mooncake/internal/logger"
 )
-
-// TestHandleVars tests variable handling
-func TestHandleVars(t *testing.T) {
-	testLogger := logger.NewTestLogger()
-
-	vars := map[string]interface{}{
-		"key1": "value1",
-		"key2": 42,
-	}
-
-	step := config.Step{
-		Vars: &vars,
-	}
-
-	ec := &ExecutionContext{
-		Svc: &RunServices{
-			Logger: testLogger,
-			Mode:   actions.ModeApply,
-		},
-		Scope: NewVariableScope(),
-	}
-
-	err := HandleVars(step, ec)
-	if err != nil {
-		t.Fatalf("HandleVars failed: %v", err)
-	}
-
-	// Check variables were set
-	if ec.Scope.User["key1"] != "value1" {
-		t.Errorf("Scope.User[key1] = %v, want 'value1'", ec.Scope.User["key1"])
-	}
-	if ec.Scope.User["key2"] != 42 {
-		t.Errorf("Scope.User[key2] = %v, want 42", ec.Scope.User["key2"])
-	}
-}
-
-// TestHandleVars_DryRun tests variable handling in dry-run mode
-func TestHandleVars_DryRun(t *testing.T) {
-	testLogger := logger.NewTestLogger()
-
-	vars := map[string]interface{}{
-		"test": "value",
-	}
-
-	step := config.Step{
-		Vars: &vars,
-	}
-
-	ec := &ExecutionContext{
-		Svc: &RunServices{
-			Logger: testLogger,
-			Mode:   actions.ModePlan,
-		},
-		Scope: NewVariableScope(),
-	}
-
-	err := HandleVars(step, ec)
-	if err != nil {
-		t.Fatalf("HandleVars failed: %v", err)
-	}
-
-	// Variables should still be set in dry-run mode
-	if ec.Scope.User["test"] != "value" {
-		t.Error("Variables should be set even in dry-run mode")
-	}
-}
-
-// TestHandleVars_EmptyVars tests handling empty variables
-func TestHandleVars_EmptyVars(t *testing.T) {
-	testLogger := logger.NewTestLogger()
-
-	vars := map[string]interface{}{}
-
-	step := config.Step{
-		Vars: &vars,
-	}
-
-	ec := &ExecutionContext{
-		Svc: &RunServices{
-			Logger: testLogger,
-		},
-		Scope: NewVariableScope(),
-	}
-
-	err := HandleVars(step, ec)
-	if err != nil {
-		t.Fatalf("HandleVars failed: %v", err)
-	}
-}
 
 // TestHandleWhenExpression tests when condition evaluation
 func TestHandleWhenExpression(t *testing.T) {

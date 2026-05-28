@@ -28,13 +28,13 @@ import (
 //
 //	func (h *Handler) Execute(ctx actions.Context, step *config.Step) (actions.Result, error) {
 //	    // Render template strings
-//	    path, err := ctx.GetTemplate().RenderString(step.FileWrite.Path, ctx.GetVariables())
+//	    path, err := ctx.Template().RenderString(step.FileWrite.Path, ctx.Variables())
 //
 //	    // Log progress
-//	    ctx.GetLogger().Infof("Creating file at %s", path)
+//	    ctx.Logger().Infof("Creating file at %s", path)
 //
 //	    // Emit events for observability
-//	    ctx.GetEventPublisher().Publish(events.Event{
+//	    ctx.EventPublisher().Publish(events.Event{
 //	        Type: events.EventFileCreated,
 //	        Data: events.FileOperationData{Path: path},
 //	    })
@@ -45,7 +45,7 @@ import (
 //	    return result, nil
 //	}
 type Context interface {
-	// GetTemplate returns the template renderer for processing Jinja2-like templates.
+	// Template returns the template renderer for processing Jinja2-like templates.
 	//
 	// Use this to render:
 	//   - Path strings with variables: "{{ home }}/{{ item }}"
@@ -53,9 +53,9 @@ type Context interface {
 	//   - Filters: "{{ path | expanduser }}"
 	//
 	// The renderer has access to all variables in scope (step vars, globals, facts).
-	GetTemplate() template.Renderer
+	Template() template.Renderer
 
-	// GetEvaluator returns the expression evaluator for conditions.
+	// Evaluator returns the expression evaluator for conditions.
 	//
 	// Use this to evaluate:
 	//   - when: "os == 'linux' && arch == 'amd64'"
@@ -63,9 +63,9 @@ type Context interface {
 	//   - failed_when: "result.rc != 0 and result.rc != 5"
 	//
 	// Returns interface{} which should be cast to bool for conditions.
-	GetEvaluator() expression.Evaluator
+	Evaluator() expression.Evaluator
 
-	// GetLogger returns the logger for handler output.
+	// Logger returns the logger for handler output.
 	//
 	// Use levels appropriately:
 	//   - Infof: User-visible progress ("Installing package nginx")
@@ -74,9 +74,9 @@ type Context interface {
 	//   - Errorf: Failures ("Failed to create directory: permission denied")
 	//
 	// Output is formatted for TUI or text mode automatically.
-	GetLogger() logger.Logger
+	Logger() logger.Logger
 
-	// GetVariables returns all variables in the current scope.
+	// Variables returns all variables in the current scope.
 	//
 	// Includes:
 	//   - Step-level vars (defined in step.Vars)
@@ -86,9 +86,9 @@ type Context interface {
 	//   - Loop context (item, item_index when in with_items/with_filetree)
 	//
 	// Keys are strings, values are interface{} (string, int, bool, []interface{}, map[string]interface{}).
-	GetVariables() map[string]interface{}
+	Variables() map[string]interface{}
 
-	// GetEventPublisher returns the event publisher for observability.
+	// EventPublisher returns the event publisher for observability.
 	//
 	// Emit events for:
 	//   - State changes (EventFileCreated, EventServiceStarted)
@@ -99,7 +99,7 @@ type Context interface {
 	//   - Artifact collector (for rollback support)
 	//   - External observers (CI/CD integrations)
 	//   - Audit logs
-	GetEventPublisher() events.Publisher
+	EventPublisher() events.Publisher
 
 	// Mode reports the dispatch mode for this context. Handlers
 	// implementing Runner consult this to decide whether to perform side
@@ -123,7 +123,7 @@ type Context interface {
 	// security.Privileged and spec-72 for the rationale.
 	Privileged() *security.Privileged
 
-	// GetCurrentStepID returns the unique ID of the currently executing step.
+	// StepID returns the unique ID of the currently executing step.
 	//
 	// Format: "step-{global_step_number}"
 	//
@@ -131,10 +131,10 @@ type Context interface {
 	//   - Emitting events (so they're associated with the step)
 	//   - Creating temporary files (include step ID to avoid conflicts)
 	//   - Logging (though step ID is usually added automatically)
-	GetCurrentStepID() string
+	StepID() string
 
 	// MergeUserVars merges the provided key-value pairs into the user variable scope.
-	// Use this instead of mutating the map returned by GetVariables() directly,
+	// Use this instead of mutating the map returned by Variables() directly,
 	// so that the write goes to the correct typed bucket (Scope.User when available).
 	MergeUserVars(vars map[string]interface{})
 

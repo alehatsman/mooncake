@@ -107,7 +107,7 @@ func (h *Handler) runApply(ctx actions.Context, step *config.Step) (actions.Resu
 	// Get base directory
 	baseDir := ec.CurrentDir
 	if raps.BaseDir != "" {
-		renderedBaseDir, err := ec.Svc.PathUtil.ExpandPath(raps.BaseDir, ec.CurrentDir, ctx.GetVariables())
+		renderedBaseDir, err := ec.Svc.PathUtil.ExpandPath(raps.BaseDir, ec.CurrentDir, ctx.Variables())
 		if err != nil {
 			return result, fmt.Errorf("failed to expand base_dir: %w", err)
 		}
@@ -119,14 +119,14 @@ func (h *Handler) runApply(ctx actions.Context, step *config.Step) (actions.Resu
 	patchsetContent := ""
 	if raps.Patchset != "" {
 		// Render inline patchset
-		renderedPatchset, patchErr := ctx.GetTemplate().Render(raps.Patchset, ctx.GetVariables())
+		renderedPatchset, patchErr := ctx.Template().Render(raps.Patchset, ctx.Variables())
 		if patchErr != nil {
 			return result, fmt.Errorf("failed to render patchset: %w", patchErr)
 		}
 		patchsetContent = renderedPatchset
 	} else {
 		// Read patchset from file
-		renderedPatchsetFile, pathErr := ec.Svc.PathUtil.ExpandPath(raps.PatchsetFile, ec.CurrentDir, ctx.GetVariables())
+		renderedPatchsetFile, pathErr := ec.Svc.PathUtil.ExpandPath(raps.PatchsetFile, ec.CurrentDir, ctx.Variables())
 		if pathErr != nil {
 			return result, fmt.Errorf("failed to expand patchset_file path: %w", pathErr)
 		}
@@ -159,7 +159,7 @@ func (h *Handler) runApply(ctx actions.Context, step *config.Step) (actions.Resu
 
 	// Write output file if specified
 	if raps.OutputFile != "" {
-		outputPath, pathErr := ec.Svc.PathUtil.ExpandPath(raps.OutputFile, ec.CurrentDir, ctx.GetVariables())
+		outputPath, pathErr := ec.Svc.PathUtil.ExpandPath(raps.OutputFile, ec.CurrentDir, ctx.Variables())
 		if pathErr != nil {
 			return result, fmt.Errorf("failed to expand output_file path: %w", pathErr)
 		}
@@ -186,7 +186,7 @@ func (h *Handler) runApply(ctx actions.Context, step *config.Step) (actions.Resu
 		}
 	}
 
-	ctx.GetLogger().Infof("  Applied patchset: %d succeeded, %d failed", successCount, failureCount)
+	ctx.Logger().Infof("  Applied patchset: %d succeeded, %d failed", successCount, failureCount)
 
 	// Set result data
 	result.SetData(map[string]interface{}{
@@ -436,7 +436,7 @@ func (h *Handler) applyPatchset(ctx actions.Context, baseDir string, filePatches
 			if raps.Backup {
 				backupPath := targetPath + ".bak"
 				if err := os.WriteFile(backupPath, originalContent, 0600); err != nil {
-					ctx.GetLogger().Debugf("  Warning: Failed to create backup for %s: %v", filePatch.Path, err)
+					ctx.Logger().Debugf("  Warning: Failed to create backup for %s: %v", filePatch.Path, err)
 				}
 			}
 
@@ -452,7 +452,7 @@ func (h *Handler) applyPatchset(ctx actions.Context, baseDir string, filePatches
 				}
 			} else {
 				// Emit event
-				publisher := ctx.GetEventPublisher()
+				publisher := ctx.EventPublisher()
 				if publisher != nil {
 					publisher.Publish(events.Event{
 						Type: events.EventFileUpdated,
@@ -599,7 +599,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 
 	baseDir := ec.CurrentDir
 	if raps.BaseDir != "" {
-		renderedBaseDir, err := ec.Svc.PathUtil.ExpandPath(raps.BaseDir, ec.CurrentDir, ctx.GetVariables())
+		renderedBaseDir, err := ec.Svc.PathUtil.ExpandPath(raps.BaseDir, ec.CurrentDir, ctx.Variables())
 		if err != nil {
 			return result, fmt.Errorf("failed to expand base_dir: %w", err)
 		}
@@ -608,13 +608,13 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 
 	patchsetContent := ""
 	if raps.Patchset != "" {
-		rendered, perr := ctx.GetTemplate().Render(raps.Patchset, ctx.GetVariables())
+		rendered, perr := ctx.Template().Render(raps.Patchset, ctx.Variables())
 		if perr != nil {
 			return result, fmt.Errorf("failed to render patchset: %w", perr)
 		}
 		patchsetContent = rendered
 	} else {
-		renderedFile, ferr := ec.Svc.PathUtil.ExpandPath(raps.PatchsetFile, ec.CurrentDir, ctx.GetVariables())
+		renderedFile, ferr := ec.Svc.PathUtil.ExpandPath(raps.PatchsetFile, ec.CurrentDir, ctx.Variables())
 		if ferr != nil {
 			return result, fmt.Errorf("failed to expand patchset_file: %w", ferr)
 		}

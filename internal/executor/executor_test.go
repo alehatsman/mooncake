@@ -148,43 +148,6 @@ func TestVariableScope_ApplyStartedAt_OmittedWhenZero(t *testing.T) {
 	}
 }
 
-func TestHandleVars(t *testing.T) {
-	testLogger := logger.NewTestLogger()
-
-	vars := map[string]interface{}{
-		"new_key": "new_value",
-	}
-
-	scope := executor.NewVariableScope()
-	scope.User["existing_key"] = "existing_value"
-	ec := &executor.ExecutionContext{
-		Svc: &executor.RunServices{
-			Logger: testLogger,
-		},
-		Scope: scope,
-	}
-
-	step := config.Step{
-		Name: "test vars",
-		Vars: &vars,
-	}
-
-	err := executor.HandleVars(step, ec)
-	if err != nil {
-		t.Fatalf("executor.HandleVars() error = %v", err)
-	}
-
-	// Verify new variable was added
-	if ec.Scope.User["new_key"] != "new_value" {
-		t.Errorf("executor.HandleVars() new_key = %v, want 'new_value'", ec.Scope.User["new_key"])
-	}
-
-	// Verify existing variable is preserved
-	if ec.Scope.User["existing_key"] != "existing_value" {
-		t.Errorf("executor.HandleVars() existing_key = %v, want 'existing_value'", ec.Scope.User["existing_key"])
-	}
-}
-
 func TestHandleWhenExpression(t *testing.T) {
 	renderer, err := template.NewPongo2Renderer()
 	if err != nil {
@@ -279,127 +242,6 @@ func TestStartConfig(t *testing.T) {
 	}
 }
 
-func TestParseFileMode(t *testing.T) {
-	tests := []struct {
-		name        string
-		modeStr     string
-		defaultMode uint32
-		want        uint32
-	}{
-		{
-			name:        "valid octal",
-			modeStr:     "0755",
-			defaultMode: 0644,
-			want:        0755,
-		},
-		{
-			name:        "valid octal 0644",
-			modeStr:     "0644",
-			defaultMode: 0755,
-			want:        0644,
-		},
-		{
-			name:        "empty string uses default",
-			modeStr:     "",
-			defaultMode: 0755,
-			want:        0755,
-		},
-		{
-			name:        "invalid string uses default",
-			modeStr:     "invalid",
-			defaultMode: 0644,
-			want:        0644,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := executor.ParseFileMode(tt.modeStr, os.FileMode(tt.defaultMode))
-			if uint32(got) != tt.want {
-				t.Errorf("executor.ParseFileMode() = %o, want %o", got, tt.want)
-			}
-		})
-	}
-}
-
-func TestShouldSkipByTags(t *testing.T) {
-	tests := []struct {
-		name       string
-		stepTags   []string
-		filterTags []string
-		wantSkip   bool
-	}{
-		{
-			name:       "no filter tags - execute all",
-			stepTags:   []string{"dev"},
-			filterTags: []string{},
-			wantSkip:   false,
-		},
-		{
-			name:       "no step tags with filter - run (untagged steps always run)",
-			stepTags:   []string{},
-			filterTags: []string{"dev"},
-			wantSkip:   false,
-		},
-		{
-			name:       "matching single tag",
-			stepTags:   []string{"dev"},
-			filterTags: []string{"dev"},
-			wantSkip:   false,
-		},
-		{
-			name:       "non-matching single tag",
-			stepTags:   []string{"prod"},
-			filterTags: []string{"dev"},
-			wantSkip:   true,
-		},
-		{
-			name:       "matching one of multiple step tags",
-			stepTags:   []string{"dev", "test"},
-			filterTags: []string{"dev"},
-			wantSkip:   false,
-		},
-		{
-			name:       "matching one of multiple filter tags",
-			stepTags:   []string{"dev"},
-			filterTags: []string{"dev", "prod"},
-			wantSkip:   false,
-		},
-		{
-			name:       "matching any tag",
-			stepTags:   []string{"dev", "test", "deploy"},
-			filterTags: []string{"prod", "deploy"},
-			wantSkip:   false,
-		},
-		{
-			name:       "no matching tags",
-			stepTags:   []string{"dev", "test"},
-			filterTags: []string{"prod", "deploy"},
-			wantSkip:   true,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			step := config.Step{
-				Name: "test step",
-				Tags: tt.stepTags,
-			}
-			ec := &executor.ExecutionContext{
-				Svc: &executor.RunServices{
-					Tags:     tt.filterTags,
-					Redactor: security.NewRedactor(),
-				},
-			}
-
-			got := executor.ShouldSkipByTags(step, ec)
-			if got != tt.wantSkip {
-				t.Errorf("executor.ShouldSkipByTags() = %v, want %v", got, tt.wantSkip)
-			}
-		})
-	}
-}
-
 func TestMergeVariables(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -439,34 +281,6 @@ func TestMergeVariables(t *testing.T) {
 				}
 			}
 		})
-	}
-}
-
-func TestMarkStepFailed(t *testing.T) {
-	testLogger := logger.NewTestLogger()
-	result := executor.NewResult()
-	scope := executor.NewVariableScope()
-	ec := &executor.ExecutionContext{
-		Svc: &executor.RunServices{
-			Logger: testLogger,
-		},
-		Scope: scope,
-	}
-	step := config.Step{
-		Name: "test",
-		As:   "result",
-	}
-
-	executor.MarkStepFailed(result, step, ec)
-
-	if !result.Failed {
-		t.Error("executor.MarkStepFailed() should set Failed to true")
-	}
-	if result.Rc != 1 {
-		t.Errorf("executor.MarkStepFailed() Rc = %v, want 1", result.Rc)
-	}
-	if _, ok := scope.Results["result"]; !ok {
-		t.Error("executor.MarkStepFailed() should register result in Scope.Results")
 	}
 }
 

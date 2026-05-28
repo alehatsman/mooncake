@@ -88,7 +88,7 @@ func (h *Handler) RunRaw(ctx actions.Context, step *config.Step) (actions.Result
 func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, error) {
 	g := step.GitCheckout
 
-	ref, err := ctx.GetTemplate().Render(g.Ref, ctx.GetVariables())
+	ref, err := ctx.Template().Render(g.Ref, ctx.Variables())
 	if err != nil {
 		return nil, fmt.Errorf("git.checkout: render ref: %w", err)
 	}
@@ -215,7 +215,7 @@ func apply(ctx actions.Context, g *config.GitCheckout, ref, targetSHA, dest, bef
 		args = append(args, "--force")
 	}
 	args = append(args, ref)
-	ctx.GetLogger().Debugf("git.checkout: %s", strings.Join(args, " "))
+	ctx.Logger().Debugf("git.checkout: %s", strings.Join(args, " "))
 	if err := runGit(dest, args...); err != nil {
 		result.SetFailed(true)
 		return result, fmt.Errorf("git.checkout: %w", err)
@@ -280,9 +280,9 @@ func captureGit(cwd string, args ...string) (string, error) {
 
 func expandDest(ctx actions.Context, dest string) (string, error) {
 	if ec, ok := ctx.(*executor.ExecutionContext); ok {
-		return ec.Svc.PathUtil.ExpandPath(dest, ec.CurrentDir, ctx.GetVariables())
+		return ec.Svc.PathUtil.ExpandPath(dest, ec.CurrentDir, ctx.Variables())
 	}
-	return ctx.GetTemplate().Render(dest, ctx.GetVariables())
+	return ctx.Template().Render(dest, ctx.Variables())
 }
 
 func shortSHA(sha string) string {

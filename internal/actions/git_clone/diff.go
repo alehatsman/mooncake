@@ -88,7 +88,7 @@ func expandDestForDiff(ctx actions.Context, dest string) string {
 	if ctx == nil {
 		return dest
 	}
-	out, err := ctx.GetTemplate().Render(dest, ctx.GetVariables())
+	out, err := ctx.Template().Render(dest, ctx.Variables())
 	if err != nil {
 		return dest
 	}

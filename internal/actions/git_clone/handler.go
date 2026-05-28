@@ -111,11 +111,11 @@ func (h *Handler) RunRaw(ctx actions.Context, step *config.Step) (actions.Result
 func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, error) {
 	g := step.GitClone
 
-	repo, err := ctx.GetTemplate().Render(g.Repo, ctx.GetVariables())
+	repo, err := ctx.Template().Render(g.Repo, ctx.Variables())
 	if err != nil {
 		return nil, fmt.Errorf("git.clone: render repo: %w", err)
 	}
-	ref, err := ctx.GetTemplate().Render(g.Ref, ctx.GetVariables())
+	ref, err := ctx.Template().Render(g.Ref, ctx.Variables())
 	if err != nil {
 		return nil, fmt.Errorf("git.clone: render ref: %w", err)
 	}
@@ -288,7 +288,7 @@ func runClone(ctx actions.Context, g *config.GitClone, repo, ref, dest string, e
 	}
 	args = append(args, repo, dest)
 
-	ctx.GetLogger().Debugf("git.clone: %s", strings.Join(args, " "))
+	ctx.Logger().Debugf("git.clone: %s", strings.Join(args, " "))
 	if err := runGit(ctx.Ctx(), "", env, args...); err != nil {
 		return fmt.Errorf("git.clone: %w", err)
 	}
@@ -463,10 +463,10 @@ func captureGit(ctx context.Context, cwd string, env []string, args ...string) (
 
 func expandDest(ctx actions.Context, dest string) (string, error) {
 	if ec, ok := ctx.(*executor.ExecutionContext); ok {
-		return ec.Svc.PathUtil.ExpandPath(dest, ec.CurrentDir, ctx.GetVariables())
+		return ec.Svc.PathUtil.ExpandPath(dest, ec.CurrentDir, ctx.Variables())
 	}
 	// Fallback for tests with bare contexts: render only.
-	return ctx.GetTemplate().Render(dest, ctx.GetVariables())
+	return ctx.Template().Render(dest, ctx.Variables())
 }
 
 func shortSHA(sha string) string {

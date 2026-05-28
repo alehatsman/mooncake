@@ -135,12 +135,12 @@ func (h *Handler) runApply(ctx actions.Context, step *config.Step) (actions.Resu
 	}
 
 	// Render paths
-	renderedSrc, err := ec.Svc.PathUtil.ExpandPath(unarchiveAction.Src, ec.CurrentDir, ctx.GetVariables())
+	renderedSrc, err := ec.Svc.PathUtil.ExpandPath(unarchiveAction.Src, ec.CurrentDir, ctx.Variables())
 	if err != nil {
 		return nil, fmt.Errorf("failed to expand src path: %w", err)
 	}
 
-	renderedDest, err := ec.Svc.PathUtil.ExpandPath(unarchiveAction.Dest, ec.CurrentDir, ctx.GetVariables())
+	renderedDest, err := ec.Svc.PathUtil.ExpandPath(unarchiveAction.Dest, ec.CurrentDir, ctx.Variables())
 	if err != nil {
 		return nil, fmt.Errorf("failed to expand dest path: %w", err)
 	}
@@ -148,7 +148,7 @@ func (h *Handler) runApply(ctx actions.Context, step *config.Step) (actions.Resu
 	// Render creates path if specified
 	var renderedCreates string
 	if unarchiveAction.Creates != "" {
-		renderedCreates, err = ec.Svc.PathUtil.ExpandPath(unarchiveAction.Creates, ec.CurrentDir, ctx.GetVariables())
+		renderedCreates, err = ec.Svc.PathUtil.ExpandPath(unarchiveAction.Creates, ec.CurrentDir, ctx.Variables())
 		if err != nil {
 			return nil, fmt.Errorf("failed to expand creates path: %w", err)
 		}
@@ -172,7 +172,7 @@ func (h *Handler) runApply(ctx actions.Context, step *config.Step) (actions.Resu
 	// Check idempotency - skip if creates path exists
 	if renderedCreates != "" {
 		if _, statErr := os.Stat(renderedCreates); statErr == nil {
-			ctx.GetLogger().Debugf("  Skipping extraction: creates path exists: %s", renderedCreates)
+			ctx.Logger().Debugf("  Skipping extraction: creates path exists: %s", renderedCreates)
 			return result, nil
 		}
 	}
@@ -197,7 +197,7 @@ func (h *Handler) runApply(ctx actions.Context, step *config.Step) (actions.Resu
 
 	// Ensure destination directory exists
 	mode := h.parseFileMode(unarchiveAction.Mode, defaultDirMode)
-	ctx.GetLogger().Debugf("  Ensuring destination directory: %s", renderedDest)
+	ctx.Logger().Debugf("  Ensuring destination directory: %s", renderedDest)
 	if mkdirErr := os.MkdirAll(renderedDest, mode); mkdirErr != nil {
 		result.Failed = true
 		return result, fmt.Errorf("failed to create destination directory: %w", mkdirErr)
@@ -210,14 +210,14 @@ func (h *Handler) runApply(ctx actions.Context, step *config.Step) (actions.Resu
 	// above is still the cheaper short-circuit when authors provide it.
 	matched, checkErr := h.archiveMatchesDest(format, renderedSrc, renderedDest, unarchiveAction.StripComponents)
 	if checkErr != nil {
-		ctx.GetLogger().Debugf("  Idempotency pre-check error (will re-extract): %v", checkErr)
+		ctx.Logger().Debugf("  Idempotency pre-check error (will re-extract): %v", checkErr)
 	} else if matched {
-		ctx.GetLogger().Debugf("  Skipping extraction: archive contents already present at %s", renderedDest)
+		ctx.Logger().Debugf("  Skipping extraction: archive contents already present at %s", renderedDest)
 		return result, nil
 	}
 
 	// Extract archive based on format
-	ctx.GetLogger().Debugf("  Extracting %s archive: %s -> %s", format.String(), renderedSrc, renderedDest)
+	ctx.Logger().Debugf("  Extracting %s archive: %s -> %s", format.String(), renderedSrc, renderedDest)
 	var stats *ExtractionStats
 	switch format {
 	case ArchiveTar:
@@ -238,10 +238,10 @@ func (h *Handler) runApply(ctx actions.Context, step *config.Step) (actions.Resu
 
 	result.Changed = stats.FilesExtracted > 0 || stats.DirsCreated > 0
 
-	ctx.GetLogger().Debugf("  Extracted %d files, %d directories (%d bytes)", stats.FilesExtracted, stats.DirsCreated, stats.BytesExtracted)
+	ctx.Logger().Debugf("  Extracted %d files, %d directories (%d bytes)", stats.FilesExtracted, stats.DirsCreated, stats.BytesExtracted)
 
 	// Emit event
-	publisher := ctx.GetEventPublisher()
+	publisher := ctx.EventPublisher()
 	if publisher != nil {
 		publisher.Publish(events.Event{
 			Type: events.EventArchiveExtracted,
@@ -322,7 +322,7 @@ func (h *Handler) extractTarArchive(srcPath, destDir string, stripComponents int
 	}
 	defer func() {
 		if closeErr := file.Close(); closeErr != nil {
-			ctx.GetLogger().Debugf("Failed to close archive file %s: %v", srcPath, closeErr)
+			ctx.Logger().Debugf("Failed to close archive file %s: %v", srcPath, closeErr)
 		}
 	}()
 
@@ -337,7 +337,7 @@ func (h *Handler) extractTarGzArchive(srcPath, destDir string, stripComponents i
 	}
 	defer func() {
 		if closeErr := file.Close(); closeErr != nil {
-			ctx.GetLogger().Debugf("Failed to close archive file %s: %v", srcPath, closeErr)
+			ctx.Logger().Debugf("Failed to close archive file %s: %v", srcPath, closeErr)
 		}
 	}()
 
@@ -347,7 +347,7 @@ func (h *Handler) extractTarGzArchive(srcPath, destDir string, stripComponents i
 	}
 	defer func() {
 		if closeErr := gzReader.Close(); closeErr != nil {
-			ctx.GetLogger().Debugf("Failed to close gzip reader for %s: %v", srcPath, closeErr)
+			ctx.Logger().Debugf("Failed to close gzip reader for %s: %v", srcPath, closeErr)
 		}
 	}()
 
@@ -445,7 +445,7 @@ func (h *Handler) extractTarFile(reader io.Reader, targetPath string, mode int64
 	}
 	defer func() {
 		if closeErr := outFile.Close(); closeErr != nil {
-			ctx.GetLogger().Debugf("Failed to close output file %s: %v", targetPath, closeErr)
+			ctx.Logger().Debugf("Failed to close output file %s: %v", targetPath, closeErr)
 		}
 	}()
 
@@ -467,7 +467,7 @@ func (h *Handler) extractZipArchive(srcPath, destDir string, stripComponents int
 	}
 	defer func() {
 		if closeErr := zipReader.Close(); closeErr != nil {
-			ctx.GetLogger().Debugf("Failed to close zip archive %s: %v", srcPath, closeErr)
+			ctx.Logger().Debugf("Failed to close zip archive %s: %v", srcPath, closeErr)
 		}
 	}()
 
@@ -524,7 +524,7 @@ func (h *Handler) extractZipFile(file *zip.File, targetPath string, ctx actions.
 	}
 	defer func() {
 		if closeErr := srcFile.Close(); closeErr != nil {
-			ctx.GetLogger().Debugf("Failed to close source file %s: %v", file.Name, closeErr)
+			ctx.Logger().Debugf("Failed to close source file %s: %v", file.Name, closeErr)
 		}
 	}()
 
@@ -541,7 +541,7 @@ func (h *Handler) extractZipFile(file *zip.File, targetPath string, ctx actions.
 	}
 	defer func() {
 		if closeErr := outFile.Close(); closeErr != nil {
-			ctx.GetLogger().Debugf("Failed to close output file %s: %v", targetPath, closeErr)
+			ctx.Logger().Debugf("Failed to close output file %s: %v", targetPath, closeErr)
 		}
 	}()
 
@@ -592,7 +592,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 	result.Checkable = true
 
 	if ua.Creates != "" {
-		renderedCreates, err := ec.Svc.PathUtil.ExpandPath(ua.Creates, ec.CurrentDir, ctx.GetVariables())
+		renderedCreates, err := ec.Svc.PathUtil.ExpandPath(ua.Creates, ec.CurrentDir, ctx.Variables())
 		if err != nil {
 			return result, fmt.Errorf("failed to expand creates path: %w", err)
 		}

@@ -211,9 +211,9 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 
 	result.Changed = true
 	result.Reason = reason
-	ctx.GetLogger().Infof("  pkg.upgrade: %s", reason)
+	ctx.Logger().Infof("  pkg.upgrade: %s", reason)
 
-	if pub := ctx.GetEventPublisher(); pub != nil {
+	if pub := ctx.EventPublisher(); pub != nil {
 		pub.Publish(events.Event{
 			Type: events.EventPackageManaged,
 			Data: map[string]interface{}{
@@ -230,8 +230,8 @@ func renderNames(ctx actions.Context, p *config.PkgUpgrade) ([]string, error) {
 	if len(p.Names) == 0 {
 		return nil, nil
 	}
-	tmpl := ctx.GetTemplate()
-	vars := ctx.GetVariables()
+	tmpl := ctx.Template()
+	vars := ctx.Variables()
 	seen := map[string]struct{}{}
 	out := make([]string, 0, len(p.Names))
 	for _, n := range p.Names {

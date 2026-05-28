@@ -102,7 +102,7 @@ func (h *Handler) applyTool(ctx actions.Context, step *config.Step) (actions.Res
 	}
 
 	spec := specFromConfig(renderedTool)
-	facts := factsFromVars(ctx.GetVariables())
+	facts := factsFromVars(ctx.Variables())
 
 	// F007: bound the install with a 30-minute outer ceiling.
 	// actions.Context doesn't expose a Go context.Context today, so we
@@ -180,7 +180,7 @@ func (h *Handler) applyTool(ctx actions.Context, step *config.Step) (actions.Res
 
 	result.SetChanged(outcome.Changed)
 	if outcome.Reason != "" {
-		ctx.GetLogger().Infof("  %s", outcome.Reason)
+		ctx.Logger().Infof("  %s", outcome.Reason)
 	}
 
 	if outcome.Changed {
@@ -225,7 +225,7 @@ func specFromConfig(t *config.Tool) Spec {
 }
 
 // renderToolTemplates returns a copy of t with all templatable string
-// fields rendered against ctx.GetVariables(). This bridges preset
+// fields rendered against ctx.Variables(). This bridges preset
 // parameters ({{ parameters.version }}) and vars: blocks ({{ mise_os }})
 // to the backend, which otherwise only handles {{ version }}/{{ os }}/
 // {{ arch }} via a string replacer.
@@ -234,7 +234,7 @@ func renderToolTemplates(t *config.Tool, ctx actions.Context) (*config.Tool, err
 		if s == "" {
 			return s, nil
 		}
-		return ctx.GetTemplate().Render(s, ctx.GetVariables())
+		return ctx.Template().Render(s, ctx.Variables())
 	}
 
 	cp := *t

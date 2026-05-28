@@ -67,7 +67,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 	if path == "" {
 		path = "/"
 	}
-	rendered, err := ctx.GetTemplate().Render(path, ctx.GetVariables())
+	rendered, err := ctx.Template().Render(path, ctx.Variables())
 	if err != nil {
 		return nil, &executor.RenderError{Field: actionName + ".path", Cause: err}
 	}

@@ -28,8 +28,8 @@ func applyResultOverrides(ctx actions.Context, step *config.Step, result *Result
 		return nil
 	}
 
-	evalContext := make(map[string]interface{}, len(ctx.GetVariables())+1)
-	for k, v := range ctx.GetVariables() {
+	evalContext := make(map[string]interface{}, len(ctx.Variables())+1)
+	for k, v := range ctx.Variables() {
 		evalContext[k] = v
 	}
 	evalContext["result"] = result.ToMap()
@@ -56,11 +56,11 @@ func applyResultOverrides(ctx actions.Context, step *config.Step, result *Result
 // did pre-spec-69 so existing expressions (including Pongo2 filters in
 // the expression text) keep working unchanged.
 func evalOverrideBool(ctx actions.Context, expression, fieldName string, evalContext map[string]interface{}) (bool, error) {
-	rendered, err := ctx.GetTemplate().Render(expression, evalContext)
+	rendered, err := ctx.Template().Render(expression, evalContext)
 	if err != nil {
 		return false, fmt.Errorf("failed to render %s: %w", fieldName, err)
 	}
-	out, err := ctx.GetEvaluator().Evaluate(rendered, evalContext)
+	out, err := ctx.Evaluator().Evaluate(rendered, evalContext)
 	if err != nil {
 		return false, fmt.Errorf("failed to evaluate %s: %w", fieldName, err)
 	}

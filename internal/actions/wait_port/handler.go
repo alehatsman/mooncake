@@ -76,7 +76,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		return nil, err
 	}
 
-	ctx.GetLogger().Infof("Waiting for TCP port %s (timeout: %s, interval: %s)", address, timeout, interval)
+	ctx.Logger().Infof("Waiting for TCP port %s (timeout: %s, interval: %s)", address, timeout, interval)
 
 	pollCtx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
@@ -115,7 +115,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		return result, err
 	}
 
-	ctx.GetLogger().Infof("Port %s open after %s (%d attempts)", address, elapsed.Round(time.Millisecond), iterations)
+	ctx.Logger().Infof("Port %s open after %s (%d attempts)", address, elapsed.Round(time.Millisecond), iterations)
 	return result, nil
 }
 
@@ -123,7 +123,7 @@ func resolveHost(ctx actions.Context, host string) (string, error) {
 	if host == "" {
 		return "localhost", nil
 	}
-	rendered, err := ctx.GetTemplate().Render(host, ctx.GetVariables())
+	rendered, err := ctx.Template().Render(host, ctx.Variables())
 	if err != nil {
 		return "", &executor.RenderError{Field: "wait.port.host", Cause: err}
 	}

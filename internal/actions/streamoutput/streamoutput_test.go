@@ -13,9 +13,9 @@ import (
 // mocks the rest of the action tests use.
 func newCtx() *testutil.MockContext {
 	return &testutil.MockContext{
-		Publisher: &testutil.MockPublisher{Events: []events.Event{}},
-		Log:       &testutil.MockLogger{Logs: []string{}},
-		StepID:    "step-1",
+		Publisher:     &testutil.MockPublisher{Events: []events.Event{}},
+		Log:           &testutil.MockLogger{Logs: []string{}},
+		CurrentStepID: "step-1",
 	}
 }
 

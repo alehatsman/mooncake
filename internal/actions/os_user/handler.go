@@ -170,7 +170,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 	}
 	result.Changed = true
 	result.Reason = plan.reason
-	ctx.GetLogger().Infof("  os.user: %s (%s)", des.name, plan.operation)
+	ctx.Logger().Infof("  os.user: %s (%s)", des.name, plan.operation)
 	return result, nil
 }
 
@@ -203,8 +203,8 @@ type desired struct {
 }
 
 func renderDesired(ctx actions.Context, u *config.OsUser) (desired, error) {
-	tmpl := ctx.GetTemplate()
-	vars := ctx.GetVariables()
+	tmpl := ctx.Template()
+	vars := ctx.Variables()
 
 	render := func(s string) (string, error) {
 		if s == "" {

@@ -372,7 +372,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		}
 	}()
 
-	renderedPath, err := ec.Svc.PathUtil.ExpandPath(fpa.Path, ec.CurrentDir, ctx.GetVariables())
+	renderedPath, err := ec.Svc.PathUtil.ExpandPath(fpa.Path, ec.CurrentDir, ctx.Variables())
 	if err != nil {
 		return result, fmt.Errorf("failed to expand path: %w", err)
 	}
@@ -382,13 +382,13 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 	//nolint:dupl // patch-load idiom shared with handler.go; trivial helper not worth the indirection.
 	patchContent := ""
 	if fpa.Patch != "" {
-		rendered, perr := ctx.GetTemplate().Render(fpa.Patch, ctx.GetVariables())
+		rendered, perr := ctx.Template().Render(fpa.Patch, ctx.Variables())
 		if perr != nil {
 			return result, fmt.Errorf("failed to render patch: %w", perr)
 		}
 		patchContent = rendered
 	} else {
-		renderedPatchFile, pferr := ec.Svc.PathUtil.ExpandPath(fpa.PatchFile, ec.CurrentDir, ctx.GetVariables())
+		renderedPatchFile, pferr := ec.Svc.PathUtil.ExpandPath(fpa.PatchFile, ec.CurrentDir, ctx.Variables())
 		if pferr != nil {
 			return result, fmt.Errorf("failed to expand patch_file path: %w", pferr)
 		}
@@ -448,9 +448,9 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 	}
 
 	result.Changed = true
-	ctx.GetLogger().Infof("  Applied patch to %s (%d hunks succeeded, %d failed)", renderedPath, appliedHunks, failedHunks)
+	ctx.Logger().Infof("  Applied patch to %s (%d hunks succeeded, %d failed)", renderedPath, appliedHunks, failedHunks)
 
-	if pub := ctx.GetEventPublisher(); pub != nil {
+	if pub := ctx.EventPublisher(); pub != nil {
 		pub.Publish(events.Event{
 			Type: events.EventFileUpdated,
 			Data: events.FileOperationData{

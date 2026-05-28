@@ -191,7 +191,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 	if err != nil {
 		return nil, fmt.Errorf("failed to create planner: %w", err)
 	}
-	fullyExpandedSteps, err := planner.ExpandStepsWithContext(expandedSteps, ec.GetVariables(), presetBaseDir)
+	fullyExpandedSteps, err := planner.ExpandStepsWithContext(expandedSteps, ec.Variables(), presetBaseDir)
 	if err != nil {
 		return nil, fmt.Errorf("failed to expand preset steps: %w", err)
 	}

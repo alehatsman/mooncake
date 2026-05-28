@@ -132,7 +132,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		}
 	}
 
-	rendered, err := ctx.GetTemplate().Render(o.URL, ctx.GetVariables())
+	rendered, err := ctx.Template().Render(o.URL, ctx.Variables())
 	if err != nil {
 		return nil, &executor.RenderError{Field: actionName + ".url", Cause: err}
 	}

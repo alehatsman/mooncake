@@ -16,11 +16,11 @@ import "fmt"
 // pass the field name, the helper produces a single uniform error
 // format, and the three copies become one.
 func EvaluateBoolExpression(ctx Context, fieldName, expression string, evalContext map[string]interface{}) (bool, error) {
-	rendered, err := ctx.GetTemplate().Render(expression, evalContext)
+	rendered, err := ctx.Template().Render(expression, evalContext)
 	if err != nil {
 		return false, fmt.Errorf("failed to render %s: %w", fieldName, err)
 	}
-	result, err := ctx.GetEvaluator().Evaluate(rendered, evalContext)
+	result, err := ctx.Evaluator().Evaluate(rendered, evalContext)
 	if err != nil {
 		return false, fmt.Errorf("failed to evaluate %s: %w", fieldName, err)
 	}

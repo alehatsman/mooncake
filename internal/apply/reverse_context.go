@@ -34,7 +34,7 @@ func newReverseContext() *reverseContext { return &reverseContext{} }
 // (the inverse step, if scheduled, will mutate state).
 func (c *reverseContext) Mode() actions.Mode { return actions.ModeApply }
 
-func (c *reverseContext) GetTemplate() template.Renderer {
+func (c *reverseContext) Template() template.Renderer {
 	// Pongo2 renderer construction can fail; ignore — Reverse should
 	// not use the renderer. Returning nil would crash any handler
 	// that did reach for it; returning the zero-value renderer is
@@ -42,12 +42,12 @@ func (c *reverseContext) GetTemplate() template.Renderer {
 	r, _ := template.NewPongo2Renderer()
 	return r
 }
-func (c *reverseContext) GetEvaluator() expression.Evaluator   { return expression.NewExprEvaluator() }
-func (c *reverseContext) GetLogger() logger.Logger             { return logger.NewLogger(logger.InfoLevel) }
-func (c *reverseContext) GetVariables() map[string]interface{} { return map[string]interface{}{} }
-func (c *reverseContext) GetEventPublisher() events.Publisher  { return events.NewPublisher() }
-func (c *reverseContext) GetCurrentStepID() string             { return "reverse" }
-func (c *reverseContext) Effects() actions.Performer           { return reverseNoopPerformer{} }
+func (c *reverseContext) Evaluator() expression.Evaluator   { return expression.NewExprEvaluator() }
+func (c *reverseContext) Logger() logger.Logger             { return logger.NewLogger(logger.InfoLevel) }
+func (c *reverseContext) Variables() map[string]interface{} { return map[string]interface{}{} }
+func (c *reverseContext) EventPublisher() events.Publisher  { return events.NewPublisher() }
+func (c *reverseContext) StepID() string                    { return "reverse" }
+func (c *reverseContext) Effects() actions.Performer        { return reverseNoopPerformer{} }
 func (c *reverseContext) Privileged() *security.Privileged {
 	// Reverse runs after the original — give it an already-root
 	// no-sudo primitive so any handler that misbehaves and shells

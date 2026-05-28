@@ -123,11 +123,11 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 	// Resolve src path against the source file's directory (Node-style:
 	// relative paths are relative to the YAML file that declares the
 	// step). CurrentDir is set per-file by the planner.
-	src, err := ec.Svc.PathUtil.ExpandPath(tmpl.Src, ec.CurrentDir, ctx.GetVariables())
+	src, err := ec.Svc.PathUtil.ExpandPath(tmpl.Src, ec.CurrentDir, ctx.Variables())
 	if err != nil {
 		return nil, fmt.Errorf("failed to expand src path: %w", err)
 	}
-	dest, err := ec.Svc.PathUtil.ExpandPath(tmpl.Dest, ec.CurrentDir, ctx.GetVariables())
+	dest, err := ec.Svc.PathUtil.ExpandPath(tmpl.Dest, ec.CurrentDir, ctx.Variables())
 	if err != nil {
 		return nil, fmt.Errorf("failed to expand dest path: %w", err)
 	}
@@ -160,12 +160,12 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 	}
 
 	// Merge per-step vars before rendering.
-	variables := ctx.GetVariables()
+	variables := ctx.Variables()
 	if tmpl.Vars != nil && len(*tmpl.Vars) > 0 {
-		variables = utils.MergeVariables(ctx.GetVariables(), *tmpl.Vars)
+		variables = utils.MergeVariables(ctx.Variables(), *tmpl.Vars)
 	}
 
-	output, err := ctx.GetTemplate().Render(string(templateBytes), variables)
+	output, err := ctx.Template().Render(string(templateBytes), variables)
 	if err != nil {
 		result.Failed = true
 		return result, fmt.Errorf("failed to render template: %w", err)
@@ -199,7 +199,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 
 	// Emit template render event — only in execute mode, matching the
 	// legacy contract.
-	if pub := ctx.GetEventPublisher(); pub != nil {
+	if pub := ctx.EventPublisher(); pub != nil {
 		pub.Publish(events.Event{
 			Type: events.EventTemplateRender,
 			Data: events.TemplateRenderData{

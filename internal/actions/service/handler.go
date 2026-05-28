@@ -169,7 +169,7 @@ func HandleService(step config.Step, ec *executor.ExecutionContext) error {
 		return &executor.StepValidationError{Field: "name", Message: "service name is required"}
 	}
 
-	renderedName, err := ec.Svc.Template.Render(serviceAction.Name, ec.GetVariables())
+	renderedName, err := ec.Svc.Template.Render(serviceAction.Name, ec.Variables())
 	if err != nil {
 		return &executor.RenderError{Field: "service.name", Cause: err}
 	}
@@ -251,7 +251,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		return result, fmt.Errorf("service action requires service configuration")
 	}
 
-	renderedName, err := ec.Svc.Template.Render(svc.Name, ec.GetVariables())
+	renderedName, err := ec.Svc.Template.Render(svc.Name, ec.Variables())
 	if err != nil {
 		return result, fmt.Errorf("failed to render service name: %w", err)
 	}

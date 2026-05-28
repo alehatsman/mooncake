@@ -58,11 +58,11 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 	}
 	w := step.WaitFile
 
-	rendered, err := ctx.GetTemplate().Render(w.Path, ctx.GetVariables())
+	rendered, err := ctx.Template().Render(w.Path, ctx.Variables())
 	if err != nil {
 		return nil, &executor.RenderError{Field: "wait.file.path", Cause: err}
 	}
-	path, err := ec.Svc.PathUtil.ExpandPath(rendered, ec.CurrentDir, ctx.GetVariables())
+	path, err := ec.Svc.PathUtil.ExpandPath(rendered, ec.CurrentDir, ctx.Variables())
 	if err != nil {
 		return nil, &executor.FileOperationError{
 			Operation: "expand path",
@@ -71,7 +71,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		}
 	}
 
-	contains, err := ctx.GetTemplate().Render(w.Contains, ctx.GetVariables())
+	contains, err := ctx.Template().Render(w.Contains, ctx.Variables())
 	if err != nil {
 		return nil, &executor.RenderError{Field: "wait.file.contains", Cause: err}
 	}
@@ -104,7 +104,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		return nil, err
 	}
 
-	ctx.GetLogger().Infof("Waiting for file %s (timeout: %s, interval: %s)", path, timeout, interval)
+	ctx.Logger().Infof("Waiting for file %s (timeout: %s, interval: %s)", path, timeout, interval)
 
 	pollCtx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
@@ -139,7 +139,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		return result, err
 	}
 
-	ctx.GetLogger().Infof("File %s ready after %s (%d checks)", path, elapsed.Round(time.Millisecond), iterations)
+	ctx.Logger().Infof("File %s ready after %s (%d checks)", path, elapsed.Round(time.Millisecond), iterations)
 	return result, nil
 }
 

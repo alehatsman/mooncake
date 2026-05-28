@@ -153,9 +153,9 @@ type Handler interface {
 	// inspects state and returns a prediction when ctx.Mode() is
 	// ModePlan. Implementations:
 	//
-	//   - emit appropriate events via ctx.GetEventPublisher() (execute mode)
-	//   - render templates via ctx.GetTemplate()
-	//   - use ctx.GetLogger() for logging
+	//   - emit appropriate events via ctx.EventPublisher() (execute mode)
+	//   - render templates via ctx.Template()
+	//   - use ctx.Logger() for logging
 	//   - return Result with Changed=true (execute) or
 	//     WouldChange=true (plan) when state would change
 	//   - route filesystem mutations through ctx.Effects() so that
@@ -208,7 +208,7 @@ func (h *HandlerFunc) DryRun(ctx Context, step *config.Step) error {
 	if h.dryRun != nil {
 		return h.dryRun(ctx, step)
 	}
-	ctx.GetLogger().Infof("  [DRY-RUN] Would execute %s action", h.metadata.Name)
+	ctx.Logger().Infof("  [DRY-RUN] Would execute %s action", h.metadata.Name)
 	return nil
 }
 

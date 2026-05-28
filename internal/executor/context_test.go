@@ -9,22 +9,22 @@ import (
 	"github.com/alehatsman/mooncake/internal/template"
 )
 
-// TestExecutionContext_GetEvaluator tests GetEvaluator method
+// TestExecutionContext_GetEvaluator tests Evaluator method
 func TestExecutionContext_GetEvaluator(t *testing.T) {
 	ctx := &ExecutionContext{
 		Svc: &RunServices{
 			Evaluator: expression.NewGovaluateEvaluator(),
 		},
 	}
-	if ctx.GetEvaluator() == nil {
-		t.Error("GetEvaluator() should return non-nil evaluator")
+	if ctx.Evaluator() == nil {
+		t.Error("Evaluator() should return non-nil evaluator")
 	}
 }
 
 func TestExecutionContext_GetEvaluator_Nil(t *testing.T) {
 	ctx := &ExecutionContext{Svc: &RunServices{}}
-	if ctx.GetEvaluator() != nil {
-		t.Error("GetEvaluator() should return nil when evaluator is not set")
+	if ctx.Evaluator() != nil {
+		t.Error("Evaluator() should return nil when evaluator is not set")
 	}
 }
 
@@ -34,8 +34,8 @@ func TestExecutionContext_GetTemplate(t *testing.T) {
 		t.Fatal(err)
 	}
 	ctx := &ExecutionContext{Svc: &RunServices{Template: tmpl}}
-	if ctx.GetTemplate() == nil {
-		t.Error("GetTemplate() should return non-nil template")
+	if ctx.Template() == nil {
+		t.Error("Template() should return non-nil template")
 	}
 }
 

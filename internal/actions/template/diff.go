@@ -74,7 +74,7 @@ func (Handler) Diff(ctx actions.Context, step *config.Step) (actions.Diff, error
 
 func resolveTemplateDest(ctx actions.Context, tpl *config.Template) string {
 	if ec, ok := ctx.(*executor.ExecutionContext); ok && ec.Svc != nil && ec.Svc.PathUtil != nil {
-		if expanded, err := ec.Svc.PathUtil.ExpandPath(tpl.Dest, ec.CurrentDir, ctx.GetVariables()); err == nil {
+		if expanded, err := ec.Svc.PathUtil.ExpandPath(tpl.Dest, ec.CurrentDir, ctx.Variables()); err == nil {
 			return expanded
 		}
 	}
@@ -105,7 +105,7 @@ func readAndRender(ctx actions.Context, src string) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("read template src: %w", err)
 	}
-	rendered, err := ctx.GetTemplate().Render(string(srcBytes), ctx.GetVariables())
+	rendered, err := ctx.Template().Render(string(srcBytes), ctx.Variables())
 	if err != nil {
 		return nil, fmt.Errorf("render template: %w", err)
 	}

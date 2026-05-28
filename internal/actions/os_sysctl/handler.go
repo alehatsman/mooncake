@@ -193,10 +193,10 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 
 	result.Changed = true
 	result.Reason = plan.reason
-	ctx.GetLogger().Infof("  os.sysctl: %s (%s)", rendered.name, plan.operation)
+	ctx.Logger().Infof("  os.sysctl: %s (%s)", rendered.name, plan.operation)
 
 	if plan.touchesFile {
-		if pub := ctx.GetEventPublisher(); pub != nil {
+		if pub := ctx.EventPublisher(); pub != nil {
 			pub.Publish(events.Event{
 				Type: events.EventFileUpdated,
 				Data: events.FileOperationData{Path: sysctlPaths.persistFile, Changed: true},
@@ -216,8 +216,8 @@ type renderedSysctl struct {
 }
 
 func renderSysctl(ctx actions.Context, s *config.OsSysctl) (renderedSysctl, error) {
-	tmpl := ctx.GetTemplate()
-	vars := ctx.GetVariables()
+	tmpl := ctx.Template()
+	vars := ctx.Variables()
 
 	name, err := tmpl.Render(s.Name, vars)
 	if err != nil {

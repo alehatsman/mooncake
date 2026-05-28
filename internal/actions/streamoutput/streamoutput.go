@@ -39,7 +39,7 @@ const MaxLineBytes = 1024 * 1024
 
 // Stream reads pipe line-by-line, optionally writing each line
 // (plus a trailing newline) into buf, and publishes a step.stdout
-// or step.stderr event per line via ctx.GetEventPublisher().
+// or step.stderr event per line via ctx.EventPublisher().
 //
 // stream must be "stdout" or "stderr"; it selects the event type
 // and tags the StepOutputData.
@@ -53,8 +53,8 @@ func Stream(pipe io.Reader, buf *bytes.Buffer, ctx actions.Context, capture bool
 	scanner.Buffer(make([]byte, 64*1024), MaxLineBytes)
 	lineNum := 0
 
-	publisher := ctx.GetEventPublisher()
-	stepID := ctx.GetCurrentStepID()
+	publisher := ctx.EventPublisher()
+	stepID := ctx.StepID()
 
 	eventType := events.EventStepStdout
 	if stream == "stderr" {
@@ -85,7 +85,7 @@ func Stream(pipe io.Reader, buf *bytes.Buffer, ctx actions.Context, capture bool
 	}
 
 	if err := scanner.Err(); err != nil {
-		if log := ctx.GetLogger(); log != nil {
+		if log := ctx.Logger(); log != nil {
 			log.Errorf("  %s stream stopped early (output truncated): %v", stream, err)
 		}
 		// F038: surface truncation through programmatic channels

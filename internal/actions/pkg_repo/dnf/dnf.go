@@ -126,9 +126,9 @@ func Run(ctx actions.Context, r *config.PkgRepo, result *executor.Result) (actio
 
 	result.Changed = true
 	result.Reason = plan.reason
-	ctx.GetLogger().Infof("  pkg.repo: %s (%s)", r.Name, plan.operation)
+	ctx.Logger().Infof("  pkg.repo: %s (%s)", r.Name, plan.operation)
 
-	if pub := ctx.GetEventPublisher(); pub != nil {
+	if pub := ctx.EventPublisher(); pub != nil {
 		pub.Publish(events.Event{
 			Type: events.EventFileUpdated,
 			Data: events.FileOperationData{Path: plan.repoPath, Changed: true},
@@ -154,8 +154,8 @@ type rendered_ struct { //nolint:revive
 }
 
 func render(ctx actions.Context, r *config.PkgRepo) (rendered_, error) {
-	tmpl := ctx.GetTemplate()
-	vars := ctx.GetVariables()
+	tmpl := ctx.Template()
+	vars := ctx.Variables()
 	renderOne := func(s string) (string, error) {
 		if s == "" {
 			return "", nil

@@ -3,7 +3,6 @@ package executor
 import (
 	"testing"
 
-	"github.com/alehatsman/mooncake/internal/actions"
 	"github.com/alehatsman/mooncake/internal/config"
 	"github.com/alehatsman/mooncake/internal/events"
 	"github.com/alehatsman/mooncake/internal/expression"
@@ -96,42 +95,6 @@ func TestGetStepDisplayName_NoFileTree(t *testing.T) {
 
 	// Note: isCustom may still be true due to fallback behavior
 	_ = isCustom
-}
-
-// TestHandleVars_MergeExisting tests merging with existing variables
-func TestHandleVars_MergeExisting(t *testing.T) {
-	testLogger := logger.NewTestLogger()
-
-	vars := map[string]interface{}{
-		"new_key": "new_value",
-	}
-
-	step := config.Step{
-		Vars: &vars,
-	}
-
-	scope := NewVariableScope()
-	scope.User["existing_key"] = "existing_value"
-	ec := &ExecutionContext{
-		Svc: &RunServices{
-			Logger: testLogger,
-			Mode:   actions.ModeApply,
-		},
-		Scope: scope,
-	}
-
-	err := HandleVars(step, ec)
-	if err != nil {
-		t.Fatalf("HandleVars failed: %v", err)
-	}
-
-	// Both old and new should exist
-	if ec.Scope.User["existing_key"] != "existing_value" {
-		t.Error("Existing variables should be preserved")
-	}
-	if ec.Scope.User["new_key"] != "new_value" {
-		t.Error("New variables should be added")
-	}
 }
 
 // TestHandleWhenExpression_BooleanLogic tests boolean logic in when expressions
@@ -239,25 +202,6 @@ func TestResult_SetData_MultipleCalls(t *testing.T) {
 	result.SetData(nil)
 
 	// No assertions - SetData is a no-op
-}
-
-// TestMarkStepFailed_Idempotent tests multiple MarkStepFailed calls
-func TestMarkStepFailed_Idempotent(t *testing.T) {
-	result := NewResult()
-	step := config.Step{Name: "Test"}
-	ec := &ExecutionContext{
-		Scope: NewVariableScope(),
-	}
-
-	MarkStepFailed(result, step, ec)
-	MarkStepFailed(result, step, ec)
-
-	if !result.Failed {
-		t.Error("Result should be failed")
-	}
-	if result.Rc != 1 {
-		t.Error("Rc should be 1")
-	}
 }
 
 // TestAddGlobalVariables_NonDestructive tests that it populates facts without losing user vars

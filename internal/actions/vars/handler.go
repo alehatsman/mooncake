@@ -69,7 +69,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		return r, nil
 	}
 
-	logger := ctx.GetLogger()
+	logger := ctx.Logger()
 	logger.Debugf("Handling vars: %+v", vars)
 	for k, v := range *vars {
 		logger.Debugf("  %v: %v", k, v)
@@ -82,7 +82,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		keys = append(keys, k)
 	}
 
-	if publisher := ctx.GetEventPublisher(); publisher != nil {
+	if publisher := ctx.EventPublisher(); publisher != nil {
 		publisher.Publish(events.Event{
 			Type: events.EventVarsSet,
 			Data: events.VarsSetData{

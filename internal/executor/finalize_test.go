@@ -11,8 +11,8 @@ import (
 // finalizeTestContext constructs an ExecutionContext wired with the
 // template renderer + expression evaluator that applyResultOverrides
 // needs. Tests share this helper because the override path's only
-// real dependencies on ctx are GetTemplate() / GetEvaluator() /
-// GetVariables().
+// real dependencies on ctx are Template() / Evaluator() /
+// Variables().
 func finalizeTestContext(vars map[string]interface{}) *ExecutionContext {
 	scope := NewVariableScope()
 	if vars != nil {

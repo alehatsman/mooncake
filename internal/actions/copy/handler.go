@@ -135,11 +135,11 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		return nil, fmt.Errorf("context is not an ExecutionContext")
 	}
 
-	src, err := ec.Svc.PathUtil.ExpandPath(cp.Src, ec.CurrentDir, ctx.GetVariables())
+	src, err := ec.Svc.PathUtil.ExpandPath(cp.Src, ec.CurrentDir, ctx.Variables())
 	if err != nil {
 		return nil, fmt.Errorf("failed to expand src path: %w", err)
 	}
-	dest, err := ec.Svc.PathUtil.ExpandPath(cp.Dest, ec.CurrentDir, ctx.GetVariables())
+	dest, err := ec.Svc.PathUtil.ExpandPath(cp.Dest, ec.CurrentDir, ctx.Variables())
 	if err != nil {
 		return nil, fmt.Errorf("failed to expand dest path: %w", err)
 	}
@@ -235,9 +235,9 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 	if ctx.Mode() == actions.ModeApply && cp.Backup {
 		if _, statErr := os.Stat(dest); statErr == nil {
 			if backupPath, berr := utils.CreateBackup(dest); berr != nil {
-				ctx.GetLogger().Debugf("  Warning: failed to create backup: %v", berr)
+				ctx.Logger().Debugf("  Warning: failed to create backup: %v", berr)
 			} else {
-				ctx.GetLogger().Debugf("  Created backup: %s", backupPath)
+				ctx.Logger().Debugf("  Created backup: %s", backupPath)
 			}
 		}
 	}
@@ -292,7 +292,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		}
 	}
 
-	if pub := ctx.GetEventPublisher(); pub != nil {
+	if pub := ctx.EventPublisher(); pub != nil {
 		pub.Publish(events.Event{
 			Type: events.EventFileCopied,
 			Data: events.FileCopiedData{

@@ -179,7 +179,7 @@ func (h *Handler) executeCommand(ctx actions.Context, step *config.Step, rendere
 	if len(step.Env) > 0 {
 		envVars := make([]string, 0, len(step.Env))
 		for key, value := range step.Env {
-			rendered, renderErr := ctx.GetTemplate().Render(value, ctx.GetVariables())
+			rendered, renderErr := ctx.Template().Render(value, ctx.Variables())
 			if renderErr != nil {
 				return nil, fmt.Errorf("failed to render env var %s: %w", key, renderErr)
 			}
@@ -190,7 +190,7 @@ func (h *Handler) executeCommand(ctx actions.Context, step *config.Step, rendere
 
 	// Set working directory if specified
 	if step.Cwd != "" {
-		rendered, renderErr := ctx.GetTemplate().Render(step.Cwd, ctx.GetVariables())
+		rendered, renderErr := ctx.Template().Render(step.Cwd, ctx.Variables())
 		if renderErr != nil {
 			return nil, fmt.Errorf("failed to render cwd: %w", renderErr)
 		}
@@ -284,7 +284,7 @@ func (h *Handler) createDirectCommand(ctx context.Context, step *config.Step, ar
 
 		// Handle stdin: sudo password comes first, then user stdin if provided
 		if step.Cmd.Stdin != "" {
-			renderedStdin, err := ec.Svc.Template.Render(step.Cmd.Stdin, ec.GetVariables())
+			renderedStdin, err := ec.Svc.Template.Render(step.Cmd.Stdin, ec.Variables())
 			if err != nil {
 				return nil, fmt.Errorf("failed to render stdin: %w", err)
 			}
@@ -301,7 +301,7 @@ func (h *Handler) createDirectCommand(ctx context.Context, step *config.Step, ar
 
 	// Handle stdin for non-sudo commands
 	if step.Cmd.Stdin != "" {
-		renderedStdin, err := ec.Svc.Template.Render(step.Cmd.Stdin, ec.GetVariables())
+		renderedStdin, err := ec.Svc.Template.Render(step.Cmd.Stdin, ec.Variables())
 		if err != nil {
 			return nil, fmt.Errorf("failed to render stdin: %w", err)
 		}
@@ -331,13 +331,13 @@ func (h *Handler) RunRaw(ctx actions.Context, step *config.Step) (actions.Result
 	}
 	renderedArgv := make([]string, len(cmdAction.Argv))
 	for i, arg := range cmdAction.Argv {
-		rendered, err := ctx.GetTemplate().Render(arg, ctx.GetVariables())
+		rendered, err := ctx.Template().Render(arg, ctx.Variables())
 		if err != nil {
 			return nil, fmt.Errorf("failed to render argv[%d]: %w", i, err)
 		}
 		renderedArgv[i] = rendered
 	}
-	ctx.GetLogger().Debugf("  Executing: %s", strings.Join(renderedArgv, " "))
+	ctx.Logger().Debugf("  Executing: %s", strings.Join(renderedArgv, " "))
 	return h.executeCommandRaw(ctx, step, renderedArgv)
 }
 
@@ -351,7 +351,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 
 		rendered := make([]string, len(cmdAction.Argv))
 		for i, arg := range cmdAction.Argv {
-			out, err := ctx.GetTemplate().Render(arg, ctx.GetVariables())
+			out, err := ctx.Template().Render(arg, ctx.Variables())
 			if err != nil {
 				out = arg
 			}
@@ -373,12 +373,12 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 	// dispatch to the retry-aware runner.
 	renderedArgv := make([]string, len(cmdAction.Argv))
 	for i, arg := range cmdAction.Argv {
-		rendered, err := ctx.GetTemplate().Render(arg, ctx.GetVariables())
+		rendered, err := ctx.Template().Render(arg, ctx.Variables())
 		if err != nil {
 			return nil, fmt.Errorf("failed to render argv[%d]: %w", i, err)
 		}
 		renderedArgv[i] = rendered
 	}
-	ctx.GetLogger().Debugf("  Executing: %s", strings.Join(renderedArgv, " "))
+	ctx.Logger().Debugf("  Executing: %s", strings.Join(renderedArgv, " "))
 	return h.executeOnce(ctx, step, renderedArgv)
 }

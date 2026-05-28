@@ -338,23 +338,23 @@ func (ec *ExecutionContext) Privileged() *security.Privileged {
 
 // --- actions.Context interface implementation ---
 
-// GetTemplate returns the template renderer.
-func (ec *ExecutionContext) GetTemplate() template.Renderer {
+// Template returns the template renderer.
+func (ec *ExecutionContext) Template() template.Renderer {
 	return ec.Svc.Template
 }
 
-// GetEvaluator returns the expression evaluator.
-func (ec *ExecutionContext) GetEvaluator() expression.Evaluator {
+// Evaluator returns the expression evaluator.
+func (ec *ExecutionContext) Evaluator() expression.Evaluator {
 	return ec.Svc.Evaluator
 }
 
-// GetLogger returns the logger.
-func (ec *ExecutionContext) GetLogger() logger.Logger {
+// Logger returns the logger.
+func (ec *ExecutionContext) Logger() logger.Logger {
 	return ec.Svc.Logger
 }
 
-// GetVariables returns all variables merged into a flat map for template/expression engines.
-func (ec *ExecutionContext) GetVariables() map[string]interface{} {
+// Variables returns all variables merged into a flat map for template/expression engines.
+func (ec *ExecutionContext) Variables() map[string]interface{} {
 	return ec.Scope.ToMap()
 }
 
@@ -363,7 +363,7 @@ func (ec *ExecutionContext) GetVariables() map[string]interface{} {
 //
 // Drops the `if ec.Svc != nil` guard the pre-cleanup version carried —
 // every other accessor on ExecutionContext (EmitEvent, Mode, Effects,
-// Privileged, GetTemplate / Evaluator / Logger / EventPublisher) derefs
+// Privileged, Template / Evaluator / Logger / EventPublisher) derefs
 // ec.Svc unconditionally. Svc is always non-nil in production paths
 // (Start / executePlanWithCapture sets it on every constructed context);
 // a future test that builds an EC without Svc panics here exactly the
@@ -383,13 +383,13 @@ func (ec *ExecutionContext) RegisterResult(r *Result, name string) {
 	ec.Scope.Results[name] = r.ToRegisteredResult()
 }
 
-// GetEventPublisher returns the event publisher.
-func (ec *ExecutionContext) GetEventPublisher() events.Publisher {
+// EventPublisher returns the event publisher.
+func (ec *ExecutionContext) EventPublisher() events.Publisher {
 	return ec.Svc.EventPublisher
 }
 
-// GetCurrentStepID returns the current step ID.
-func (ec *ExecutionContext) GetCurrentStepID() string {
+// StepID returns the current step ID.
+func (ec *ExecutionContext) StepID() string {
 	return ec.CurrentStepID
 }
 

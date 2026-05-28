@@ -73,7 +73,7 @@ func (h *Handler) RunRaw(ctx actions.Context, step *config.Step) (actions.Result
 
 func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, error) {
 	img := step.ContainerImage
-	renderedName, err := ctx.GetTemplate().Render(img.Name, ctx.GetVariables())
+	renderedName, err := ctx.Template().Render(img.Name, ctx.Variables())
 	if err != nil {
 		return nil, fmt.Errorf("render container.image.name: %w", err)
 	}
@@ -131,7 +131,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 			}
 			return res, nil
 		}
-		ctx.GetLogger().Infof("  Pulling image %s via %s", renderedName, rt.Name())
+		ctx.Logger().Infof("  Pulling image %s via %s", renderedName, rt.Name())
 		if err := rt.ImagePull(bg, renderedName); err != nil {
 			return nil, err
 		}
@@ -148,7 +148,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 			res.Reason = fmt.Sprintf("would remove image %s", renderedName)
 			return res, nil
 		}
-		ctx.GetLogger().Infof("  Removing image %s via %s", renderedName, rt.Name())
+		ctx.Logger().Infof("  Removing image %s via %s", renderedName, rt.Name())
 		if err := rt.ImageRemove(bg, renderedName); err != nil {
 			return nil, err
 		}
@@ -168,7 +168,7 @@ func renderStepEnv(ctx actions.Context, env map[string]string) (map[string]strin
 	}
 	out := make(map[string]string, len(env))
 	for k, v := range env {
-		rendered, err := ctx.GetTemplate().Render(v, ctx.GetVariables())
+		rendered, err := ctx.Template().Render(v, ctx.Variables())
 		if err != nil {
 			return nil, fmt.Errorf("render env %s: %w", k, err)
 		}

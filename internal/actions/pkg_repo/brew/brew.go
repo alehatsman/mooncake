@@ -75,7 +75,7 @@ func Run(ctx actions.Context, r *config.PkgRepo, result *executor.Result) (actio
 	// Render the tap through the template engine so {{ var }} works
 	// the same way it does for r.Apt.URI / r.Name etc.
 	if tap != "" {
-		rendered, err := ctx.GetTemplate().Render(tap, ctx.GetVariables())
+		rendered, err := ctx.Template().Render(tap, ctx.Variables())
 		if err != nil {
 			return result, fmt.Errorf("pkg.repo.brew: render tap: %w", err)
 		}
@@ -159,9 +159,9 @@ func Run(ctx actions.Context, r *config.PkgRepo, result *executor.Result) (actio
 
 	result.Changed = true
 	result.Reason = fmt.Sprintf("%sed %s", op, tap)
-	ctx.GetLogger().Infof("  pkg.repo: %s (%s %s)", r.Name, op, tap)
+	ctx.Logger().Infof("  pkg.repo: %s (%s %s)", r.Name, op, tap)
 
-	if pub := ctx.GetEventPublisher(); pub != nil {
+	if pub := ctx.EventPublisher(); pub != nil {
 		pub.Publish(events.Event{
 			Type: events.EventFileUpdated,
 			Data: events.FileOperationData{Path: "brew:" + tap, Changed: true},

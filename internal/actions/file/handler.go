@@ -286,7 +286,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		return nil, fmt.Errorf("context is not an ExecutionContext")
 	}
 
-	renderedPath, err := ec.Svc.PathUtil.ExpandPath(file.Path, ec.CurrentDir, ctx.GetVariables())
+	renderedPath, err := ec.Svc.PathUtil.ExpandPath(file.Path, ec.CurrentDir, ctx.Variables())
 	if err != nil {
 		return nil, fmt.Errorf("failed to expand path: %w", err)
 	}
@@ -410,7 +410,7 @@ func (h *Handler) runState(
 		return p.Mkdir(renderedPath, mode, opts), nil
 
 	case actionTypeFile:
-		rendered, err := ctx.GetTemplate().Render(file.Content, ctx.GetVariables())
+		rendered, err := ctx.Template().Render(file.Content, ctx.Variables())
 		if err != nil {
 			return actions.Effect{}, fmt.Errorf("failed to render content: %w", err)
 		}
@@ -427,9 +427,9 @@ func (h *Handler) runState(
 			if _, statErr := os.Stat(renderedPath); statErr == nil {
 				backupPath := renderedPath + ".bak"
 				if writeErr := copyFileStreaming(renderedPath, backupPath, 0o600); writeErr != nil {
-					ctx.GetLogger().Debugf("  Warning: failed to create backup: %v", writeErr)
+					ctx.Logger().Debugf("  Warning: failed to create backup: %v", writeErr)
 				} else {
-					ctx.GetLogger().Debugf("  Created backup: %s", backupPath)
+					ctx.Logger().Debugf("  Created backup: %s", backupPath)
 				}
 			}
 		}
@@ -472,11 +472,11 @@ func (h *Handler) runState(
 // resolveLinkSrc renders and path-expands the link source. Returns the
 // fully-resolved path or an error if rendering/expansion fails.
 func (h *Handler) resolveLinkSrc(ctx actions.Context, ec *executor.ExecutionContext, file *config.File) (string, error) {
-	rendered, err := ctx.GetTemplate().Render(file.Src, ctx.GetVariables())
+	rendered, err := ctx.Template().Render(file.Src, ctx.Variables())
 	if err != nil {
 		return "", fmt.Errorf("failed to render src: %w", err)
 	}
-	expanded, err := ec.Svc.PathUtil.ExpandPath(rendered, ec.CurrentDir, ctx.GetVariables())
+	expanded, err := ec.Svc.PathUtil.ExpandPath(rendered, ec.CurrentDir, ctx.Variables())
 	if err != nil {
 		return "", fmt.Errorf("failed to expand src path: %w", err)
 	}
@@ -523,7 +523,7 @@ func (h *Handler) checkHardlinkForce(path, desiredTarget string, force bool) err
 // consumers truncate to MaxDiffSize anyway); SizeBefore/After carry
 // ground truth. F026.
 func emitFileEvent(ctx actions.Context, state string, eff actions.Effect, path string, mode os.FileMode, formatMode func(os.FileMode) string, beforeHead []byte, beforeSize int64, beforeSum string) {
-	pub := ctx.GetEventPublisher()
+	pub := ctx.EventPublisher()
 	if pub == nil {
 		return
 	}

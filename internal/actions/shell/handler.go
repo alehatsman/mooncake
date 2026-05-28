@@ -297,7 +297,7 @@ func (h *Handler) configureCommandEnvironment(command *exec.Cmd, ctx actions.Con
 	}
 
 	for key, value := range step.Env {
-		renderedValue, err := ctx.GetTemplate().Render(value, ctx.GetVariables())
+		renderedValue, err := ctx.Template().Render(value, ctx.Variables())
 		if err != nil {
 			return fmt.Errorf("failed to render env var %s: %w", key, err)
 		}
@@ -307,7 +307,7 @@ func (h *Handler) configureCommandEnvironment(command *exec.Cmd, ctx actions.Con
 
 	// Set working directory
 	if step.Cwd != "" {
-		renderedCwd, err := ctx.GetTemplate().Render(step.Cwd, ctx.GetVariables())
+		renderedCwd, err := ctx.Template().Render(step.Cwd, ctx.Variables())
 		if err != nil {
 			return fmt.Errorf("failed to render cwd: %w", err)
 		}
@@ -393,7 +393,7 @@ func (h *Handler) processCommandResult(_ actions.Context, _ *config.Step, result
 func (h *Handler) evaluateResultOverrides(ctx actions.Context, step *config.Step, result *executor.Result) error {
 	// Create evaluation context
 	evalContext := make(map[string]interface{})
-	for k, v := range ctx.GetVariables() {
+	for k, v := range ctx.Variables() {
 		evalContext[k] = v
 	}
 	evalContext["result"] = result.ToMap()
@@ -451,11 +451,11 @@ func (h *Handler) RunRaw(ctx actions.Context, step *config.Step) (actions.Result
 		// This guard is belt-and-suspenders for direct callers.
 		return h.Run(ctx, step)
 	}
-	rendered, err := ctx.GetTemplate().Render(cmd, ctx.GetVariables())
+	rendered, err := ctx.Template().Render(cmd, ctx.Variables())
 	if err != nil {
 		return nil, fmt.Errorf("failed to render command: %w", err)
 	}
-	ctx.GetLogger().Debugf("  Executing: %s", rendered)
+	ctx.Logger().Debugf("  Executing: %s", rendered)
 	return h.executeShellCommandRaw(ctx, step, rendered)
 }
 
@@ -468,7 +468,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		r.Checkable = true
 		r.WouldChange = true
 
-		rendered, err := ctx.GetTemplate().Render(cmd, ctx.GetVariables())
+		rendered, err := ctx.Template().Render(cmd, ctx.Variables())
 		if err != nil {
 			rendered = cmd + " (template render would fail)"
 		}
@@ -490,10 +490,10 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 	// reached by direct-call tests in this package.
 	//
 	// F011: legacy Execute / DryRun pair folded into Run.
-	renderedCommand, err := ctx.GetTemplate().Render(cmd, ctx.GetVariables())
+	renderedCommand, err := ctx.Template().Render(cmd, ctx.Variables())
 	if err != nil {
 		return nil, fmt.Errorf("failed to render command: %w", err)
 	}
-	ctx.GetLogger().Debugf("  Executing: %s", renderedCommand)
+	ctx.Logger().Debugf("  Executing: %s", renderedCommand)
 	return h.executeOnce(ctx, step, renderedCommand)
 }

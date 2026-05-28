@@ -176,9 +176,9 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 
 	result.Changed = true
 	result.Reason = plan.reason
-	ctx.GetLogger().Infof("  os.cron: %s (%s)", rendered.name, plan.operation)
+	ctx.Logger().Infof("  os.cron: %s (%s)", rendered.name, plan.operation)
 
-	if pub := ctx.GetEventPublisher(); pub != nil {
+	if pub := ctx.EventPublisher(); pub != nil {
 		pub.Publish(events.Event{
 			Type: events.EventFileUpdated,
 			Data: events.FileOperationData{Path: plan.path, Changed: true},
@@ -198,8 +198,8 @@ type renderedCron struct {
 }
 
 func renderCron(ctx actions.Context, c *config.OsCron) (renderedCron, error) {
-	tmpl := ctx.GetTemplate()
-	vars := ctx.GetVariables()
+	tmpl := ctx.Template()
+	vars := ctx.Variables()
 
 	render := func(s string) (string, error) {
 		if s == "" {

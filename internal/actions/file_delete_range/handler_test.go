@@ -27,14 +27,14 @@ func createTestContext(t *testing.T) *executor.ExecutionContext {
 	return &executor.ExecutionContext{
 		Svc: &executor.RunServices{
 			Template:       tmpl,
-			Evaluator:      mockCtx.GetEvaluator(),
+			Evaluator:      mockCtx.Evaluator(),
 			Logger:         mockCtx.Log,
 			EventPublisher: mockCtx.Publisher,
 			PathUtil:       pathutil.NewPathExpander(tmpl),
 			Mode:           actions.ModeApply,
 		},
 		Scope:         executor.NewVariableScope(),
-		CurrentStepID: mockCtx.StepID,
+		CurrentStepID: mockCtx.CurrentStepID,
 		CurrentDir:    tmpDir,
 	}
 }

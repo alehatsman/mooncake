@@ -86,7 +86,7 @@ func resolveUnarchivePath(ctx actions.Context, raw string) string {
 		return ""
 	}
 	if ec, ok := ctx.(*executor.ExecutionContext); ok && ec.Svc != nil && ec.Svc.PathUtil != nil {
-		if expanded, err := ec.Svc.PathUtil.ExpandPath(raw, ec.CurrentDir, ctx.GetVariables()); err == nil {
+		if expanded, err := ec.Svc.PathUtil.ExpandPath(raw, ec.CurrentDir, ctx.Variables()); err == nil {
 			return expanded
 		}
 	}

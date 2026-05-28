@@ -268,7 +268,7 @@ func (h *Handler) buildPackageList(pkg *config.Package) []string {
 func (h *Handler) renderPackageNames(ctx actions.Context, names []string) ([]string, error) {
 	rendered := make([]string, len(names))
 	for i, name := range names {
-		out, err := ctx.GetTemplate().Render(name, ctx.GetVariables())
+		out, err := ctx.Template().Render(name, ctx.Variables())
 		if err != nil {
 			return nil, fmt.Errorf("render package name %q: %w", name, err)
 		}
@@ -282,8 +282,8 @@ func (h *Handler) renderPackageNames(ctx actions.Context, names []string) ([]str
 // matched without a Pongo2 round-trip (preserves typing); otherwise the
 // template renders to a string and the shared resolver parses it.
 func (h *Handler) resolveNamesExpr(ctx actions.Context, expr string) ([]string, error) {
-	vars := ctx.GetVariables()
-	evaluator := ctx.GetEvaluator()
+	vars := ctx.Variables()
+	evaluator := ctx.Evaluator()
 
 	trimmed := strings.TrimSpace(expr)
 	if inner, ok := stripTemplateWrapper(trimmed); ok {
@@ -292,7 +292,7 @@ func (h *Handler) resolveNamesExpr(ctx actions.Context, expr string) ([]string, 
 		}
 	}
 
-	rendered, renderErr := ctx.GetTemplate().Render(expr, vars)
+	rendered, renderErr := ctx.Template().Render(expr, vars)
 	if renderErr != nil {
 		return nil, fmt.Errorf("render: %w", renderErr)
 	}
@@ -870,7 +870,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 	}
 
 	// Shared preamble — same for both modes.
-	manager, err := h.determinePackageManager(pkg.Manager, ctx.GetVariables())
+	manager, err := h.determinePackageManager(pkg.Manager, ctx.Variables())
 	if err != nil {
 		return nil, fmt.Errorf("failed to determine package manager: %w", err)
 	}

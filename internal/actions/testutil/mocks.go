@@ -16,12 +16,12 @@ import (
 
 // MockContext implements actions.Context for testing
 type MockContext struct {
-	Variables   map[string]interface{}
-	Tmpl        template.Renderer
-	Publisher   *MockPublisher
-	Log         logger.Logger
-	StepID      string
-	CurrentMode actions.Mode
+	Vars          map[string]interface{}
+	Tmpl          template.Renderer
+	Publisher     *MockPublisher
+	Log           logger.Logger
+	CurrentStepID string
+	CurrentMode   actions.Mode
 	// Performer, if set, is returned by Effects(). Tests exercising the
 	// Spec-16 Run path inject a fake or real Performer here. When nil,
 	// Effects() returns a no-op Performer that records nothing.
@@ -32,40 +32,40 @@ type MockContext struct {
 	CurrentCtx context.Context
 }
 
-func (m *MockContext) GetVariables() map[string]interface{} {
-	return m.Variables
+func (m *MockContext) Variables() map[string]interface{} {
+	return m.Vars
 }
 
 func (m *MockContext) SetVariable(key string, value interface{}) {
-	m.Variables[key] = value
+	m.Vars[key] = value
 }
 
 func (m *MockContext) MergeUserVars(vars map[string]interface{}) {
 	for k, v := range vars {
-		m.Variables[k] = v
+		m.Vars[k] = v
 	}
 }
 
-func (m *MockContext) GetTemplate() template.Renderer {
+func (m *MockContext) Template() template.Renderer {
 	return m.Tmpl
 }
 
-func (m *MockContext) GetEventPublisher() events.Publisher {
+func (m *MockContext) EventPublisher() events.Publisher {
 	return m.Publisher
 }
 
-func (m *MockContext) GetLogger() logger.Logger {
+func (m *MockContext) Logger() logger.Logger {
 	return m.Log
 }
 
-func (m *MockContext) GetCurrentStepID() string {
-	if m.StepID == "" {
+func (m *MockContext) StepID() string {
+	if m.CurrentStepID == "" {
 		return "step-1"
 	}
-	return m.StepID
+	return m.CurrentStepID
 }
 
-func (m *MockContext) GetEvaluator() expression.Evaluator {
+func (m *MockContext) Evaluator() expression.Evaluator {
 	return expression.NewExprEvaluator()
 }
 
@@ -192,12 +192,12 @@ func NewMockContext() *MockContext {
 		panic("Failed to create mock renderer: " + err.Error())
 	}
 	return &MockContext{
-		Variables:   make(map[string]interface{}),
-		Tmpl:        renderer,
-		Publisher:   &MockPublisher{Events: []events.Event{}},
-		Log:         &MockLogger{Logs: []string{}},
-		StepID:      "step-1",
-		CurrentMode: actions.ModeApply,
+		Vars:          make(map[string]interface{}),
+		Tmpl:          renderer,
+		Publisher:     &MockPublisher{Events: []events.Event{}},
+		Log:           &MockLogger{Logs: []string{}},
+		CurrentStepID: "step-1",
+		CurrentMode:   actions.ModeApply,
 	}
 }
 

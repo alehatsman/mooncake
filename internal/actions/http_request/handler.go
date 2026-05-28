@@ -407,7 +407,7 @@ type renderedRequest struct {
 // and captures the response as a registered fact. Retry is owned by
 // the executor's runWithRetry — see RunRaw + IsRetryable below.
 func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, error) {
-	rr, err := h.render(ctx, step.HTTPRequest, ctx.GetVariables(), "")
+	rr, err := h.render(ctx, step.HTTPRequest, ctx.Variables(), "")
 	if err != nil {
 		return nil, err
 	}
@@ -498,7 +498,7 @@ func (h *Handler) runPlan(ctx actions.Context, step *config.Step, rr *renderedRe
 			// network blip during plan shouldn't gate the entire run.
 			// Fall through with probeFact=nil so creates_when (if any)
 			// evaluates against the existing scope only.
-			ctx.GetLogger().Debugf("  probe failed: %v", probeErr)
+			ctx.Logger().Debugf("  probe failed: %v", probeErr)
 			res.Reason = fmt.Sprintf("probe failed: %v; would call %s %s%s", probeErr, rr.method, rr.url, bodyHint)
 			res.WouldChange = !readMethods[rr.method]
 			return res, nil
@@ -514,7 +514,7 @@ func (h *Handler) runPlan(ctx actions.Context, step *config.Step, rr *renderedRe
 			} else {
 				res.Reason = fmt.Sprintf("skip %s %s (creates_when: false — state already matches)", rr.method, rr.url)
 			}
-			ctx.GetLogger().Infof("  [plan] %s", res.Reason)
+			ctx.Logger().Infof("  [plan] %s", res.Reason)
 			return res, nil
 		}
 		// Probe ran but no creates_when to evaluate; surface the probe
@@ -529,7 +529,7 @@ func (h *Handler) runPlan(ctx actions.Context, step *config.Step, rr *renderedRe
 		res.WouldChange = true
 		res.Reason = fmt.Sprintf("would call %s %s%s", rr.method, rr.url, bodyHint)
 	}
-	ctx.GetLogger().Infof("  [plan] %s", res.Reason)
+	ctx.Logger().Infof("  [plan] %s", res.Reason)
 	return res, nil
 }
 
@@ -553,7 +553,7 @@ func (h *Handler) executeProbe(ctx actions.Context, probe *config.HTTPRequest) (
 	if probe == nil {
 		return nil, nil
 	}
-	pr, err := h.render(ctx, probe, ctx.GetVariables(), "probe.")
+	pr, err := h.render(ctx, probe, ctx.Variables(), "probe.")
 	if err != nil {
 		return nil, err
 	}
@@ -603,7 +603,7 @@ func buildFact(got *httpAttempt, rr *renderedRequest) map[string]interface{} {
 // evalCreatesWhen renders + evaluates the creates_when predicate with
 // `probe` merged into scope when set. Returns the predicate's bool.
 func evalCreatesWhen(ctx actions.Context, expr string, probeFact map[string]interface{}) (bool, error) {
-	base := ctx.GetVariables()
+	base := ctx.Variables()
 	merged := make(map[string]interface{}, len(base)+1)
 	for k, v := range base {
 		merged[k] = v
@@ -611,11 +611,11 @@ func evalCreatesWhen(ctx actions.Context, expr string, probeFact map[string]inte
 	if probeFact != nil {
 		merged["probe"] = probeFact
 	}
-	rendered, err := ctx.GetTemplate().Render(expr, merged)
+	rendered, err := ctx.Template().Render(expr, merged)
 	if err != nil {
 		return false, fmt.Errorf("%s.creates_when render: %w", actionName, err)
 	}
-	out, err := ctx.GetEvaluator().Evaluate(rendered, merged)
+	out, err := ctx.Evaluator().Evaluate(rendered, merged)
 	if err != nil {
 		return false, fmt.Errorf("%s.creates_when evaluate: %w", actionName, err)
 	}
@@ -663,7 +663,7 @@ func (h *Handler) runApply(ctx actions.Context, step *config.Step, rr *renderedR
 	// Publish event (host + path only; no query, no body). Emitted
 	// per-attempt — if retries fire, you'll see multiple events with
 	// the same step ID, each carrying its own status_code.
-	if pub := ctx.GetEventPublisher(); pub != nil {
+	if pub := ctx.EventPublisher(); pub != nil {
 		pub.Publish(events.Event{
 			Type: events.EventHTTPRequested,
 			Data: events.HTTPRequestedData{
@@ -749,7 +749,7 @@ func (h *Handler) runApply(ctx actions.Context, step *config.Step, rr *renderedR
 			// Render-error on reverse block is informational: the
 			// apply itself succeeded; we just can't snapshot a clean
 			// reverse. Surface it so Reverse() fails loudly later.
-			ctx.GetLogger().Errorf("  reverse-block snapshot failed: %v", err)
+			ctx.Logger().Errorf("  reverse-block snapshot failed: %v", err)
 		} else {
 			res.ReverseData = snap
 		}
@@ -759,7 +759,7 @@ func (h *Handler) runApply(ctx actions.Context, step *config.Step, rr *renderedR
 	// own "retry N/M" line between attempts; consumers tracking total
 	// trips should read response.attempts from the registered fact,
 	// which the executor fixes up post-loop with the cross-attempt count.
-	ctx.GetLogger().Infof("  HTTP %s %s -> %d (%dms)",
+	ctx.Logger().Infof("  HTTP %s %s -> %d (%dms)",
 		rr.method, rr.url, statusCode, data["duration_ms"])
 	return res, nil
 }
@@ -771,7 +771,7 @@ func (h *Handler) runApply(ctx actions.Context, step *config.Step, rr *renderedR
 // wraps it in a Step that the transaction layer can re-run as a normal
 // http.request invocation.
 func (h *Handler) snapshotReverse(ctx actions.Context, step *config.Step, responseFact map[string]interface{}) (*config.HTTPRequest, error) {
-	base := ctx.GetVariables()
+	base := ctx.Variables()
 	merged := make(map[string]interface{}, len(base)+2)
 	for k, v := range base {
 		merged[k] = v
@@ -959,13 +959,13 @@ var readFile = os.ReadFile
 // is best-effort idempotent — re-running the same plan twice creates
 // the parent dir once.
 func writeResponseBody(ctx actions.Context, pathTemplate string, body []byte, responseFact map[string]interface{}) (string, error) {
-	base := ctx.GetVariables()
+	base := ctx.Variables()
 	merged := make(map[string]interface{}, len(base)+1)
 	for k, v := range base {
 		merged[k] = v
 	}
 	merged["response"] = responseFact
-	rendered, err := ctx.GetTemplate().Render(pathTemplate, merged)
+	rendered, err := ctx.Template().Render(pathTemplate, merged)
 	if err != nil {
 		return "", fmt.Errorf("render path %q: %w", pathTemplate, err)
 	}
@@ -1046,7 +1046,7 @@ func checkExpectJSONSchema(ctx actions.Context, schemaPathTemplate string, data 
 	if !ok {
 		return fmt.Errorf("expect_json_schema: context is not an ExecutionContext")
 	}
-	resolved, err := ec.Svc.PathUtil.ExpandPath(schemaPathTemplate, ec.CurrentDir, ctx.GetVariables())
+	resolved, err := ec.Svc.PathUtil.ExpandPath(schemaPathTemplate, ec.CurrentDir, ctx.Variables())
 	if err != nil {
 		return fmt.Errorf("expect_json_schema: resolve %q: %w", schemaPathTemplate, err)
 	}

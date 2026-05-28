@@ -101,7 +101,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 	result := executor.NewResult()
 	result.Checkable = true
 
-	path, err := ec.Svc.PathUtil.ExpandPath(p.Path, ec.CurrentDir, ctx.GetVariables())
+	path, err := ec.Svc.PathUtil.ExpandPath(p.Path, ec.CurrentDir, ctx.Variables())
 	if err != nil {
 		return result, fmt.Errorf("text.patch.ini: expand path: %w", err)
 	}
@@ -168,9 +168,9 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 
 	result.Changed = true
 	result.Reason = reason
-	ctx.GetLogger().Infof("  text.patch.ini: %s", path)
+	ctx.Logger().Infof("  text.patch.ini: %s", path)
 
-	if pub := ctx.GetEventPublisher(); pub != nil {
+	if pub := ctx.EventPublisher(); pub != nil {
 		pub.Publish(events.Event{
 			Type: events.EventFileUpdated,
 			Data: events.FileOperationData{

@@ -36,7 +36,7 @@ func (h *Handler) render(ctx actions.Context, r *config.HTTPRequest, vars map[st
 // as a Step (the executor's template pass on Run is idempotent on
 // already-resolved strings since no `{{` / `{%` remain).
 func renderConfig(ctx actions.Context, r *config.HTTPRequest, vars map[string]interface{}, fieldPrefix string) (*config.HTTPRequest, error) {
-	tpl := ctx.GetTemplate()
+	tpl := ctx.Template()
 	at := func(field string) string { return actionName + "." + fieldPrefix + field }
 
 	out := *r // shallow copy; we'll overwrite the template-bearing fields below

@@ -99,7 +99,7 @@ func expandPPA(ctx actions.Context, out *rendered_, a *config.PkgRepoApt, state 
 		out.uri = ppaURI(owner, ppa)
 	}
 	if len(out.suites) == 0 {
-		codename := ubuntuCodename(ctx.GetVariables())
+		codename := ubuntuCodename(ctx.Variables())
 		if codename == "" {
 			return fmt.Errorf("pkg.repo.apt: ppa shorthand needs a suite; host distribution_codename is unset — supply `suites:` explicitly")
 		}

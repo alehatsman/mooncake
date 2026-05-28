@@ -248,9 +248,9 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 
 	result.Changed = true
 	result.Reason = reason
-	ctx.GetLogger().Infof("  pkg.hold: %s", reason)
+	ctx.Logger().Infof("  pkg.hold: %s", reason)
 
-	if pub := ctx.GetEventPublisher(); pub != nil {
+	if pub := ctx.EventPublisher(); pub != nil {
 		pub.Publish(events.Event{
 			Type: events.EventPackageManaged,
 			Data: map[string]interface{}{
@@ -281,8 +281,8 @@ func summarize(state string, toHold, toUnhold []string) string {
 // renderPackages produces the deduplicated, template-expanded list of
 // package names to operate on.
 func renderPackages(ctx actions.Context, p *config.PkgHold) ([]string, error) {
-	tmpl := ctx.GetTemplate()
-	vars := ctx.GetVariables()
+	tmpl := ctx.Template()
+	vars := ctx.Variables()
 	render := func(s string) (string, error) {
 		if s == "" {
 			return "", nil

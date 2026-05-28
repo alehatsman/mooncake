@@ -26,14 +26,14 @@ func diffTestCtx(t *testing.T) *executor.ExecutionContext {
 	return &executor.ExecutionContext{
 		Svc: &executor.RunServices{
 			Template:       tmpl,
-			Evaluator:      mock.GetEvaluator(),
+			Evaluator:      mock.Evaluator(),
 			Logger:         mock.Log,
 			EventPublisher: mock.Publisher,
 			PathUtil:       pathutil.NewPathExpander(tmpl),
 			Mode:           actions.ModePlan,
 		},
 		Scope:         executor.NewVariableScope(),
-		CurrentStepID: mock.StepID,
+		CurrentStepID: mock.CurrentStepID,
 		CurrentDir:    "/tmp",
 	}
 }

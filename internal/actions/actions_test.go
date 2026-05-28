@@ -69,14 +69,14 @@ type mockContext struct {
 	dryRun    bool
 }
 
-func (m *mockContext) GetVariables() map[string]interface{} {
+func (m *mockContext) Variables() map[string]interface{} {
 	if m.variables == nil {
 		return make(map[string]interface{})
 	}
 	return m.variables
 }
 
-func (m *mockContext) GetTemplate() template.Renderer {
+func (m *mockContext) Template() template.Renderer {
 	if m.tmpl == nil {
 		renderer, err := template.NewPongo2Renderer()
 		if err != nil {
@@ -87,28 +87,28 @@ func (m *mockContext) GetTemplate() template.Renderer {
 	return m.tmpl
 }
 
-func (m *mockContext) GetEventPublisher() events.Publisher {
+func (m *mockContext) EventPublisher() events.Publisher {
 	if m.publisher == nil {
 		return &mockPublisher{}
 	}
 	return m.publisher
 }
 
-func (m *mockContext) GetLogger() logger.Logger {
+func (m *mockContext) Logger() logger.Logger {
 	if m.log == nil {
 		return &mockLogger{}
 	}
 	return m.log
 }
 
-func (m *mockContext) GetCurrentStepID() string {
+func (m *mockContext) StepID() string {
 	if m.stepID == "" {
 		return "step-1"
 	}
 	return m.stepID
 }
 
-func (m *mockContext) GetEvaluator() expression.Evaluator {
+func (m *mockContext) Evaluator() expression.Evaluator {
 	return expression.NewExprEvaluator()
 }
 
@@ -687,7 +687,7 @@ func TestHandlerFunc_NilDryRun(t *testing.T) {
 		t.Errorf("DryRun with nil function should return nil, got: %v", err)
 	}
 
-	// The default dry-run calls GetLogger().Infof, which should not panic
+	// The default dry-run calls Logger().Infof, which should not panic
 }
 
 // TestHandlerFunc_ValidateError tests HandlerFunc returning validation error
