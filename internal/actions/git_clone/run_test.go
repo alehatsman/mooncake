@@ -145,6 +145,11 @@ func TestRun_Plan_DestMissing_WouldClone(t *testing.T) {
 	if !strings.Contains(r.Reason, "missing") {
 		t.Errorf("reason should mention missing; got %q", r.Reason)
 	}
+	// F5: predicted apply verb must match apply()'s OpCreate
+	// for the fresh-clone path.
+	if r.Operation != executor.OpCreate {
+		t.Errorf("Operation = %q, want OpCreate (missing dest)", r.Operation)
+	}
 }
 
 func TestRun_Apply_FreshClone(t *testing.T) {
@@ -377,6 +382,11 @@ func TestRun_Plan_RepoUpdate_NoUpdate(t *testing.T) {
 	if r.WouldChange {
 		t.Errorf("plan with update=false on existing repo should be no-op; reason=%q", r.Reason)
 	}
+	// F5: already-converged plan must emit OpNoop instead of
+	// leaving Operation unset.
+	if r.Operation != executor.OpNoop {
+		t.Errorf("Operation = %q, want OpNoop (already-cloned, update=false)", r.Operation)
+	}
 }
 
 func TestRun_Plan_RepoUpdate_WouldChange(t *testing.T) {
@@ -394,6 +404,11 @@ func TestRun_Plan_RepoUpdate_WouldChange(t *testing.T) {
 	}
 	if !strings.Contains(r.Reason, secondTag) {
 		t.Errorf("reason should mention target ref %s; got %q", secondTag, r.Reason)
+	}
+	// F5: predicted apply verb is OpUpdate for the
+	// fetch-and-checkout path; matches apply()'s update branch.
+	if r.Operation != executor.OpUpdate {
+		t.Errorf("Operation = %q, want OpUpdate (ref switch)", r.Operation)
 	}
 }
 
