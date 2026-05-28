@@ -1,6 +1,7 @@
 package apply
 
 import (
+	"context"
 	"os"
 
 	"github.com/alehatsman/mooncake/internal/actions"
@@ -57,11 +58,18 @@ func (c *reverseContext) Privileged() *security.Privileged {
 }
 
 func (c *reverseContext) MergeUserVars(_ map[string]interface{}) {}
-func (c *reverseContext) SetChanged(_ bool)                      {}
-func (c *reverseContext) SetStdout(_ string)                     {}
-func (c *reverseContext) SetStderr(_ string)                     {}
-func (c *reverseContext) SetFailed(_ bool)                       {}
-func (c *reverseContext) SetData(_ map[string]interface{})       {}
+
+// Ctx returns a detached background context. Reverse() implementations
+// are pure on (step + ReverseData) and shouldn't shell out; if one does,
+// it gets a non-nil, non-cancellable ctx rather than a nil that would
+// NPE inside exec.CommandContext.
+func (c *reverseContext) Ctx() context.Context { return context.Background() }
+
+func (c *reverseContext) SetChanged(_ bool)                {}
+func (c *reverseContext) SetStdout(_ string)               {}
+func (c *reverseContext) SetStderr(_ string)               {}
+func (c *reverseContext) SetFailed(_ bool)                 {}
+func (c *reverseContext) SetData(_ map[string]interface{}) {}
 
 // reverseNoopPerformer satisfies actions.Performer with no-op
 // returns. Reverse handlers should not call Effects(); this guard

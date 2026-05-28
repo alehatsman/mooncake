@@ -1,6 +1,8 @@
 package actions
 
 import (
+	"context"
+
 	"github.com/alehatsman/mooncake/internal/config"
 	"github.com/alehatsman/mooncake/internal/events"
 	"github.com/alehatsman/mooncake/internal/expression"
@@ -135,6 +137,26 @@ type Context interface {
 	// Use this instead of mutating the map returned by GetVariables() directly,
 	// so that the write goes to the correct typed bucket (Scope.User when available).
 	MergeUserVars(vars map[string]interface{})
+
+	// Ctx returns the run-wide context driving this apply. Handlers
+	// MUST plumb this into any external call (exec.CommandContext,
+	// http.NewRequestWithContext, net.Dialer{...}.DialContext, …) so
+	// the apply observes SIGINT / fleet kill / MCP shutdown / caller
+	// cancel. Per-step timeouts compose on top via
+	// context.WithTimeout(ctx.Ctx(), step.Timeout).
+	//
+	// Producers attach typed cancel causes via context.WithCancelCause
+	// (see executor.ErrCancelSignal / ErrCancelFleet / ErrCancelMCP);
+	// syncResultEnvelope then classifies the resulting Cancelled
+	// step's CancelledReason. F2 (handler-ctx threading) is what
+	// makes that classification observable end-to-end — without it,
+	// handlers that ignore ctx complete normally during a cancel and
+	// the recap never says cancelled=N.
+	//
+	// May return context.Background() in detached contexts (Reverse
+	// plans, certain test setups) — handlers should treat it as
+	// non-nil but always-cancellable in principle.
+	Ctx() context.Context
 }
 
 // Result represents the outcome of an action execution.

@@ -384,3 +384,19 @@ func (ec *ExecutionContext) GetEventPublisher() events.Publisher {
 func (ec *ExecutionContext) GetCurrentStepID() string {
 	return ec.CurrentStepID
 }
+
+// Ctx returns the run-wide context (ec.Svc.Ctx). Handlers reach through
+// this to plumb cancellation into shell-outs and HTTP calls so SIGINT /
+// fleet kill / MCP shutdown propagates end-to-end (F2).
+//
+// Returns context.Background() when Svc or Svc.Ctx is nil — production
+// paths always populate both, but the guard keeps test-built contexts
+// that skip RunServices construction from panicking. Returning a live
+// (non-nil, non-cancellable) ctx is safer than nil for handlers that
+// chain WithTimeout / WithCancel onto it.
+func (ec *ExecutionContext) Ctx() context.Context {
+	if ec.Svc == nil || ec.Svc.Ctx == nil {
+		return context.Background()
+	}
+	return ec.Svc.Ctx
+}

@@ -2,6 +2,7 @@
 package testutil
 
 import (
+	"context"
 	"fmt"
 	"os"
 
@@ -25,6 +26,10 @@ type MockContext struct {
 	// Spec-16 Run path inject a fake or real Performer here. When nil,
 	// Effects() returns a no-op Performer that records nothing.
 	Performer actions.Performer
+	// CurrentCtx, if set, is returned by Ctx(). Tests exercising the
+	// F2 ctx-threading paths inject a cancellable ctx here. When nil,
+	// Ctx() falls back to context.Background().
+	CurrentCtx context.Context
 }
 
 func (m *MockContext) GetVariables() map[string]interface{} {
@@ -67,6 +72,17 @@ func (m *MockContext) GetEvaluator() expression.Evaluator {
 // Mode reports the configured CurrentMode.
 func (m *MockContext) Mode() actions.Mode {
 	return m.CurrentMode
+}
+
+// Ctx returns the test-configured CurrentCtx, or context.Background()
+// when the test didn't bother to set one. Tests that exercise F2
+// ctx-cancellation paths must populate CurrentCtx with a cancellable
+// ctx (typically context.WithCancel or context.WithCancelCause).
+func (m *MockContext) Ctx() context.Context {
+	if m.CurrentCtx != nil {
+		return m.CurrentCtx
+	}
+	return context.Background()
 }
 
 // Effects returns a no-op Performer that records calls but does not

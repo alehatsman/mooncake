@@ -1,6 +1,7 @@
 package print
 
 import (
+	"context"
 	"os"
 	"strings"
 	"testing"
@@ -73,6 +74,8 @@ func (m *mockContext) IsDryRun() bool {
 func (m *mockContext) Mode() actions.Mode { return m.mode }
 
 func (m *mockContext) Effects() actions.Performer { return printNoopPerformer{} }
+
+func (m *mockContext) Ctx() context.Context { return context.Background() }
 func (m *mockContext) Privileged() *security.Privileged {
 	return &security.Privileged{
 		Escalation: security.EscalationReport{Available: true, Reason: security.EscalationAvailableRoot},

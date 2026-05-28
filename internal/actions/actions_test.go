@@ -1,6 +1,7 @@
 package actions
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -123,6 +124,8 @@ func (m *mockContext) Mode() Mode {
 }
 
 func (m *mockContext) Effects() Performer { return testNoopPerformer{mode: m.Mode()} }
+
+func (m *mockContext) Ctx() context.Context { return context.Background() }
 
 func (m *mockContext) Privileged() *security.Privileged {
 	return &security.Privileged{

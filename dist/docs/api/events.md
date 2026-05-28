@@ -518,6 +518,13 @@ RunCompletedData contains data for run.completed events
 type RunCompletedData struct {
     TotalSteps   int `json:"total_steps"`
     SuccessSteps int `json:"success_steps"`
+    // OkSteps counts steps that completed successfully without
+    // changing the system (F6). Mutually exclusive with ChangedSteps
+    // at the executor's decision sites; for the typical case
+    // OkSteps + ChangedSteps == SuccessSteps. Lifts the renderer-side
+    // derivation onto a first-class field so downstream consumers
+    // (agentd, MCP, SDK) don't have to subtract.
+    OkSteps      int `json:"ok_steps,omitempty"`
     FailedSteps  int `json:"failed_steps"`
     SkippedSteps int `json:"skipped_steps"`
     ChangedSteps int `json:"changed_steps"`

@@ -129,6 +129,7 @@ log.Infof("Summary: %d changed, %d unchanged, %d failed",
   - [func (e *EvaluationError) Unwrap() error](<#func-evaluationerror-unwrap>)
 - [type ExecutionContext](<#type-executioncontext>)
   - [func (ec *ExecutionContext) Clone() ExecutionContext](<#func-executioncontext-clone>)
+  - [func (ec *ExecutionContext) Ctx() context.Context](<#func-executioncontext-ctx>)
   - [func (ec *ExecutionContext) Effects() actions.Performer](<#func-executioncontext-effects>)
   - [func (ec *ExecutionContext) EmitEvent(eventType events.EventType, data interface{})](<#func-executioncontext-emitevent>)
   - [func (ec *ExecutionContext) GetCurrentStepID() string](<#func-executioncontext-getcurrentstepid>)
@@ -754,6 +755,16 @@ func (ec *ExecutionContext) Clone() ExecutionContext
 
 Clone creates a new ExecutionContext for a nested execution scope \(include or loop\). Svc is shared by pointer; Scope is deep\-cloned \(User\+Results\); per\-step fields are reset.
 
+### func \(\*ExecutionContext\) Ctx
+
+```go
+func (ec *ExecutionContext) Ctx() context.Context
+```
+
+Ctx returns the run\-wide context \(ec.Svc.Ctx\). Handlers reach through this to plumb cancellation into shell\-outs and HTTP calls so SIGINT / fleet kill / MCP shutdown propagates end\-to\-end \(F2\).
+
+Returns context.Background\(\) when Svc or Svc.Ctx is nil — production paths always populate both, but the guard keeps test\-built contexts that skip RunServices construction from panicking. Returning a live \(non\-nil, non\-cancellable\) ctx is safer than nil for handlers that chain WithTimeout / WithCancel onto it.
+
 ### func \(\*ExecutionContext\) Effects
 
 ```go
@@ -868,6 +879,14 @@ type ExecutionStats struct {
     Failed *int
     // Changed counts steps that resulted in a system change
     Changed *int
+    // OK counts steps that completed successfully without changing the
+    // system (F6 / proposal-02). Mutually exclusive with Changed at each
+    // step decision site — a step is either "ran and did nothing" (OK)
+    // or "ran and mutated" (Changed). Invariant: OK + Changed == Executed
+    // for every successful step. Lifts the renderer-side derivation
+    // (`ok := SuccessSteps - ChangedSteps`) onto a first-class field so
+    // downstream consumers (agentd, MCP, SDK) read it directly.
+    OK  *int
     // Reverted counts steps whose changes were undone by a transaction's
     // LIFO Reverse() pass (MT-45). Reverted steps are subtracted from
     // Changed at rollback time so the recap reflects net effect, not
