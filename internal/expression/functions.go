@@ -13,6 +13,20 @@ import (
 // regexCache caches compiled regex patterns for performance
 var regexCache sync.Map
 
+// argc verifies that params holds exactly want arguments, returning a
+// "<name> requires N argument(s), got M" error otherwise. Centralizes the
+// arg-count guard repeated by every builtin in this file.
+func argc(name string, params []interface{}, want int) error {
+	if len(params) == want {
+		return nil
+	}
+	unit := "arguments"
+	if want == 1 {
+		unit = "argument"
+	}
+	return fmt.Errorf("%s requires %d %s, got %d", name, want, unit, len(params))
+}
+
 // StringFunctions returns string manipulation functions
 //
 //nolint:gocyclo // High complexity due to comprehensive error checking for all string functions
@@ -20,8 +34,8 @@ func StringFunctions() map[string]interface{} {
 	return map[string]interface{}{
 		// starts_with checks if string starts with prefix
 		"starts_with": func(params ...interface{}) (interface{}, error) {
-			if len(params) != 2 {
-				return false, fmt.Errorf("starts_with requires 2 arguments, got %d", len(params))
+			if err := argc("starts_with", params, 2); err != nil {
+				return false, err
 			}
 			str, ok1 := params[0].(string)
 			prefix, ok2 := params[1].(string)
@@ -33,8 +47,8 @@ func StringFunctions() map[string]interface{} {
 
 		// ends_with checks if string ends with suffix
 		"ends_with": func(params ...interface{}) (interface{}, error) {
-			if len(params) != 2 {
-				return false, fmt.Errorf("ends_with requires 2 arguments, got %d", len(params))
+			if err := argc("ends_with", params, 2); err != nil {
+				return false, err
 			}
 			str, ok1 := params[0].(string)
 			suffix, ok2 := params[1].(string)
@@ -46,8 +60,8 @@ func StringFunctions() map[string]interface{} {
 
 		// lower converts string to lowercase
 		"lower": func(params ...interface{}) (interface{}, error) {
-			if len(params) != 1 {
-				return "", fmt.Errorf("lower requires 1 argument, got %d", len(params))
+			if err := argc("lower", params, 1); err != nil {
+				return "", err
 			}
 			str, ok := params[0].(string)
 			if !ok {
@@ -58,8 +72,8 @@ func StringFunctions() map[string]interface{} {
 
 		// upper converts string to uppercase
 		"upper": func(params ...interface{}) (interface{}, error) {
-			if len(params) != 1 {
-				return "", fmt.Errorf("upper requires 1 argument, got %d", len(params))
+			if err := argc("upper", params, 1); err != nil {
+				return "", err
 			}
 			str, ok := params[0].(string)
 			if !ok {
@@ -70,8 +84,8 @@ func StringFunctions() map[string]interface{} {
 
 		// trim removes leading and trailing whitespace
 		"trim": func(params ...interface{}) (interface{}, error) {
-			if len(params) != 1 {
-				return "", fmt.Errorf("trim requires 1 argument, got %d", len(params))
+			if err := argc("trim", params, 1); err != nil {
+				return "", err
 			}
 			str, ok := params[0].(string)
 			if !ok {
@@ -82,8 +96,8 @@ func StringFunctions() map[string]interface{} {
 
 		// split splits string by separator
 		"split": func(params ...interface{}) (interface{}, error) {
-			if len(params) != 2 {
-				return []string{}, fmt.Errorf("split requires 2 arguments, got %d", len(params))
+			if err := argc("split", params, 2); err != nil {
+				return []string{}, err
 			}
 			str, ok1 := params[0].(string)
 			sep, ok2 := params[1].(string)
@@ -95,8 +109,8 @@ func StringFunctions() map[string]interface{} {
 
 		// join joins array elements with separator
 		"join": func(params ...interface{}) (interface{}, error) {
-			if len(params) != 2 {
-				return "", fmt.Errorf("join requires 2 arguments, got %d", len(params))
+			if err := argc("join", params, 2); err != nil {
+				return "", err
 			}
 			sep, ok := params[1].(string)
 			if !ok {
@@ -131,8 +145,8 @@ func StringFunctions() map[string]interface{} {
 
 		// replace replaces all occurrences of old with new
 		"replace": func(params ...interface{}) (interface{}, error) {
-			if len(params) != 3 {
-				return "", fmt.Errorf("replace requires 3 arguments, got %d", len(params))
+			if err := argc("replace", params, 3); err != nil {
+				return "", err
 			}
 			str, ok1 := params[0].(string)
 			old, ok2 := params[1].(string)
@@ -145,8 +159,8 @@ func StringFunctions() map[string]interface{} {
 
 		// regex_match checks if string matches regex pattern
 		"regex_match": func(params ...interface{}) (interface{}, error) {
-			if len(params) != 2 {
-				return false, fmt.Errorf("regex_match requires 2 arguments, got %d", len(params))
+			if err := argc("regex_match", params, 2); err != nil {
+				return false, err
 			}
 			str, ok1 := params[0].(string)
 			pattern, ok2 := params[1].(string)
@@ -181,8 +195,8 @@ func MathFunctions() map[string]interface{} {
 	return map[string]interface{}{
 		// min returns minimum of two numbers
 		"min": func(params ...interface{}) (interface{}, error) {
-			if len(params) != 2 {
-				return 0.0, fmt.Errorf("min requires 2 arguments, got %d", len(params))
+			if err := argc("min", params, 2); err != nil {
+				return 0.0, err
 			}
 			a, err1 := toFloat64(params[0])
 			b, err2 := toFloat64(params[1])
@@ -194,8 +208,8 @@ func MathFunctions() map[string]interface{} {
 
 		// max returns maximum of two numbers
 		"max": func(params ...interface{}) (interface{}, error) {
-			if len(params) != 2 {
-				return 0.0, fmt.Errorf("max requires 2 arguments, got %d", len(params))
+			if err := argc("max", params, 2); err != nil {
+				return 0.0, err
 			}
 			a, err1 := toFloat64(params[0])
 			b, err2 := toFloat64(params[1])
@@ -207,8 +221,8 @@ func MathFunctions() map[string]interface{} {
 
 		// abs returns absolute value
 		"abs": func(params ...interface{}) (interface{}, error) {
-			if len(params) != 1 {
-				return 0.0, fmt.Errorf("abs requires 1 argument, got %d", len(params))
+			if err := argc("abs", params, 1); err != nil {
+				return 0.0, err
 			}
 			n, err := toFloat64(params[0])
 			if err != nil {
@@ -219,8 +233,8 @@ func MathFunctions() map[string]interface{} {
 
 		// floor returns floor value
 		"floor": func(params ...interface{}) (interface{}, error) {
-			if len(params) != 1 {
-				return 0.0, fmt.Errorf("floor requires 1 argument, got %d", len(params))
+			if err := argc("floor", params, 1); err != nil {
+				return 0.0, err
 			}
 			n, err := toFloat64(params[0])
 			if err != nil {
@@ -231,8 +245,8 @@ func MathFunctions() map[string]interface{} {
 
 		// ceil returns ceiling value
 		"ceil": func(params ...interface{}) (interface{}, error) {
-			if len(params) != 1 {
-				return 0.0, fmt.Errorf("ceil requires 1 argument, got %d", len(params))
+			if err := argc("ceil", params, 1); err != nil {
+				return 0.0, err
 			}
 			n, err := toFloat64(params[0])
 			if err != nil {
@@ -243,8 +257,8 @@ func MathFunctions() map[string]interface{} {
 
 		// round rounds to nearest integer
 		"round": func(params ...interface{}) (interface{}, error) {
-			if len(params) != 1 {
-				return 0.0, fmt.Errorf("round requires 1 argument, got %d", len(params))
+			if err := argc("round", params, 1); err != nil {
+				return 0.0, err
 			}
 			n, err := toFloat64(params[0])
 			if err != nil {
@@ -255,8 +269,8 @@ func MathFunctions() map[string]interface{} {
 
 		// pow returns a^b
 		"pow": func(params ...interface{}) (interface{}, error) {
-			if len(params) != 2 {
-				return 0.0, fmt.Errorf("pow requires 2 arguments, got %d", len(params))
+			if err := argc("pow", params, 2); err != nil {
+				return 0.0, err
 			}
 			a, err1 := toFloat64(params[0])
 			b, err2 := toFloat64(params[1])
@@ -268,8 +282,8 @@ func MathFunctions() map[string]interface{} {
 
 		// sqrt returns square root
 		"sqrt": func(params ...interface{}) (interface{}, error) {
-			if len(params) != 1 {
-				return 0.0, fmt.Errorf("sqrt requires 1 argument, got %d", len(params))
+			if err := argc("sqrt", params, 1); err != nil {
+				return 0.0, err
 			}
 			n, err := toFloat64(params[0])
 			if err != nil {
@@ -317,8 +331,8 @@ func CollectionFunctions() map[string]interface{} {
 	return map[string]interface{}{
 		// len returns length of string, array, or map
 		"len": func(params ...interface{}) (interface{}, error) {
-			if len(params) != 1 {
-				return 0, fmt.Errorf("len requires 1 argument, got %d", len(params))
+			if err := argc("len", params, 1); err != nil {
+				return 0, err
 			}
 			v := params[0]
 			if v == nil {
@@ -335,8 +349,8 @@ func CollectionFunctions() map[string]interface{} {
 
 		// includes checks if item is in array
 		"includes": func(params ...interface{}) (interface{}, error) {
-			if len(params) != 2 {
-				return false, fmt.Errorf("includes requires 2 arguments, got %d", len(params))
+			if err := argc("includes", params, 2); err != nil {
+				return false, err
 			}
 			item := params[0]
 			arr := params[1]
@@ -357,8 +371,8 @@ func CollectionFunctions() map[string]interface{} {
 
 		// empty checks if value is empty (nil, empty string, empty array, zero)
 		"empty": func(params ...interface{}) (interface{}, error) {
-			if len(params) != 1 {
-				return true, fmt.Errorf("empty requires 1 argument, got %d", len(params))
+			if err := argc("empty", params, 1); err != nil {
+				return true, err
 			}
 			v := params[0]
 			if v == nil {
@@ -383,8 +397,8 @@ func CollectionFunctions() map[string]interface{} {
 
 		// first returns first element of array
 		"first": func(params ...interface{}) (interface{}, error) {
-			if len(params) != 1 {
-				return nil, fmt.Errorf("first requires 1 argument, got %d", len(params))
+			if err := argc("first", params, 1); err != nil {
+				return nil, err
 			}
 			arr := params[0]
 			if arr == nil {
@@ -399,8 +413,8 @@ func CollectionFunctions() map[string]interface{} {
 
 		// last returns last element of array
 		"last": func(params ...interface{}) (interface{}, error) {
-			if len(params) != 1 {
-				return nil, fmt.Errorf("last requires 1 argument, got %d", len(params))
+			if err := argc("last", params, 1); err != nil {
+				return nil, err
 			}
 			arr := params[0]
 			if arr == nil {
@@ -420,8 +434,8 @@ func TypeFunctions() map[string]interface{} {
 	return map[string]interface{}{
 		// is_string checks if value is a string
 		"is_string": func(params ...interface{}) (interface{}, error) {
-			if len(params) != 1 {
-				return false, fmt.Errorf("is_string requires 1 argument, got %d", len(params))
+			if err := argc("is_string", params, 1); err != nil {
+				return false, err
 			}
 			_, ok := params[0].(string)
 			return ok, nil
@@ -429,8 +443,8 @@ func TypeFunctions() map[string]interface{} {
 
 		// is_number checks if value is a number
 		"is_number": func(params ...interface{}) (interface{}, error) {
-			if len(params) != 1 {
-				return false, fmt.Errorf("is_number requires 1 argument, got %d", len(params))
+			if err := argc("is_number", params, 1); err != nil {
+				return false, err
 			}
 			v := params[0]
 			if v == nil {
@@ -443,8 +457,8 @@ func TypeFunctions() map[string]interface{} {
 
 		// is_bool checks if value is a boolean
 		"is_bool": func(params ...interface{}) (interface{}, error) {
-			if len(params) != 1 {
-				return false, fmt.Errorf("is_bool requires 1 argument, got %d", len(params))
+			if err := argc("is_bool", params, 1); err != nil {
+				return false, err
 			}
 			_, ok := params[0].(bool)
 			return ok, nil
@@ -452,8 +466,8 @@ func TypeFunctions() map[string]interface{} {
 
 		// is_array checks if value is an array or slice
 		"is_array": func(params ...interface{}) (interface{}, error) {
-			if len(params) != 1 {
-				return false, fmt.Errorf("is_array requires 1 argument, got %d", len(params))
+			if err := argc("is_array", params, 1); err != nil {
+				return false, err
 			}
 			v := params[0]
 			if v == nil {
@@ -465,8 +479,8 @@ func TypeFunctions() map[string]interface{} {
 
 		// is_map checks if value is a map
 		"is_map": func(params ...interface{}) (interface{}, error) {
-			if len(params) != 1 {
-				return false, fmt.Errorf("is_map requires 1 argument, got %d", len(params))
+			if err := argc("is_map", params, 1); err != nil {
+				return false, err
 			}
 			v := params[0]
 			if v == nil {
@@ -477,8 +491,8 @@ func TypeFunctions() map[string]interface{} {
 
 		// is_defined checks if variable is not nil
 		"is_defined": func(params ...interface{}) (interface{}, error) {
-			if len(params) != 1 {
-				return false, fmt.Errorf("is_defined requires 1 argument, got %d", len(params))
+			if err := argc("is_defined", params, 1); err != nil {
+				return false, err
 			}
 			return params[0] != nil, nil
 		},
@@ -490,8 +504,8 @@ func UtilityFunctions() map[string]interface{} {
 	return map[string]interface{}{
 		// default returns defaultValue if v is nil or empty
 		"default": func(params ...interface{}) (interface{}, error) {
-			if len(params) != 2 {
-				return nil, fmt.Errorf("default requires 2 arguments, got %d", len(params))
+			if err := argc("default", params, 2); err != nil {
+				return nil, err
 			}
 			v := params[0]
 			defaultValue := params[1]
@@ -512,8 +526,8 @@ func UtilityFunctions() map[string]interface{} {
 
 		// env gets environment variable
 		"env": func(params ...interface{}) (interface{}, error) {
-			if len(params) != 1 {
-				return "", fmt.Errorf("env requires 1 argument, got %d", len(params))
+			if err := argc("env", params, 1); err != nil {
+				return "", err
 			}
 			name, ok := params[0].(string)
 			if !ok {
@@ -524,8 +538,8 @@ func UtilityFunctions() map[string]interface{} {
 
 		// has_env checks if environment variable exists
 		"has_env": func(params ...interface{}) (interface{}, error) {
-			if len(params) != 1 {
-				return false, fmt.Errorf("has_env requires 1 argument, got %d", len(params))
+			if err := argc("has_env", params, 1); err != nil {
+				return false, err
 			}
 			name, ok := params[0].(string)
 			if !ok {
@@ -551,8 +565,8 @@ func UtilityFunctions() map[string]interface{} {
 
 		// ternary returns trueValue if condition is true, else falseValue
 		"ternary": func(params ...interface{}) (interface{}, error) {
-			if len(params) != 3 {
-				return nil, fmt.Errorf("ternary requires 3 arguments, got %d", len(params))
+			if err := argc("ternary", params, 3); err != nil {
+				return nil, err
 			}
 			condition, ok := params[0].(bool)
 			if !ok {

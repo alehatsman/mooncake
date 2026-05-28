@@ -63,6 +63,15 @@ func RunLoop(opts RunOptions) (*LoopResult, error) {
 	var iterations []IterationLog
 	var lastIteration *IterationSummary
 
+	// terminate writes a failure-log entry, appends it to the run's
+	// iteration list, and returns the stop result. Collapses the
+	// log+append+return triplet repeated by every terminal exit below.
+	terminate := func(iterNum int, planHash, reason, msg string, stop StopReason, retErr error) (*LoopResult, error) {
+		log := writeLoopFailureLog(opts.RepoRoot, iterNum, opts, planHash, reason, msg)
+		iterations = append(iterations, *log)
+		return &LoopResult{Iterations: iterations, StopReason: stop, FinalLog: log}, retErr
+	}
+
 	for i := 1; i <= opts.MaxIterations; i++ {
 		iterNum, err := NextIterationNumber(opts.RepoRoot)
 		if err != nil {
@@ -97,36 +106,18 @@ func RunLoop(opts RunOptions) (*LoopResult, error) {
 		rawPlan, err := client.GeneratePlan(genCtx, systemPrompt, userPrompt, opts.Model)
 		cancelGen()
 		if err != nil {
-			log := writeLoopFailureLog(opts.RepoRoot, iterNum, opts, "", "generation_failed", err.Error())
-			iterations = append(iterations, *log)
-			return &LoopResult{
-				Iterations: iterations,
-				StopReason: StopFailed,
-				FinalLog:   log,
-			}, err
+			return terminate(iterNum, "", "generation_failed", err.Error(), StopFailed, err)
 		}
 
 		planBytes, err := SanitizePlan(rawPlan)
 		if err != nil {
-			log := writeLoopFailureLog(opts.RepoRoot, iterNum, opts, "", "sanitization_failed", err.Error())
-			iterations = append(iterations, *log)
-			return &LoopResult{
-				Iterations: iterations,
-				StopReason: StopFailed,
-				FinalLog:   log,
-			}, err
+			return terminate(iterNum, "", "sanitization_failed", err.Error(), StopFailed, err)
 		}
 
 		planHash := ComputePlanHash(planBytes)
 
 		if lastIteration != nil && planHash == lastIteration.PlanHash {
-			log := writeLoopFailureLog(opts.RepoRoot, iterNum, opts, planHash, "no_progress", "plan identical to previous iteration")
-			iterations = append(iterations, *log)
-			return &LoopResult{
-				Iterations: iterations,
-				StopReason: StopNoProgress,
-				FinalLog:   log,
-			}, nil
+			return terminate(iterNum, planHash, "no_progress", "plan identical to previous iteration", StopNoProgress, nil)
 		}
 
 		// Step-style contract enforcement (spec-67 §12.3, plan §4 + §8).
@@ -151,13 +142,7 @@ func RunLoop(opts RunOptions) (*LoopResult, error) {
 
 		wrappedBytes, err := WrapInTransaction(planBytes)
 		if err != nil {
-			log := writeLoopFailureLog(opts.RepoRoot, iterNum, opts, planHash, "wrap_failed", err.Error())
-			iterations = append(iterations, *log)
-			return &LoopResult{
-				Iterations: iterations,
-				StopReason: StopFailed,
-				FinalLog:   log,
-			}, err
+			return terminate(iterNum, planHash, "wrap_failed", err.Error(), StopFailed, err)
 		}
 
 		log := logger.NewLogger(logger.ErrorLevel)
@@ -230,14 +215,7 @@ func RunLoop(opts RunOptions) (*LoopResult, error) {
 			}
 			continue
 		case OutcomeAbort:
-			const msg = "operator aborted at confirm gate"
-			abLog := writeLoopFailureLog(opts.RepoRoot, iterNum, opts, planHash, "aborted", msg)
-			iterations = append(iterations, *abLog)
-			return &LoopResult{
-				Iterations: iterations,
-				StopReason: StopAborted,
-				FinalLog:   abLog,
-			}, nil
+			return terminate(iterNum, planHash, "aborted", "operator aborted at confirm gate", StopAborted, nil)
 		}
 		// On OutcomeApply (or no gate when --auto-apply), executor ran.
 		// If the operator edited the plan, persist the edited bytes
