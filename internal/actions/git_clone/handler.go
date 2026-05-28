@@ -179,19 +179,30 @@ func planResult(state destState, repo, ref string, update bool) *executor.Result
 	r := executor.NewResult()
 	r.Checkable = true
 
+	// F5 / proposal-01-02-06-followups: set Operation to the
+	// predicted apply-time verb so plan and apply agree on the
+	// envelope's Operation for the same input. The matching apply
+	// path (apply() below) lands OpCreate for fresh clones and
+	// OpUpdate for in-place updates; the no-change branch lands
+	// OpNoop. The "dest exists but is not a git repo" branch is a
+	// hard failure at apply time and keeps Operation unset.
 	switch {
 	case !state.exists:
+		r.Operation = executor.OpCreate
 		r.WouldChange = true
 		r.Reason = fmt.Sprintf("would clone %s -> dest (missing)", repo)
 	case state.exists && !state.isGitDir:
 		r.WouldChange = true
 		r.Reason = "dest exists but is not a git repository"
 	case !update:
+		r.Operation = executor.OpNoop
 		r.Reason = "dest is a git repo and update=false"
 	case ref == "":
+		r.Operation = executor.OpUpdate
 		r.WouldChange = true
 		r.Reason = "would fetch and fast-forward (no ref pinned)"
 	default:
+		r.Operation = executor.OpUpdate
 		r.WouldChange = true
 		r.Reason = fmt.Sprintf("would fetch and checkout %s (current HEAD %s)", ref, shortSHA(state.headSHA))
 	}
