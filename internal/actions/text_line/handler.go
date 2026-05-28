@@ -143,10 +143,17 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		return result, err
 	}
 
-	result.Operation = executor.Operation(plan.operation)
+	// F5 / proposal-01-02-06-followups: normalize plan.operation
+	// strings to the canonical executor.Operation enum at the
+	// handler boundary. The internal "noop-present"/"noop-absent"
+	// variants are kept in Data["phase"] for telemetry but the
+	// envelope-level Operation must be OpNoop so plan and apply
+	// agree on the verb for already-converged inputs.
+	result.Operation = mapPlanOperation(plan.operation)
 	result.Target = path
 	result.Data = map[string]interface{}{
-		"path": path,
+		"path":  path,
+		"phase": plan.operation,
 	}
 
 	if !plan.changed {
@@ -250,6 +257,30 @@ func normalizeState(s string) string {
 		return statePresent
 	}
 	return strings.ToLower(s)
+}
+
+// mapPlanOperation translates the handler-internal plan.operation
+// string into a canonical executor.Operation. The internal verbs
+// ("insert"/"replace"/"append"/"delete"/"create"/"noop-present"/
+// "noop-absent") are richer than the kernel enum; the extra detail
+// lives in result.Data["phase"]. The envelope's Operation field
+// must be one of OpCreate/OpUpdate/OpDelete/OpNoop so plan and
+// apply report the same verb for the same input.
+func mapPlanOperation(op string) executor.Operation {
+	switch op {
+	case "create":
+		return executor.OpCreate
+	case "delete":
+		return executor.OpDelete
+	case "insert", "replace", "append":
+		return executor.OpUpdate
+	default:
+		// "noop-present", "noop-absent", and any future no-op
+		// variant. Defaulting to OpNoop keeps the converged
+		// path honest if a new noop verb is added without
+		// updating this switch.
+		return executor.OpNoop
+	}
 }
 
 // computedPlan is the predicted outcome shared by plan and apply modes.
