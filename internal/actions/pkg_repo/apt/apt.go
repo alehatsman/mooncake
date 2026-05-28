@@ -128,7 +128,7 @@ func Run(ctx actions.Context, r *config.PkgRepo, result *executor.Result) (actio
 		PriorContent: priorContent,
 	}
 
-	if err := apply(performer, plan, rendered); err != nil {
+	if err := apply(ctx.Ctx(), performer, plan, rendered); err != nil {
 		return result, err
 	}
 
@@ -325,7 +325,7 @@ func renderDEB822(r rendered_, keyringPath string) string {
 	return sb.String()
 }
 
-func apply(performer actions.Performer, p plan_, r rendered_) error {
+func apply(ctx context.Context, performer actions.Performer, p plan_, r rendered_) error {
 	// All file ops go through the supplied Performer with Become: true.
 	// The Performer (spec-69 phase 5b) tries the direct os.* first and
 	// only sudos on EACCES, so this works equally well under sudo
@@ -350,7 +350,7 @@ func apply(performer actions.Performer, p plan_, r rendered_) error {
 		if e := performer.Mkdir(paths.KeyringsDir, 0o755, pOpts); e.Err != nil {
 			return fmt.Errorf("pkg.repo.apt: mkdir keyrings: %w", e.Err)
 		}
-		body, err := shared.HTTPFetchKey(r.gpgKeyURL)
+		body, err := shared.HTTPFetchKey(ctx, r.gpgKeyURL)
 		if err != nil {
 			return fmt.Errorf("pkg.repo.apt: fetch gpg key: %w", err)
 		}

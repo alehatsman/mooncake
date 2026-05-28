@@ -1,6 +1,7 @@
 package apt
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -73,7 +74,7 @@ func newStubFS(t *testing.T) *stubFS {
 	originalUpdate := updateCache
 	originalVerify := shared.VerifyKeyFingerprint
 	paths = Paths{SourcesDir: s.sourcesDir, KeyringsDir: s.keyringsDir}
-	shared.HTTPFetchKey = func(string) ([]byte, error) { return s.keyBody, nil }
+	shared.HTTPFetchKey = func(context.Context, string) ([]byte, error) { return s.keyBody, nil }
 	shared.VerifyKeyFingerprint = func([]byte, string) error { return nil } // no-op stub
 	updateCache = func(_ *security.Privileged) error {
 		s.updateCalled++

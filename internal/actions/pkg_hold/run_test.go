@@ -2,6 +2,7 @@
 package pkg_hold
 
 import (
+	"context"
 	"runtime"
 	"sort"
 	"testing"
@@ -56,14 +57,14 @@ func newStub(t *testing.T, held map[string]bool) *stub {
 	origHold := aptMarkHold
 	origUnhold := aptMarkUnhold
 	origLookPath := lookPath
-	aptMarkShowHold = func() (map[string]bool, error) {
+	aptMarkShowHold = func(_ context.Context) (map[string]bool, error) {
 		out := make(map[string]bool, len(s.held))
 		for k, v := range s.held {
 			out[k] = v
 		}
 		return out, nil
 	}
-	aptMarkHold = func(_ *security.Privileged, pkgs []string) error {
+	aptMarkHold = func(_ context.Context, _ *security.Privileged, pkgs []string) error {
 		cp := append([]string(nil), pkgs...)
 		s.holdCalls = append(s.holdCalls, cp)
 		for _, p := range cp {
@@ -71,7 +72,7 @@ func newStub(t *testing.T, held map[string]bool) *stub {
 		}
 		return nil
 	}
-	aptMarkUnhold = func(_ *security.Privileged, pkgs []string) error {
+	aptMarkUnhold = func(_ context.Context, _ *security.Privileged, pkgs []string) error {
 		cp := append([]string(nil), pkgs...)
 		s.unholdCalls = append(s.unholdCalls, cp)
 		for _, p := range cp {
@@ -252,14 +253,14 @@ func newBrewStub(t *testing.T, pinned map[string]bool) *brewStub {
 	origPin := brewPin
 	origUnpin := brewUnpin
 	origLookPath := lookPath
-	brewListPinned = func() (map[string]bool, error) {
+	brewListPinned = func(_ context.Context) (map[string]bool, error) {
 		out := make(map[string]bool, len(s.pinned))
 		for k, v := range s.pinned {
 			out[k] = v
 		}
 		return out, nil
 	}
-	brewPin = func(_ *security.Privileged, pkgs []string) error {
+	brewPin = func(_ context.Context, _ *security.Privileged, pkgs []string) error {
 		cp := append([]string(nil), pkgs...)
 		s.pinCalls = append(s.pinCalls, cp)
 		for _, p := range cp {
@@ -267,7 +268,7 @@ func newBrewStub(t *testing.T, pinned map[string]bool) *brewStub {
 		}
 		return nil
 	}
-	brewUnpin = func(_ *security.Privileged, pkgs []string) error {
+	brewUnpin = func(_ context.Context, _ *security.Privileged, pkgs []string) error {
 		cp := append([]string(nil), pkgs...)
 		s.unpinCalls = append(s.unpinCalls, cp)
 		for _, p := range cp {
@@ -371,7 +372,7 @@ func TestAutoDetect_PrefersAptOverBrew(t *testing.T) {
 	s := newStub(t, map[string]bool{}) // sets lookPath to find everything
 	// Sentinel: any brew call fails the test.
 	origBrewPin := brewPin
-	brewPin = func(_ *security.Privileged, pkgs []string) error {
+	brewPin = func(_ context.Context, _ *security.Privileged, pkgs []string) error {
 		t.Errorf("brew should not be invoked when apt-mark is on PATH; got pin %v", pkgs)
 		return nil
 	}
@@ -430,14 +431,14 @@ func newDnfStub(t *testing.T, locked map[string]bool) *dnfStub {
 	origAdd := dnfVersionlockAdd
 	origDel := dnfVersionlockDel
 	origLookPath := lookPath
-	dnfVersionlockShow = func() (map[string]bool, error) {
+	dnfVersionlockShow = func(_ context.Context) (map[string]bool, error) {
 		out := make(map[string]bool, len(s.locked))
 		for k, v := range s.locked {
 			out[k] = v
 		}
 		return out, nil
 	}
-	dnfVersionlockAdd = func(_ *security.Privileged, pkgs []string) error {
+	dnfVersionlockAdd = func(_ context.Context, _ *security.Privileged, pkgs []string) error {
 		cp := append([]string(nil), pkgs...)
 		s.addCalls = append(s.addCalls, cp)
 		for _, p := range cp {
@@ -445,7 +446,7 @@ func newDnfStub(t *testing.T, locked map[string]bool) *dnfStub {
 		}
 		return nil
 	}
-	dnfVersionlockDel = func(_ *security.Privileged, pkgs []string) error {
+	dnfVersionlockDel = func(_ context.Context, _ *security.Privileged, pkgs []string) error {
 		cp := append([]string(nil), pkgs...)
 		s.deleteCalls = append(s.deleteCalls, cp)
 		for _, p := range cp {
@@ -538,7 +539,7 @@ func TestApply_YumAlias_CanonicalizesToDnf(t *testing.T) {
 func TestAutoDetect_PrefersAptOverDnf(t *testing.T) {
 	s := newStub(t, map[string]bool{}) // sets lookPath to find everything
 	origDnfAdd := dnfVersionlockAdd
-	dnfVersionlockAdd = func(_ *security.Privileged, pkgs []string) error {
+	dnfVersionlockAdd = func(_ context.Context, _ *security.Privileged, pkgs []string) error {
 		t.Errorf("dnf should not be invoked when apt-mark is on PATH; got %v", pkgs)
 		return nil
 	}

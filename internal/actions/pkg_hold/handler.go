@@ -175,7 +175,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 	}
 	state := normalizeState(p.State)
 
-	currentHeld, err := readCurrentHolds(manager)
+	currentHeld, err := readCurrentHolds(ctx.Ctx(), manager)
 	if err != nil {
 		return result, fmt.Errorf("pkg.hold: read current holds: %w", err)
 	}
@@ -236,12 +236,12 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 	}
 
 	if len(toHold) > 0 {
-		if err := runHold(runner, manager, toHold); err != nil {
+		if err := runHold(ctx.Ctx(), runner, manager, toHold); err != nil {
 			return result, fmt.Errorf("pkg.hold: %s hold: %w", manager, err)
 		}
 	}
 	if len(toUnhold) > 0 {
-		if err := runUnhold(runner, manager, toUnhold); err != nil {
+		if err := runUnhold(ctx.Ctx(), runner, manager, toUnhold); err != nil {
 			return result, fmt.Errorf("pkg.hold: %s unhold: %w", manager, err)
 		}
 	}
@@ -349,39 +349,39 @@ func resolveManager(requested string) (string, error) {
 
 // readCurrentHolds returns the set of currently-held package names
 // for the resolved manager. Centralises the dispatch so the Run()
-// flow stays manager-agnostic.
-func readCurrentHolds(manager string) (map[string]bool, error) {
+// flow stays manager-agnostic. F2: ctx is the run-wide cancel.
+func readCurrentHolds(ctx context.Context, manager string) (map[string]bool, error) {
 	switch manager {
 	case managerApt:
-		return aptMarkShowHold()
+		return aptMarkShowHold(ctx)
 	case managerDnf:
-		return dnfVersionlockShow()
+		return dnfVersionlockShow(ctx)
 	case managerBrew:
-		return brewListPinned()
+		return brewListPinned(ctx)
 	}
 	return nil, fmt.Errorf("readCurrentHolds: unsupported manager %q", manager)
 }
 
-func runHold(runner *security.Privileged, manager string, pkgs []string) error {
+func runHold(ctx context.Context, runner *security.Privileged, manager string, pkgs []string) error {
 	switch manager {
 	case managerApt:
-		return aptMarkHold(runner, pkgs)
+		return aptMarkHold(ctx, runner, pkgs)
 	case managerDnf:
-		return dnfVersionlockAdd(runner, pkgs)
+		return dnfVersionlockAdd(ctx, runner, pkgs)
 	case managerBrew:
-		return brewPin(runner, pkgs)
+		return brewPin(ctx, runner, pkgs)
 	}
 	return fmt.Errorf("runHold: unsupported manager %q", manager)
 }
 
-func runUnhold(runner *security.Privileged, manager string, pkgs []string) error {
+func runUnhold(ctx context.Context, runner *security.Privileged, manager string, pkgs []string) error {
 	switch manager {
 	case managerApt:
-		return aptMarkUnhold(runner, pkgs)
+		return aptMarkUnhold(ctx, runner, pkgs)
 	case managerDnf:
-		return dnfVersionlockDel(runner, pkgs)
+		return dnfVersionlockDel(ctx, runner, pkgs)
 	case managerBrew:
-		return brewUnpin(runner, pkgs)
+		return brewUnpin(ctx, runner, pkgs)
 	}
 	return fmt.Errorf("runUnhold: unsupported manager %q", manager)
 }
@@ -395,10 +395,10 @@ func normalizeState(s string) string {
 }
 
 // realAptMarkShowHold runs `apt-mark showhold` and returns the set of
-// currently-held package names.
-func realAptMarkShowHold() (map[string]bool, error) {
+// currently-held package names. F2: ctx is the run-wide cancel.
+func realAptMarkShowHold(ctx context.Context) (map[string]bool, error) {
 	// #nosec G204 -- fixed apt-mark binary.
-	cmd := exec.Command("apt-mark", "showhold")
+	cmd := exec.CommandContext(ctx, "apt-mark", "showhold")
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
@@ -424,20 +424,20 @@ func realAptMarkShowHold() (map[string]bool, error) {
 	return held, nil
 }
 
-func realAptMarkHold(runner *security.Privileged, pkgs []string) error {
-	return runAptMark(runner, "hold", pkgs)
+func realAptMarkHold(ctx context.Context, runner *security.Privileged, pkgs []string) error {
+	return runAptMark(ctx, runner, "hold", pkgs)
 }
 
-func realAptMarkUnhold(runner *security.Privileged, pkgs []string) error {
-	return runAptMark(runner, "unhold", pkgs)
+func realAptMarkUnhold(ctx context.Context, runner *security.Privileged, pkgs []string) error {
+	return runAptMark(ctx, runner, "unhold", pkgs)
 }
 
-func runAptMark(runner *security.Privileged, verb string, pkgs []string) error {
+func runAptMark(ctx context.Context, runner *security.Privileged, verb string, pkgs []string) error {
 	if len(pkgs) == 0 {
 		return nil
 	}
 	args := append([]string{verb}, pkgs...)
-	out, err := runner.Run(context.TODO(), "apt-mark", args...)
+	out, err := runner.Run(ctx, "apt-mark", args...)
 	if err != nil {
 		msg := strings.TrimSpace(string(out))
 		if msg != "" {
@@ -451,10 +451,10 @@ func runAptMark(runner *security.Privileged, verb string, pkgs []string) error {
 // realBrewListPinned runs `brew list --pinned` and returns the set
 // of currently-pinned formulae. Brew output is one name per line.
 // Casks can't be pinned (brew limitation); they never appear in
-// this output.
-func realBrewListPinned() (map[string]bool, error) {
+// this output. F2: ctx is the run-wide cancel.
+func realBrewListPinned(ctx context.Context) (map[string]bool, error) {
 	// #nosec G204 -- fixed brew binary.
-	cmd := exec.Command("brew", "list", "--pinned")
+	cmd := exec.CommandContext(ctx, "brew", "list", "--pinned")
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
@@ -480,12 +480,12 @@ func realBrewListPinned() (map[string]bool, error) {
 	return pinned, nil
 }
 
-func realBrewPin(_ *security.Privileged, pkgs []string) error {
-	return runBrew("pin", pkgs)
+func realBrewPin(ctx context.Context, _ *security.Privileged, pkgs []string) error {
+	return runBrew(ctx, "pin", pkgs)
 }
 
-func realBrewUnpin(_ *security.Privileged, pkgs []string) error {
-	return runBrew("unpin", pkgs)
+func realBrewUnpin(ctx context.Context, _ *security.Privileged, pkgs []string) error {
+	return runBrew(ctx, "unpin", pkgs)
 }
 
 // runBrew shells out to `brew pin|unpin <pkgs...>`. Brew accepts
@@ -494,13 +494,13 @@ func realBrewUnpin(_ *security.Privileged, pkgs []string) error {
 // surface it verbatim so the operator sees the actual brew
 // constraint rather than a mooncake-wrapped layer that obscures
 // the cause. No runner arg: brew never runs under sudo.
-func runBrew(verb string, pkgs []string) error {
+func runBrew(ctx context.Context, verb string, pkgs []string) error {
 	if len(pkgs) == 0 {
 		return nil
 	}
 	args := append([]string{verb}, pkgs...)
 	// #nosec G204 -- args are validated package names from YAML.
-	cmd := exec.Command("brew", args...)
+	cmd := exec.CommandContext(ctx, "brew", args...)
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
 	if err := cmd.Run(); err != nil {
@@ -553,10 +553,10 @@ var versionlockMissingPluginRE = regexp.MustCompile(`(?i)no such command|unknown
 // preflight failure on a fresh box), the error is rewrapped with a
 // targeted install hint pointing at dnf-plugin-versionlock /
 // yum-plugin-versionlock — saves the operator a doc round-trip.
-func realDnfVersionlockShow() (map[string]bool, error) {
+func realDnfVersionlockShow(ctx context.Context) (map[string]bool, error) {
 	bin := dnfBinary()
 	// #nosec G204 -- fixed dnf/yum binary.
-	cmd := exec.Command(bin, "versionlock", "list")
+	cmd := exec.CommandContext(ctx, bin, "versionlock", "list")
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
@@ -602,12 +602,12 @@ func parseVersionlockEntry(line string) string {
 	return ""
 }
 
-func realDnfVersionlockAdd(runner *security.Privileged, pkgs []string) error {
-	return runDnfVersionlock(runner, "add", pkgs)
+func realDnfVersionlockAdd(ctx context.Context, runner *security.Privileged, pkgs []string) error {
+	return runDnfVersionlock(ctx, runner, "add", pkgs)
 }
 
-func realDnfVersionlockDel(runner *security.Privileged, pkgs []string) error {
-	return runDnfVersionlock(runner, "delete", pkgs)
+func realDnfVersionlockDel(ctx context.Context, runner *security.Privileged, pkgs []string) error {
+	return runDnfVersionlock(ctx, runner, "delete", pkgs)
 }
 
 // runDnfVersionlock shells out to `dnf versionlock add|delete <pkgs>`.
@@ -615,13 +615,13 @@ func realDnfVersionlockDel(runner *security.Privileged, pkgs []string) error {
 // dnf message verbatim. The plugin-missing path is detected here too
 // (the showhold equivalent), turning a bare exec failure into a
 // targeted install hint.
-func runDnfVersionlock(runner *security.Privileged, verb string, pkgs []string) error {
+func runDnfVersionlock(ctx context.Context, runner *security.Privileged, verb string, pkgs []string) error {
 	if len(pkgs) == 0 {
 		return nil
 	}
 	bin := dnfBinary()
 	args := append([]string{"versionlock", verb}, pkgs...)
-	out, err := runner.Run(context.TODO(), bin, args...)
+	out, err := runner.Run(ctx, bin, args...)
 	if err != nil {
 		msg := strings.TrimSpace(string(out))
 		if versionlockMissingPluginRE.MatchString(msg) {

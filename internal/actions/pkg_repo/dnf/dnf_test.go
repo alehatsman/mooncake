@@ -1,6 +1,7 @@
 package dnf
 
 import (
+	"context"
 	"errors"
 	"os"
 	"path/filepath"
@@ -66,7 +67,7 @@ func newStubFS(t *testing.T) *stubFS {
 	originalClean := cleanCache
 	originalVerify := shared.VerifyKeyFingerprint
 	paths = Paths{ReposDir: s.reposDir, KeyringDir: s.keyringDir}
-	shared.HTTPFetchKey = func(string) ([]byte, error) { return s.keyBody, nil }
+	shared.HTTPFetchKey = func(context.Context, string) ([]byte, error) { return s.keyBody, nil }
 	shared.VerifyKeyFingerprint = func([]byte, string) error { return nil }
 	cleanCache = func(_ *security.Privileged) error {
 		s.cacheCalled++

@@ -126,14 +126,17 @@ func WriteAtomic(path string, content []byte, mode os.FileMode) error {
 
 // HTTPFetchKey is the package-level hook for fetching a GPG key body
 // over HTTP. Wired to HTTPFetchKeyDefault in production; tests
-// override with a fake fetcher to avoid network I/O.
+// override with a fake fetcher to avoid network I/O. F2: ctx is the
+// run-wide cancel.
 var HTTPFetchKey = HTTPFetchKeyDefault
 
 // HTTPFetchKeyDefault routes through httputil for bounded dial / TLS
 // / response-headers timeouts (F012). Empty body and non-200 status
-// surface as errors.
-func HTTPFetchKeyDefault(url string) ([]byte, error) {
-	req, err := httputil.NewRequest(context.Background(), http.MethodGet, url, nil)
+// surface as errors. The parent ctx propagates run-wide cancellation
+// so SIGINT / fleet kill / MCP shutdown aborts an in-flight keyring
+// fetch promptly (F2).
+func HTTPFetchKeyDefault(ctx context.Context, url string) ([]byte, error) {
+	req, err := httputil.NewRequest(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return nil, fmt.Errorf("build request: %w", err)
 	}

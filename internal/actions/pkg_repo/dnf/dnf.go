@@ -114,7 +114,7 @@ func Run(ctx actions.Context, r *config.PkgRepo, result *executor.Result) (actio
 		PriorContent: priorContent,
 	}
 
-	if err := apply(performer, plan, rendered); err != nil {
+	if err := apply(ctx.Ctx(), performer, plan, rendered); err != nil {
 		return result, err
 	}
 
@@ -321,7 +321,7 @@ func boolOneZero(b bool) string {
 	return "0"
 }
 
-func apply(performer actions.Performer, p plan_, r rendered_) error {
+func apply(ctx context.Context, performer actions.Performer, p plan_, r rendered_) error {
 	// All file ops go through the supplied Performer — its spec-69
 	// phase 5b try-direct-then-fallback makes Become: true work
 	// equally for /etc/yum.repos.d and tempdir-overridden test paths.
@@ -343,7 +343,7 @@ func apply(performer actions.Performer, p plan_, r rendered_) error {
 		if e := performer.Mkdir(paths.KeyringDir, 0o755, pOpts); e.Err != nil {
 			return fmt.Errorf("pkg.repo.dnf: mkdir keyring: %w", e.Err)
 		}
-		body, err := shared.HTTPFetchKey(r.gpgKeyURL)
+		body, err := shared.HTTPFetchKey(ctx, r.gpgKeyURL)
 		if err != nil {
 			return fmt.Errorf("pkg.repo.dnf: fetch gpg key: %w", err)
 		}
