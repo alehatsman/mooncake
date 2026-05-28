@@ -38,12 +38,13 @@ func TestSyncResultEnvelope_PlainErr_Failed(t *testing.T) {
 	}
 }
 
-// TestSyncResultEnvelope_RunCtxCanceled_Sigint covers the proposal-02
+// TestSyncResultEnvelope_RunCtxCanceled_Generic covers the proposal-02
 // attribution: when the run-wide ctx is cancelled at the moment the
 // handler errors, classify as Cancelled rather than Failed and bump
-// Stats.Cancelled. SIGINT-equivalent context.Canceled maps to
-// CancelledReason=sigint.
-func TestSyncResultEnvelope_RunCtxCanceled_Sigint(t *testing.T) {
+// Stats.Cancelled. A plain context.WithCancel with no cause attached
+// maps to CancelledReason=cancelled (the F4 generic bucket — producer
+// didn't attribute the cancel, so the envelope refuses to guess).
+func TestSyncResultEnvelope_RunCtxCanceled_Generic(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 
@@ -57,14 +58,79 @@ func TestSyncResultEnvelope_RunCtxCanceled_Sigint(t *testing.T) {
 	if !r.Cancelled {
 		t.Errorf("Cancelled should be true when runCtx.Err() != nil")
 	}
-	if r.CancelledReason != CancelledReasonSigint {
-		t.Errorf("CancelledReason = %q, want %q", r.CancelledReason, CancelledReasonSigint)
+	if r.CancelledReason != CancelledReasonCancelled {
+		t.Errorf("CancelledReason = %q, want %q (no cause attached → generic)", r.CancelledReason, CancelledReasonCancelled)
 	}
 	if r.Error != "aborted mid-write" {
 		t.Errorf("Error = %q, want %q", r.Error, "aborted mid-write")
 	}
 	if *stats.Cancelled != 1 {
 		t.Errorf("Stats.Cancelled = %d, want 1", *stats.Cancelled)
+	}
+}
+
+// TestSyncResultEnvelope_CancelCause_Signal covers F4 attribution:
+// WithCancelCause(ctx, ErrCancelSignal) → CancelledReason=sigint.
+// The signal handlers in cmd/kernel/apply.go and
+// internal/fleet/orchestrator.go are the live producers.
+func TestSyncResultEnvelope_CancelCause_Signal(t *testing.T) {
+	ctx, cancel := context.WithCancelCause(context.Background())
+	cancel(ErrCancelSignal)
+
+	r := &Result{}
+	syncResultEnvelope(ctx, r, errors.New("aborted by ^C"), nil)
+
+	if !r.Cancelled {
+		t.Errorf("Cancelled should be true")
+	}
+	if r.CancelledReason != CancelledReasonSigint {
+		t.Errorf("CancelledReason = %q, want %q", r.CancelledReason, CancelledReasonSigint)
+	}
+}
+
+// TestSyncResultEnvelope_CancelCause_Fleet pins ErrCancelFleet →
+// CancelledReason=fleet_kill. No live producer today; future fleet
+// kill wire-handler will attach this sentinel.
+func TestSyncResultEnvelope_CancelCause_Fleet(t *testing.T) {
+	ctx, cancel := context.WithCancelCause(context.Background())
+	cancel(ErrCancelFleet)
+
+	r := &Result{}
+	syncResultEnvelope(ctx, r, errors.New("peer killed"), nil)
+
+	if r.CancelledReason != CancelledReasonFleetKill {
+		t.Errorf("CancelledReason = %q, want %q", r.CancelledReason, CancelledReasonFleetKill)
+	}
+}
+
+// TestSyncResultEnvelope_CancelCause_MCP pins ErrCancelMCP →
+// CancelledReason=mcp_shutdown. No live producer today; future MCP
+// shutdown path will attach this sentinel.
+func TestSyncResultEnvelope_CancelCause_MCP(t *testing.T) {
+	ctx, cancel := context.WithCancelCause(context.Background())
+	cancel(ErrCancelMCP)
+
+	r := &Result{}
+	syncResultEnvelope(ctx, r, errors.New("mcp shutting down"), nil)
+
+	if r.CancelledReason != CancelledReasonMCPShutdown {
+		t.Errorf("CancelledReason = %q, want %q", r.CancelledReason, CancelledReasonMCPShutdown)
+	}
+}
+
+// TestSyncResultEnvelope_CancelCause_UnknownError pins the precedence
+// rule: a cancel cause that doesn't match any registered sentinel
+// (e.g. a caller's own typed error) falls back to the generic
+// "cancelled" bucket — the envelope refuses to invent attribution.
+func TestSyncResultEnvelope_CancelCause_UnknownError(t *testing.T) {
+	ctx, cancel := context.WithCancelCause(context.Background())
+	cancel(errors.New("custom-domain cancel"))
+
+	r := &Result{}
+	syncResultEnvelope(ctx, r, errors.New("torn down"), nil)
+
+	if r.CancelledReason != CancelledReasonCancelled {
+		t.Errorf("CancelledReason = %q, want %q (unknown cause → generic)", r.CancelledReason, CancelledReasonCancelled)
 	}
 }
 

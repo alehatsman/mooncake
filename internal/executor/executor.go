@@ -528,15 +528,19 @@ func emitStepSkipped(step config.Step, ec *ExecutionContext, stepName, skipReaso
 //     Failed / Rc / Error here so handler authors don't have to
 //     remember to set both.
 //
-//   - Proposal-02: when the run-wide context (runCtx) is cancelled at
-//     the moment the handler errors, classify as Cancelled rather
-//     than Failed. The exit-code aggregator and recap counters treat
-//     them differently — cancelled→130, failed→1. CancelledReason is
-//     derived from runCtx.Err(): DeadlineExceeded → "timeout", any
-//     other Canceled → "sigint" (the operator-facing default; fleet-
-//     kill / programmatic cancel land here too with the same reason
-//     code, which is the lossy part of the F016-without-handler-
-//     attribution compromise).
+//   - Proposal-02 / F4: when the run-wide context (runCtx) is
+//     cancelled at the moment the handler errors, classify as
+//     Cancelled rather than Failed. The exit-code aggregator and
+//     recap counters treat them differently — cancelled→130,
+//     failed→1. CancelledReason is derived by reading
+//     context.Cause(runCtx) and matching the cancel-cause sentinels:
+//     ErrCancelSignal → "sigint", ErrCancelFleet → "fleet_kill",
+//     ErrCancelMCP → "mcp_shutdown", DeadlineExceeded → "timeout".
+//     Any other cause (or a plain WithCancel with no cause attached)
+//     maps to "cancelled" — the generic bucket that says "the run
+//     was torn down but we don't know why specifically". Producers
+//     that want accurate attribution must use context.WithCancelCause
+//     with one of the sentinels.
 //
 // stats may be nil for callers that don't track counters; the
 // Cancelled bump is then skipped. r must be non-nil; the typed-nil
@@ -556,11 +560,7 @@ func syncResultEnvelope(runCtx context.Context, r *Result, err error, stats *Exe
 			}
 		}
 		if r.CancelledReason == "" {
-			if errors.Is(runCtx.Err(), context.DeadlineExceeded) {
-				r.CancelledReason = CancelledReasonTimeout
-			} else {
-				r.CancelledReason = CancelledReasonSigint
-			}
+			r.CancelledReason = classifyCancelReason(runCtx)
 		}
 		if r.Error == "" {
 			r.Error = err.Error()
@@ -575,6 +575,43 @@ func syncResultEnvelope(runCtx context.Context, r *Result, err error, stats *Exe
 	}
 	if r.Error == "" {
 		r.Error = err.Error()
+	}
+}
+
+// classifyCancelReason maps the cancel cause attached to runCtx (via
+// context.WithCancelCause) onto a CancelledReason enum value. The
+// precedence is:
+//
+//  1. DeadlineExceeded — read off runCtx.Err() directly. A timer-fired
+//     ctx exposes DeadlineExceeded as its Err, and context.Cause()
+//     returns the same value when no explicit cause was attached. The
+//     check has to come first so a producer that attaches a sentinel
+//     to a parent ctx and then bounds it with WithTimeout still
+//     reports "timeout" for the deadline path.
+//  2. Sentinel match via errors.Is on context.Cause(runCtx) — covers
+//     ErrCancelSignal / ErrCancelFleet / ErrCancelMCP.
+//  3. Generic "cancelled" — any other cancel (plain WithCancel, or a
+//     custom error nobody recognises). The producer didn't attribute
+//     the cancel, so the envelope shouldn't pretend it knows.
+//
+// runCtx must already have runCtx.Err() != nil — callers are
+// responsible for the gate; this helper does no recheck.
+func classifyCancelReason(runCtx context.Context) string {
+	if errors.Is(runCtx.Err(), context.DeadlineExceeded) {
+		return CancelledReasonTimeout
+	}
+	cause := context.Cause(runCtx)
+	switch {
+	case errors.Is(cause, ErrCancelSignal):
+		return CancelledReasonSigint
+	case errors.Is(cause, ErrCancelFleet):
+		return CancelledReasonFleetKill
+	case errors.Is(cause, ErrCancelMCP):
+		return CancelledReasonMCPShutdown
+	case errors.Is(cause, context.DeadlineExceeded):
+		return CancelledReasonTimeout
+	default:
+		return CancelledReasonCancelled
 	}
 }
 

@@ -11,6 +11,8 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
+
+	"github.com/alehatsman/mooncake/internal/executor"
 )
 
 // ApplyConfig holds the inputs for an Orchestrator.Run() — everything
@@ -99,8 +101,8 @@ func (o *Orchestrator) Run(ctx context.Context) (*FleetKernelResult, error) {
 	w := o.cfg.Writer
 	useColor := ShouldColor(w, o.cfg.NoColor)
 
-	applyCtx, cancel := context.WithCancel(ctx)
-	defer cancel()
+	applyCtx, cancel := context.WithCancelCause(ctx)
+	defer cancel(nil)
 	o.installSignalHandler(applyCtx, cancel, w)
 
 	if machineManifest != nil {
@@ -230,10 +232,11 @@ func (o *Orchestrator) resolveVars(planDir, machine string) []string {
 }
 
 // installSignalHandler wires SIGINT/SIGTERM to cancel applyCtx and print
-// a banner; a second signal hard-exits 130. Same shape fleetApplyAction
-// owned previously — moved verbatim so the goroutine topology is
-// byte-identical.
-func (o *Orchestrator) installSignalHandler(applyCtx context.Context, cancel context.CancelFunc, w io.Writer) {
+// a banner; a second signal hard-exits 130. cancel is a
+// context.CancelCauseFunc so F4 can attach ErrCancelSignal — any peer
+// step that errors during teardown is then classified as
+// CancelledReasonSigint by executor.syncResultEnvelope.
+func (o *Orchestrator) installSignalHandler(applyCtx context.Context, cancel context.CancelCauseFunc, w io.Writer) {
 	sigCh := make(chan os.Signal, 2)
 	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
 	go func() {
@@ -242,7 +245,7 @@ func (o *Orchestrator) installSignalHandler(applyCtx context.Context, cancel con
 		case <-sigCh:
 			fmt.Fprintln(w, "⚠ ^C closes the log stream only — remote runs continue.")
 			fmt.Fprintln(w, "  See `mooncake fleet logs <host>` to reattach.")
-			cancel()
+			cancel(executor.ErrCancelSignal)
 			select {
 			case <-sigCh:
 				os.Exit(130)

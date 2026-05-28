@@ -3,6 +3,7 @@ package executor
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"reflect"
 	"time"
@@ -37,9 +38,29 @@ const (
 	SkippedReasonTagFilter        = "tag_filter"
 	SkippedReasonTryAlreadyFailed = "try_already_failed"
 
-	CancelledReasonSigint    = "sigint"
-	CancelledReasonFleetKill = "fleet_kill"
-	CancelledReasonTimeout   = "timeout"
+	CancelledReasonSigint      = "sigint"
+	CancelledReasonFleetKill   = "fleet_kill"
+	CancelledReasonMCPShutdown = "mcp_shutdown"
+	CancelledReasonTimeout     = "timeout"
+	CancelledReasonCancelled   = "cancelled"
+)
+
+// Cancel-cause sentinels for context.WithCancelCause. Producers attach
+// one of these as the cancel cause so syncResultEnvelope can classify
+// the resulting Cancelled step accurately — distinguishing operator
+// SIGINT from fleet-driven kill from MCP shutdown from a programmatic
+// caller dropping its own ctx.
+//
+// Today only ErrCancelSignal has a live producer (the SIGINT/SIGTERM
+// handlers in cmd/kernel/apply.go and internal/fleet/orchestrator.go).
+// ErrCancelFleet and ErrCancelMCP are declared so the eventual
+// fleet-kill wire and MCP shutdown paths attach them without
+// re-touching this package. Cancels without a registered cause map
+// to CancelledReasonCancelled (the generic bucket).
+var (
+	ErrCancelSignal = errors.New("mooncake: cancelled by signal")
+	ErrCancelFleet  = errors.New("mooncake: cancelled by fleet kill")
+	ErrCancelMCP    = errors.New("mooncake: cancelled by mcp shutdown")
 )
 
 // Result represents the outcome of executing a step and can be registered

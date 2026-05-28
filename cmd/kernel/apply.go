@@ -11,6 +11,7 @@ import (
 
 	"github.com/alehatsman/mooncake/cmd/cmdutil"
 	"github.com/alehatsman/mooncake/internal/apply"
+	"github.com/alehatsman/mooncake/internal/executor"
 )
 
 // ApplyCommand returns the `mooncake apply` cli.Command.
@@ -257,8 +258,8 @@ func mapCancelExit(kr *apply.KernelResult, runErr error) error {
 // thread ctx through executor → handler → exec.CommandContext so the
 // apply can drain on signal instead of being killed by os.Exit.
 func runWithSignalCtx(parent context.Context, body func(context.Context) error) error {
-	ctx, cancel := context.WithCancel(parent)
-	defer cancel()
+	ctx, cancel := context.WithCancelCause(parent)
+	defer cancel(nil)
 
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
@@ -272,7 +273,12 @@ func runWithSignalCtx(parent context.Context, body func(context.Context) error) 
 			// Stop listening so a follow-up signal during shutdown hits
 			// the default handler and hard-kills if we hang anywhere.
 			signal.Stop(sigCh)
-			cancel()
+			// Attach the signal cause so any step that errors during
+			// teardown is classified as CancelledReasonSigint by
+			// executor.syncResultEnvelope (F4). The os.Exit below
+			// short-circuits the recap today (see F2), but the cause
+			// is plumbed for when that hard-kill is removed.
+			cancel(executor.ErrCancelSignal)
 			code := 130 // SIGINT
 			if sig == syscall.SIGTERM {
 				code = 143
