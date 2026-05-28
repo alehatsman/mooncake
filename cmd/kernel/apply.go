@@ -250,13 +250,16 @@ func mapCancelExit(kr *apply.KernelResult, runErr error) error {
 // layer rather than in apply.Runner — embedded callers (agentd, MCP,
 // future SDK) call apply.Runner directly and drive their own shutdown.
 //
-// On signal the goroutine prints a friendly stderr message and calls
-// os.Exit immediately. Hard-exit is required today because the
-// executor's hot loop does not yet observe ctx cancellation, so a
-// running shell child (e.g. `sleep 30`) would otherwise block apply
-// for its full duration after a Ctrl-C. F016 is the follow-up to
-// thread ctx through executor → handler → exec.CommandContext so the
-// apply can drain on signal instead of being killed by os.Exit.
+// On signal the goroutine cancels the run-wide ctx with
+// executor.ErrCancelSignal (F4) so any in-flight child process gets
+// killed via exec.CommandContext (F2 handler-side ctx threading), then
+// hard-exits via os.Exit. The hard-exit stays even after F2 because
+// the drain path's Cancelled-vs-Failed classification isn't yet
+// promoted into Stats.Cancelled for every handler — a shell child
+// killed mid-flight currently lands as Failed, which mapCancelExit
+// treats as exit 1. Dropping the hard-exit before that's reconciled
+// would change the contract from "Ctrl-C → exit 130" to "Ctrl-C →
+// exit 1" for the most common case.
 func runWithSignalCtx(parent context.Context, body func(context.Context) error) error {
 	ctx, cancel := context.WithCancelCause(parent)
 	defer cancel(nil)
@@ -270,14 +273,14 @@ func runWithSignalCtx(parent context.Context, body func(context.Context) error) 
 		select {
 		case sig := <-sigCh:
 			fmt.Fprintf(os.Stderr, "\n⚠ received %s, aborting apply\n", sig)
-			// Stop listening so a follow-up signal during shutdown hits
-			// the default handler and hard-kills if we hang anywhere.
 			signal.Stop(sigCh)
-			// Attach the signal cause so any step that errors during
-			// teardown is classified as CancelledReasonSigint by
-			// executor.syncResultEnvelope (F4). The os.Exit below
-			// short-circuits the recap today (see F2), but the cause
-			// is plumbed for when that hard-kill is removed.
+			// Attach the signal cause so any step that errors
+			// during teardown is classified as
+			// CancelledReasonSigint by executor.syncResultEnvelope
+			// (F4). The os.Exit below short-circuits the recap; a
+			// followup will surface the cancel cleanly once the
+			// classification is consistent across handler-killed
+			// children.
 			cancel(executor.ErrCancelSignal)
 			code := 130 // SIGINT
 			if sig == syscall.SIGTERM {
