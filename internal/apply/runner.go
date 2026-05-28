@@ -270,6 +270,7 @@ func assembleResult(capture *executor.RunCapture, tail *captureSubscriber, execE
 		out.Summary = RunSummary{
 			TotalSteps:   runData.TotalSteps,
 			Ok:           runData.SuccessSteps,
+			OkSteps:      runData.OkSteps,
 			Changed:      runData.ChangedSteps,
 			Skipped:      runData.SkippedSteps,
 			Failed:       runData.FailedSteps,

@@ -138,9 +138,11 @@ func (a *AgentSubscriber) OnEvent(event events.Event) {
 		if !ok {
 			return
 		}
-		ok2 := d.SuccessSteps - d.ChangedSteps
-		if ok2 < 0 {
-			ok2 = 0
+		// F6: prefer the first-class OkSteps field; fall back to the
+		// subtraction only when the producer is pre-F6.
+		ok2 := d.OkSteps
+		if ok2 == 0 && d.SuccessSteps > d.ChangedSteps {
+			ok2 = d.SuccessSteps - d.ChangedSteps
 		}
 		success := d.Success
 		rec = &agentEvent{

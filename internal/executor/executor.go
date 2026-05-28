@@ -704,6 +704,9 @@ func dispatchPlanMode(step config.Step, ec *ExecutionContext, stepName string) (
 		Reason:    "unknown action",
 		Level:     ec.Level,
 	})
+	// F6: unknown-action steps in plan mode produce no diff, so they
+	// count as OK to keep OK+Changed == Executed.
+	incStat(ec.Svc.Stats.OK)
 	incStat(ec.Svc.Stats.Executed)
 	return true, nil
 }
@@ -722,6 +725,11 @@ func postExecuteSuccess(step config.Step, ec *ExecutionContext, stepID, stepName
 	}
 	if changed {
 		incStat(ec.Svc.Stats.Changed)
+	} else {
+		// F6: a successful no-change step bumps OK. Mutually exclusive
+		// with Changed so the invariant OK+Changed == Executed holds
+		// for every step that reaches postExecuteSuccess.
+		incStat(ec.Svc.Stats.OK)
 	}
 
 	ec.EmitEvent(events.EventStepCompleted, events.StepCompletedData{
@@ -1315,6 +1323,7 @@ func executePlanWithCapture(ctx context.Context, p *plan.Plan, sudoPass string, 
 	statsSkipped := 0
 	statsFailed := 0
 	statsChanged := 0
+	statsOK := 0
 	statsReverted := 0
 	statsCancelled := 0
 
@@ -1341,6 +1350,7 @@ func executePlanWithCapture(ctx context.Context, p *plan.Plan, sudoPass string, 
 			Skipped:   &statsSkipped,
 			Failed:    &statsFailed,
 			Changed:   &statsChanged,
+			OK:        &statsOK,
 			Reverted:  &statsReverted,
 			Cancelled: &statsCancelled,
 		},
@@ -1394,6 +1404,7 @@ func executePlanWithCapture(ctx context.Context, p *plan.Plan, sudoPass string, 
 		Data: events.RunCompletedData{
 			TotalSteps:     len(steps),
 			SuccessSteps:   statsExecuted,
+			OkSteps:        statsOK,
 			FailedSteps:    statsFailed,
 			SkippedSteps:   statsSkipped,
 			ChangedSteps:   statsChanged,
@@ -1671,6 +1682,12 @@ func dispatchRunner(step config.Step, ec *ExecutionContext, runner actions.Runne
 		})
 		if wouldChange {
 			incStat(ec.Svc.Stats.Changed)
+		} else {
+			// F6: plan-mode parity with apply — a step that predicts
+			// no change counts as OK in the recap, keeping OK+Changed
+			// == Executed across modes so plan→apply numerical
+			// comparisons stay honest.
+			incStat(ec.Svc.Stats.OK)
 		}
 		incStat(ec.Svc.Stats.Executed)
 		// spec-37: in plan mode the bind happens only when the handler
