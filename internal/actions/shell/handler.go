@@ -219,8 +219,9 @@ func (h *Handler) executeShellCommandRaw(ctx actions.Context, step *config.Step,
 		result.Duration = result.EndTime.Sub(result.StartTime)
 	}()
 
-	// Setup context with timeout
-	cmdCtx, cancel, err := h.setupCommandContext(step)
+	// Setup context with timeout, inheriting the run-wide ctx so SIGINT /
+	// fleet kill / MCP shutdown reach the child process (F2).
+	cmdCtx, cancel, err := h.setupCommandContext(ctx, step)
 	if err != nil {
 		return result, err
 	}
@@ -246,9 +247,23 @@ func (h *Handler) executeShellCommandRaw(ctx actions.Context, step *config.Step,
 	return h.processCommandResult(ctx, step, result, stdout, stderr, execErr)
 }
 
-// setupCommandContext creates a context with timeout if specified
-func (h *Handler) setupCommandContext(step *config.Step) (context.Context, context.CancelFunc, error) {
-	cmdCtx := context.Background()
+// setupCommandContext creates a context with optional per-step timeout,
+// rooted in the run-wide ctx from actions.Context. Pre-F2 the base was
+// context.Background(); that made `shell: sleep 30` ignore SIGINT and
+// forced the cmd/kernel signal handler to os.Exit(130) before the
+// child could be killed cleanly.
+//
+// Cancellation precedence:
+//
+//   - Run-wide cancel (ctx.Ctx()) fires → cmdCtx cancels → the kernel
+//     delivers the configured signal to the child (see exec_unix.go's
+//     setpgid + group-kill wiring). Cause-classification (signal vs
+//     fleet vs timeout vs generic) flows through executor.classifyCancelReason
+//     reading context.Cause on the run-wide ctx (F4).
+//   - Step-level --timeout fires → DeadlineExceeded on cmdCtx →
+//     syncResultEnvelope classifies as CancelledReasonTimeout.
+func (h *Handler) setupCommandContext(ctx actions.Context, step *config.Step) (context.Context, context.CancelFunc, error) {
+	cmdCtx := ctx.Ctx()
 	var cancel context.CancelFunc
 
 	if step.Timeout != "" {
