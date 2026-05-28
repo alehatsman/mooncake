@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
-# docs-check — regenerate docs into a temp dir and diff against the
-# committed copies in docs-next/generated/. Exit non-zero if any
-# differ. The "Generated: <timestamp>" line is stripped before diff
-# so cosmetic mtime drift doesn't trip the check.
+# docs-check — regenerate the dist/docs/ tree into a temp dir and diff
+# it against the committed copy. Exit non-zero if anything differs.
+#
+# The "Generated: <timestamp>" footer is stripped before comparison so
+# cosmetic mtime drift doesn't trip the check; same for gomarkdoc's
+# "DO NOT EDIT" preamble.
 #
 # Assumes the mooncake binary is already built at $BIN (default
 # out/mooncake). The caller is responsible for `mooncake task build`
@@ -11,31 +13,38 @@
 set -euo pipefail
 
 BIN="${BIN:-out/mooncake}"
-TMP=".tmp/docs-check"
-
-mkdir -p "$TMP"
+DIST="dist/docs"
+TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 
-"$BIN" docs generate --section all                --output "$TMP/actions.md"    >/dev/null
-"$BIN" docs generate --section schema             --output "$TMP/schema.md"     >/dev/null
-"$BIN" docs generate --section action-properties  --output "$TMP/properties.md" >/dev/null
+"$BIN" docs generate --section all-into-dir --output "$TMP" >/dev/null
 
-failed=0
-for file in actions.md schema.md properties.md; do
-  grep -v "Generated: " "docs-next/generated/$file" > "$TMP/current_$file" 2>/dev/null || true
-  grep -v "Generated: " "$TMP/$file"               > "$TMP/new_$file"     2>/dev/null || true
-  if ! diff -q "$TMP/current_$file" "$TMP/new_$file" >/dev/null 2>&1; then
-    if [ $failed -eq 0 ]; then
-      echo "✗ Documentation is out of sync!"
-      echo
-      echo "The following files have changed:"
-      failed=1
-    fi
-    echo "  docs-next/generated/$file"
+# Strip volatile lines (timestamps + gomarkdoc's DO-NOT-EDIT preamble
+# header which embeds a version stamp) from both trees before diff.
+strip_volatile() {
+  local src="$1"
+  local dst="$2"
+  mkdir -p "$dst"
+  if [ ! -d "$src" ]; then
+    return
   fi
-done
+  (cd "$src" && find . -type f -print0) | while IFS= read -r -d '' rel; do
+    mkdir -p "$dst/$(dirname "$rel")"
+    grep -vE '^<!-- (Generated: |Version: .* \| Generated: )' "$src/$rel" > "$dst/$rel" 2>/dev/null || true
+  done
+}
 
-if [ $failed -eq 1 ]; then
+strip_volatile "$DIST" "$TMP/current"
+strip_volatile "$TMP" "$TMP/new"
+# strip_volatile recursed into its own output; clean that up to keep
+# diff focused on real content rather than the strip-temp twins.
+rm -rf "$TMP/new/current" "$TMP/new/new"
+
+if ! diff -r -q "$TMP/current" "$TMP/new" >/dev/null 2>&1; then
+  echo "✗ Documentation is out of sync!"
+  echo
+  echo "Differences (current vs regenerated):"
+  diff -r -q "$TMP/current" "$TMP/new" || true
   echo
   echo "Run 'mooncake task docs-generate' to update documentation."
   exit 1

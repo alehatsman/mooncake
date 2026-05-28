@@ -93,7 +93,7 @@ Installed:
   pre-commit  → 'mooncake task ci-fast' (~seconds). Catches stub panics,
                 agent TODOs, unformatted code, soft-cap regressions, and
                 generated-doc drift before they land in a commit.
-                Auto-stages docs-next/generated/* + schema.json when a
+                Auto-stages dist/docs/* + schema.json when a
                 handler/config Go file is staged and the generator
                 emits new content.
   pre-push    → 'mooncake task ci'      (~1-2 min). Full build + test +

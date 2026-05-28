@@ -287,6 +287,67 @@ func TestPlan_AlreadyOk(t *testing.T) {
 	if r.WouldChange {
 		t.Errorf("plan with present line should not WouldChange; reason=%q", r.Reason)
 	}
+	// F5: already-converged plan must emit OpNoop, not the
+	// internal "noop-present" phase string.
+	if r.Operation != executor.OpNoop {
+		t.Errorf("Operation = %q, want OpNoop", r.Operation)
+	}
+	if phase, _ := r.Data["phase"].(string); phase != "noop-present" {
+		t.Errorf("Data[phase] = %q, want noop-present (telemetry detail)", phase)
+	}
+}
+
+// F5: plan mode on a would-change input must report the predicted
+// apply-time verb (OpUpdate for insert/append/replace, OpDelete for
+// remove, OpCreate for the file-creation branch) so plan/apply
+// agree on Operation for the same input.
+func TestPlan_OperationMatchesPredictedApplyVerb(t *testing.T) {
+	dir := t.TempDir()
+
+	cases := []struct {
+		name   string
+		setup  func(path string)
+		step   func(path string) *config.TextLine
+		wantOp executor.Operation
+		wantWC bool
+	}{
+		{
+			name:   "append-missing-line",
+			setup:  func(p string) { writeFile(t, p, "alpha\n") },
+			step:   func(p string) *config.TextLine { return &config.TextLine{Path: p, Line: "beta"} },
+			wantOp: executor.OpUpdate,
+			wantWC: true,
+		},
+		{
+			name:   "create-when-file-absent",
+			setup:  func(string) {},
+			step:   func(p string) *config.TextLine { return &config.TextLine{Path: p, Line: "alpha"} },
+			wantOp: executor.OpCreate,
+			wantWC: true,
+		},
+		{
+			name:  "delete-matching",
+			setup: func(p string) { writeFile(t, p, "alpha\nbeta\n") },
+			step: func(p string) *config.TextLine {
+				return &config.TextLine{Path: p, Regexp: "^beta$", State: "absent"}
+			},
+			wantOp: executor.OpDelete,
+			wantWC: true,
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			path := filepath.Join(dir, c.name)
+			c.setup(path)
+			r := mustRun(t, true, &config.Step{TextLine: c.step(path)})
+			if r.Operation != c.wantOp {
+				t.Errorf("Operation = %q, want %q", r.Operation, c.wantOp)
+			}
+			if r.WouldChange != c.wantWC {
+				t.Errorf("WouldChange = %v, want %v", r.WouldChange, c.wantWC)
+			}
+		})
+	}
 }
 
 func TestPreservesFileWithoutTrailingNewline(t *testing.T) {

@@ -997,6 +997,15 @@ func (p *Planner) renderActionTemplates(step *config.Step, ctx *ExpansionContext
 			return fmt.Errorf("step %q: %w", step.Name, err)
 		}
 		step.Use = rendered
+		// Clone Props before rendering: for_each iterates the same outer
+		// step value N times, and renderPropsValue mutates the map in place.
+		// Without the clone, iteration 0 resolves "{{ item }}" to its first
+		// value and iterations 1+ see a literal (no template left to render).
+		// Mirrors the shallow-copy guard the non-use path applies at line 1023.
+		if step.Props != nil {
+			cloned, _ := clonePropsValue(step.Props).(map[string]interface{})
+			step.Props = cloned
+		}
 		if err := renderPropsValue(step.Props, render); err != nil {
 			return fmt.Errorf("step %q: %w", step.Name, err)
 		}
@@ -1030,6 +1039,31 @@ func (p *Planner) renderActionTemplates(step *config.Step, ctx *ExpansionContext
 		break
 	}
 	return nil
+}
+
+// clonePropsValue returns a deep copy of a props value (map/slice/scalar).
+// Used by renderActionTemplates so that for_each iterations don't mutate
+// each other's templates — see the use: branch at line 994. Mirrors the
+// shape walked by renderPropsValue.
+func clonePropsValue(v interface{}) interface{} {
+	switch x := v.(type) {
+	case nil:
+		return nil
+	case map[string]interface{}:
+		out := make(map[string]interface{}, len(x))
+		for k, sub := range x {
+			out[k] = clonePropsValue(sub)
+		}
+		return out
+	case []interface{}:
+		out := make([]interface{}, len(x))
+		for i, sub := range x {
+			out[i] = clonePropsValue(sub)
+		}
+		return out
+	default:
+		return v
+	}
 }
 
 // renderPropsValue walks a props map/slice/string value and renders every
