@@ -6,6 +6,7 @@ package observe_process
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -96,7 +97,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		return result, nil
 	}
 
-	obs, err := findProcess(o)
+	obs, err := findProcess(ctx.Ctx(), o)
 	env := actions.ObserveResult{
 		Found: obs.Running,
 		Value: obs,
@@ -113,7 +114,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 	return result, nil
 }
 
-func findProcess(o *config.ObserveProcess) (ProcessObservation, error) {
+func findProcess(ctx context.Context, o *config.ObserveProcess) (ProcessObservation, error) {
 	// Linux fast path: walk /proc. Falls back to ps on macOS/BSD/Solaris.
 	if runtime.GOOS == "linux" {
 		obs, err := findProcessLinux(o)
@@ -122,7 +123,7 @@ func findProcess(o *config.ObserveProcess) (ProcessObservation, error) {
 		}
 		// Linux without /proc (e.g. some containers) — try ps too.
 	}
-	return findProcessPs(o)
+	return findProcessPs(ctx, o)
 }
 
 func findProcessLinux(o *config.ObserveProcess) (ProcessObservation, error) {
@@ -174,10 +175,10 @@ func findProcessLinux(o *config.ObserveProcess) (ProcessObservation, error) {
 	return obs, nil
 }
 
-func findProcessPs(o *config.ObserveProcess) (ProcessObservation, error) {
+func findProcessPs(ctx context.Context, o *config.ObserveProcess) (ProcessObservation, error) {
 	// `ps -eo pid,user,args` works on macOS, Linux, BSDs. Solaris's
 	// /usr/ucb/ps is out of scope for v1.
-	out, err := exec.Command("ps", "-eo", "pid,user,args").Output()
+	out, err := exec.CommandContext(ctx, "ps", "-eo", "pid,user,args").Output()
 	if err != nil {
 		return ProcessObservation{}, fmt.Errorf("ps: %w", err)
 	}
