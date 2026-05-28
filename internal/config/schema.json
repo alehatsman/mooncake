@@ -285,7 +285,11 @@
       "x-category": "command",
       "x-supports-dry-run": true,
       "x-supports-become": true,
-      "x-version": "1.0.0"
+      "x-version": "1.0.0",
+      "x-emits-events": [
+        "step.stdout",
+        "step.stderr"
+      ]
     },
     "cmd_action": {
       "type": "object",
@@ -311,7 +315,11 @@
       "x-category": "command",
       "x-supports-dry-run": true,
       "x-supports-become": true,
-      "x-version": "1.0.0"
+      "x-version": "1.0.0",
+      "x-emits-events": [
+        "step.stdout",
+        "step.stderr"
+      ]
     },
     "container": {
       "type": "object",

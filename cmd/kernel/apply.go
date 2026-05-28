@@ -102,6 +102,17 @@ func applyFlags() []cli.Flag {
 		// Spec 16 stale-plan policy (only meaningful with --from-plan).
 		&cli.BoolFlag{Name: "allow-stale", Value: false, Usage: "Apply a saved plan even if host facts mismatch or input files have changed since plan time"},
 		&cli.DurationFlag{Name: "max-plan-age", Value: 0, Usage: "Refuse to apply a saved plan older than this duration (e.g. 1h). Default: no limit."},
+
+		// Step output rendering: stream stdout/stderr inline by default
+		// so operators see what their `cmd:` / `shell:` steps print
+		// without flipping --log-level debug (which firehoses internal
+		// traces too). --no-stream-output keeps only the lifecycle
+		// markers (▶ / ~ / ✓ / ✗) for CI logs or noisy commands.
+		&cli.BoolFlag{
+			Name:  "no-stream-output",
+			Value: false,
+			Usage: "Hide captured stdout/stderr from steps; show only lifecycle markers. Has no effect with --output-format json (event stream is always full).",
+		},
 	}
 }
 
@@ -189,6 +200,7 @@ func run(c *cli.Context) error {
 		MaxOutputLines:    c.Int("max-output-lines"),
 		FactsJSONPath:     c.String("facts-json"),
 		OpID:              recordOp("apply", configPath, false),
+		StreamStepOutput:  !c.Bool("no-stream-output"),
 	}
 	return runWithSignalCtx(c.Context, func(ctx context.Context) error {
 		kr, runErr := apply.NewRunner(cfg).Run(ctx)

@@ -950,3 +950,40 @@ func TestHandler_Execute_ResultRc(t *testing.T) {
 		})
 	}
 }
+
+// TestHandler_Execute_StreamsStdout verifies cmd emits per-line step.stdout
+// events the same way shell does. Pre-refactor cmd buffered everything via
+// bytes.Buffer and emitted nothing, so `mooncake apply` had no visible
+// output for `cmd:` steps in the default text format.
+func TestHandler_Execute_StreamsStdout(t *testing.T) {
+	h := &Handler{}
+	ctx := newMockExecutionContext()
+
+	step := &config.Step{
+		Cmd: &config.CommandAction{
+			Argv: echoArgv("streamed-line"),
+		},
+	}
+	if _, err := h.Run(ctx, step); err != nil {
+		t.Fatalf("Run() error = %v", err)
+	}
+
+	mockPub := ctx.Svc.EventPublisher.(*testutil.MockPublisher)
+	foundStdout := false
+	for _, event := range mockPub.Events {
+		if event.Type != events.EventStepStdout {
+			continue
+		}
+		data, ok := event.Data.(events.StepOutputData)
+		if !ok {
+			t.Fatalf("event.Data not StepOutputData: %T", event.Data)
+		}
+		if strings.Contains(data.Line, "streamed-line") {
+			foundStdout = true
+			break
+		}
+	}
+	if !foundStdout {
+		t.Errorf("expected EventStepStdout carrying 'streamed-line', got %d events", len(mockPub.Events))
+	}
+}
