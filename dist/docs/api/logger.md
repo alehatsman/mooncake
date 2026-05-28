@@ -170,7 +170,7 @@ const (
 )
 ```
 
-## func GetTerminalSize
+## func [GetTerminalSize](<https://github.com/alehatsman/mooncake/blob/master/internal/logger/tui_detector.go#L96>)
 
 ```go
 func GetTerminalSize() (width, height int)
@@ -178,7 +178,7 @@ func GetTerminalSize() (width, height int)
 
 GetTerminalSize returns the current terminal size. Returns default 80x24 if detection fails.
 
-## func IsTUISupported
+## func [IsTUISupported](<https://github.com/alehatsman/mooncake/blob/master/internal/logger/tui_detector.go#L79>)
 
 ```go
 func IsTUISupported() bool
@@ -186,7 +186,7 @@ func IsTUISupported() bool
 
 IsTUISupported checks if the terminal supports TUI mode. Returns true if terminal is detected, supports ANSI codes, and meets minimum size requirements.
 
-## func ParseLogLevel
+## func [ParseLogLevel](<https://github.com/alehatsman/mooncake/blob/master/internal/logger/logger.go#L30>)
 
 ```go
 func ParseLogLevel(level string) (int, error)
@@ -194,7 +194,7 @@ func ParseLogLevel(level string) (int, error)
 
 ParseLogLevel converts a log level string to its integer constant. Valid values are "debug", "info", and "error" \(case\-insensitive\). Returns an error if the level string is not recognized.
 
-## func StripANSI
+## func [StripANSI](<https://github.com/alehatsman/mooncake/blob/master/internal/logger/ansi.go#L21>)
 
 ```go
 func StripANSI(s string) string
@@ -208,7 +208,7 @@ Example:
 StripANSI("\x1b[31mRed Text\x1b[0m") → "Red Text"
 ```
 
-## func TruncateANSI
+## func [TruncateANSI](<https://github.com/alehatsman/mooncake/blob/master/internal/logger/ansi.go#L52>)
 
 ```go
 func TruncateANSI(s string, maxWidth int) string
@@ -224,7 +224,7 @@ Example:
 TruncateANSI("\x1b[31mLong Red Text\x1b[0m", 8) → "\x1b[31mLong...\x1b[0m"
 ```
 
-## func VisibleLength
+## func [VisibleLength](<https://github.com/alehatsman/mooncake/blob/master/internal/logger/ansi.go#L35>)
 
 ```go
 func VisibleLength(s string) int
@@ -241,7 +241,7 @@ VisibleLength("\x1b[31mRed\x1b[0m") → 3
 VisibleLength("Hello 🌙") → 7
 ```
 
-## type AgentSubscriber
+## type [AgentSubscriber](<https://github.com/alehatsman/mooncake/blob/master/internal/logger/agent_subscriber.go#L44>)
 
 AgentSubscriber writes one flat JSON line per lifecycle event to stdout. No ANSI, no human framing — designed for programmatic consumption.
 
@@ -249,7 +249,7 @@ AgentSubscriber writes one flat JSON line per lifecycle event to stdout. No ANSI
 type AgentSubscriber struct{}
 ```
 
-### func NewAgentSubscriber
+### func [NewAgentSubscriber](<https://github.com/alehatsman/mooncake/blob/master/internal/logger/agent_subscriber.go#L47>)
 
 ```go
 func NewAgentSubscriber() *AgentSubscriber
@@ -257,7 +257,7 @@ func NewAgentSubscriber() *AgentSubscriber
 
 NewAgentSubscriber creates a new AgentSubscriber.
 
-### func \(\*AgentSubscriber\) Close
+### func \(\*AgentSubscriber\) [Close](<https://github.com/alehatsman/mooncake/blob/master/internal/logger/agent_subscriber.go#L187>)
 
 ```go
 func (a *AgentSubscriber) Close()
@@ -265,7 +265,7 @@ func (a *AgentSubscriber) Close()
 
 Close implements the Subscriber interface.
 
-### func \(\*AgentSubscriber\) OnEvent
+### func \(\*AgentSubscriber\) [OnEvent](<https://github.com/alehatsman/mooncake/blob/master/internal/logger/agent_subscriber.go#L52>)
 
 ```go
 func (a *AgentSubscriber) OnEvent(event events.Event)
@@ -273,7 +273,7 @@ func (a *AgentSubscriber) OnEvent(event events.Event)
 
 OnEvent handles an incoming event and writes a JSONL record.
 
-## type AnimationFrames
+## type [AnimationFrames](<https://github.com/alehatsman/mooncake/blob/master/internal/logger/tui_animator.go#L57-L61>)
 
 AnimationFrames manages animation frames for the mooncake character.
 
@@ -283,7 +283,7 @@ type AnimationFrames struct {
 }
 ```
 
-### func LoadEmbeddedFrames
+### func [LoadEmbeddedFrames](<https://github.com/alehatsman/mooncake/blob/master/internal/logger/tui_animator.go#L64>)
 
 ```go
 func LoadEmbeddedFrames() (*AnimationFrames, error)
@@ -291,7 +291,7 @@ func LoadEmbeddedFrames() (*AnimationFrames, error)
 
 LoadEmbeddedFrames loads animation frames from the embedded content.
 
-### func LoadFramesFromFile
+### func [LoadFramesFromFile](<https://github.com/alehatsman/mooncake/blob/master/internal/logger/tui_animator.go#L70>)
 
 ```go
 func LoadFramesFromFile(path string) (*AnimationFrames, error)
@@ -299,7 +299,7 @@ func LoadFramesFromFile(path string) (*AnimationFrames, error)
 
 LoadFramesFromFile loads animation frames from a file. Frames are expected to be 3 lines each, separated by blank lines.
 
-### func LoadFramesFromString
+### func [LoadFramesFromString](<https://github.com/alehatsman/mooncake/blob/master/internal/logger/tui_animator.go#L82>)
 
 ```go
 func LoadFramesFromString(content string) (*AnimationFrames, error)
@@ -307,7 +307,7 @@ func LoadFramesFromString(content string) (*AnimationFrames, error)
 
 LoadFramesFromString loads animation frames from a string. Frames are expected to be 3 lines each, separated by blank lines.
 
-### func \(\*AnimationFrames\) Current
+### func \(\*AnimationFrames\) [Current](<https://github.com/alehatsman/mooncake/blob/master/internal/logger/tui_animator.go#L127>)
 
 ```go
 func (a *AnimationFrames) Current() []string
@@ -315,7 +315,7 @@ func (a *AnimationFrames) Current() []string
 
 Current returns the current frame without advancing
 
-### func \(\*AnimationFrames\) FrameCount
+### func \(\*AnimationFrames\) [FrameCount](<https://github.com/alehatsman/mooncake/blob/master/internal/logger/tui_animator.go#L135>)
 
 ```go
 func (a *AnimationFrames) FrameCount() int
@@ -323,7 +323,7 @@ func (a *AnimationFrames) FrameCount() int
 
 FrameCount returns the total number of frames
 
-### func \(\*AnimationFrames\) Next
+### func \(\*AnimationFrames\) [Next](<https://github.com/alehatsman/mooncake/blob/master/internal/logger/tui_animator.go#L118>)
 
 ```go
 func (a *AnimationFrames) Next() []string
@@ -331,7 +331,7 @@ func (a *AnimationFrames) Next() []string
 
 Next advances to the next frame and returns it
 
-## type BufferSnapshot
+## type [BufferSnapshot](<https://github.com/alehatsman/mooncake/blob/master/internal/logger/tui_buffer.go#L23-L30>)
 
 BufferSnapshot is an atomic snapshot of the buffer state for rendering.
 
@@ -346,7 +346,7 @@ type BufferSnapshot struct {
 }
 ```
 
-## type ConsoleLogger
+## type [ConsoleLogger](<https://github.com/alehatsman/mooncake/blob/master/internal/logger/console_logger.go#L13-L18>)
 
 ConsoleLogger implements Logger interface with colored console output.
 
@@ -356,7 +356,7 @@ type ConsoleLogger struct {
 }
 ```
 
-### func NewConsoleLogger
+### func [NewConsoleLogger](<https://github.com/alehatsman/mooncake/blob/master/internal/logger/console_logger.go#L30>)
 
 ```go
 func NewConsoleLogger(logLevel int) *ConsoleLogger
@@ -364,7 +364,7 @@ func NewConsoleLogger(logLevel int) *ConsoleLogger
 
 NewConsoleLogger creates a ConsoleLogger directly \(for type\-specific needs\).
 
-### func \(\*ConsoleLogger\) Codef
+### func \(\*ConsoleLogger\) [Codef](<https://github.com/alehatsman/mooncake/blob/master/internal/logger/console_logger.go#L116>)
 
 ```go
 func (l *ConsoleLogger) Codef(format string, v ...interface{})
@@ -372,7 +372,7 @@ func (l *ConsoleLogger) Codef(format string, v ...interface{})
 
 Codef logs a code snippet message.
 
-### func \(\*ConsoleLogger\) Complete
+### func \(\*ConsoleLogger\) [Complete](<https://github.com/alehatsman/mooncake/blob/master/internal/logger/console_logger.go#L178>)
 
 ```go
 func (l *ConsoleLogger) Complete(stats ExecutionStats)
@@ -380,7 +380,7 @@ func (l *ConsoleLogger) Complete(stats ExecutionStats)
 
 Complete logs the execution completion summary with statistics.
 
-### func \(\*ConsoleLogger\) Debugf
+### func \(\*ConsoleLogger\) [Debugf](<https://github.com/alehatsman/mooncake/blob/master/internal/logger/console_logger.go#L87>)
 
 ```go
 func (l *ConsoleLogger) Debugf(format string, v ...interface{})
@@ -388,7 +388,7 @@ func (l *ConsoleLogger) Debugf(format string, v ...interface{})
 
 Debugf logs a debug message.
 
-### func \(\*ConsoleLogger\) Errorf
+### func \(\*ConsoleLogger\) [Errorf](<https://github.com/alehatsman/mooncake/blob/master/internal/logger/console_logger.go#L77>)
 
 ```go
 func (l *ConsoleLogger) Errorf(format string, v ...interface{})
@@ -396,7 +396,7 @@ func (l *ConsoleLogger) Errorf(format string, v ...interface{})
 
 Errorf logs an error message.
 
-### func \(\*ConsoleLogger\) Infof
+### func \(\*ConsoleLogger\) [Infof](<https://github.com/alehatsman/mooncake/blob/master/internal/logger/console_logger.go#L67>)
 
 ```go
 func (l *ConsoleLogger) Infof(format string, v ...interface{})
@@ -404,7 +404,7 @@ func (l *ConsoleLogger) Infof(format string, v ...interface{})
 
 Infof logs an informational message.
 
-### func \(\*ConsoleLogger\) LogStep
+### func \(\*ConsoleLogger\) [LogStep](<https://github.com/alehatsman/mooncake/blob/master/internal/logger/console_logger.go#L150>)
 
 ```go
 func (l *ConsoleLogger) LogStep(info StepInfo)
@@ -412,7 +412,7 @@ func (l *ConsoleLogger) LogStep(info StepInfo)
 
 LogStep logs a step execution with status.
 
-### func \(\*ConsoleLogger\) Mooncake
+### func \(\*ConsoleLogger\) [Mooncake](<https://github.com/alehatsman/mooncake/blob/master/internal/logger/console_logger.go#L125>)
 
 ```go
 func (l *ConsoleLogger) Mooncake()
@@ -420,7 +420,7 @@ func (l *ConsoleLogger) Mooncake()
 
 Mooncake displays the mooncake banner.
 
-### func \(\*ConsoleLogger\) SetLogLevel
+### func \(\*ConsoleLogger\) [SetLogLevel](<https://github.com/alehatsman/mooncake/blob/master/internal/logger/console_logger.go#L39>)
 
 ```go
 func (l *ConsoleLogger) SetLogLevel(logLevel int)
@@ -428,7 +428,7 @@ func (l *ConsoleLogger) SetLogLevel(logLevel int)
 
 SetLogLevel sets the logging level for the logger.
 
-### func \(\*ConsoleLogger\) SetLogLevelStr
+### func \(\*ConsoleLogger\) [SetLogLevelStr](<https://github.com/alehatsman/mooncake/blob/master/internal/logger/console_logger.go#L44>)
 
 ```go
 func (l *ConsoleLogger) SetLogLevelStr(logLevel string) error
@@ -436,7 +436,7 @@ func (l *ConsoleLogger) SetLogLevelStr(logLevel string) error
 
 SetLogLevelStr sets the logging level from a string value.
 
-### func \(\*ConsoleLogger\) SetRedactor
+### func \(\*ConsoleLogger\) [SetRedactor](<https://github.com/alehatsman/mooncake/blob/master/internal/logger/console_logger.go#L54>)
 
 ```go
 func (l *ConsoleLogger) SetRedactor(redactor Redactor)
@@ -444,7 +444,7 @@ func (l *ConsoleLogger) SetRedactor(redactor Redactor)
 
 SetRedactor sets the redactor for automatic sensitive data redaction.
 
-### func \(\*ConsoleLogger\) Textf
+### func \(\*ConsoleLogger\) [Textf](<https://github.com/alehatsman/mooncake/blob/master/internal/logger/console_logger.go#L110>)
 
 ```go
 func (l *ConsoleLogger) Textf(format string, v ...interface{})
@@ -452,7 +452,7 @@ func (l *ConsoleLogger) Textf(format string, v ...interface{})
 
 Textf logs a plain text message.
 
-### func \(\*ConsoleLogger\) WithPadLevel
+### func \(\*ConsoleLogger\) [WithPadLevel](<https://github.com/alehatsman/mooncake/blob/master/internal/logger/console_logger.go#L140>)
 
 ```go
 func (l *ConsoleLogger) WithPadLevel(padLevel int) Logger
@@ -460,7 +460,7 @@ func (l *ConsoleLogger) WithPadLevel(padLevel int) Logger
 
 WithPadLevel creates a new logger with the specified padding level.
 
-## type ConsoleSubscriber
+## type [ConsoleSubscriber](<https://github.com/alehatsman/mooncake/blob/master/internal/logger/console_subscriber.go#L15-L32>)
 
 ConsoleSubscriber implements event\-based console logging
 
@@ -470,7 +470,7 @@ type ConsoleSubscriber struct {
 }
 ```
 
-### func NewConsoleSubscriber
+### func [NewConsoleSubscriber](<https://github.com/alehatsman/mooncake/blob/master/internal/logger/console_subscriber.go#L38>)
 
 ```go
 func NewConsoleSubscriber(logLevel int, logFormat string, streamOutput bool) *ConsoleSubscriber
@@ -478,7 +478,7 @@ func NewConsoleSubscriber(logLevel int, logFormat string, streamOutput bool) *Co
 
 NewConsoleSubscriber creates a new console subscriber. streamOutput=false matches the historical \`mooncake apply\` UX \(step\-start/end markers only at info; shell stdout/stderr only at debug\). \`mooncake task\` constructs with streamOutput=true.
 
-### func \(\*ConsoleSubscriber\) Close
+### func \(\*ConsoleSubscriber\) [Close](<https://github.com/alehatsman/mooncake/blob/master/internal/logger/console_subscriber.go#L67>)
 
 ```go
 func (c *ConsoleSubscriber) Close()
@@ -486,7 +486,7 @@ func (c *ConsoleSubscriber) Close()
 
 Close implements the Subscriber interface
 
-### func \(\*ConsoleSubscriber\) OnEvent
+### func \(\*ConsoleSubscriber\) [OnEvent](<https://github.com/alehatsman/mooncake/blob/master/internal/logger/console_subscriber.go#L54>)
 
 ```go
 func (c *ConsoleSubscriber) OnEvent(event events.Event)
@@ -494,7 +494,7 @@ func (c *ConsoleSubscriber) OnEvent(event events.Event)
 
 OnEvent handles incoming events
 
-### func \(\*ConsoleSubscriber\) SetRedactor
+### func \(\*ConsoleSubscriber\) [SetRedactor](<https://github.com/alehatsman/mooncake/blob/master/internal/logger/console_subscriber.go#L47>)
 
 ```go
 func (c *ConsoleSubscriber) SetRedactor(r interface{ Redact(string) string })
@@ -502,7 +502,7 @@ func (c *ConsoleSubscriber) SetRedactor(r interface{ Redact(string) string })
 
 SetRedactor sets the redactor for sensitive data
 
-## type DiscardLogger
+## type [DiscardLogger](<https://github.com/alehatsman/mooncake/blob/master/internal/logger/discard_logger.go#L11>)
 
 DiscardLogger implements Logger by ignoring every call.
 
@@ -512,7 +512,7 @@ Use it on a production code path that needs to satisfy the Logger interface but 
 type DiscardLogger struct{}
 ```
 
-### func NewDiscardLogger
+### func [NewDiscardLogger](<https://github.com/alehatsman/mooncake/blob/master/internal/logger/discard_logger.go#L14>)
 
 ```go
 func NewDiscardLogger() *DiscardLogger
@@ -520,79 +520,79 @@ func NewDiscardLogger() *DiscardLogger
 
 NewDiscardLogger returns a Logger that drops every entry.
 
-### func \(DiscardLogger\) Codef
+### func \(DiscardLogger\) [Codef](<https://github.com/alehatsman/mooncake/blob/master/internal/logger/discard_logger.go#L19>)
 
 ```go
 func (DiscardLogger) Codef(string, ...interface{})
 ```
 
-### func \(DiscardLogger\) Complete
+### func \(DiscardLogger\) [Complete](<https://github.com/alehatsman/mooncake/blob/master/internal/logger/discard_logger.go#L26>)
 
 ```go
 func (DiscardLogger) Complete(ExecutionStats)
 ```
 
-### func \(DiscardLogger\) Debugf
+### func \(DiscardLogger\) [Debugf](<https://github.com/alehatsman/mooncake/blob/master/internal/logger/discard_logger.go#L17>)
 
 ```go
 func (DiscardLogger) Debugf(string, ...interface{})
 ```
 
-### func \(DiscardLogger\) Errorf
+### func \(DiscardLogger\) [Errorf](<https://github.com/alehatsman/mooncake/blob/master/internal/logger/discard_logger.go#L18>)
 
 ```go
 func (DiscardLogger) Errorf(string, ...interface{})
 ```
 
-### func \(DiscardLogger\) Infof
+### func \(DiscardLogger\) [Infof](<https://github.com/alehatsman/mooncake/blob/master/internal/logger/discard_logger.go#L16>)
 
 ```go
 func (DiscardLogger) Infof(string, ...interface{})
 ```
 
-### func \(DiscardLogger\) LogStep
+### func \(DiscardLogger\) [LogStep](<https://github.com/alehatsman/mooncake/blob/master/internal/logger/discard_logger.go#L25>)
 
 ```go
 func (DiscardLogger) LogStep(StepInfo)
 ```
 
-### func \(DiscardLogger\) Mooncake
+### func \(DiscardLogger\) [Mooncake](<https://github.com/alehatsman/mooncake/blob/master/internal/logger/discard_logger.go#L21>)
 
 ```go
 func (DiscardLogger) Mooncake()
 ```
 
-### func \(DiscardLogger\) SetLogLevel
+### func \(DiscardLogger\) [SetLogLevel](<https://github.com/alehatsman/mooncake/blob/master/internal/logger/discard_logger.go#L22>)
 
 ```go
 func (DiscardLogger) SetLogLevel(int)
 ```
 
-### func \(DiscardLogger\) SetLogLevelStr
+### func \(DiscardLogger\) [SetLogLevelStr](<https://github.com/alehatsman/mooncake/blob/master/internal/logger/discard_logger.go#L23>)
 
 ```go
 func (DiscardLogger) SetLogLevelStr(string) error
 ```
 
-### func \(DiscardLogger\) SetRedactor
+### func \(DiscardLogger\) [SetRedactor](<https://github.com/alehatsman/mooncake/blob/master/internal/logger/discard_logger.go#L27>)
 
 ```go
 func (DiscardLogger) SetRedactor(Redactor)
 ```
 
-### func \(DiscardLogger\) Textf
+### func \(DiscardLogger\) [Textf](<https://github.com/alehatsman/mooncake/blob/master/internal/logger/discard_logger.go#L20>)
 
 ```go
 func (DiscardLogger) Textf(string, ...interface{})
 ```
 
-### func \(DiscardLogger\) WithPadLevel
+### func \(DiscardLogger\) [WithPadLevel](<https://github.com/alehatsman/mooncake/blob/master/internal/logger/discard_logger.go#L24>)
 
 ```go
 func (d DiscardLogger) WithPadLevel(int) Logger
 ```
 
-## type ExecutionStats
+## type [ExecutionStats](<https://github.com/alehatsman/mooncake/blob/master/internal/logger/logger.go#L52-L57>)
 
 ExecutionStats contains execution statistics.
 
@@ -605,7 +605,7 @@ type ExecutionStats struct {
 }
 ```
 
-## type FirstRunHintSubscriber
+## type [FirstRunHintSubscriber](<https://github.com/alehatsman/mooncake/blob/master/internal/logger/first_run_subscriber.go#L23-L26>)
 
 FirstRunHintSubscriber prints a single line of next\-step guidance after the first successful \`mooncake apply\` on a host. It is a one\-shot: once the marker file \~/.mooncake/.first\-run\-completed exists, the subscriber is a no\-op. Spec 40 §"First\-run hint".
 
@@ -617,7 +617,7 @@ type FirstRunHintSubscriber struct {
 }
 ```
 
-### func NewFirstRunHintSubscriber
+### func [NewFirstRunHintSubscriber](<https://github.com/alehatsman/mooncake/blob/master/internal/logger/first_run_subscriber.go#L36>)
 
 ```go
 func NewFirstRunHintSubscriber(out io.Writer, outputFormat string) *FirstRunHintSubscriber
@@ -625,7 +625,7 @@ func NewFirstRunHintSubscriber(out io.Writer, outputFormat string) *FirstRunHint
 
 NewFirstRunHintSubscriber returns a subscriber that prints the hint to out \(typically os.Stdout\) on the first successful run. outputFormat is the CLI's \-\-output\-format value; the hint is only printed when it is empty or "text".
 
-### func \(\*FirstRunHintSubscriber\) Close
+### func \(\*FirstRunHintSubscriber\) [Close](<https://github.com/alehatsman/mooncake/blob/master/internal/logger/first_run_subscriber.go#L76>)
 
 ```go
 func (s *FirstRunHintSubscriber) Close()
@@ -633,7 +633,7 @@ func (s *FirstRunHintSubscriber) Close()
 
 Close implements the Subscriber interface.
 
-### func \(\*FirstRunHintSubscriber\) OnEvent
+### func \(\*FirstRunHintSubscriber\) [OnEvent](<https://github.com/alehatsman/mooncake/blob/master/internal/logger/first_run_subscriber.go#L43>)
 
 ```go
 func (s *FirstRunHintSubscriber) OnEvent(event events.Event)
@@ -641,7 +641,7 @@ func (s *FirstRunHintSubscriber) OnEvent(event events.Event)
 
 OnEvent prints the hint when the run completes successfully and no marker exists. Marker creation and printing are best\-effort: a failure to write the marker just means the hint may print again next run.
 
-## type LogEntry
+## type [LogEntry](<https://github.com/alehatsman/mooncake/blob/master/internal/logger/test_logger.go#L10-L13>)
 
 LogEntry represents a single log entry.
 
@@ -652,7 +652,7 @@ type LogEntry struct {
 }
 ```
 
-## type Logger
+## type [Logger](<https://github.com/alehatsman/mooncake/blob/master/internal/logger/logger.go#L65-L78>)
 
 Logger interface defines the logging contract.
 
@@ -673,7 +673,7 @@ type Logger interface {
 }
 ```
 
-### func NewLogger
+### func [NewLogger](<https://github.com/alehatsman/mooncake/blob/master/internal/logger/console_logger.go#L21>)
 
 ```go
 func NewLogger(logLevel int) Logger
@@ -681,7 +681,7 @@ func NewLogger(logLevel int) Logger
 
 NewLogger creates a new ConsoleLogger with the specified log level.
 
-## type ProgressInfo
+## type [ProgressInfo](<https://github.com/alehatsman/mooncake/blob/master/internal/logger/tui_buffer.go#L17-L20>)
 
 ProgressInfo tracks overall execution progress.
 
@@ -692,7 +692,7 @@ type ProgressInfo struct {
 }
 ```
 
-## type QuietSubscriber
+## type [QuietSubscriber](<https://github.com/alehatsman/mooncake/blob/master/internal/logger/quiet_subscriber.go#L17-L20>)
 
 QuietSubscriber suppresses all output except failures and the final recap. Designed for CI pipelines and scripting where only failures matter.
 
@@ -702,7 +702,7 @@ type QuietSubscriber struct {
 }
 ```
 
-### func NewQuietSubscriber
+### func [NewQuietSubscriber](<https://github.com/alehatsman/mooncake/blob/master/internal/logger/quiet_subscriber.go#L23>)
 
 ```go
 func NewQuietSubscriber() *QuietSubscriber
@@ -710,7 +710,7 @@ func NewQuietSubscriber() *QuietSubscriber
 
 NewQuietSubscriber creates a new QuietSubscriber.
 
-### func \(\*QuietSubscriber\) Close
+### func \(\*QuietSubscriber\) [Close](<https://github.com/alehatsman/mooncake/blob/master/internal/logger/quiet_subscriber.go#L72>)
 
 ```go
 func (q *QuietSubscriber) Close()
@@ -718,7 +718,7 @@ func (q *QuietSubscriber) Close()
 
 Close implements the Subscriber interface.
 
-### func \(\*QuietSubscriber\) OnEvent
+### func \(\*QuietSubscriber\) [OnEvent](<https://github.com/alehatsman/mooncake/blob/master/internal/logger/quiet_subscriber.go#L28>)
 
 ```go
 func (q *QuietSubscriber) OnEvent(event events.Event)
@@ -726,7 +726,7 @@ func (q *QuietSubscriber) OnEvent(event events.Event)
 
 OnEvent handles an incoming event.
 
-## type Redactor
+## type [Redactor](<https://github.com/alehatsman/mooncake/blob/master/internal/logger/logger.go#L60-L62>)
 
 Redactor interface for redacting sensitive data in logs.
 
@@ -736,7 +736,7 @@ type Redactor interface {
 }
 ```
 
-## type RunLogSubscriber
+## type [RunLogSubscriber](<https://github.com/alehatsman/mooncake/blob/master/internal/logger/runlog_subscriber.go#L13-L15>)
 
 RunLogSubscriber appends a compact run record to \~/.mooncake/runs.jsonl on EventRunCompleted. Write failures are silently dropped so they never fail a run.
 
@@ -746,7 +746,7 @@ type RunLogSubscriber struct {
 }
 ```
 
-### func NewRunLogSubscriber
+### func [NewRunLogSubscriber](<https://github.com/alehatsman/mooncake/blob/master/internal/logger/runlog_subscriber.go#L18>)
 
 ```go
 func NewRunLogSubscriber(configPath string) *RunLogSubscriber
@@ -754,7 +754,7 @@ func NewRunLogSubscriber(configPath string) *RunLogSubscriber
 
 NewRunLogSubscriber creates a subscriber that records runs under the given config basename.
 
-### func \(\*RunLogSubscriber\) Close
+### func \(\*RunLogSubscriber\) [Close](<https://github.com/alehatsman/mooncake/blob/master/internal/logger/runlog_subscriber.go#L47>)
 
 ```go
 func (r *RunLogSubscriber) Close()
@@ -762,7 +762,7 @@ func (r *RunLogSubscriber) Close()
 
 Close implements the Subscriber interface.
 
-### func \(\*RunLogSubscriber\) OnEvent
+### func \(\*RunLogSubscriber\) [OnEvent](<https://github.com/alehatsman/mooncake/blob/master/internal/logger/runlog_subscriber.go#L23>)
 
 ```go
 func (r *RunLogSubscriber) OnEvent(event events.Event)
@@ -770,7 +770,7 @@ func (r *RunLogSubscriber) OnEvent(event events.Event)
 
 OnEvent handles incoming events.
 
-## type StderrErrorSubscriber
+## type [StderrErrorSubscriber](<https://github.com/alehatsman/mooncake/blob/master/internal/logger/stderr_error_subscriber.go#L28-L30>)
 
 StderrErrorSubscriber writes a structured JSON error line to stderr on every step failure, regardless of the active output format.
 
@@ -780,7 +780,7 @@ type StderrErrorSubscriber struct {
 }
 ```
 
-### func NewStderrErrorSubscriber
+### func [NewStderrErrorSubscriber](<https://github.com/alehatsman/mooncake/blob/master/internal/logger/stderr_error_subscriber.go#L33>)
 
 ```go
 func NewStderrErrorSubscriber() *StderrErrorSubscriber
@@ -788,7 +788,7 @@ func NewStderrErrorSubscriber() *StderrErrorSubscriber
 
 NewStderrErrorSubscriber creates a subscriber that writes to os.Stderr.
 
-### func \(\*StderrErrorSubscriber\) Close
+### func \(\*StderrErrorSubscriber\) [Close](<https://github.com/alehatsman/mooncake/blob/master/internal/logger/stderr_error_subscriber.go#L67>)
 
 ```go
 func (s *StderrErrorSubscriber) Close()
@@ -796,7 +796,7 @@ func (s *StderrErrorSubscriber) Close()
 
 Close implements the Subscriber interface.
 
-### func \(\*StderrErrorSubscriber\) OnEvent
+### func \(\*StderrErrorSubscriber\) [OnEvent](<https://github.com/alehatsman/mooncake/blob/master/internal/logger/stderr_error_subscriber.go#L38>)
 
 ```go
 func (s *StderrErrorSubscriber) OnEvent(event events.Event)
@@ -804,7 +804,7 @@ func (s *StderrErrorSubscriber) OnEvent(event events.Event)
 
 OnEvent handles incoming events.
 
-## type StepEntry
+## type [StepEntry](<https://github.com/alehatsman/mooncake/blob/master/internal/logger/tui_buffer.go#L9-L14>)
 
 StepEntry represents a single step in the execution history.
 
@@ -817,7 +817,7 @@ type StepEntry struct {
 }
 ```
 
-## type StepInfo
+## type [StepInfo](<https://github.com/alehatsman/mooncake/blob/master/internal/logger/logger.go#L44-L49>)
 
 StepInfo contains structured information about a step execution.
 
@@ -830,7 +830,7 @@ type StepInfo struct {
 }
 ```
 
-## type TUIBuffer
+## type [TUIBuffer](<https://github.com/alehatsman/mooncake/blob/master/internal/logger/tui_buffer.go#L33-L49>)
 
 TUIBuffer manages step history and message buffering.
 
@@ -840,7 +840,7 @@ type TUIBuffer struct {
 }
 ```
 
-### func NewTUIBuffer
+### func [NewTUIBuffer](<https://github.com/alehatsman/mooncake/blob/master/internal/logger/tui_buffer.go#L52>)
 
 ```go
 func NewTUIBuffer(historySize int) *TUIBuffer
@@ -848,7 +848,7 @@ func NewTUIBuffer(historySize int) *TUIBuffer
 
 NewTUIBuffer creates a new TUI buffer with specified history size.
 
-### func \(\*TUIBuffer\) AddDebug
+### func \(\*TUIBuffer\) [AddDebug](<https://github.com/alehatsman/mooncake/blob/master/internal/logger/tui_buffer.go#L98>)
 
 ```go
 func (b *TUIBuffer) AddDebug(message string)
@@ -856,7 +856,7 @@ func (b *TUIBuffer) AddDebug(message string)
 
 AddDebug adds a debug message to the buffer.
 
-### func \(\*TUIBuffer\) AddError
+### func \(\*TUIBuffer\) [AddError](<https://github.com/alehatsman/mooncake/blob/master/internal/logger/tui_buffer.go#L110>)
 
 ```go
 func (b *TUIBuffer) AddError(message string)
@@ -864,7 +864,7 @@ func (b *TUIBuffer) AddError(message string)
 
 AddError adds an error message to the buffer.
 
-### func \(\*TUIBuffer\) AddStep
+### func \(\*TUIBuffer\) [AddStep](<https://github.com/alehatsman/mooncake/blob/master/internal/logger/tui_buffer.go#L65>)
 
 ```go
 func (b *TUIBuffer) AddStep(entry StepEntry)
@@ -872,7 +872,7 @@ func (b *TUIBuffer) AddStep(entry StepEntry)
 
 AddStep adds a step to the history \(circular buffer\).
 
-### func \(\*TUIBuffer\) GetSnapshot
+### func \(\*TUIBuffer\) [GetSnapshot](<https://github.com/alehatsman/mooncake/blob/master/internal/logger/tui_buffer.go#L122>)
 
 ```go
 func (b *TUIBuffer) GetSnapshot() BufferSnapshot
@@ -880,7 +880,7 @@ func (b *TUIBuffer) GetSnapshot() BufferSnapshot
 
 GetSnapshot returns an atomic snapshot of the buffer state.
 
-### func \(\*TUIBuffer\) SetCompletion
+### func \(\*TUIBuffer\) [SetCompletion](<https://github.com/alehatsman/mooncake/blob/master/internal/logger/tui_buffer.go#L90>)
 
 ```go
 func (b *TUIBuffer) SetCompletion(stats ExecutionStats)
@@ -888,7 +888,7 @@ func (b *TUIBuffer) SetCompletion(stats ExecutionStats)
 
 SetCompletion sets execution completion statistics.
 
-### func \(\*TUIBuffer\) SetCurrentStep
+### func \(\*TUIBuffer\) [SetCurrentStep](<https://github.com/alehatsman/mooncake/blob/master/internal/logger/tui_buffer.go#L81>)
 
 ```go
 func (b *TUIBuffer) SetCurrentStep(name string, progress ProgressInfo)
@@ -896,7 +896,7 @@ func (b *TUIBuffer) SetCurrentStep(name string, progress ProgressInfo)
 
 SetCurrentStep sets the currently executing step.
 
-## type TUIDisplay
+## type [TUIDisplay](<https://github.com/alehatsman/mooncake/blob/master/internal/logger/tui_display.go#L12-L17>)
 
 TUIDisplay handles screen rendering for the animated TUI.
 
@@ -906,7 +906,7 @@ type TUIDisplay struct {
 }
 ```
 
-### func NewTUIDisplay
+### func [NewTUIDisplay](<https://github.com/alehatsman/mooncake/blob/master/internal/logger/tui_display.go#L20>)
 
 ```go
 func NewTUIDisplay(animator *AnimationFrames, buffer *TUIBuffer, width, height int) *TUIDisplay
@@ -914,7 +914,7 @@ func NewTUIDisplay(animator *AnimationFrames, buffer *TUIBuffer, width, height i
 
 NewTUIDisplay creates a new TUI display renderer.
 
-### func \(\*TUIDisplay\) Render
+### func \(\*TUIDisplay\) [Render](<https://github.com/alehatsman/mooncake/blob/master/internal/logger/tui_display.go#L30>)
 
 ```go
 func (d *TUIDisplay) Render() string
@@ -922,7 +922,7 @@ func (d *TUIDisplay) Render() string
 
 Render generates the complete screen output.
 
-## type TUILogger
+## type [TUILogger](<https://github.com/alehatsman/mooncake/blob/master/internal/logger/tui_logger.go#L17-L30>)
 
 TUILogger implements Logger interface with animated TUI display.
 
@@ -932,7 +932,7 @@ type TUILogger struct {
 }
 ```
 
-### func NewTUILogger
+### func [NewTUILogger](<https://github.com/alehatsman/mooncake/blob/master/internal/logger/tui_logger.go#L33>)
 
 ```go
 func NewTUILogger(logLevel int) (*TUILogger, error)
@@ -940,7 +940,7 @@ func NewTUILogger(logLevel int) (*TUILogger, error)
 
 NewTUILogger creates a new TUI logger.
 
-### func \(\*TUILogger\) Codef
+### func \(\*TUILogger\) [Codef](<https://github.com/alehatsman/mooncake/blob/master/internal/logger/tui_logger.go#L183>)
 
 ```go
 func (l *TUILogger) Codef(format string, v ...interface{})
@@ -948,7 +948,7 @@ func (l *TUILogger) Codef(format string, v ...interface{})
 
 Codef logs formatted code.
 
-### func \(\*TUILogger\) Complete
+### func \(\*TUILogger\) [Complete](<https://github.com/alehatsman/mooncake/blob/master/internal/logger/tui_logger.go#L272>)
 
 ```go
 func (l *TUILogger) Complete(stats ExecutionStats)
@@ -956,7 +956,7 @@ func (l *TUILogger) Complete(stats ExecutionStats)
 
 Complete logs the execution completion summary with statistics.
 
-### func \(\*TUILogger\) Debugf
+### func \(\*TUILogger\) [Debugf](<https://github.com/alehatsman/mooncake/blob/master/internal/logger/tui_logger.go#L148>)
 
 ```go
 func (l *TUILogger) Debugf(format string, v ...interface{})
@@ -964,7 +964,7 @@ func (l *TUILogger) Debugf(format string, v ...interface{})
 
 Debugf logs a debug message.
 
-### func \(\*TUILogger\) Errorf
+### func \(\*TUILogger\) [Errorf](<https://github.com/alehatsman/mooncake/blob/master/internal/logger/tui_logger.go#L162>)
 
 ```go
 func (l *TUILogger) Errorf(format string, v ...interface{})
@@ -972,7 +972,7 @@ func (l *TUILogger) Errorf(format string, v ...interface{})
 
 Errorf logs an error message.
 
-### func \(\*TUILogger\) Infof
+### func \(\*TUILogger\) [Infof](<https://github.com/alehatsman/mooncake/blob/master/internal/logger/tui_logger.go#L141>)
 
 ```go
 func (l *TUILogger) Infof(_ string, _ ...interface{})
@@ -980,7 +980,7 @@ func (l *TUILogger) Infof(_ string, _ ...interface{})
 
 Infof logs an info message \(ignored in TUI mode \- use LogStep for steps\).
 
-### func \(\*TUILogger\) LogStep
+### func \(\*TUILogger\) [LogStep](<https://github.com/alehatsman/mooncake/blob/master/internal/logger/tui_logger.go#L93>)
 
 ```go
 func (l *TUILogger) LogStep(info StepInfo)
@@ -988,7 +988,7 @@ func (l *TUILogger) LogStep(info StepInfo)
 
 LogStep handles structured step logging.
 
-### func \(\*TUILogger\) Mooncake
+### func \(\*TUILogger\) [Mooncake](<https://github.com/alehatsman/mooncake/blob/master/internal/logger/tui_logger.go#L214>)
 
 ```go
 func (l *TUILogger) Mooncake()
@@ -996,7 +996,7 @@ func (l *TUILogger) Mooncake()
 
 Mooncake displays the mooncake banner \(initializes display\).
 
-### func \(\*TUILogger\) SetLogLevel
+### func \(\*TUILogger\) [SetLogLevel](<https://github.com/alehatsman/mooncake/blob/master/internal/logger/tui_logger.go#L220>)
 
 ```go
 func (l *TUILogger) SetLogLevel(logLevel int)
@@ -1004,7 +1004,7 @@ func (l *TUILogger) SetLogLevel(logLevel int)
 
 SetLogLevel sets the log level.
 
-### func \(\*TUILogger\) SetLogLevelStr
+### func \(\*TUILogger\) [SetLogLevelStr](<https://github.com/alehatsman/mooncake/blob/master/internal/logger/tui_logger.go#L228>)
 
 ```go
 func (l *TUILogger) SetLogLevelStr(logLevel string) error
@@ -1012,7 +1012,7 @@ func (l *TUILogger) SetLogLevelStr(logLevel string) error
 
 SetLogLevelStr sets the log level from a string.
 
-### func \(\*TUILogger\) SetRedactor
+### func \(\*TUILogger\) [SetRedactor](<https://github.com/alehatsman/mooncake/blob/master/internal/logger/tui_logger.go#L239>)
 
 ```go
 func (l *TUILogger) SetRedactor(redactor Redactor)
@@ -1020,7 +1020,7 @@ func (l *TUILogger) SetRedactor(redactor Redactor)
 
 SetRedactor sets the redactor for automatic sensitive data redaction.
 
-### func \(\*TUILogger\) Start
+### func \(\*TUILogger\) [Start](<https://github.com/alehatsman/mooncake/blob/master/internal/logger/tui_logger.go#L60>)
 
 ```go
 func (l *TUILogger) Start()
@@ -1028,7 +1028,7 @@ func (l *TUILogger) Start()
 
 Start begins the animation and rendering loop.
 
-### func \(\*TUILogger\) Stop
+### func \(\*TUILogger\) [Stop](<https://github.com/alehatsman/mooncake/blob/master/internal/logger/tui_logger.go#L77>)
 
 ```go
 func (l *TUILogger) Stop()
@@ -1036,7 +1036,7 @@ func (l *TUILogger) Stop()
 
 Stop stops the animation and shows final render.
 
-### func \(\*TUILogger\) Textf
+### func \(\*TUILogger\) [Textf](<https://github.com/alehatsman/mooncake/blob/master/internal/logger/tui_logger.go#L201>)
 
 ```go
 func (l *TUILogger) Textf(format string, v ...interface{})
@@ -1044,7 +1044,7 @@ func (l *TUILogger) Textf(format string, v ...interface{})
 
 Textf logs plain text.
 
-### func \(\*TUILogger\) WithPadLevel
+### func \(\*TUILogger\) [WithPadLevel](<https://github.com/alehatsman/mooncake/blob/master/internal/logger/tui_logger.go#L254>)
 
 ```go
 func (l *TUILogger) WithPadLevel(padLevel int) Logger
@@ -1052,7 +1052,7 @@ func (l *TUILogger) WithPadLevel(padLevel int) Logger
 
 WithPadLevel creates a new logger with the specified padding level.
 
-## type TUISubscriber
+## type [TUISubscriber](<https://github.com/alehatsman/mooncake/blob/master/internal/logger/tui_subscriber.go#L12-L25>)
 
 TUISubscriber implements event\-based TUI display.
 
@@ -1062,7 +1062,7 @@ type TUISubscriber struct {
 }
 ```
 
-### func NewTUISubscriber
+### func [NewTUISubscriber](<https://github.com/alehatsman/mooncake/blob/master/internal/logger/tui_subscriber.go#L28>)
 
 ```go
 func NewTUISubscriber(logLevel int) (*TUISubscriber, error)
@@ -1070,7 +1070,7 @@ func NewTUISubscriber(logLevel int) (*TUISubscriber, error)
 
 NewTUISubscriber creates a new TUI subscriber.
 
-### func \(\*TUISubscriber\) Close
+### func \(\*TUISubscriber\) [Close](<https://github.com/alehatsman/mooncake/blob/master/internal/logger/tui_subscriber.go#L146>)
 
 ```go
 func (t *TUISubscriber) Close()
@@ -1078,7 +1078,7 @@ func (t *TUISubscriber) Close()
 
 Close implements the Subscriber interface.
 
-### func \(\*TUISubscriber\) OnEvent
+### func \(\*TUISubscriber\) [OnEvent](<https://github.com/alehatsman/mooncake/blob/master/internal/logger/tui_subscriber.go#L113>)
 
 ```go
 func (t *TUISubscriber) OnEvent(event events.Event)
@@ -1086,7 +1086,7 @@ func (t *TUISubscriber) OnEvent(event events.Event)
 
 OnEvent handles incoming events.
 
-### func \(\*TUISubscriber\) SetRedactor
+### func \(\*TUISubscriber\) [SetRedactor](<https://github.com/alehatsman/mooncake/blob/master/internal/logger/tui_subscriber.go#L106>)
 
 ```go
 func (t *TUISubscriber) SetRedactor(r Redactor)
@@ -1094,7 +1094,7 @@ func (t *TUISubscriber) SetRedactor(r Redactor)
 
 SetRedactor sets the redactor for sensitive data.
 
-### func \(\*TUISubscriber\) Start
+### func \(\*TUISubscriber\) [Start](<https://github.com/alehatsman/mooncake/blob/master/internal/logger/tui_subscriber.go#L55>)
 
 ```go
 func (t *TUISubscriber) Start()
@@ -1102,7 +1102,7 @@ func (t *TUISubscriber) Start()
 
 Start begins the animation and rendering loop.
 
-### func \(\*TUISubscriber\) Stop
+### func \(\*TUISubscriber\) [Stop](<https://github.com/alehatsman/mooncake/blob/master/internal/logger/tui_subscriber.go#L80>)
 
 ```go
 func (t *TUISubscriber) Stop()
@@ -1110,7 +1110,7 @@ func (t *TUISubscriber) Stop()
 
 Stop stops the animation and shows final render.
 
-## type TerminalInfo
+## type [TerminalInfo](<https://github.com/alehatsman/mooncake/blob/master/internal/logger/tui_detector.go#L10-L15>)
 
 TerminalInfo contains information about terminal capabilities.
 
@@ -1123,7 +1123,7 @@ type TerminalInfo struct {
 }
 ```
 
-### func DetectTerminal
+### func [DetectTerminal](<https://github.com/alehatsman/mooncake/blob/master/internal/logger/tui_detector.go#L18>)
 
 ```go
 func DetectTerminal() TerminalInfo
@@ -1131,7 +1131,7 @@ func DetectTerminal() TerminalInfo
 
 DetectTerminal detects terminal capabilities and returns terminal information.
 
-## type TestLogger
+## type [TestLogger](<https://github.com/alehatsman/mooncake/blob/master/internal/logger/test_logger.go#L16-L22>)
 
 TestLogger implements Logger interface and captures log output for testing.
 
@@ -1142,7 +1142,7 @@ type TestLogger struct {
 }
 ```
 
-### func NewTestLogger
+### func [NewTestLogger](<https://github.com/alehatsman/mooncake/blob/master/internal/logger/test_logger.go#L25>)
 
 ```go
 func NewTestLogger() *TestLogger
@@ -1150,7 +1150,7 @@ func NewTestLogger() *TestLogger
 
 NewTestLogger creates a new TestLogger for use in tests.
 
-### func \(\*TestLogger\) Clear
+### func \(\*TestLogger\) [Clear](<https://github.com/alehatsman/mooncake/blob/master/internal/logger/test_logger.go#L201>)
 
 ```go
 func (t *TestLogger) Clear()
@@ -1158,7 +1158,7 @@ func (t *TestLogger) Clear()
 
 Clear removes all log entries.
 
-### func \(\*TestLogger\) Codef
+### func \(\*TestLogger\) [Codef](<https://github.com/alehatsman/mooncake/blob/master/internal/logger/test_logger.go#L67>)
 
 ```go
 func (t *TestLogger) Codef(format string, v ...interface{})
@@ -1166,7 +1166,7 @@ func (t *TestLogger) Codef(format string, v ...interface{})
 
 Codef logs a code snippet message.
 
-### func \(\*TestLogger\) Complete
+### func \(\*TestLogger\) [Complete](<https://github.com/alehatsman/mooncake/blob/master/internal/logger/test_logger.go#L146>)
 
 ```go
 func (t *TestLogger) Complete(stats ExecutionStats)
@@ -1174,7 +1174,7 @@ func (t *TestLogger) Complete(stats ExecutionStats)
 
 Complete logs the execution completion summary with statistics.
 
-### func \(\*TestLogger\) Contains
+### func \(\*TestLogger\) [Contains](<https://github.com/alehatsman/mooncake/blob/master/internal/logger/test_logger.go#L157>)
 
 ```go
 func (t *TestLogger) Contains(substr string) bool
@@ -1182,7 +1182,7 @@ func (t *TestLogger) Contains(substr string) bool
 
 Contains checks if any log message contains the substring.
 
-### func \(\*TestLogger\) ContainsLevel
+### func \(\*TestLogger\) [ContainsLevel](<https://github.com/alehatsman/mooncake/blob/master/internal/logger/test_logger.go#L169>)
 
 ```go
 func (t *TestLogger) ContainsLevel(level, substr string) bool
@@ -1190,7 +1190,7 @@ func (t *TestLogger) ContainsLevel(level, substr string) bool
 
 ContainsLevel checks if any log at the specified level contains the substring.
 
-### func \(\*TestLogger\) Count
+### func \(\*TestLogger\) [Count](<https://github.com/alehatsman/mooncake/blob/master/internal/logger/test_logger.go#L181>)
 
 ```go
 func (t *TestLogger) Count() int
@@ -1198,7 +1198,7 @@ func (t *TestLogger) Count() int
 
 Count returns the number of log entries.
 
-### func \(\*TestLogger\) CountLevel
+### func \(\*TestLogger\) [CountLevel](<https://github.com/alehatsman/mooncake/blob/master/internal/logger/test_logger.go#L188>)
 
 ```go
 func (t *TestLogger) CountLevel(level string) int
@@ -1206,7 +1206,7 @@ func (t *TestLogger) CountLevel(level string) int
 
 CountLevel returns the number of log entries at the specified level.
 
-### func \(\*TestLogger\) Debugf
+### func \(\*TestLogger\) [Debugf](<https://github.com/alehatsman/mooncake/blob/master/internal/logger/test_logger.go#L45>)
 
 ```go
 func (t *TestLogger) Debugf(format string, v ...interface{})
@@ -1214,7 +1214,7 @@ func (t *TestLogger) Debugf(format string, v ...interface{})
 
 Debugf logs a debug message.
 
-### func \(\*TestLogger\) Errorf
+### func \(\*TestLogger\) [Errorf](<https://github.com/alehatsman/mooncake/blob/master/internal/logger/test_logger.go#L56>)
 
 ```go
 func (t *TestLogger) Errorf(format string, v ...interface{})
@@ -1222,7 +1222,7 @@ func (t *TestLogger) Errorf(format string, v ...interface{})
 
 Errorf logs an error message.
 
-### func \(\*TestLogger\) GetLogs
+### func \(\*TestLogger\) [GetLogs](<https://github.com/alehatsman/mooncake/blob/master/internal/logger/test_logger.go#L208>)
 
 ```go
 func (t *TestLogger) GetLogs() []LogEntry
@@ -1230,7 +1230,7 @@ func (t *TestLogger) GetLogs() []LogEntry
 
 GetLogs returns a copy of all log entries.
 
-### func \(\*TestLogger\) Infof
+### func \(\*TestLogger\) [Infof](<https://github.com/alehatsman/mooncake/blob/master/internal/logger/test_logger.go#L34>)
 
 ```go
 func (t *TestLogger) Infof(format string, v ...interface{})
@@ -1238,7 +1238,7 @@ func (t *TestLogger) Infof(format string, v ...interface{})
 
 Infof logs an informational message.
 
-### func \(\*TestLogger\) LogStep
+### func \(\*TestLogger\) [LogStep](<https://github.com/alehatsman/mooncake/blob/master/internal/logger/test_logger.go#L138>)
 
 ```go
 func (t *TestLogger) LogStep(info StepInfo)
@@ -1246,7 +1246,7 @@ func (t *TestLogger) LogStep(info StepInfo)
 
 LogStep logs a step execution with status.
 
-### func \(\*TestLogger\) Mooncake
+### func \(\*TestLogger\) [Mooncake](<https://github.com/alehatsman/mooncake/blob/master/internal/logger/test_logger.go#L84>)
 
 ```go
 func (t *TestLogger) Mooncake()
@@ -1254,7 +1254,7 @@ func (t *TestLogger) Mooncake()
 
 Mooncake displays the mooncake banner.
 
-### func \(\*TestLogger\) SetLogLevel
+### func \(\*TestLogger\) [SetLogLevel](<https://github.com/alehatsman/mooncake/blob/master/internal/logger/test_logger.go#L91>)
 
 ```go
 func (t *TestLogger) SetLogLevel(logLevel int)
@@ -1262,7 +1262,7 @@ func (t *TestLogger) SetLogLevel(logLevel int)
 
 SetLogLevel sets the logging level for the logger.
 
-### func \(\*TestLogger\) SetLogLevelStr
+### func \(\*TestLogger\) [SetLogLevelStr](<https://github.com/alehatsman/mooncake/blob/master/internal/logger/test_logger.go#L98>)
 
 ```go
 func (t *TestLogger) SetLogLevelStr(logLevel string) error
@@ -1270,7 +1270,7 @@ func (t *TestLogger) SetLogLevelStr(logLevel string) error
 
 SetLogLevelStr sets the logging level from a string value.
 
-### func \(\*TestLogger\) SetRedactor
+### func \(\*TestLogger\) [SetRedactor](<https://github.com/alehatsman/mooncake/blob/master/internal/logger/test_logger.go#L113>)
 
 ```go
 func (t *TestLogger) SetRedactor(redactor Redactor)
@@ -1278,7 +1278,7 @@ func (t *TestLogger) SetRedactor(redactor Redactor)
 
 SetRedactor sets the redactor for automatic sensitive data redaction.
 
-### func \(\*TestLogger\) Textf
+### func \(\*TestLogger\) [Textf](<https://github.com/alehatsman/mooncake/blob/master/internal/logger/test_logger.go#L77>)
 
 ```go
 func (t *TestLogger) Textf(format string, v ...interface{})
@@ -1286,7 +1286,7 @@ func (t *TestLogger) Textf(format string, v ...interface{})
 
 Textf logs a plain text message.
 
-### func \(\*TestLogger\) WithPadLevel
+### func \(\*TestLogger\) [WithPadLevel](<https://github.com/alehatsman/mooncake/blob/master/internal/logger/test_logger.go#L128>)
 
 ```go
 func (t *TestLogger) WithPadLevel(padLevel int) Logger
