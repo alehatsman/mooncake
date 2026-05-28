@@ -20,7 +20,6 @@ Package events provides the event system for Mooncake execution lifecycle. Event
   - [func (p *ChannelPublisher) Subscribe(subscriber Subscriber) int](<#func-channelpublisher-subscribe>)
   - [func (p *ChannelPublisher) Unsubscribe(id int)](<#func-channelpublisher-unsubscribe>)
 - [type Event](<#type-event>)
-- [type EventType](<#type-eventtype>)
 - [type FileCopiedData](<#type-filecopieddata>)
 - [type FileDownloadedData](<#type-filedownloadeddata>)
 - [type FileOperationData](<#type-fileoperationdata>)
@@ -56,6 +55,7 @@ Package events provides the event system for Mooncake execution lifecycle. Event
 - [type TransactionRollbackCompleteData](<#type-transactionrollbackcompletedata>)
 - [type TransactionRollbackFailedData](<#type-transactionrollbackfaileddata>)
 - [type TransactionStepReversedData](<#type-transactionstepreverseddata>)
+- [type Type](<#type-type>)
 - [type VarsLoadedData](<#type-varsloadeddata>)
 - [type VarsSetData](<#type-varssetdata>)
 
@@ -162,157 +162,10 @@ Event represents a single event in the execution lifecycle
 
 ```go
 type Event struct {
-    Type      EventType   `json:"type"`
+    Type      Type        `json:"type"`
     Timestamp time.Time   `json:"timestamp"`
     Data      interface{} `json:"data"`
 }
-```
-
-## type EventType
-
-EventType identifies the type of event
-
-```go
-type EventType string
-```
-
-Event types for run lifecycle
-
-```go
-const (
-    EventRunStarted   EventType = "run.started"
-    EventPlanLoaded   EventType = "plan.loaded"
-    EventRunCompleted EventType = "run.completed"
-)
-```
-
-Event types for step lifecycle
-
-```go
-const (
-    EventStepStarted   EventType = "step.started"
-    EventStepCompleted EventType = "step.completed"
-    EventStepSkipped   EventType = "step.skipped"
-    EventStepFailed    EventType = "step.failed"
-    EventStepChecked   EventType = "step.checked"
-)
-```
-
-Event types for output streaming
-
-```go
-const (
-    EventStepStdout EventType = "step.stdout"
-    EventStepStderr EventType = "step.stderr"
-    EventStepDebug  EventType = "step.debug"
-)
-```
-
-Event types for file operations
-
-```go
-const (
-    EventFileCreated        EventType = "file.created"
-    EventFileUpdated        EventType = "file.updated"
-    EventFileRemoved        EventType = "file.removed"
-    EventFileCopied         EventType = "file.copied"
-    EventFileDownloaded     EventType = "file.downloaded"
-    EventHTTPRequested      EventType = "http.requested"
-    EventDirCreated         EventType = "directory.created"
-    EventDirRemoved         EventType = "directory.removed"
-    EventLinkCreated        EventType = "link.created"
-    EventPermissionsChanged EventType = "permissions.changed"
-    EventTemplateRender     EventType = "template.rendered"
-    EventArchiveExtracted   EventType = "archive.extracted"
-)
-```
-
-Event types for variables
-
-```go
-const (
-    EventVarsSet    EventType = "variables.set"
-    EventVarsLoaded EventType = "variables.loaded"
-)
-```
-
-Event types for assertions
-
-```go
-const (
-    EventAssertPassed EventType = "assert.passed"
-    EventAssertFailed EventType = "assert.failed"
-)
-```
-
-Event types for presets
-
-```go
-const (
-    EventPresetExpanded  EventType = "preset.expanded"
-    EventPresetCompleted EventType = "preset.completed"
-)
-```
-
-Event types for agent loop
-
-```go
-const (
-    EventAgentIterationStarted EventType = "agent.iteration.started"
-    EventAgentPlanGenerated    EventType = "agent.plan.generated"
-    EventAgentPlanValidating   EventType = "agent.plan.validating"
-    EventAgentPlanValid        EventType = "agent.plan.valid"
-    EventAgentPlanInvalid      EventType = "agent.plan.invalid"
-    EventAgentPlanExecuting    EventType = "agent.plan.executing"
-    EventAgentIterationDone    EventType = "agent.iteration.done"
-    EventAgentLoopComplete     EventType = "agent.loop.complete"
-)
-```
-
-Event types for artifact capture
-
-```go
-const (
-    EventArtifactCaptureStart    EventType = "artifact_capture.start"
-    EventArtifactCaptureComplete EventType = "artifact_capture.complete"
-)
-```
-
-Event types for transaction rollback \(F054 / spec\-30\).
-
-Spec\-30 §"Key files" promised a six\-event surface for transaction lifecycle \(begin / commit / rollback\_begin / step\_reversed / rollback\_complete / rollback\_failed\); the implementation shipped the executor\-side semantics but never wired the event emit. F054 closes the visibility half: four events at natural emit boundaries inside handleTxnBodyFailure \+ the inverse\-step dispatch path. The two missing events \(TransactionBegin / TransactionCommit\) need compound\-parent step.started semantics that don't exist yet — deferred until the executor exposes per\-compound\-parent lifecycle.
-
-```go
-const (
-    EventTransactionRollbackBegin    EventType = "transaction.rollback_begin"
-    EventTransactionStepReversed     EventType = "transaction.step_reversed"
-    EventTransactionRollbackComplete EventType = "transaction.rollback_complete"
-    EventTransactionRollbackFailed   EventType = "transaction.rollback_failed"
-)
-```
-
-Event types for package management
-
-```go
-const (
-    EventPackageManaged EventType = "package.managed"
-)
-```
-
-Event types for print
-
-```go
-const (
-    EventPrintMessage EventType = "print.message"
-)
-```
-
-Event types for service management
-
-```go
-const (
-    EventServiceManaged EventType = "service.managed"
-)
 ```
 
 ## type FileCopiedData
@@ -857,6 +710,153 @@ type TransactionStepReversedData struct {
     // DurationMs is how long the inverse Run took.
     DurationMs int64 `json:"duration_ms"`
 }
+```
+
+## type Type
+
+Type identifies the type of event
+
+```go
+type Type string
+```
+
+Event types for run lifecycle
+
+```go
+const (
+    EventRunStarted   Type = "run.started"
+    EventPlanLoaded   Type = "plan.loaded"
+    EventRunCompleted Type = "run.completed"
+)
+```
+
+Event types for step lifecycle
+
+```go
+const (
+    EventStepStarted   Type = "step.started"
+    EventStepCompleted Type = "step.completed"
+    EventStepSkipped   Type = "step.skipped"
+    EventStepFailed    Type = "step.failed"
+    EventStepChecked   Type = "step.checked"
+)
+```
+
+Event types for output streaming
+
+```go
+const (
+    EventStepStdout Type = "step.stdout"
+    EventStepStderr Type = "step.stderr"
+    EventStepDebug  Type = "step.debug"
+)
+```
+
+Event types for file operations
+
+```go
+const (
+    EventFileCreated        Type = "file.created"
+    EventFileUpdated        Type = "file.updated"
+    EventFileRemoved        Type = "file.removed"
+    EventFileCopied         Type = "file.copied"
+    EventFileDownloaded     Type = "file.downloaded"
+    EventHTTPRequested      Type = "http.requested"
+    EventDirCreated         Type = "directory.created"
+    EventDirRemoved         Type = "directory.removed"
+    EventLinkCreated        Type = "link.created"
+    EventPermissionsChanged Type = "permissions.changed"
+    EventTemplateRender     Type = "template.rendered"
+    EventArchiveExtracted   Type = "archive.extracted"
+)
+```
+
+Event types for variables
+
+```go
+const (
+    EventVarsSet    Type = "variables.set"
+    EventVarsLoaded Type = "variables.loaded"
+)
+```
+
+Event types for assertions
+
+```go
+const (
+    EventAssertPassed Type = "assert.passed"
+    EventAssertFailed Type = "assert.failed"
+)
+```
+
+Event types for presets
+
+```go
+const (
+    EventPresetExpanded  Type = "preset.expanded"
+    EventPresetCompleted Type = "preset.completed"
+)
+```
+
+Event types for agent loop
+
+```go
+const (
+    EventAgentIterationStarted Type = "agent.iteration.started"
+    EventAgentPlanGenerated    Type = "agent.plan.generated"
+    EventAgentPlanValidating   Type = "agent.plan.validating"
+    EventAgentPlanValid        Type = "agent.plan.valid"
+    EventAgentPlanInvalid      Type = "agent.plan.invalid"
+    EventAgentPlanExecuting    Type = "agent.plan.executing"
+    EventAgentIterationDone    Type = "agent.iteration.done"
+    EventAgentLoopComplete     Type = "agent.loop.complete"
+)
+```
+
+Event types for artifact capture
+
+```go
+const (
+    EventArtifactCaptureStart    Type = "artifact_capture.start"
+    EventArtifactCaptureComplete Type = "artifact_capture.complete"
+)
+```
+
+Event types for transaction rollback \(F054 / spec\-30\).
+
+Spec\-30 §"Key files" promised a six\-event surface for transaction lifecycle \(begin / commit / rollback\_begin / step\_reversed / rollback\_complete / rollback\_failed\); the implementation shipped the executor\-side semantics but never wired the event emit. F054 closes the visibility half: four events at natural emit boundaries inside handleTxnBodyFailure \+ the inverse\-step dispatch path. The two missing events \(TransactionBegin / TransactionCommit\) need compound\-parent step.started semantics that don't exist yet — deferred until the executor exposes per\-compound\-parent lifecycle.
+
+```go
+const (
+    EventTransactionRollbackBegin    Type = "transaction.rollback_begin"
+    EventTransactionStepReversed     Type = "transaction.step_reversed"
+    EventTransactionRollbackComplete Type = "transaction.rollback_complete"
+    EventTransactionRollbackFailed   Type = "transaction.rollback_failed"
+)
+```
+
+Event types for package management
+
+```go
+const (
+    EventPackageManaged Type = "package.managed"
+)
+```
+
+Event types for print
+
+```go
+const (
+    EventPrintMessage Type = "print.message"
+)
+```
+
+Event types for service management
+
+```go
+const (
+    EventServiceManaged Type = "service.managed"
+)
 ```
 
 ## type VarsLoadedData

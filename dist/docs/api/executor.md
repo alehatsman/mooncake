@@ -131,7 +131,7 @@ log.Infof("Summary: %d changed, %d unchanged, %d failed",
   - [func (ec *ExecutionContext) Clone() ExecutionContext](<#func-executioncontext-clone>)
   - [func (ec *ExecutionContext) Ctx() context.Context](<#func-executioncontext-ctx>)
   - [func (ec *ExecutionContext) Effects() actions.Performer](<#func-executioncontext-effects>)
-  - [func (ec *ExecutionContext) EmitEvent(eventType events.EventType, data interface{})](<#func-executioncontext-emitevent>)
+  - [func (ec *ExecutionContext) EmitEvent(eventType events.Type, data interface{})](<#func-executioncontext-emitevent>)
   - [func (ec *ExecutionContext) Evaluator() expression.Evaluator](<#func-executioncontext-evaluator>)
   - [func (ec *ExecutionContext) EventPublisher() events.Publisher](<#func-executioncontext-eventpublisher>)
   - [func (ec *ExecutionContext) Logger() logger.Logger](<#func-executioncontext-logger>)
@@ -776,7 +776,7 @@ Effects returns a Performer pre\-bound to the current step's AsUser. Like ec.Pri
 ### func \(\*ExecutionContext\) EmitEvent
 
 ```go
-func (ec *ExecutionContext) EmitEvent(eventType events.EventType, data interface{})
+func (ec *ExecutionContext) EmitEvent(eventType events.Type, data interface{})
 ```
 
 EmitEvent publishes an event to all subscribers
