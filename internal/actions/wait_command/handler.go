@@ -84,7 +84,10 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 	ctx.GetLogger().Infof("Waiting for command %q (timeout: %s, interval: %s, expect_exit: %d)",
 		cmd, timeout, interval, w.ExpectExit)
 
-	pollCtx, cancel := context.WithTimeout(context.Background(), timeout)
+	// F2: poll ctx inherits the run-wide ctx so SIGINT / fleet kill /
+	// MCP shutdown cancel the polling loop and any in-flight child
+	// process. The user-configured timeout chains on top.
+	pollCtx, cancel := context.WithTimeout(ctx.Ctx(), timeout)
 	defer cancel()
 
 	start := time.Now()
