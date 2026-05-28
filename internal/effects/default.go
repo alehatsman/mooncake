@@ -126,7 +126,7 @@ func (p *defaultPerformer) withChown(sudoCmd, path string) string {
 	if spec == "" {
 		return sudoCmd
 	}
-	return sudoCmd + " && chown " + spec + " " + shellQuote(path)
+	return sudoCmd + " && chown " + spec + " " + ShellQuote(path)
 }
 
 // needSudoForOwnership reports whether a create-style operation must
@@ -211,7 +211,7 @@ func (p *defaultPerformer) Mkdir(path string, mode os.FileMode, opts actions.Per
 	// in one shell so the resulting state is atomic from sudo's
 	// perspective.
 	sudoCmd := p.withChown(fmt.Sprintf("mkdir -p -m %s %s && chmod %s %s",
-		formatMode(mode), shellQuote(path), formatMode(mode), shellQuote(path)), path)
+		formatMode(mode), ShellQuote(path), formatMode(mode), ShellQuote(path)), path)
 	dirAlreadyExists := info != nil && info.IsDir()
 	if !dirAlreadyExists && p.needSudoForOwnership() {
 		if err := p.runSudo(sudoCmd); err != nil {
@@ -232,7 +232,7 @@ func (p *defaultPerformer) Mkdir(path string, mode os.FileMode, opts actions.Per
 	if mkdirErr == nil {
 		chmodErr := os.Chmod(path, mode)
 		if err := p.becomeFallback(opts, chmodErr,
-			fmt.Sprintf("chmod %s %s", formatMode(mode), shellQuote(path)),
+			fmt.Sprintf("chmod %s %s", formatMode(mode), ShellQuote(path)),
 		); err != nil {
 			e.Err = fmt.Errorf("chmod %s: %w", path, err)
 			return e
@@ -336,7 +336,7 @@ func (p *defaultPerformer) sudoWriteFile(path string, content []byte, mode os.Fi
 		return fmt.Errorf("write temp file: %w", err)
 	}
 	cmd := fmt.Sprintf("mv %s %s && chmod %s %s",
-		shellQuote(tmpPath), shellQuote(path), formatMode(mode), shellQuote(path))
+		ShellQuote(tmpPath), ShellQuote(path), formatMode(mode), ShellQuote(path))
 	cmd = p.withChown(cmd, path)
 	return p.runSudo(cmd)
 }
@@ -464,7 +464,7 @@ func (p *defaultPerformer) CopyFile(src, dest string, mode os.FileMode, opts act
 		// gate on needSudoForOwnership so AsUser="" and AsUser=current
 		// both skip the unnecessary sudo wrap.
 		cmd := fmt.Sprintf("mv %s %s && chmod %s %s",
-			shellQuote(tmpFile), shellQuote(dest), formatMode(finalMode), shellQuote(dest))
+			ShellQuote(tmpFile), ShellQuote(dest), formatMode(finalMode), ShellQuote(dest))
 		cmd = p.withChown(cmd, dest)
 		if err := p.runSudo(cmd); err != nil {
 			e.Err = err
@@ -576,7 +576,7 @@ func (p *defaultPerformer) Symlink(target, path string, opts actions.PerformerOp
 
 	if _, statErr := os.Lstat(path); statErr == nil {
 		if p.needSudoForOwnership() {
-			if err := p.runSudo("rm -f " + shellQuote(path)); err != nil {
+			if err := p.runSudo("rm -f " + ShellQuote(path)); err != nil {
 				e.Err = err
 				return e
 			}
@@ -590,9 +590,9 @@ func (p *defaultPerformer) Symlink(target, path string, opts actions.PerformerOp
 		// `chown -h` (no-dereference) is the symlink-aware form so the
 		// link itself is chowned, not the target. Bundled into the same
 		// sudo invocation when AsUser is a named non-root user.
-		cmd := fmt.Sprintf("ln -s %s %s", shellQuote(target), shellQuote(path))
+		cmd := fmt.Sprintf("ln -s %s %s", ShellQuote(target), ShellQuote(path))
 		if spec := p.chownSpec(); spec != "" {
-			cmd += " && chown -h " + spec + " " + shellQuote(path)
+			cmd += " && chown -h " + spec + " " + ShellQuote(path)
 		}
 		if err := p.runSudo(cmd); err != nil {
 			e.Err = err
@@ -637,7 +637,7 @@ func (p *defaultPerformer) Hardlink(target, path string, _ actions.PerformerOpts
 
 	if _, statErr := os.Lstat(path); statErr == nil {
 		if p.needSudoForOwnership() {
-			if err := p.runSudo("rm -f " + shellQuote(path)); err != nil {
+			if err := p.runSudo("rm -f " + ShellQuote(path)); err != nil {
 				e.Err = err
 				return e
 			}
@@ -648,7 +648,7 @@ func (p *defaultPerformer) Hardlink(target, path string, _ actions.PerformerOpts
 	}
 
 	if p.needSudoForOwnership() {
-		cmd := fmt.Sprintf("ln %s %s", shellQuote(target), shellQuote(path))
+		cmd := fmt.Sprintf("ln %s %s", ShellQuote(target), ShellQuote(path))
 		cmd = p.withChown(cmd, path)
 		if err := p.runSudo(cmd); err != nil {
 			e.Err = err
@@ -687,7 +687,7 @@ func (p *defaultPerformer) Touch(path string, mode os.FileMode, _ actions.Perfor
 
 	if p.needSudoForOwnership() {
 		cmd := fmt.Sprintf("touch %s && chmod %s %s",
-			shellQuote(path), formatMode(mode), shellQuote(path))
+			ShellQuote(path), formatMode(mode), ShellQuote(path))
 		cmd = p.withChown(cmd, path)
 		if err := p.runSudo(cmd); err != nil {
 			e.Err = err
@@ -752,11 +752,11 @@ func (p *defaultPerformer) Remove(path string, recursive bool, opts actions.Perf
 	var sudoCmd string
 	switch {
 	case info.IsDir() && recursive:
-		sudoCmd = "rm -rf " + shellQuote(path)
+		sudoCmd = "rm -rf " + ShellQuote(path)
 	case info.IsDir():
-		sudoCmd = "rmdir " + shellQuote(path)
+		sudoCmd = "rmdir " + ShellQuote(path)
 	default:
-		sudoCmd = "rm -f " + shellQuote(path)
+		sudoCmd = "rm -f " + ShellQuote(path)
 	}
 	if err := p.becomeFallback(opts, rmErr, sudoCmd); err != nil {
 		e.Err = fmt.Errorf("remove %s: %w", path, err)
@@ -797,7 +797,7 @@ func (p *defaultPerformer) Chmod(path string, mode os.FileMode, opts actions.Per
 	// Try direct first; fall back to sudo on EACCES when Become is set.
 	directErr := os.Chmod(path, mode)
 	if err := p.becomeFallback(opts, directErr,
-		fmt.Sprintf("chmod %s %s", formatMode(mode), shellQuote(path)),
+		fmt.Sprintf("chmod %s %s", formatMode(mode), ShellQuote(path)),
 	); err != nil {
 		e.Err = fmt.Errorf("chmod %s: %w", path, err)
 		return e
@@ -867,7 +867,7 @@ func (p *defaultPerformer) Chown(path, owner, group string, opts actions.Perform
 	}
 	directErr := os.Chown(path, uid, gid)
 	if err := p.becomeFallback(opts, directErr,
-		fmt.Sprintf("chown %s %s", spec, shellQuote(path)),
+		fmt.Sprintf("chown %s %s", spec, ShellQuote(path)),
 	); err != nil {
 		e.Err = fmt.Errorf("chown %s: %w", path, err)
 		return e
@@ -934,10 +934,6 @@ func describePathKind(info os.FileInfo) string {
 func ShellQuote(s string) string {
 	return "'" + replaceAll(s, "'", `'\''`) + "'"
 }
-
-// shellQuote is the unexported alias retained for in-package callers.
-// New code should prefer ShellQuote at the call site.
-func shellQuote(s string) string { return ShellQuote(s) }
 
 func replaceAll(s, old, replacement string) string {
 	out := make([]byte, 0, len(s))

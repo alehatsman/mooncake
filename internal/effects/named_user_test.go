@@ -35,7 +35,7 @@ func TestWithChown_NamedUser_AppendsChownClause(t *testing.T) {
 	p := NewPerformer(func() actions.Mode { return actions.ModeApply }, "", false, username).(*defaultPerformer)
 	got := p.withChown("mv /tmp/x /etc/foo && chmod 0644 /etc/foo", "/etc/foo")
 
-	wantSuffix := "&& chown " + wantSpec + " " + shellQuote("/etc/foo")
+	wantSuffix := "&& chown " + wantSpec + " " + ShellQuote("/etc/foo")
 	if !strings.Contains(got, wantSuffix) {
 		t.Errorf("withChown output missing chown clause for %q:\n  got:  %s\n  want: contains %q", username, got, wantSuffix)
 	}
