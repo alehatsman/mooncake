@@ -35,6 +35,19 @@ func (h *Handler) Metadata() actions.ActionMetadata {
 		SupportedPlatforms: []string{},
 		RequiresSudo:       false,
 		ImplementsCheck:    true,
+		Examples: []string{
+			`# Clone or update to a tagged version (idempotent)
+- name: Vendor the upstream repo
+  git.clone:
+    repo: https://github.com/anthropics/anthropic-sdk-go.git
+    dest: "{{ home }}/src/anthropic-sdk-go"
+    ref: v1.2.3`,
+			`# Track a branch tip (re-runs fast-forward when remote moves)
+- git.clone:
+    repo: git@github.com:internal/infra.git
+    dest: /opt/infra
+    ref: main`,
+		},
 	}
 }
 

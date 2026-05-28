@@ -116,6 +116,14 @@ type ActionMetadata struct {
 	// read.yaml). Default false: mutation actions must not affect vars during
 	// plan. See spec-37.
 	CaptureInPlan bool
+
+	// Examples is an ordered list of hand-written YAML snippets shown by
+	// `mooncake actions show <verb>`. Each entry should be a complete
+	// step (one or more `- verb:` blocks) the user can copy-paste into a
+	// playbook. When non-empty, the renderer prints these instead of the
+	// synthetic schema-derived minimum example. Multi-line entries are
+	// printed verbatim so authors control wrapping and field order.
+	Examples []string
 }
 
 // Handler defines the interface that all action handlers must implement.

@@ -42,6 +42,17 @@ func (Handler) Metadata() actions.ActionMetadata {
 		SupportedPlatforms: []string{}, // All platforms
 		RequiresSudo:       false,      // Depends on dest path/ownership
 		ImplementsCheck:    true,       // Uses checksums for idempotency
+		Examples: []string{
+			`# Copy a config file with explicit mode + owner
+- name: Drop the systemd unit
+  file.copy:
+    src: ./files/myapp.service
+    dest: /etc/systemd/system/myapp.service
+    mode: "0644"
+    owner: root
+    group: root
+  become: true`,
+		},
 	}
 }
 

@@ -93,6 +93,62 @@ func TestRenderActionShowText_KnownAction(t *testing.T) {
 	}
 }
 
+// TestRenderActionShowText_CuratedExamplesWin — when meta.Examples
+// is populated the renderer prints those verbatim and skips the
+// synthetic "Minimum example:" block. Authors get full control over
+// field order, multi-step composition, and comments.
+func TestRenderActionShowText_CuratedExamplesWin(t *testing.T) {
+	meta := &actions.ActionMetadata{
+		Name:     "file.copy",
+		Category: actions.CategoryFile,
+		Examples: []string{
+			"# canonical\n- file.copy:\n    src: ./a\n    dest: /etc/a",
+			"# alt\n- file.copy:\n    src: ./b\n    dest: /etc/b",
+		},
+	}
+	def := &schemagen.Definition{
+		Type:       "object",
+		Properties: map[string]*schemagen.Property{"src": {Type: "string"}, "dest": {Type: "string"}},
+		Required:   []string{"src", "dest"},
+	}
+	var buf bytes.Buffer
+	renderActionShowText(meta, def, &buf)
+	out := buf.String()
+
+	if !strings.Contains(out, "Examples:") {
+		t.Errorf("expected plural 'Examples:' header (2 entries):\n%s", out)
+	}
+	if strings.Contains(out, "Minimum example:") {
+		t.Errorf("synthetic block should be suppressed when Examples is set:\n%s", out)
+	}
+	for _, want := range []string{"# canonical", "src: ./a", "# alt", "dest: /etc/b"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("output missing %q:\n%s", want, out)
+		}
+	}
+}
+
+// TestRenderActionShowText_SingleExampleSingularHeader — one entry
+// reads as "Example:" (singular), two+ as "Examples:".
+func TestRenderActionShowText_SingleExampleSingularHeader(t *testing.T) {
+	meta := &actions.ActionMetadata{
+		Name:     "pkg",
+		Category: actions.CategorySystem,
+		Examples: []string{"- pkg:\n    name: ripgrep"},
+	}
+	def := &schemagen.Definition{
+		Type:       "object",
+		Properties: map[string]*schemagen.Property{"name": {Type: "string"}},
+		Required:   []string{"name"},
+	}
+	var buf bytes.Buffer
+	renderActionShowText(meta, def, &buf)
+	out := buf.String()
+	if !strings.Contains(out, "Example:\n") || strings.Contains(out, "Examples:") {
+		t.Errorf("expected singular 'Example:' header for 1 entry:\n%s", out)
+	}
+}
+
 // TestRenderActionShowText_NoRequiredOmitsExample — when an action has
 // no required fields the minimum-example block is suppressed (a
 // synthetic example with no semantics is worse than no example).

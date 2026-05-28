@@ -89,6 +89,29 @@ func (Handler) Metadata() actions.ActionMetadata {
 		SupportedPlatforms: []string{},
 		RequiresSudo:       false,
 		ImplementsCheck:    true,
+		Examples: []string{
+			`# GET + register the parsed JSON for downstream steps
+- name: Probe metadata
+  http.request:
+    url: https://api.example.com/v1/whoami
+    method: GET
+    expect_status: 200
+  as: whoami
+
+- log:
+    msg: "logged in as {{ whoami.body.email }}"`,
+			`# POST a JSON body with auth header
+- http.request:
+    url: https://api.example.com/v1/events
+    method: POST
+    headers:
+      Authorization: "Bearer {{ env.API_TOKEN }}"
+      Content-Type: application/json
+    json_body:
+      kind: deploy
+      sha: "{{ git_sha }}"
+    expect_status: 201`,
+		},
 	}
 }
 

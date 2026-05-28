@@ -47,6 +47,22 @@ func (Handler) Metadata() actions.ActionMetadata {
 		SupportedPlatforms: []string{}, // All platforms
 		RequiresSudo:       false,      // Depends on command
 		ImplementsCheck:    false,
+		Examples: []string{
+			`# Run a command and capture stdout for a later step
+- name: Probe the API version
+  cmd:
+    argv: [curl, -fsSL, "https://api.example.com/version"]
+  as: api_version
+
+- name: Echo what we got
+  log:
+    msg: "api version = {{ api_version.stdout }}"`,
+			`# Silence the captured buffer for noisy commands; output still streams
+- name: Run a long build
+  cmd:
+    argv: [make, build]
+    capture: false`,
+		},
 	}
 }
 

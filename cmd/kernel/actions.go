@@ -294,16 +294,45 @@ func renderActionShowText(meta *actions.ActionMetadata, def *schemagen.Definitio
 		}
 	}
 
-	// Minimum example: a single-step playbook with the required fields
-	// only, default-valued. Skipped when no required fields exist (the
-	// action is either parameterless or takes a scalar — neither warrants
-	// a synthetic example with no real semantics).
-	if len(reqNames) > 0 {
+	// Examples: prefer hand-written canonical snippets from
+	// meta.Examples when present (they show realistic field
+	// combinations and the right value shapes); otherwise fall back
+	// to the synthetic schema-derived "Minimum example" — which is
+	// better than nothing for the long tail of handlers that haven't
+	// been hand-curated yet.
+	switch {
+	case len(meta.Examples) > 0:
+		header := "Example:"
+		if len(meta.Examples) > 1 {
+			header = "Examples:"
+		}
+		fmt.Fprintln(w, "\n"+header)
+		for i, ex := range meta.Examples {
+			if i > 0 {
+				fmt.Fprintln(w)
+			}
+			printIndented(w, "  ", strings.TrimRight(ex, "\n"))
+		}
+	case len(reqNames) > 0:
+		// Synthetic minimum example: a single-step playbook with the
+		// required fields only, default-valued. Skipped when no
+		// required fields exist (the action is either parameterless
+		// or takes a scalar — neither warrants a synthetic example
+		// with no real semantics).
 		fmt.Fprintln(w, "\nMinimum example:")
 		fmt.Fprintf(w, "  - %s:\n", meta.Name)
 		for _, n := range reqNames {
 			fmt.Fprintf(w, "      %s: %s\n", n, exampleValue(def.Properties[n]))
 		}
+	}
+}
+
+// printIndented writes s to w with `indent` prepended to each line.
+// Preserves embedded blank lines and avoids tab-expansion so YAML
+// snippets render exactly as authors wrote them.
+func printIndented(w io.Writer, indent, s string) {
+	for _, line := range strings.Split(s, "\n") {
+		fmt.Fprintln(w, indent+line)
 	}
 }
 

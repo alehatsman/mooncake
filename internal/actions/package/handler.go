@@ -76,6 +76,23 @@ func (h *Handler) Metadata() actions.ActionMetadata {
 		SupportedPlatforms: []string{"linux", "darwin", "windows", "freebsd"}, // Multiple package managers supported
 		RequiresSudo:       true,                                              // Typically requires elevated privileges
 		ImplementsCheck:    true,                                              // Checks if package is installed before installing
+		Examples: []string{
+			`# Install a single package (auto-detects manager: apt/dnf/brew/...)
+- name: Install ripgrep
+  pkg:
+    name: ripgrep
+    state: present`,
+			`# Install several with a cache refresh
+- name: Dev essentials
+  pkg:
+    names: [git, make, jq, curl]
+    state: present
+    update_cache: true`,
+			`# Upgrade an already-installed package to latest
+- pkg:
+    name: nginx
+    state: latest`,
+		},
 	}
 }
 

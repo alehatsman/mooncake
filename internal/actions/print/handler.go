@@ -48,6 +48,18 @@ func (h *Handler) Metadata() actions.ActionMetadata {
 		SupportedPlatforms: []string{},
 		RequiresSudo:       false,
 		ImplementsCheck:    false,
+		Examples: []string{
+			`# Plain message
+- name: Note the host
+  log:
+    msg: "deploying on {{ hostname }} ({{ distribution }} {{ distribution_version }})"`,
+			`# Structured payload — renders as a kv block under the title
+- log:
+    title: "Resolved config"
+    data:
+      port: "{{ port }}"
+      mode: "{{ mode }}"`,
+		},
 	}
 }
 

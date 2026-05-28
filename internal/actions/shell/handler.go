@@ -53,6 +53,22 @@ func (h *Handler) Metadata() actions.ActionMetadata {
 		SupportedPlatforms: []string{}, // All platforms
 		RequiresSudo:       false,      // Depends on command
 		ImplementsCheck:    false,
+		Examples: []string{
+			`# Inline shell with idempotency guard
+- name: Initialize the swarm
+  shell:
+    cmd: docker swarm init --advertise-addr {{ host_ip }}
+    creates: /var/lib/docker/swarm/state.json`,
+			`# Multi-line script with cwd + env
+- name: Build the artifact
+  shell:
+    cmd: |
+      go mod download
+      go build -o ./out/server ./cmd/server
+  cwd: "{{ repo }}"
+  env:
+    CGO_ENABLED: "0"`,
+		},
 	}
 }
 

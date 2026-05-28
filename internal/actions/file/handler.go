@@ -180,6 +180,27 @@ func (Handler) Metadata() actions.ActionMetadata {
 		SupportedPlatforms: []string{}, // All platforms
 		RequiresSudo:       false,      // Depends on path/ownership operation
 		ImplementsCheck:    true,       // Checks existence, permissions, ownership before changes
+		Examples: []string{
+			`# Write a file with content
+- name: Drop a config snippet
+  file.write:
+    path: "{{ home }}/.config/myapp/config.yml"
+    content: |
+      mode: production
+      port: 8080
+    mode: "0644"`,
+			`# Ensure a directory exists
+- name: Create the scratch dir
+  file.write:
+    path: "{{ home }}/.mooncake/scratch"
+    state: directory
+    mode: "0755"`,
+			`# Remove a path
+- name: Delete the stale lockfile
+  file.write:
+    path: /var/run/myapp.lock
+    state: absent`,
+		},
 	}
 }
 
