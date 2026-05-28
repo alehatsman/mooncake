@@ -12,10 +12,13 @@ import (
 	"os/exec"
 	"runtime"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/alehatsman/mooncake/internal/actions"
+	"github.com/alehatsman/mooncake/internal/actions/streamoutput"
 	"github.com/alehatsman/mooncake/internal/config"
+	"github.com/alehatsman/mooncake/internal/events"
 	"github.com/alehatsman/mooncake/internal/executor"
 	"github.com/alehatsman/mooncake/internal/security"
 )
@@ -31,12 +34,15 @@ func init() {
 // Metadata returns metadata about the command action.
 func (Handler) Metadata() actions.ActionMetadata {
 	return actions.ActionMetadata{
-		Name:               "cmd",
-		Description:        "Execute commands directly without shell interpolation",
-		Category:           actions.CategoryCommand,
-		SupportsDryRun:     true,
-		SupportsBecome:     true,
-		EmitsEvents:        []string{},
+		Name:           "cmd",
+		Description:    "Execute commands directly without shell interpolation",
+		Category:       actions.CategoryCommand,
+		SupportsDryRun: true,
+		SupportsBecome: true,
+		EmitsEvents: []string{
+			string(events.EventStepStdout),
+			string(events.EventStepStderr),
+		},
 		Version:            "1.0.0",
 		SupportedPlatforms: []string{}, // All platforms
 		RequiresSudo:       false,      // Depends on command
@@ -175,13 +181,42 @@ func (h *Handler) executeCommand(ctx actions.Context, step *config.Step, rendere
 		cmd.Dir = rendered
 	}
 
-	// Capture stdout and stderr
-	var stdout, stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
+	// Stream stdout/stderr through the shared line-buffered streamer so
+	// the console subscriber renders each line in time and `result.Stdout`
+	// still carries the full capture for downstream `register/as`.
+	// Cmd.Capture defaults to true; honor an explicit `capture: false`.
+	shouldCapture := true
+	if step.Cmd != nil && step.Cmd.Capture != nil {
+		shouldCapture = *step.Cmd.Capture
+	}
 
-	// Execute the command
-	err = cmd.Run()
+	stdoutPipe, err := cmd.StdoutPipe()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create stdout pipe: %w", err)
+	}
+	stderrPipe, err := cmd.StderrPipe()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create stderr pipe: %w", err)
+	}
+
+	if startErr := cmd.Start(); startErr != nil {
+		return nil, fmt.Errorf("failed to start command: %w", startErr)
+	}
+
+	var stdout, stderr bytes.Buffer
+	var wg sync.WaitGroup
+	wg.Add(2)
+	go func() {
+		defer wg.Done()
+		streamoutput.Stream(stdoutPipe, &stdout, ctx, shouldCapture, "stdout")
+	}()
+	go func() {
+		defer wg.Done()
+		streamoutput.Stream(stderrPipe, &stderr, ctx, shouldCapture, "stderr")
+	}()
+	wg.Wait()
+
+	err = cmd.Wait()
 
 	// Process result
 	result := executor.NewResult()

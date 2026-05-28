@@ -13,11 +13,9 @@
 package shell
 
 import (
-	"bufio"
 	"bytes"
 	"context"
 	"fmt"
-	"io"
 	"os"
 	"os/exec"
 	"strings"
@@ -25,6 +23,7 @@ import (
 	"time"
 
 	"github.com/alehatsman/mooncake/internal/actions"
+	"github.com/alehatsman/mooncake/internal/actions/streamoutput"
 	"github.com/alehatsman/mooncake/internal/config"
 	"github.com/alehatsman/mooncake/internal/events"
 	"github.com/alehatsman/mooncake/internal/executor"
@@ -316,126 +315,20 @@ func (h *Handler) executeAndCaptureOutput(command *exec.Cmd, ctx actions.Context
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		h.streamOutput(stdout, &stdoutBuf, ctx, shouldCapture, "stdout")
+		streamoutput.Stream(stdout, &stdoutBuf, ctx, shouldCapture, "stdout")
 	}()
 
 	// Stream stderr
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		h.streamOutput(stderr, &stderrBuf, ctx, shouldCapture, "stderr")
+		streamoutput.Stream(stderr, &stderrBuf, ctx, shouldCapture, "stderr")
 	}()
 
 	wg.Wait()
 
 	err = command.Wait()
 	return stdoutBuf.String(), stderrBuf.String(), err
-}
-
-// streamOutput streams command output line by line.
-//
-// F018: bufio.Scanner defaults to a 64 KB token cap; lines longer than
-// that triggered Scan()→false, scanner.Err()==bufio.ErrTooLong, and
-// silent truncation of the rest of the stream — the command still
-// reported success and a downstream step consuming `as: out` got an
-// empty or partial stdout with no signal. Two changes:
-//
-//   - Raise the per-line cap to 1 MB via scanner.Buffer. 1 MB is
-//     generous for human-readable output and small enough that a
-//     runaway command can't OOM the daemon. Binary blobs > 1 MB
-//     should be redirected to a file by the playbook, not captured.
-//   - Check scanner.Err() after the loop and surface ErrTooLong (or
-//     any other non-EOF pipe error) via the logger so the user sees
-//     the truncation instead of treating short stdout as authoritative.
-//     The step's exit code is unchanged — log-and-continue is the
-//     least-surprising option, matching the finding's recommendation.
-const shellStreamMaxLineBytes = 1024 * 1024
-
-func (h *Handler) streamOutput(pipe io.Reader, buf *bytes.Buffer, ctx actions.Context, capture bool, stream string) {
-	scanner := bufio.NewScanner(pipe)
-	scanner.Buffer(make([]byte, 64*1024), shellStreamMaxLineBytes)
-	lineNum := 0
-
-	publisher := ctx.GetEventPublisher()
-	stepID := ctx.GetCurrentStepID()
-
-	for scanner.Scan() {
-		line := scanner.Text()
-		lineNum++
-
-		// Capture if requested
-		if capture {
-			buf.WriteString(line)
-			buf.WriteString("\n")
-		}
-
-		// Emit event
-		if publisher != nil {
-			var eventType events.EventType
-			if stream == "stdout" {
-				eventType = events.EventStepStdout
-			} else {
-				eventType = events.EventStepStderr
-			}
-
-			publisher.Publish(events.Event{
-				Type:      eventType,
-				Timestamp: time.Now(),
-				Data: events.StepOutputData{
-					StepID:     stepID,
-					Stream:     stream,
-					Line:       line,
-					LineNumber: lineNum,
-				},
-			})
-		}
-	}
-	if err := scanner.Err(); err != nil {
-		if log := ctx.GetLogger(); log != nil {
-			log.Errorf("  shell %s stream stopped early (output truncated): %v", stream, err)
-		}
-		// F038: also surface the truncation through the programmatic
-		// channels. F018 wired the human logger only; consumers
-		// reading result.Stdout / result.Stderr or subscribing to
-		// step.* events would see the step complete with empty/short
-		// output and no signal that data was dropped. Two writes:
-		//
-		//   1. Append a clearly-prefixed marker line to the captured
-		//      buffer so result.Stdout / result.Stderr carries the
-		//      truncation message. The "mooncake: " prefix makes it
-		//      distinguishable from real subprocess output.
-		//   2. Publish a synthetic step.stderr event so live SSE
-		//      subscribers receive the message without waiting for
-		//      step.completed.
-		//
-		// result.Failed stays false: truncation is not a step failure
-		// (the subprocess may still exit 0). Consumers that want to
-		// fail on truncation can grep for the marker in stderr.
-		msg := fmt.Sprintf("mooncake: %s stream truncated (line exceeded %d-byte limit): %v", stream, shellStreamMaxLineBytes, err)
-		if capture {
-			buf.WriteString(msg)
-			buf.WriteString("\n")
-		}
-		if publisher != nil {
-			publisher.Publish(events.Event{
-				Type:      events.EventStepStderr,
-				Timestamp: time.Now(),
-				Data: events.StepOutputData{
-					StepID:     stepID,
-					Stream:     "stderr",
-					Line:       msg,
-					LineNumber: lineNum + 1,
-				},
-			})
-		}
-		// CRITICAL: keep draining the pipe even after Scanner gave up,
-		// otherwise the child process blocks on its write end when the
-		// kernel pipe buffer fills (PIPE_BUF is small) and command.Wait()
-		// hangs forever — turning silent truncation into a process leak.
-		// Discard the rest; capture is best-effort once we've decided
-		// the stream is too long for us.
-		_, _ = io.Copy(io.Discard, pipe)
-	}
 }
 
 // processCommandResult records the *raw* outcome of the command —
