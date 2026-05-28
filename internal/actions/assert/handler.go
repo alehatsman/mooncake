@@ -28,6 +28,17 @@ const (
 	msgGitClean         = "clean working tree"
 )
 
+// ctxFor returns ec.Svc.Ctx with a Background fallback so test setups
+// that build an ExecutionContext without populating Svc.Ctx still get a
+// non-nil ctx for exec.CommandContext / http.NewRequestWithContext.
+// Production paths always populate Svc.Ctx via Start / ExecutePlan.
+func ctxFor(ec *executor.ExecutionContext) context.Context {
+	if ec == nil || ec.Svc == nil || ec.Svc.Ctx == nil {
+		return context.Background()
+	}
+	return ec.Svc.Ctx
+}
+
 // Handler implements the assert action handler.
 type Handler struct{}
 
@@ -98,9 +109,10 @@ func (h *Handler) executeAssertCommand(assertCmd *config.AssertCommand, ec *exec
 
 	ec.Svc.Logger.Debugf("Asserting command exit code: %s (expected: %d)", cmd, expectedExitCode)
 
-	// Execute command
+	// Execute command. F2: inherit the run-wide ctx so SIGINT /
+	// fleet kill / MCP shutdown cancels the assertion shell-out.
 	// #nosec G204 -- Command from user config is intentional functionality
-	shellCmd := exec.Command("bash", "-c", cmd)
+	shellCmd := exec.CommandContext(ctxFor(ec), "bash", "-c", cmd)
 	shellCmd.Dir = ec.CurrentDir
 
 	output, execErr := shellCmd.CombinedOutput()
@@ -540,7 +552,7 @@ func (h *Handler) executeAssertGitClean(assertGit *config.AssertGitClean, ec *ex
 
 	// Check if we're in a git repository
 	// #nosec G204 -- Git command is controlled and safe
-	checkCmd := exec.Command("git", "rev-parse", "--git-dir")
+	checkCmd := exec.CommandContext(ctxFor(ec), "git", "rev-parse", "--git-dir")
 	checkCmd.Dir = ec.CurrentDir
 	if err := checkCmd.Run(); err != nil {
 		return "", "", &executor.AssertionError{
@@ -554,7 +566,7 @@ func (h *Handler) executeAssertGitClean(assertGit *config.AssertGitClean, ec *ex
 
 	// Get git status
 	// #nosec G204 -- Git command is controlled and safe
-	statusCmd := exec.Command("git", "status", "--porcelain")
+	statusCmd := exec.CommandContext(ctxFor(ec), "git", "status", "--porcelain")
 	statusCmd.Dir = ec.CurrentDir
 	output, err := statusCmd.CombinedOutput()
 	if err != nil {
@@ -611,7 +623,7 @@ func (h *Handler) executeAssertGitDiff(assertDiff *config.AssertGitDiff, ec *exe
 
 	// Check if we're in a git repository
 	// #nosec G204 -- Git command is controlled and safe
-	checkCmd := exec.Command("git", "rev-parse", "--git-dir")
+	checkCmd := exec.CommandContext(ctxFor(ec), "git", "rev-parse", "--git-dir")
 	checkCmd.Dir = ec.CurrentDir
 	if err := checkCmd.Run(); err != nil {
 		return "", "", &executor.AssertionError{
@@ -642,7 +654,7 @@ func (h *Handler) executeAssertGitDiff(assertDiff *config.AssertGitDiff, ec *exe
 
 	// Execute git diff
 	// #nosec G204 -- Git command with controlled arguments
-	diffCmd := exec.Command("git", diffArgs...)
+	diffCmd := exec.CommandContext(ctxFor(ec), "git", diffArgs...)
 	diffCmd.Dir = ec.CurrentDir
 	output, diffErr := diffCmd.CombinedOutput()
 
