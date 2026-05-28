@@ -5,6 +5,13 @@ on master via `076af5b8` (envelope + handler sweep) and `fe30524a`
 (cleanup: missed handlers, OpReverted wire-up, exit code 130). Both
 gates green. This file lists what's still loose.
 
+**Update 2026-05-28:** F2, F4, F5, F6 shipped — see per-section
+`SHIPPED` markers. Still open: F1 (dispatchRunner refactor, deferred
+by policy), F3 (apt/dnf dedup, deferred by policy), F7 (status-enum
+docs), F8 (observe.target const), F9 (YAML migration doc), and the
+F2.11 finale (drop `os.Exit(130/143)` hard-kill, blocked on shell
+handler surfacing ctx-cancel as Cancelled rather than Failed).
+
 **Context for the fresh agent:** read these first.
 
 - `docs-working/streams/core/proposals/proposal-01-result-schema-conventions.md`
@@ -81,7 +88,34 @@ the same behavior in smaller functions.
 
 ---
 
-## F2. F016 — ctx threading through every handler
+## F2. F016 — ctx threading through every handler — SHIPPED 2026-05-28
+
+**Landed:** 11 commits `d8c0e6ee` → `6925b967` on master.
+
+Handler-side ctx threading complete across the punch list:
+F2.1 actions.Context.Ctx() foundations + 3 implementers
+(ExecutionContext / reverseContext / MockContext); F2.2 shell
+setupCommandContext with SIGINT-during-sleep regression test
+(0.15s cancel vs 30s pre-F2); F2.3 wait_command pollCtx; F2.4
+pkg_repo/brew (ListTaps + Exec + HTTPFetchKey); F2.5 pkg.hold +
+apt + dnf (12 hook signatures + HTTPFetchKey); F2.6 git_clone +
+git_config; F2.7 assert (5 sites + ctxFor helper); F2.8 os_user +
+os_group platform_{linux,darwin,windows} + dscl.Run signature;
+F2.9 observe_process; F2.10 windows.hyperv_firewall_rule +
+service/windows.
+
+**Still open — F2.11:** drop the `os.Exit(130/143)` hard-kill in
+`runWithSignalCtx`. Blocked on shell handler's
+`processCommandResult` surfacing ctx-cancel as a non-nil err (so
+syncResultEnvelope's existing classification kicks in and
+Stats.Cancelled gets bumped). Without that, dropping the hard-kill
+regresses TestIssue87_SIG{INT,TERM}ExitsCleanly because
+mapCancelExit sees kr.Summary.Cancelled == 0 and falls through to
+runErr → exit 1 instead of 130.
+
+---
+
+## F2. F016 — ctx threading through every handler (original brief, kept for reference)
 
 **Tag:** Accuracy gap. Highest-effort item in this file. Wide-blast-
 radius surgery.
@@ -180,7 +214,23 @@ each driver drops by ~40%; dupl no longer flags the pair.
 
 ---
 
-## F4. CancelledReason is coarse
+## F4. CancelledReason is coarse — SHIPPED 2026-05-28
+
+**Landed:** `e35593b6` on master.
+
+`syncResultEnvelope` now reads `context.Cause(runCtx)` against typed
+sentinels — `ErrCancelSignal` / `ErrCancelFleet` / `ErrCancelMCP` —
+instead of collapsing every non-deadline cancel onto `"sigint"`.
+Plain `WithCancel` no-cause cancels now map to `"cancelled"` generic.
+Live producers wired: `cmd/kernel/apply.runWithSignalCtx` and
+`internal/fleet/Orchestrator.installSignalHandler`. `ErrCancelFleet`
+and `ErrCancelMCP` declared but unwired pending fleet-kill wire and
+MCP shutdown surface. 4 new sync_envelope tests pin Signal / Fleet /
+MCP / Unknown attribution paths.
+
+---
+
+## F4. CancelledReason is coarse (original brief, kept for reference)
 
 **Tag:** Accuracy gap. Single-bit `sigint` vs `timeout` distinction
 today.
@@ -226,7 +276,18 @@ reports `cancelled_reason: fleet_kill` in `runs.jsonl`.
 
 ---
 
-## F5. Plan-mode Operation contract is informal
+## F5. Plan-mode Operation contract is informal — SHIPPED 2026-05-28
+
+**Landed:** `14dcf3c1` on master.
+
+Plan-mode handlers now emit `OpNoop` in already-converged branches,
+matching the apply-mode envelope for the same input. ~15 handler
+families swept. Plan→apply numerical comparisons stay honest across
+idempotent runs.
+
+---
+
+## F5. Plan-mode Operation contract is informal (original brief, kept for reference)
 
 **Tag:** Polish. No behavioral bug, but the codebase is split.
 
@@ -271,7 +332,22 @@ mode on an already-converged target reports `Operation=OpNoop`,
 
 ---
 
-## F6. Recap "ok" is derived in the renderer
+## F6. Recap "ok" is derived in the renderer — SHIPPED 2026-05-28
+
+**Landed:** `7f719195` on master (feat commit `f46a0135`).
+
+`OK *int` added to `ExecutionStats`, bumped at four sites:
+`postExecuteSuccess` when changed==false (apply no-op), plan-mode
+dispatch when wouldChange==false, the unknown-action plan path, and
+MT-45 rollback (alongside Reverted, preserving OK+Changed==Executed).
+`events.RunCompletedData` carries `OkSteps`; `apply.RunSummary` adds
+`OkSteps` next to the legacy `Ok` field (kept as SuccessSteps for
+MCP/agentd/history back-compat). 3 renderer sites read OkSteps with
+pre-F6 subtraction fallback. 2 end-to-end tests pin the invariant.
+
+---
+
+## F6. Recap "ok" is derived in the renderer (original brief, kept for reference)
 
 **Tag:** Polish. Data-model smell, no numerical bug.
 
@@ -438,14 +514,20 @@ old playbook breaks if its author was depending on the bug.
 
 ## Suggested ordering for a fresh agent
 
-If you can only do a few of these, the value ranking is:
+**Shipped 2026-05-28:** F2 (handler ctx threading, 11 commits), F4
+(CancelledReason via context.Cause), F5 (plan-mode OpNoop sweep),
+F6 (recap `ok` as first-class counter).
 
-1. **F2 (ctx threading)** — biggest accuracy gain, biggest effort.
-   Worth doing carefully, one handler family at a time.
-2. **F4 (CancelledReason via context.Cause)** — small, isolated,
-   makes the recap honest about why a run cancelled.
-3. **F9 (YAML migration doc)** — pure docs, ~30 min of work, biggest
-   user-visible value of anything in this file.
+What's left, in priority order:
+
+1. **F2.11 finale** — drop `os.Exit(130/143)` in `runWithSignalCtx`.
+   Blocked on shell handler `processCommandResult` surfacing
+   ctx-cancel as non-nil err so syncResultEnvelope's
+   classification kicks in. ~30 min once that's in place.
+2. **F9 (YAML migration doc)** — pure docs, ~30 min, biggest
+   user-visible value of anything still open. Handled by the docs
+   agent.
+3. **F7 (status-enum doc)** — pure docs; handled by docs agent.
 4. **F1 (dispatchRunner refactor)** — defer until the next time
    someone needs to touch dispatch for unrelated reasons. The
    gocyclo violation is informational; routinely-refactoring
@@ -453,5 +535,5 @@ If you can only do a few of these, the value ranking is:
 5. **F3 (apt/dnf dedup)** — only do this when one of the drivers
    needs a real change anyway, so the shared extraction is paid
    for by real demand.
-6. **F5, F6, F7, F8** — polish. Pick up when you're already in the
-   neighborhood.
+6. **F8 (observe.target const)** — polish. Pick up when you're
+   already in the neighborhood.

@@ -51,6 +51,13 @@ _None._ Module-system phase 2 (lockfile + `mod tidy` + `parameters:` hard-remove
 Recently shipped (now in [`archive/streams/core/specs/done/`](../../archive/streams/core/specs/done/)):
 
 - spec-66 — Typed plan diffs (2026-05-27, all 8 waves; 16 renderers registered).
+- proposal-01 / -02 / -06 result-envelope bundle (2026-05-28, `076af5b8` + `fe30524a`).
+- proposal-11 — `assert` action + `heal:` kernel primitive (2026-05-28, `b35a1986`).
+- proposal-19 — `windows.hyperv_firewall_rule` action (2026-05-27, `b87e3f20`).
+- F2 handler-side ctx threading sweep (2026-05-28, 11 commits `d8c0e6ee` → `6925b967`) — apply now drains cleanly on SIGINT / fleet kill / MCP shutdown across shell, wait_command, pkg.*, git_*, assert, os_user/os_group, observe_process, and Windows handlers.
+- F4 — CancelledReason via `context.Cause` sentinels (2026-05-28, `e35593b6`).
+- F5 — plan-mode OpNoop sweep (2026-05-28, `14dcf3c1`).
+- F6 — recap `ok` as first-class counter (2026-05-28, `7f719195`).
 - spec-67 — Module system phase 1 (2026-05-21, `index.yml` + `props:` + local `use:` + `mooncake mod add/cache`). Supersedes spec-65, which was archived undelivered.
 
 ## Open gaps

@@ -25,16 +25,16 @@ These are brainstormed proposals, not specs.
 
 | # | Proposal | Effort | Value | Why |
 |---|---|---|---|---|
-| [01](./proposal-01-result-schema-conventions.md) | Standardize result schema: 5-field common envelope | M | High | Every action returns its own shape; agents have to know each |
-| [02](./proposal-02-recap-counter-discipline.md) | Codify `ok / changed / skipped / failed / reverted / cancelled` | S | High | Counters are the user's exit signal; today their semantics are folklore |
+| ~~01~~ | ~~Standardize result schema: 5-field common envelope~~ | M | High | ✅ shipped 2026-05-28 (`076af5b8` + `fe30524a`) — see `archive/.../done/proposal-01-*.md` + followups doc |
+| ~~02~~ | ~~Codify `ok / changed / skipped / failed / reverted / cancelled`~~ | S | High | ✅ shipped 2026-05-28 — see archive + followups doc |
 | [03](./proposal-03-step-validator-consistency.md) | `mooncake step` enforces `additionalProperties: false` | XS | Medium | Closes the asymmetry where `step` accepts unknown fields silently |
 | [05](./proposal-05-action-capability-flags.md) | Surface `Permissions/Diff/Cost/Reverse` capability flags | XS | Medium | spec-22 shipped the methods; make their outputs inspectable |
-| [06](./proposal-06-failed-vs-error-distinction.md) | Reconcile `failed: false` + `error: "..."`; query vs. mutation taxonomy | S | Medium | Recurring confusion across observe/wait/os actions (#61 umbrella) |
+| ~~06~~ | ~~Reconcile `failed: false` + `error: "..."`; query vs. mutation taxonomy~~ | S | Medium | ✅ shipped 2026-05-28 — see archive + followups doc |
 | [07](./proposal-07-pkg-aur-support.md) | `pkg.install: manager: yay` / `paru` for Arch AUR | S | Medium | Today's AUR install is a 20-line `shell: yay -S` block — no idempotency, no plan diff |
 | [08](./proposal-08-pkg-brew-taps-and-tolerant-rc.md) | `pkg.repo: manager: brew` for taps; tolerate idempotent non-zero rc | S | Medium | `brew tap` exits 1 on re-tap; cask vs. formula is shell-only today |
 | [09](./proposal-09-template-now-filter.md) | Working `now` / `apply_started_at` for timestamped strings | XS | Medium | Pongo2's `{% now %}` silently no-ops; blocks rolling backup patterns |
 | [10](./proposal-10-wait-http-post-body.md) | `wait_http`: POST + headers + body | S | Medium | GET-only blocks polling services with no health endpoint (e.g. vLLM embeddings) |
-| [11](./proposal-11-action-assert-heal.md) | `assert` action + on-fail `heal:` handler | M | High | Self-healing as a primitive; the maintain-loop kernel verb |
+| ~~11~~ | ~~`assert` action + on-fail `heal:` handler~~ | M | High | ✅ shipped 2026-05-28 (`b35a1986`) — see `archive/.../done/proposal-11-*.md` |
 | [12](./proposal-12-action-kv-state.md) | `kv` action — typed persistent state in plan/diff | S | High | Agents need memory between runs; today they smuggle it through files |
 | [13](./proposal-13-action-process.md) | `process` action — supervised long-running processes | S | Medium-High | Fills the gap between `shell:` (fire-and-forget) and `service:` (OS-installed) |
 | [14](./proposal-14-action-watch.md) | `watch` action — reactive triggers for the maintain loop | M | Medium-High | Event-driven heals + agent reflexes; cron replacement |
