@@ -489,11 +489,77 @@ func DispatchStepAction(step config.Step, ec *ExecutionContext) error {
 		// Spec 16: all handlers implement Runner. dispatchRunner is the
 		// single dispatch path; it consults ctx.Mode() and emits the
 		// appropriate events.
-		return dispatchRunner(step, ec, handler)
+		dispatchErr := dispatchRunner(step, ec, handler)
+
+		// proposal-11 vertical slice: if the step declared heal: and
+		// the primary dispatch failed, run the heal children sequentially
+		// and re-run the primary. On second-pass success the original
+		// failure is suppressed and the run-wide Healed counter bumps.
+		// Apply-mode only; plan mode falls through unchanged (heal
+		// preview at plan time is a follow-up — see proposal-11).
+		// Validate() restricts heal: to assert steps in this slice; the
+		// actionType check here is defense-in-depth.
+		if dispatchErr != nil &&
+			len(step.Heal) > 0 &&
+			actionType == "assert" &&
+			ec.Mode() != actions.ModePlan {
+			if healed := tryHeal(step, ec, handler, dispatchErr); healed {
+				incStat(ec.Svc.Stats.Healed)
+				return nil
+			}
+		}
+		return dispatchErr
 	}
 
 	// If we get here, the action type is not registered
 	return fmt.Errorf("no handler registered for action type: %s", actionType)
+}
+
+// tryHeal runs the heal children as a child plan, then re-dispatches
+// the primary step. Returns true iff the re-dispatch succeeded —
+// meaning the predicate now passes and the original failure can be
+// suppressed. False on any failure path (heal-children failing, or
+// re-dispatch still failing); the caller then surfaces the original
+// dispatch error.
+//
+// proposal-11: heal children execute in the same ExecutionContext as
+// the parent (same vars, same CurrentDir). They go through the full
+// ExecuteSteps pipeline so loops / when / nested compounds all work.
+//
+// On a heal-child failure we deliberately do NOT retry the assert —
+// if the remediation itself broke, the original predicate is unlikely
+// to pass and surfacing the heal error would mask the real assert
+// failure. The original error wins; the heal failure shows up in the
+// child step's own event stream.
+func tryHeal(step config.Step, ec *ExecutionContext, handler actions.Runner, origErr error) bool {
+	logger := ec.GetLogger()
+	if logger != nil {
+		logger.Debugf("  assert failed, running heal (%d child step(s))", len(step.Heal))
+	}
+
+	// Run heal as a child plan. Errors from heal children mean the
+	// remediation itself broke — bail without re-checking the assert.
+	if err := ExecuteSteps(step.Heal, ec); err != nil {
+		if logger != nil {
+			logger.Debugf("  heal failed: %v (original assert error wins)", err)
+		}
+		_ = origErr // explicit: caller propagates origErr
+		return false
+	}
+
+	// Re-evaluate the assertion. dispatchRunner re-emits the
+	// EventAssertPassed/Failed pair, so the run log shows the post-heal
+	// outcome alongside the original failure.
+	if err := dispatchRunner(step, ec, handler); err != nil {
+		if logger != nil {
+			logger.Debugf("  assert still failing after heal: %v", err)
+		}
+		return false
+	}
+	if logger != nil {
+		logger.Debugf("  assert healed successfully")
+	}
+	return true
 }
 
 func emitStepSkipped(step config.Step, ec *ExecutionContext, stepName, skipReason string) {
@@ -785,6 +851,18 @@ func ExecuteStep(step config.Step, ec *ExecutionContext) error {
 		if step.ContinueOnError {
 			ec.tryStateFor(step.ID).ContinueOnError = true
 		}
+		return nil
+	}
+
+	// proposal-11: heal-child siblings are preview-only at apply mode.
+	// The planner expands them so `mooncake plan` surfaces their
+	// diff/perms/risk alongside the parent assert; the actual apply
+	// execution flows through DispatchStepAction's tryHeal seam on
+	// the parent (which still reads the nested step.Heal field).
+	// Silent skip — no step.skipped event, no global-counter bump.
+	// Plan mode falls through so the per-step StepChecked event fires
+	// with the handler's Differ/Permitter output.
+	if step.HealParent != "" && ec.Mode() != actions.ModePlan {
 		return nil
 	}
 
@@ -1317,6 +1395,7 @@ func executePlanWithCapture(ctx context.Context, p *plan.Plan, sudoPass string, 
 	statsChanged := 0
 	statsReverted := 0
 	statsCancelled := 0
+	statsHealed := 0
 
 	// spec-72 §1: probe escalation once per run. NOPASSWD / NNP /
 	// sudo availability are stable per host (operator-configured,
@@ -1343,6 +1422,7 @@ func executePlanWithCapture(ctx context.Context, p *plan.Plan, sudoPass string, 
 			Changed:   &statsChanged,
 			Reverted:  &statsReverted,
 			Cancelled: &statsCancelled,
+			Healed:    &statsHealed,
 		},
 		Template:       renderer,
 		Evaluator:      evaluator,
@@ -1399,6 +1479,7 @@ func executePlanWithCapture(ctx context.Context, p *plan.Plan, sudoPass string, 
 			ChangedSteps:   statsChanged,
 			RevertedSteps:  statsReverted,
 			CancelledSteps: statsCancelled,
+			HealedSteps:    statsHealed,
 			DurationMs:     duration.Milliseconds(),
 			Success:        execErr == nil,
 			CheckMode:      mode == actions.ModePlan,

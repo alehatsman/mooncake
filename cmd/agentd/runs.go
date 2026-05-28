@@ -338,6 +338,7 @@ func streamRunEvents(hc *http.Client, runID string) error {
 				Failed    int    `json:"failed_steps"`
 				Reverted  int    `json:"reverted_steps"`
 				Cancelled int    `json:"cancelled_steps"`
+				Healed    int    `json:"healed_steps"`
 				Dur       int64  `json:"duration_ms"`
 				Success   bool   `json:"success"`
 				Error     string `json:"error_message"`
@@ -350,6 +351,9 @@ func streamRunEvents(hc *http.Client, runID string) error {
 			}
 			if d.Cancelled > 0 {
 				recap += fmt.Sprintf("  cancelled=%d", d.Cancelled)
+			}
+			if d.Healed > 0 {
+				recap += fmt.Sprintf("  healed=%d", d.Healed)
 			}
 			recap += fmt.Sprintf("  %dms", d.Dur)
 			if d.Success {

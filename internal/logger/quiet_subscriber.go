@@ -56,15 +56,15 @@ func (q *QuietSubscriber) OnEvent(event events.Event) {
 		if ok2 < 0 {
 			ok2 = 0
 		}
+		line := fmt.Sprintf("RECAP  ok=%d  changed=%d  skipped=%d  failed=%d",
+			ok2, d.ChangedSteps, d.SkippedSteps, d.FailedSteps)
 		if d.RevertedSteps > 0 {
-			fmt.Printf("RECAP  ok=%d  changed=%d  skipped=%d  failed=%d  reverted=%d  %s\n",
-				ok2, d.ChangedSteps, d.SkippedSteps, d.FailedSteps,
-				d.RevertedSteps, formatDuration(d.DurationMs))
-		} else {
-			fmt.Printf("RECAP  ok=%d  changed=%d  skipped=%d  failed=%d  %s\n",
-				ok2, d.ChangedSteps, d.SkippedSteps, d.FailedSteps,
-				formatDuration(d.DurationMs))
+			line += fmt.Sprintf("  reverted=%d", d.RevertedSteps)
 		}
+		if d.HealedSteps > 0 {
+			line += fmt.Sprintf("  healed=%d", d.HealedSteps)
+		}
+		fmt.Printf("%s  %s\n", line, formatDuration(d.DurationMs))
 	}
 }
 

@@ -279,6 +279,17 @@ func (g *Generator) generateStepDefinition() (*Definition, error) {
 			Type:        "string",
 			Description: "(plan metadata) Role of this step inside its parent compound: 'try', 'catch', or 'finally'",
 		},
+		"heal": {
+			Type: "array",
+			Items: &Property{
+				Ref: "#/definitions/step",
+			},
+			Description: "Remediation steps that run when an assert step fails. The assert is re-checked after heal; on success the failure is suppressed and the run-wide healed counter bumps (proposal-11).",
+		},
+		"heal_parent": {
+			Type:        "string",
+			Description: "(plan metadata) Parent assert step ID when expanded from a heal child (proposal-11)",
+		},
 	}
 
 	for name, prop := range universalFields {
