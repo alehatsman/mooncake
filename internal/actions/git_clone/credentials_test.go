@@ -1,6 +1,7 @@
 package git_clone
 
 import (
+	"context"
 	"os"
 	"os/exec"
 	"runtime"
@@ -337,12 +338,12 @@ func TestRunGit_ReceivesEnv(t *testing.T) {
 	// passed through.
 	var capturedEnv []string
 	orig := gitRunner
-	gitRunner = func(_ string, env []string, _ []string) error {
+	gitRunner = func(_ context.Context, _ string, env []string, _ []string) error {
 		capturedEnv = env
 		return nil
 	}
 	t.Cleanup(func() { gitRunner = orig })
-	_ = runGit("", []string{"GIT_ASKPASS=/tmp/test"}, "status")
+	_ = runGit(context.Background(), "", []string{"GIT_ASKPASS=/tmp/test"}, "status")
 	hasAskpass := false
 	for _, e := range capturedEnv {
 		if e == "GIT_ASKPASS=/tmp/test" {

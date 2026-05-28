@@ -4,6 +4,7 @@ package git_clone
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -124,7 +125,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		return nil, fmt.Errorf("git.clone: expand dest: %w", err)
 	}
 
-	state, err := inspectDest(dest)
+	state, err := inspectDest(ctx.Ctx(), dest)
 	if err != nil {
 		return nil, err
 	}
@@ -150,7 +151,7 @@ type destState struct {
 	headSHA  string // resolved HEAD sha, only set when isGitDir
 }
 
-func inspectDest(dest string) (destState, error) {
+func inspectDest(ctx context.Context, dest string) (destState, error) {
 	info, err := os.Stat(dest)
 	if errors.Is(err, os.ErrNotExist) {
 		return destState{}, nil
@@ -168,7 +169,7 @@ func inspectDest(dest string) (destState, error) {
 		return destState{exists: true, isGitDir: false}, nil
 	}
 
-	sha, err := captureGit(dest, nil, "rev-parse", "HEAD")
+	sha, err := captureGit(ctx, dest, nil, "rev-parse", "HEAD")
 	if err != nil {
 		return destState{exists: true, isGitDir: true}, nil
 	}
@@ -241,7 +242,7 @@ func apply(ctx actions.Context, g *config.GitClone, repo, ref, dest string, stat
 		// at a different ref than the plan declared masks divergence
 		// (issue #26).
 		if ref != "" {
-			refSHA, resolveErr := captureGit(dest, env, "rev-parse", "--verify", "--quiet", ref+"^{commit}")
+			refSHA, resolveErr := captureGit(ctx.Ctx(), dest, env, "rev-parse", "--verify", "--quiet", ref+"^{commit}")
 			refSHA = strings.TrimSpace(refSHA)
 			if resolveErr != nil || refSHA == "" || refSHA != state.headSHA {
 				result.SetFailed(true)
@@ -258,7 +259,7 @@ func apply(ctx actions.Context, g *config.GitClone, repo, ref, dest string, stat
 		}
 		result.SetChanged(false)
 	default:
-		changed, err := runUpdate(g, ref, dest, state.headSHA, env)
+		changed, err := runUpdate(ctx.Ctx(), g, ref, dest, state.headSHA, env)
 		if err != nil {
 			result.SetFailed(true)
 			return result, err
@@ -266,7 +267,7 @@ func apply(ctx actions.Context, g *config.GitClone, repo, ref, dest string, stat
 		result.SetChanged(changed)
 	}
 
-	finalSHA, err := captureGit(dest, nil, "rev-parse", "HEAD")
+	finalSHA, err := captureGit(ctx.Ctx(), dest, nil, "rev-parse", "HEAD")
 	if err != nil {
 		return result, fmt.Errorf("git.clone: read final sha: %w", err)
 	}
@@ -288,21 +289,21 @@ func runClone(ctx actions.Context, g *config.GitClone, repo, ref, dest string, e
 	args = append(args, repo, dest)
 
 	ctx.GetLogger().Debugf("git.clone: %s", strings.Join(args, " "))
-	if err := runGit("", env, args...); err != nil {
+	if err := runGit(ctx.Ctx(), "", env, args...); err != nil {
 		return fmt.Errorf("git.clone: %w", err)
 	}
 
 	if ref != "" {
-		if err := checkout(dest, ref, g.Force, env); err != nil {
+		if err := checkout(ctx.Ctx(), dest, ref, g.Force, env); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func runUpdate(g *config.GitClone, ref, dest, beforeSHA string, env []string) (bool, error) {
+func runUpdate(ctx context.Context, g *config.GitClone, ref, dest, beforeSHA string, env []string) (bool, error) {
 	if !g.Force {
-		dirty, err := isDirty(dest)
+		dirty, err := isDirty(ctx, dest)
 		if err != nil {
 			return false, err
 		}
@@ -315,12 +316,12 @@ func runUpdate(g *config.GitClone, ref, dest, beforeSHA string, env []string) (b
 	if g.Depth > 0 {
 		fetchArgs = append(fetchArgs, "--depth", strconv.Itoa(g.Depth))
 	}
-	if err := runGit(dest, env, fetchArgs...); err != nil {
+	if err := runGit(ctx, dest, env, fetchArgs...); err != nil {
 		return false, fmt.Errorf("git.clone: fetch: %w", err)
 	}
 
 	if ref != "" {
-		if err := checkout(dest, ref, g.Force, env); err != nil {
+		if err := checkout(ctx, dest, ref, g.Force, env); err != nil {
 			return false, err
 		}
 	} else {
@@ -338,55 +339,55 @@ func runUpdate(g *config.GitClone, ref, dest, beforeSHA string, env []string) (b
 		//    opaque "refusing to merge unrelated histories", surprising
 		//    to anyone using mooncake on a host where they also hack on
 		//    the repo.
-		shallow, err := isShallow(dest)
+		shallow, err := isShallow(ctx, dest)
 		if err != nil {
 			return false, err
 		}
 		if g.Force || shallow {
-			if err := runGit(dest, env, "reset", "--hard", "@{u}"); err != nil {
+			if err := runGit(ctx, dest, env, "reset", "--hard", "@{u}"); err != nil {
 				return false, fmt.Errorf("git.clone: reset to upstream: %w", err)
 			}
 		} else {
-			ahead, err := captureGit(dest, env, "rev-list", "--count", "@{u}..HEAD")
+			ahead, err := captureGit(ctx, dest, env, "rev-list", "--count", "@{u}..HEAD")
 			if err != nil {
 				return false, fmt.Errorf("git.clone: count local-only commits: %w", err)
 			}
 			if n := strings.TrimSpace(ahead); n != "" && n != "0" {
 				return false, fmt.Errorf("git.clone: local has %s commit(s) not on origin (set force: true to discard)", n)
 			}
-			if err := runGit(dest, env, "merge", "--ff-only", "@{u}"); err != nil {
+			if err := runGit(ctx, dest, env, "merge", "--ff-only", "@{u}"); err != nil {
 				return false, fmt.Errorf("git.clone: fast-forward: %w", err)
 			}
 		}
 	}
 
 	if g.RecurseSubmodules {
-		if err := runGit(dest, env, "submodule", "update", "--init", "--recursive"); err != nil {
+		if err := runGit(ctx, dest, env, "submodule", "update", "--init", "--recursive"); err != nil {
 			return false, fmt.Errorf("git.clone: submodule update: %w", err)
 		}
 	}
 
-	afterSHA, err := captureGit(dest, nil, "rev-parse", "HEAD")
+	afterSHA, err := captureGit(ctx, dest, nil, "rev-parse", "HEAD")
 	if err != nil {
 		return false, fmt.Errorf("git.clone: read HEAD after update: %w", err)
 	}
 	return strings.TrimSpace(afterSHA) != beforeSHA, nil
 }
 
-func checkout(dest, ref string, force bool, env []string) error {
+func checkout(ctx context.Context, dest, ref string, force bool, env []string) error {
 	args := []string{"checkout"}
 	if force {
 		args = append(args, "--force")
 	}
 	args = append(args, ref)
-	if err := runGit(dest, env, args...); err != nil {
+	if err := runGit(ctx, dest, env, args...); err != nil {
 		return fmt.Errorf("git.clone: checkout %s: %w", ref, err)
 	}
 	return nil
 }
 
-func isDirty(dest string) (bool, error) {
-	out, err := captureGit(dest, nil, "status", "--porcelain")
+func isDirty(ctx context.Context, dest string) (bool, error) {
+	out, err := captureGit(ctx, dest, nil, "status", "--porcelain")
 	if err != nil {
 		return false, fmt.Errorf("git.clone: status: %w", err)
 	}
@@ -396,7 +397,7 @@ func isDirty(dest string) (bool, error) {
 // isShallow reports whether dest is a shallow clone. Cheaper than
 // `git rev-parse --is-shallow-repository` and avoids a subprocess in
 // the common (deep-clone) case.
-func isShallow(dest string) (bool, error) {
+func isShallow(_ context.Context, dest string) (bool, error) {
 	_, err := os.Stat(filepath.Join(dest, ".git", "shallow"))
 	if err == nil {
 		return true, nil
@@ -408,16 +409,18 @@ func isShallow(dest string) (bool, error) {
 }
 
 // gitRunner is overridable by tests so credential-env wiring can be
-// inspected without requiring a real git invocation.
+// inspected without requiring a real git invocation. F2: ctx is the
+// run-wide cancel so SIGINT / fleet kill / MCP shutdown aborts the
+// child git process promptly.
 var gitRunner = realRunGit
 
-func runGit(cwd string, env []string, args ...string) error {
-	return gitRunner(cwd, env, args)
+func runGit(ctx context.Context, cwd string, env []string, args ...string) error {
+	return gitRunner(ctx, cwd, env, args)
 }
 
-func realRunGit(cwd string, env []string, args []string) error {
+func realRunGit(ctx context.Context, cwd string, env []string, args []string) error {
 	// #nosec G204 -- args are validated/static + user-supplied repo/ref; git is the binary we shell to.
-	cmd := exec.Command("git", args...)
+	cmd := exec.CommandContext(ctx, "git", args...)
 	if cwd != "" {
 		cmd.Dir = cwd
 	}
@@ -436,9 +439,9 @@ func realRunGit(cwd string, env []string, args []string) error {
 	return nil
 }
 
-func captureGit(cwd string, env []string, args ...string) (string, error) {
+func captureGit(ctx context.Context, cwd string, env []string, args ...string) (string, error) {
 	// #nosec G204 -- internal git invocation; args are static commands.
-	cmd := exec.Command("git", args...)
+	cmd := exec.CommandContext(ctx, "git", args...)
 	if cwd != "" {
 		cmd.Dir = cwd
 	}

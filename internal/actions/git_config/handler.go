@@ -4,6 +4,7 @@ package git_config //nolint:revive // package name follows action convention
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -156,7 +157,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		return nil, err
 	}
 
-	drift, err := computeDrift(scope, repo, renderedSet, renderedUnset)
+	drift, err := computeDrift(ctx.Ctx(), scope, repo, renderedSet, renderedUnset)
 	if err != nil {
 		return nil, err
 	}
@@ -177,7 +178,7 @@ type driftEntry struct {
 	hadValue bool   // true if a value was observed before the change
 }
 
-func computeDrift(scope, repo string, set map[string]string, unset []string) ([]driftEntry, error) {
+func computeDrift(ctx context.Context, scope, repo string, set map[string]string, unset []string) ([]driftEntry, error) {
 	var drift []driftEntry
 
 	keys := make([]string, 0, len(set))
@@ -188,7 +189,7 @@ func computeDrift(scope, repo string, set map[string]string, unset []string) ([]
 
 	for _, key := range keys {
 		desired := set[key]
-		current, had, err := readKey(scope, repo, key)
+		current, had, err := readKey(ctx, scope, repo, key)
 		if err != nil {
 			return nil, err
 		}
@@ -199,7 +200,7 @@ func computeDrift(scope, repo string, set map[string]string, unset []string) ([]
 	}
 
 	for _, key := range unset {
-		current, had, err := readKey(scope, repo, key)
+		current, had, err := readKey(ctx, scope, repo, key)
 		if err != nil {
 			return nil, err
 		}
@@ -224,7 +225,7 @@ func planResult(drift []driftEntry) *executor.Result {
 	return r
 }
 
-func apply(_ actions.Context, scope, repo string, drift []driftEntry) (actions.Result, error) {
+func apply(ctx actions.Context, scope, repo string, drift []driftEntry) (actions.Result, error) {
 	result := executor.NewResult()
 	result.Checkable = true
 	result.Operation = executor.OpUpdate
@@ -256,12 +257,12 @@ func apply(_ actions.Context, scope, repo string, drift []driftEntry) (actions.R
 	for _, d := range drift {
 		switch d.op {
 		case "set":
-			if err := runGit(scopeArgs(scope, repo, d.key, []string{"--replace-all", d.key, d.desired})...); err != nil {
+			if err := runGit(ctx.Ctx(), scopeArgs(scope, repo, d.key, []string{"--replace-all", d.key, d.desired})...); err != nil {
 				result.SetFailed(true)
 				return result, fmt.Errorf("git.config: set %s: %w", d.key, err)
 			}
 		case "unset":
-			if err := runGit(scopeArgs(scope, repo, d.key, []string{"--unset-all", d.key})...); err != nil {
+			if err := runGit(ctx.Ctx(), scopeArgs(scope, repo, d.key, []string{"--unset-all", d.key})...); err != nil {
 				result.SetFailed(true)
 				return result, fmt.Errorf("git.config: unset %s: %w", d.key, err)
 			}
@@ -286,14 +287,14 @@ func scopeArgs(scope, repo, _ string, tail []string) []string {
 	return append(args, tail...)
 }
 
-func readKey(scope, repo, key string) (string, bool, error) {
+func readKey(ctx context.Context, scope, repo, key string) (string, bool, error) {
 	var args []string
 	if scope == scopeLocal {
 		args = []string{"-C", repo, "config", "--local", "--get", key}
 	} else {
 		args = []string{"config", "--" + scope, "--get", key}
 	}
-	out, code, stderr, err := captureGitWithCode(args...)
+	out, code, stderr, err := captureGitWithCode(ctx, args...)
 	switch {
 	case err != nil:
 		// Genuine exec failure (binary missing, etc).
@@ -385,9 +386,9 @@ func expandRepo(ctx actions.Context, repo string) (string, error) {
 	return ctx.GetTemplate().Render(repo, ctx.GetVariables())
 }
 
-func runGit(args ...string) error {
+func runGit(ctx context.Context, args ...string) error {
 	// #nosec G204 -- args are internally constructed; user-supplied keys/values are passed via argv (not shell).
-	cmd := exec.Command("git", args...)
+	cmd := exec.CommandContext(ctx, "git", args...)
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
 	if err := cmd.Run(); err != nil {
@@ -400,9 +401,9 @@ func runGit(args ...string) error {
 	return nil
 }
 
-func captureGitWithCode(args ...string) (string, int, string, error) {
+func captureGitWithCode(ctx context.Context, args ...string) (string, int, string, error) {
 	// #nosec G204 -- internal git invocation; args constructed from scope + user-supplied key.
-	cmd := exec.Command("git", args...)
+	cmd := exec.CommandContext(ctx, "git", args...)
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr

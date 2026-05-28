@@ -1,6 +1,7 @@
 package git_clone
 
 import (
+	"context"
 	"errors"
 
 	"github.com/alehatsman/mooncake/internal/actions"
@@ -45,7 +46,15 @@ func (Handler) Diff(ctx actions.Context, step *config.Step) (actions.Diff, error
 	// without a real context (templated paths), so use Dest as-is;
 	// if it doesn't stat we treat that as OpCreate.
 	dest := expandDestForDiff(ctx, g.Dest)
-	state, err := inspectDest(dest)
+	// Diff() may be called with a nil ctx from plan-time probes that
+	// don't carry an actions.Context (typed-diff renderer). Fall back
+	// to context.Background() so inspectDest's git rev-parse runs
+	// without cancellation rather than panicking on ctx.Ctx().
+	probeCtx := context.Background()
+	if ctx != nil {
+		probeCtx = ctx.Ctx()
+	}
+	state, err := inspectDest(probeCtx, dest)
 	if err != nil {
 		// inspectDest errors only on non-OK stat failures (e.g.
 		// permission denied). Conservatively report OpUpdate

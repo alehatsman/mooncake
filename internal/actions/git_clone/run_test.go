@@ -1,6 +1,7 @@
 package git_clone
 
 import (
+	"context"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -415,7 +416,7 @@ func TestRun_Plan_RepoUpdate_WouldChange(t *testing.T) {
 func TestRun_RecurseSubmodules_PassesFlag(t *testing.T) {
 	var allArgs [][]string
 	orig := gitRunner
-	gitRunner = func(_ string, _ []string, args []string) error {
+	gitRunner = func(_ context.Context, _ string, _ []string, args []string) error {
 		allArgs = append(allArgs, args)
 		return nil
 	}
