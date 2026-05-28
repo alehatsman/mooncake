@@ -38,6 +38,7 @@
 package windows
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -73,18 +74,19 @@ const (
 )
 
 // Exec is the test seam for shelling to powershell. Tests override
-// this with a recorder; production calls RealExec.
+// this with a recorder; production calls RealExec. F2: ctx is the
+// run-wide cancel.
 var Exec = RealExec
 
 // RealExec runs a PowerShell snippet via `powershell -NoProfile
 // -NonInteractive -Command <script>`. Stderr from a non-zero exit is
 // folded into the returned error so callers don't lose the SCM-side
 // diagnostic.
-func RealExec(script string) (string, error) {
+func RealExec(ctx context.Context, script string) (string, error) {
 	// #nosec G204 -- script is built from validated config fields
 	// plus PowerShell cmdlet names; operator strings go through
 	// quotePS to escape single quotes.
-	cmd := exec.Command("powershell", "-NoProfile", "-NonInteractive", "-Command", script)
+	cmd := exec.CommandContext(ctx, "powershell", "-NoProfile", "-NonInteractive", "-Command", script)
 	stdout, err := cmd.Output()
 	if err != nil {
 		var ee *exec.ExitError
@@ -132,7 +134,7 @@ func Handle(serviceName string, serviceAction *config.ServiceAction, step config
 		}
 	}
 
-	current, err := ReadService(serviceName)
+	current, err := ReadService(ec.Svc.Ctx, serviceName)
 	if err != nil {
 		shared.MarkStepFailed(result, step, ec)
 		return err
@@ -150,7 +152,7 @@ func Handle(serviceName string, serviceAction *config.ServiceAction, step config
 	operations := []string{}
 
 	if serviceAction.State != "" {
-		stateChanged, err := manageState(serviceName, serviceAction.State, current)
+		stateChanged, err := manageState(ec.Svc.Ctx, serviceName, serviceAction.State, current)
 		if err != nil {
 			shared.MarkStepFailed(result, step, ec)
 			return err
@@ -162,7 +164,7 @@ func Handle(serviceName string, serviceAction *config.ServiceAction, step config
 	}
 
 	if serviceAction.Enabled != nil {
-		enabledChanged, err := manageEnabled(serviceName, *serviceAction.Enabled, current)
+		enabledChanged, err := manageEnabled(ec.Svc.Ctx, serviceName, *serviceAction.Enabled, current)
 		if err != nil {
 			shared.MarkStepFailed(result, step, ec)
 			return err
@@ -215,13 +217,17 @@ func Handle(serviceName string, serviceAction *config.ServiceAction, step config
 // / Stopped is transient and inverting it across a reboot is murky
 // (the service may have auto-started before reverse-apply runs).
 // State reverse on windows would over-promise.
-func CapturePriorState(serviceName string, step config.Step, _ *executor.ExecutionContext) *shared.OsServiceReverseInfo {
+func CapturePriorState(serviceName string, step config.Step, ec *executor.ExecutionContext) *shared.OsServiceReverseInfo {
 	info := &shared.OsServiceReverseInfo{Name: serviceName, Platform: "windows"}
 	if step.OsService != nil {
 		info.HadEnabledIntent = step.OsService.Enabled != nil
 		info.HadStateIntent = step.OsService.State != ""
 	}
-	current, err := ReadService(serviceName)
+	captureCtx := context.Background()
+	if ec != nil && ec.Svc != nil && ec.Svc.Ctx != nil {
+		captureCtx = ec.Svc.Ctx
+	}
+	current, err := ReadService(captureCtx, serviceName)
 	if err != nil || current == nil {
 		return info // probe failed / service missing — zero values
 	}
@@ -238,13 +244,13 @@ func CapturePriorState(serviceName string, step config.Step, _ *executor.Executi
 // ReadService queries SCM via Get-Service. Returns nil (not an
 // error) when the service doesn't exist — distinguishing "missing"
 // from "PowerShell broken" lets the caller emit a clear diagnostic.
-func ReadService(name string) (*ServiceState, error) {
+func ReadService(ctx context.Context, name string) (*ServiceState, error) {
 	script := fmt.Sprintf(
 		"$s = Get-Service -Name %s -ErrorAction SilentlyContinue; "+
 			"if ($s) { $s | Select-Object Name,DisplayName,Status,StartType,CanStop | ConvertTo-Json -Compress }",
 		QuotePS(name),
 	)
-	out, err := Exec(script)
+	out, err := Exec(ctx, script)
 	if err != nil {
 		return nil, fmt.Errorf("Get-Service %s: %w", name, err)
 	}
@@ -259,13 +265,13 @@ func ReadService(name string) (*ServiceState, error) {
 	return &state, nil
 }
 
-func manageState(name, desiredState string, current *ServiceState) (bool, error) {
+func manageState(ctx context.Context, name, desiredState string, current *ServiceState) (bool, error) {
 	switch desiredState {
 	case shared.StateStarted:
 		if current.Status == statusRunning {
 			return false, nil
 		}
-		if _, err := Exec(fmt.Sprintf("Start-Service -Name %s", QuotePS(name))); err != nil {
+		if _, err := Exec(ctx, fmt.Sprintf("Start-Service -Name %s", QuotePS(name))); err != nil {
 			return false, fmt.Errorf("Start-Service %s: %w", name, err)
 		}
 		return true, nil
@@ -276,7 +282,7 @@ func manageState(name, desiredState string, current *ServiceState) (bool, error)
 		if !current.CanStop {
 			return false, fmt.Errorf("service %s is not stoppable (CanStop=false; usually a system service)", name)
 		}
-		if _, err := Exec(fmt.Sprintf("Stop-Service -Name %s", QuotePS(name))); err != nil {
+		if _, err := Exec(ctx, fmt.Sprintf("Stop-Service -Name %s", QuotePS(name))); err != nil {
 			return false, fmt.Errorf("Stop-Service %s: %w", name, err)
 		}
 		return true, nil
@@ -284,7 +290,7 @@ func manageState(name, desiredState string, current *ServiceState) (bool, error)
 		// Restart-Service handles "wasn't running" cleanly — it
 		// stops if running, then starts. Always Changed=true since
 		// we deliberately bounced the service.
-		if _, err := Exec(fmt.Sprintf("Restart-Service -Name %s -Force", QuotePS(name))); err != nil {
+		if _, err := Exec(ctx, fmt.Sprintf("Restart-Service -Name %s -Force", QuotePS(name))); err != nil {
 			return false, fmt.Errorf("Restart-Service %s: %w", name, err)
 		}
 		return true, nil
@@ -298,7 +304,7 @@ func manageState(name, desiredState string, current *ServiceState) (bool, error)
 // Automatic, false → Disabled. Manual is intentionally not exposed
 // — it's a "user has to click Start" state that no os.service spec
 // wants by default.
-func manageEnabled(name string, enabled bool, current *ServiceState) (bool, error) {
+func manageEnabled(ctx context.Context, name string, enabled bool, current *ServiceState) (bool, error) {
 	wantType := startTypeDisabled
 	wantTypeName := "Disabled"
 	if enabled {
@@ -313,7 +319,7 @@ func manageEnabled(name string, enabled bool, current *ServiceState) (bool, erro
 	// Automatic. Same logic in reverse for `enabled: false`.
 	script := fmt.Sprintf("Set-Service -Name %s -StartupType %s",
 		QuotePS(name), wantTypeName)
-	if _, err := Exec(script); err != nil {
+	if _, err := Exec(ctx, script); err != nil {
 		return false, fmt.Errorf("Set-Service -StartupType %s: %w", wantTypeName, err)
 	}
 	return true, nil

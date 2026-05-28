@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -730,7 +731,7 @@ func TestHandleService_BecomeWithoutPassword(t *testing.T) {
 // runs on any CI host without needing a real PowerShell.
 func TestHandleWindowsService_MissingServiceErrors(t *testing.T) {
 	prev := windowspkg.Exec
-	windowspkg.Exec = func(string) (string, error) { return "", nil }
+	windowspkg.Exec = func(context.Context, string) (string, error) { return "", nil }
 	t.Cleanup(func() { windowspkg.Exec = prev })
 
 	ctx := newMockExecutionContext()

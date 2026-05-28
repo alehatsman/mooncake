@@ -1,6 +1,7 @@
 package windows_hyperv_firewall_rule
 
 import (
+	"context"
 	"strings"
 	"testing"
 
@@ -101,11 +102,11 @@ func TestResolveVMCreatorID(t *testing.T) {
 
 	t.Run("literal GUID passes through", func(t *testing.T) {
 		called := false
-		runPS = func(string) (string, error) {
+		runPS = func(context.Context, string) (string, error) {
 			called = true
 			return "", nil
 		}
-		got, err := resolveVMCreatorID("{ABCDEF01-2345-6789-ABCD-EF0123456789}")
+		got, err := resolveVMCreatorID(context.Background(), "{ABCDEF01-2345-6789-ABCD-EF0123456789}")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -119,11 +120,11 @@ func TestResolveVMCreatorID(t *testing.T) {
 
 	t.Run("auto triggers resolver", func(t *testing.T) {
 		captured := ""
-		runPS = func(s string) (string, error) {
+		runPS = func(_ context.Context, s string) (string, error) {
 			captured = s
 			return winutil.WSLDefaultVMCreatorID + "\n", nil
 		}
-		got, err := resolveVMCreatorID("auto")
+		got, err := resolveVMCreatorID(context.Background(), "auto")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -136,10 +137,10 @@ func TestResolveVMCreatorID(t *testing.T) {
 	})
 
 	t.Run("empty also triggers resolver", func(t *testing.T) {
-		runPS = func(string) (string, error) {
+		runPS = func(context.Context, string) (string, error) {
 			return winutil.WSLDefaultVMCreatorID, nil
 		}
-		got, err := resolveVMCreatorID("")
+		got, err := resolveVMCreatorID(context.Background(), "")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -149,10 +150,10 @@ func TestResolveVMCreatorID(t *testing.T) {
 	})
 
 	t.Run("resolver empty output is an error", func(t *testing.T) {
-		runPS = func(string) (string, error) {
+		runPS = func(context.Context, string) (string, error) {
 			return "   \n", nil
 		}
-		if _, err := resolveVMCreatorID("auto"); err == nil {
+		if _, err := resolveVMCreatorID(context.Background(), "auto"); err == nil {
 			t.Error("expected error on empty resolver output")
 		}
 	})

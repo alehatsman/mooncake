@@ -15,6 +15,7 @@ package windows_hyperv_firewall_rule
 
 import (
 	"bytes"
+	"context"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -116,12 +117,12 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 
 	state := normalizeState(f.State)
 
-	vmID, err := resolveVMCreatorID(f.VMCreatorID)
+	vmID, err := resolveVMCreatorID(ctx.Ctx(), f.VMCreatorID)
 	if err != nil {
 		return result, fmt.Errorf("%s: resolve vm_creator_id: %w", actionName, err)
 	}
 
-	current, err := queryRule(f.Name, vmID)
+	current, err := queryRule(ctx.Ctx(), f.Name, vmID)
 	if err != nil {
 		return result, fmt.Errorf("%s: query current rule: %w", actionName, err)
 	}
@@ -139,7 +140,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 			result.Reason = "would remove rule " + f.Name
 			return result, nil
 		}
-		if err := deleteRule(f.Name, vmID); err != nil {
+		if err := deleteRule(ctx.Ctx(), f.Name, vmID); err != nil {
 			return result, err
 		}
 		result.Changed = true
@@ -174,11 +175,11 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		// Apply. Like windows.firewall_rule, we delete+recreate on
 		// drift rather than field-by-field Set-* gymnastics.
 		if current != nil {
-			if err := deleteRule(f.Name, vmID); err != nil {
+			if err := deleteRule(ctx.Ctx(), f.Name, vmID); err != nil {
 				return result, err
 			}
 		}
-		if err := createRule(desired); err != nil {
+		if err := createRule(ctx.Ctx(), desired); err != nil {
 			return result, err
 		}
 		result.Changed = true
@@ -197,11 +198,11 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 // resolveVMCreatorID returns a concrete GUID for the rule. Empty or
 // "auto" triggers the resolver script; anything else is returned
 // verbatim (after trimming).
-func resolveVMCreatorID(raw string) (string, error) {
+func resolveVMCreatorID(ctx context.Context, raw string) (string, error) {
 	raw = strings.TrimSpace(raw)
 	if raw == "" || strings.EqualFold(raw, vmCreatorAuto) {
 		script := winutil.RenderHyperVResolveVMCreator(wslMatchName, winutil.WSLDefaultVMCreatorID)
-		out, err := runPS(script)
+		out, err := runPS(ctx, script)
 		if err != nil {
 			return "", err
 		}
@@ -221,9 +222,9 @@ func resolveVMCreatorID(raw string) (string, error) {
 // queryRule runs winutil.RenderHyperVQuery, parses the PSCustomObject
 // summary, and returns it as an *observedRule (or nil when no rule
 // exists for the (name, vmID) pair).
-func queryRule(name, vmID string) (*observedRule, error) {
+func queryRule(ctx context.Context, name, vmID string) (*observedRule, error) {
 	script := "ConvertTo-Json -InputObject (" + winutil.RenderHyperVQuery(name, vmID) + ") -Compress"
-	out, err := runPS(script)
+	out, err := runPS(ctx, script)
 	if err != nil {
 		return nil, fmt.Errorf("query rule: %w", err)
 	}
@@ -258,19 +259,19 @@ func queryRule(name, vmID string) (*observedRule, error) {
 	}, nil
 }
 
-func createRule(r winutil.HyperVRule) error {
+func createRule(ctx context.Context, r winutil.HyperVRule) error {
 	ps, err := winutil.RenderHyperVCreate(r)
 	if err != nil {
 		return err
 	}
-	if _, err := runPS(ps); err != nil {
+	if _, err := runPS(ctx, ps); err != nil {
 		return fmt.Errorf("create rule: %w", err)
 	}
 	return nil
 }
 
-func deleteRule(name, vmID string) error {
-	if _, err := runPS(winutil.RenderHyperVDelete(name, vmID)); err != nil {
+func deleteRule(ctx context.Context, name, vmID string) error {
+	if _, err := runPS(ctx, winutil.RenderHyperVDelete(name, vmID)); err != nil {
 		return fmt.Errorf("delete rule: %w", err)
 	}
 	return nil
@@ -412,7 +413,7 @@ func stringSliceEqualUnsorted(a, b []string) bool {
 // quoting hazard at the cmd.exe boundary, and WithUTF8Output prevents
 // the OEM-codepage round-trip from corrupting non-ASCII output
 // (issue #13).
-func realPSRun(script string) (string, error) {
+func realPSRun(ctx context.Context, script string) (string, error) {
 	script = winutil.WithUTF8Output(script)
 	utf16le := utf16.Encode([]rune(script))
 	buf := bytes.Buffer{}
@@ -421,7 +422,7 @@ func realPSRun(script string) (string, error) {
 		buf.WriteByte(byte(r >> 8))
 	}
 	encoded := base64.StdEncoding.EncodeToString(buf.Bytes())
-	cmd := exec.Command("powershell.exe", "-NoProfile", "-EncodedCommand", encoded)
+	cmd := exec.CommandContext(ctx, "powershell.exe", "-NoProfile", "-EncodedCommand", encoded)
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr

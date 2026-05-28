@@ -1,6 +1,7 @@
 package windows
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"strings"
@@ -74,7 +75,7 @@ func stubExec(t *testing.T, replyFn func(script string) (string, error)) *[]stri
 	t.Helper()
 	calls := []string{}
 	prev := Exec
-	Exec = func(script string) (string, error) {
+	Exec = func(_ context.Context, script string) (string, error) {
 		calls = append(calls, script)
 		return replyFn(script)
 	}
