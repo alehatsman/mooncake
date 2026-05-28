@@ -74,11 +74,15 @@ func (g *Generator) writeConceptCards(outDir string, dirs []string) ([]string, e
 }
 
 // conceptSlug derives the page slug from a package directory.
-// "internal/executor" → "executor"; "internal/foo/bar" → "foo-bar"
-// so the dist/docs/concepts/ tree stays flat (one file per concept).
+// "internal/executor" → "executor"; "internal/foo/bar" → "foo-bar".
+// Paths outside internal/ (e.g. absolute paths used in tests) fall back
+// to the leaf name so the dist/docs/concepts/ tree stays flat and
+// predictable regardless of where the caller invoked from.
 func conceptSlug(dir string) string {
-	trimmed := strings.TrimPrefix(dir, "internal/")
-	return strings.ReplaceAll(trimmed, "/", "-")
+	if strings.HasPrefix(dir, "internal/") {
+		return strings.ReplaceAll(strings.TrimPrefix(dir, "internal/"), "/", "-")
+	}
+	return filepath.Base(dir)
 }
 
 // renderConceptCard wraps the README body in stable front matter +

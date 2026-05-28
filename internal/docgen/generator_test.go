@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"strings"
 	"testing"
-	"time"
 
 	_ "github.com/alehatsman/mooncake/internal/register" // Register all actions
 )
@@ -16,15 +15,10 @@ func TestNewGenerator(t *testing.T) {
 	if gen.Version != version {
 		t.Errorf("expected version %s, got %s", version, gen.Version)
 	}
-
-	if gen.Timestamp.IsZero() {
-		t.Error("expected non-zero timestamp")
-	}
 }
 
 func TestGeneratePlatformMatrix(t *testing.T) {
 	gen := NewGenerator("test")
-	gen.Timestamp = time.Date(2024, 1, 1, 12, 0, 0, 0, time.UTC)
 
 	var buf bytes.Buffer
 	err := gen.generatePlatformMatrix(&buf)

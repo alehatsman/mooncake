@@ -5,23 +5,18 @@ import (
 	"fmt"
 	"io"
 	"sort"
-	"time"
 
 	"github.com/alehatsman/mooncake/internal/actions"
 )
 
 // Generator generates documentation from action metadata.
 type Generator struct {
-	Version   string
-	Timestamp time.Time
+	Version string
 }
 
 // NewGenerator creates a new documentation generator.
 func NewGenerator(version string) *Generator {
-	return &Generator{
-		Version:   version,
-		Timestamp: time.Now(),
-	}
+	return &Generator{Version: version}
 }
 
 // GenerateSection generates a specific documentation section.
