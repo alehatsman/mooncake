@@ -68,11 +68,22 @@ type StepResult struct {
 // 1-to-1.
 type RunSummary struct {
 	TotalSteps int
-	Ok         int
-	Changed    int
-	Skipped    int
-	Failed     int
-	Reverted   int
+	// Ok is the legacy "successful steps" count — equal to SuccessSteps
+	// (total executed-not-failed). MCP / agentd / history consumers have
+	// read it under this name since proposal-02 shipped; F6 keeps the
+	// name and semantics for backward compatibility, and adds OkSteps
+	// below as the actual "ran-without-changes" bucket the recap line
+	// reports as `ok=`.
+	Ok int
+	// OkSteps counts steps that completed successfully without changing
+	// the system (F6). OkSteps + Changed == Ok (i.e. SuccessSteps) for
+	// the typical case. Distinct from the legacy Ok field above so
+	// existing consumers keep their meaning.
+	OkSteps  int
+	Changed  int
+	Skipped  int
+	Failed   int
+	Reverted int
 	// Cancelled counts steps interrupted mid-execution per proposal-02
 	// (SIGINT, fleet kill, timeout).
 	Cancelled int

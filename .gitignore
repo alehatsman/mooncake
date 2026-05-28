@@ -18,7 +18,12 @@ testing-output/
 
 # Build output
 out/
-dist/
+# dist/ holds release artifacts (ignored), but dist/docs/ is the
+# committed generated docs tree consumed by MkDocs + the docs-check
+# drift gate. The `dist/*` + `!dist/docs/` pair re-includes that one
+# subtree; a bare `dist/` would block the negation per gitignore rules.
+dist/*
+!dist/docs/
 build/
 
 # Documentation site (generated)

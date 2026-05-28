@@ -62,9 +62,8 @@ if ! go build -o "$BIN" ./cmd >/dev/null 2>&1; then
   exit 1
 fi
 
-if ! "$BIN" docs generate --section all                --output docs-next/generated/actions.md    >/dev/null 2>&1 || \
-   ! "$BIN" docs generate --section schema             --output docs-next/generated/schema.md     >/dev/null 2>&1 || \
-   ! "$BIN" docs generate --section action-properties  --output docs-next/generated/properties.md >/dev/null 2>&1; then
+rm -rf dist/docs && mkdir -p dist/docs
+if ! "$BIN" docs generate --section all-into-dir --output dist/docs >/dev/null 2>&1; then
   echo "  ✗ docs generate failed — fix the generator before committing." >&2
   exit 1
 fi
@@ -77,7 +76,7 @@ if ! "$BIN" schema generate --format json       --output internal/config/schema.
 fi
 
 changed=$(git diff --name-only -- \
-  docs-next/generated/ \
+  dist/docs/ \
   internal/config/schema.json \
   internal/config/schema.d \
   mooncake.d.ts)
@@ -89,7 +88,7 @@ fi
 
 echo "$changed" | sed 's/^/  ↑ auto-staging: /'
 git add -- \
-  docs-next/generated/ \
+  dist/docs/ \
   internal/config/schema.json \
   internal/config/schema.d \
   mooncake.d.ts

@@ -118,27 +118,47 @@ tasks:
       - shell: { cmd: "govulncheck ./..." }
 
   # ── Docs / schema ────────────────────────────────────────────────────
+  # Docs are fully generated. Source of truth = code (action metadata,
+  # CLI command tree, package godocs) + a tiny curated set of READMEs
+  # under internal/*/README.md. Output tree lives at dist/docs/ (gitignored).
+  # MkDocs reads dist/docs/ via mkdocs.yml; the nav is derived from
+  # dist/docs/SUMMARY.md by the mkdocs-literate-nav plugin.
+
+  docs-tools-install:
+    desc: Install gomarkdoc + mkdocs python deps used by docs-generate / docs-build
+    steps:
+      - shell: { cmd: "go install github.com/princjef/gomarkdoc/cmd/gomarkdoc@v0.4.1" }
+      - shell: { cmd: "pipenv install --dev" }
+      - log: { msg: "installed gomarkdoc and pipenv-managed mkdocs deps" }
+
   docs-generate:
-    desc: Generate documentation from code (actions, schema, properties)
+    desc: Regenerate the entire dist/docs/ tree from code
     steps:
       - shell: { cmd: "go build -o {{ BIN }} ./cmd" }
-      - shell: { cmd: "mkdir -p docs-next/generated" }
-      - shell: { cmd: "{{ BIN }} docs generate --section all                --output docs-next/generated/actions.md" }
-      - shell: { cmd: "{{ BIN }} docs generate --section schema             --output docs-next/generated/schema.md" }
-      - shell: { cmd: "{{ BIN }} docs generate --section action-properties  --output docs-next/generated/properties.md" }
-      - log: { msg: "generated docs-next/generated/{actions,schema,properties}.md" }
+      - shell: { cmd: "rm -rf dist/docs && mkdir -p dist/docs" }
+      - shell: { cmd: "{{ BIN }} docs generate --section all-into-dir --output dist/docs" }
+      - log: { msg: "regenerated dist/docs/ from code" }
 
   docs-check:
-    desc: Verify generated docs are up to date with the current code
+    desc: Verify dist/docs/ is up to date with the current code
     steps:
       - shell: { cmd: "go build -o {{ BIN }} ./cmd" }
       - shell: { cmd: "BIN={{ BIN }} bash ./scripts/docs-check.sh" }
 
   docs-serve:
-    desc: Build and serve documentation site (requires pipenv + mkdocs)
+    desc: Serve the generated MkDocs site locally
     steps:
-      - shell: { cmd: "pipenv run mkdocs build" }
       - shell: { cmd: "pipenv run mkdocs serve" }
+
+  docs-build:
+    desc: Build the static MkDocs site into site/
+    steps:
+      - shell: { cmd: "pipenv run mkdocs build --strict" }
+
+  docs-seed-readmes:
+    desc: One-shot seed of stub READMEs under internal/actions/*/
+    steps:
+      - shell: { cmd: "bash ./scripts/seed-action-readmes.sh" }
 
   schema-generate:
     desc: Generate JSON Schema + TypeScript types from code
