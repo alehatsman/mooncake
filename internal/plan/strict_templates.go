@@ -30,6 +30,7 @@ package plan
 import (
 	"reflect"
 	"regexp"
+	"sort"
 	"strings"
 
 	"github.com/alehatsman/mooncake/internal/config"
@@ -64,7 +65,12 @@ var freeNames = map[string]bool{
 
 // CheckPlanStrict scans the expanded plan for unresolved root
 // identifiers. Returns a deterministic list (steps in order, refs
-// per step in field declaration order, deduplicated by root).
+// per step in field declaration order — and within map-keyed fields
+// such as `env:` and `props:`, in sorted-key order — deduplicated by
+// root). The sorted-key visit order is what makes both the slice
+// ordering AND the field attributed to a deduplicated root stable
+// across runs (F059): Go map iteration is randomized, so without it
+// `--format json` reorders run-to-run and the recorded Field wobbles.
 func CheckPlanStrict(p *Plan) []UnresolvedRef {
 	if p == nil {
 		return nil
@@ -157,8 +163,12 @@ func collectStepRefs(step *config.Step, known, seen map[string]bool, out *[]Unre
 	if step.UnlessCommand != nil {
 		scan("unless_command", *step.UnlessCommand)
 	}
-	for key, value := range step.Env {
-		scan("env."+key, value)
+	// Sorted-key iteration: step.Env is a map, so a bare range would
+	// visit entries in randomized order (F059). Sorting makes the
+	// emitted refs — and which env key wins the per-step root dedup —
+	// deterministic.
+	for _, key := range sortedStringKeys(step.Env) {
+		scan("env."+key, step.Env[key])
 	}
 
 	// Action structs — reach via the same reflect strategy as
@@ -237,9 +247,11 @@ func walkStringLeaves(rv reflect.Value, prefix string, scan func(field, tmpl str
 		if rv.Type().Key().Kind() != reflect.String {
 			return
 		}
-		iter := rv.MapRange()
-		for iter.Next() {
-			walkStringLeaves(iter.Value(), prefix+"."+iter.Key().String(), scan)
+		// Sorted-key iteration so the walk is deterministic (F059).
+		keys := rv.MapKeys()
+		sort.Slice(keys, func(i, j int) bool { return keys[i].String() < keys[j].String() })
+		for _, k := range keys {
+			walkStringLeaves(rv.MapIndex(k), prefix+"."+k.String(), scan)
 		}
 	case reflect.Interface:
 		if rv.IsNil() {
@@ -259,8 +271,9 @@ func walkPropsLeaves(v interface{}, prefix string, scan func(field, tmpl string)
 	case string:
 		scan(prefix, x)
 	case map[string]interface{}:
-		for k, sub := range x {
-			walkPropsLeaves(sub, prefix+"."+k, scan)
+		// Sorted-key iteration so the walk is deterministic (F059).
+		for _, k := range sortedStringKeys(x) {
+			walkPropsLeaves(x[k], prefix+"."+k, scan)
 		}
 	case []interface{}:
 		for _, sub := range x {
@@ -289,4 +302,17 @@ func missingRoots(tmpl string, known map[string]bool) []string {
 		out = append(out, root)
 	}
 	return out
+}
+
+// sortedStringKeys returns the keys of a string-keyed map in sorted
+// order. Used to make the strict-template scan visit map-valued fields
+// (env, props) deterministically — Go map iteration order is randomized
+// (F059).
+func sortedStringKeys[V any](m map[string]V) []string {
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	return keys
 }

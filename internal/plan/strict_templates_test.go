@@ -164,6 +164,78 @@ func TestCheckPlanStrict_DedupesWithinStep(t *testing.T) {
 	}
 }
 
+// TestCheckPlanStrict_DeterministicMapOrder pins F059: env values are
+// scanned in sorted-key order, so the emitted refs are stable across
+// runs regardless of Go's randomized map iteration. Without the fix
+// the slice order flips run-to-run.
+func TestCheckPlanStrict_DeterministicMapOrder(t *testing.T) {
+	newPlan := func() *Plan {
+		return &Plan{
+			Steps: []config.Step{
+				{
+					ID:    "step-0001",
+					Name:  "env demo",
+					Shell: &config.ShellAction{Cmd: "echo hi"},
+					Env: map[string]string{
+						"ALPHA":   "{{ undef_b }}",
+						"BRAVO":   "{{ undef_a }}",
+						"CHARLIE": "{{ undef_c }}",
+					},
+				},
+			},
+		}
+	}
+
+	// Sorted by env key (ALPHA, BRAVO, CHARLIE), NOT by root name.
+	wantFields := []string{"env.ALPHA", "env.BRAVO", "env.CHARLIE"}
+	wantRoots := []string{"undef_b", "undef_a", "undef_c"}
+
+	// Run several times: Go randomizes map iteration per range, so a
+	// non-deterministic implementation would eventually disagree.
+	for iter := 0; iter < 50; iter++ {
+		refs := CheckPlanStrict(newPlan())
+		if len(refs) != len(wantFields) {
+			t.Fatalf("iter %d: got %d refs, want %d: %+v", iter, len(refs), len(wantFields), refs)
+		}
+		for i := range refs {
+			if refs[i].Field != wantFields[i] || refs[i].Root != wantRoots[i] {
+				t.Fatalf("iter %d: refs[%d] = {Field:%q Root:%q}, want {Field:%q Root:%q}",
+					iter, i, refs[i].Field, refs[i].Root, wantFields[i], wantRoots[i])
+			}
+		}
+	}
+}
+
+// TestCheckPlanStrict_DeterministicFieldAttribution pins the second
+// half of F059: when the same undefined root appears in multiple env
+// keys, the dedup must always attribute it to the lowest sorted key
+// (env.A), never wobble to env.B.
+func TestCheckPlanStrict_DeterministicFieldAttribution(t *testing.T) {
+	newPlan := func() *Plan {
+		return &Plan{
+			Steps: []config.Step{
+				{
+					Shell: &config.ShellAction{Cmd: "echo hi"},
+					Env: map[string]string{
+						"ZEBRA": "{{ shared }}",
+						"APPLE": "{{ shared }}",
+						"MANGO": "{{ shared }}",
+					},
+				},
+			},
+		}
+	}
+	for iter := 0; iter < 50; iter++ {
+		refs := CheckPlanStrict(newPlan())
+		if len(refs) != 1 {
+			t.Fatalf("iter %d: expected 1 deduped ref, got %d: %+v", iter, len(refs), refs)
+		}
+		if refs[0].Field != "env.APPLE" {
+			t.Fatalf("iter %d: Field = %q, want env.APPLE (lowest sorted key wins dedup)", iter, refs[0].Field)
+		}
+	}
+}
+
 func TestMissingRoots_IgnoresBuiltins(t *testing.T) {
 	known := map[string]bool{}
 	for k := range pongo2Builtins {

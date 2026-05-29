@@ -7,13 +7,44 @@ Queue**, produces a finding (or several), and the queue updates.
 > moved to `docs-working/archive/code-review/findings/`. New findings
 > go in that same folder; add a row to the index below.
 
-## At-a-glance status (2026-05-29)
+## At-a-glance status (2026-05-30)
 
 | | Count |
 |---|---:|
-| ✅ Findings filed and resolved (F001–F058, F036 skipped) | **57** |
+| ✅ Findings filed and resolved (F001–F059, F036 skipped) | **58** |
 | 🟡 Findings open (filed, not yet fixed) | **0** |
 | 📋 Packages still queued for review | **0 substantive** (1 broad follow-up — see below) |
+
+**2026-05-30 cold-read of `internal/plan` gaps** (PICKUP item 1).
+The 2026-05-27 plan pass had covered `{plan,integrity,io,validate,
+planner_transaction,planner_trycatch}.go`; this pass closed the two
+remaining gaps: `planner.go` end-to-end (45 KB, previously only
+`walkAndRender`/F024 + spot-checks) and `strict_templates.go` (new
+2026-05-28, never reviewed). One finding:
+
+- **F059** (**fixed** 2026-05-30, fix-f059) — `CheckPlanStrict`
+  documented deterministic output but iterated `step.Env`, `props`, and
+  nested action-struct maps in randomized order, so `--format json`
+  `unresolved_templates` reordered run-to-run and field attribution
+  wobbled. Smell (no incorrect detection; unstable ordering +
+  flaky-snapshot risk). Fixed by sorting all three map-iteration sites
+  at the source (`sortedStringKeys` helper + `MapKeys()` sort), which
+  also makes the deduplicated-root field attribution deterministic
+  (lowest sorted key wins) — a property a post-hoc tail-sort would have
+  left wobbling. Two 50-iteration regression tests. Adjacent (left
+  open, latent): `rootVarRe`/`pongo2Builtins` are byte-identical copies
+  of `internal/template/renderer.go`'s (drift risk, F002/F013 shape);
+  `planner.go:1396 convertToSlice` is another test-only
+  `//nolint:unused` helper.
+
+Verified clean (no finding): `expandInclude` cycle detection +
+deferred dual-stack (`seenFiles`/`includeStack`) cleanup on every error
+path; `readRunConfig` re-parses per call so the in-place `Tags`
+mutation across sibling includes is safe; `expandWithItems` scalar form
+routes through `template.ResolveList` (avoids pongo2's slice-stringify
+trap — the for_each breakage class); `RenderPreserving` falls back to
+plain `Render` on any `{%` tag, so loop vars never leak to the strict
+checker as false positives. `internal/plan` is now fully cold-read.
 
 **2026-05-29 re-review of post-2026-05-27 executor deltas.**
 `internal/executor/` was last cold-read 2026-05-27, but `executor.go`
@@ -289,6 +320,7 @@ closed — see that folder's README.
 | F056 | plan.SavePlanToFile uses default umask (0644 on shared hosts) | smell | **done** | [findings/F056](../archive/code-review/findings/F056-plan-io-default-umask-perms.md) |
 | F057 | Pongo2Renderer per-renderer mutex misses pongo2's global TemplateSet | smell | **done** | [findings/F057](../archive/code-review/findings/F057-pongo2-per-renderer-mutex-misses-global-state.md) |
 | F058 | mid-flight cancel double-counts as Cancelled+Failed; breaks mapCancelExit exit-130 gate | risk | **done** | [findings/F058](../archive/code-review/findings/F058-cancel-double-counts-as-failed.md) |
+| F059 | CheckPlanStrict claims deterministic output but iterates maps (env/props/nested) in random order — JSON diagnostics reorder run-to-run | smell | **done** | [findings/F059](../archive/code-review/findings/F059-strict-templates-nondeterministic-map-iteration.md) |
 
 ## Still to review
 
@@ -369,6 +401,7 @@ The previous 10-row queue is fully consumed:
 | 2026-05-27 | **Round 2:** `internal/executor/{errors,reverse_registry}.go` + `result.go` ReverseData wire-encoding tail + `context.go` tail (Privileged / Performer / actions.Context impl) + `executor.go` end-to-end (`checkIdempotencyConditions`, `checkSkipConditions`, `handleWhenExpression`, `ExecuteStep`, `ExecuteSteps`, `DispatchStepAction`, `Start`, `AddGlobalVariables`, `getStepDisplayName`, `emitStepSkipped`) | F055 (idempotency `unless:` runs without ctx/timeout — same F051/F053 family). Four adjacent observations noted inline below (vars-file silent-swallow; redundant outer nil-guards × 5 sites; handleVars dead code; ec.Svc nil-guard inconsistency). |
 | 2026-05-27 | `internal/plan/{plan,integrity,io,validate,planner_transaction,planner_trycatch}.go` end-to-end (~700 LOC) | F056 (plan-file default umask perms — F037 shape). Three adjacent observations: plan.io.go yaml.Unmarshal non-strict (F048 shape); plan.io.go partial-write on `os.Create` failure leaves zero/garbage file; validate.go AllowStale silent demotion — caller has no signal which checks fired. |
 | 2026-05-27 | `internal/template/{renderer,listresolver}.go` end-to-end (~620 LOC) | F057 (pongo2 per-renderer mutex doesn't protect the global TemplateSet — latent race, unreachable today under single-worker invariant; reaches the moment anything parallelises). |
+| 2026-05-30 | `internal/plan/planner.go` end-to-end (45 KB; closes the F024-only partial) + `internal/plan/strict_templates.go` (new 2026-05-28) | F059 (CheckPlanStrict nondeterministic map iteration vs documented deterministic contract). Adjacent: duplicated rootVarRe/pongo2Builtins vs renderer.go (drift risk); convertToSlice test-only dead code. Verified clean: include cycle detection + deferred cleanup, readRunConfig fresh-parse, for_each ResolveList path, RenderPreserving `{%`-tag fallback. `internal/plan` now fully cold-read. |
 
 ## Cross-cutting themes / patterns to track
 
