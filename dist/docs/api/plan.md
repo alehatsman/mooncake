@@ -320,7 +320,7 @@ type StepInspection struct {
 }
 ```
 
-## type [UnresolvedRef](<https://github.com/alehatsman/mooncake/blob/master/internal/plan/strict_templates.go#L40-L46>)
+## type [UnresolvedRef](<https://github.com/alehatsman/mooncake/blob/master/internal/plan/strict_templates.go#L41-L47>)
 
 UnresolvedRef describes a single \`\{\{ root \}\}\` reference whose root identifier is not in scope at the step's plan\-time position.
 
@@ -334,13 +334,13 @@ type UnresolvedRef struct {
 }
 ```
 
-### func [CheckPlanStrict](<https://github.com/alehatsman/mooncake/blob/master/internal/plan/strict_templates.go#L68>)
+### func [CheckPlanStrict](<https://github.com/alehatsman/mooncake/blob/master/internal/plan/strict_templates.go#L74>)
 
 ```go
 func CheckPlanStrict(p *Plan) []UnresolvedRef
 ```
 
-CheckPlanStrict scans the expanded plan for unresolved root identifiers. Returns a deterministic list \(steps in order, refs per step in field declaration order, deduplicated by root\).
+CheckPlanStrict scans the expanded plan for unresolved root identifiers. Returns a deterministic list \(steps in order, refs per step in field declaration order — and within map\-keyed fields such as \`env:\` and \`props:\`, in sorted\-key order — deduplicated by root\). The sorted\-key visit order is what makes both the slice ordering AND the field attributed to a deduplicated root stable across runs \(F059\): Go map iteration is randomized, so without it \`\-\-format json\` reorders run\-to\-run and the recorded Field wobbles.
 
 ## type [ValidateOptions](<https://github.com/alehatsman/mooncake/blob/master/internal/plan/validate.go#L41-L48>)
 

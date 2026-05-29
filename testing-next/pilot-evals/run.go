@@ -10,7 +10,8 @@
 // burn API tokens. Use -dry-run to validate the harness shape
 // without contacting an LLM.
 //
-// See spec-67 §14 (docs-working/streams/agent/specs/spec-67-mooncake-pilot.md)
+// See spec-67 §14 (moongit issue #6 — full doc inlined; or git history at
+// HEAD~:docs-working/streams/agent/specs/spec-67-mooncake-pilot.md)
 // and testing-next/pilot-evals/README.md.
 package main
 

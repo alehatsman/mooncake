@@ -6,10 +6,11 @@ guide see [LLM_GUIDE.md](./LLM_GUIDE.md); for rules of engagement see
 
 ## 👉 What to work on right now
 
-Open [`docs-working/PICKUP.md`](./docs-working/PICKUP.md) first.
-Curated short list of pickups ranked by leverage, with claim
-slugs and "where to read" pointers. Saves you the 10-files-to-skim
-problem.
+Run `mgit issue list --state todo,in_progress` first — the backlog
+(specs, proposals, audit gaps) now lives as moongit issues, not in a
+tracked file. `mgit issue show <n>` for the full design doc (inlined
+as a comment). Claim with `mgit issue claim <n> --state in_progress`
+before coding. See CLAUDE.md §"Workflow" for the full protocol.
 
 ## Focused feedback (use these — avoid `mooncake task ci`)
 
@@ -92,10 +93,9 @@ Package graph + LOC + coupling metrics. Re-run after structural changes.
 | CLI entry points | `cmd/` |
 | Generated docs | `docs-next/generated/` (regen via `mooncake task docs-generate`) |
 | Generated schema | `internal/config/schema.json` (regen via `mooncake task schema-generate`) |
-| Architecture report | `docs-working/arch-report/` |
-| Manual-test findings (closed) | `docs-working/archive/analysis/findings-2026-05-15/` |
-| Code-review findings | `docs-working/code-review/findings/` (queue in `code-review/TODO.md`) |
-| Pickup list (start here) | `docs-working/PICKUP.md` |
+| Strategy / vision docs | `docs-working/vision/`, `docs-working/positioning.md` |
+| Backlog: specs, proposals, audit gaps (start here) | moongit issues — `mgit issue list`; full design docs inlined as comments |
+| Architecture report, manual-test findings, code-review findings | git history — `git show HEAD~:docs-working/arch-report/…` / `…/code-review/…` (dropped from the tree 2026-05-30) |
 
 ## When tests look wrong
 

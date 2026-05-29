@@ -2034,7 +2034,7 @@ type Step struct {
 
     // Idempotency controls (4 fields total; UnlessExists/UnlessCommand are
     // the canonical names and Creates/Unless are friendly aliases — see
-    // F013 in docs-working/code-review for the policy rationale).
+    // F013 in git history at HEAD~:docs-working/code-review for the policy rationale).
     UnlessExists  *string `yaml:"unless_exists,omitempty" json:"unless_exists,omitempty"`   // Skip if path exists
     UnlessCommand *string `yaml:"unless_command,omitempty" json:"unless_command,omitempty"` // Skip if command succeeds
 
