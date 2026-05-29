@@ -563,10 +563,14 @@ func emitStepSkipped(step config.Step, ec *ExecutionContext, stepName, skipReaso
 //     that want accurate attribution must use context.WithCancelCause
 //     with one of the sentinels.
 //
-// stats may be nil for callers that don't track counters; the
-// Cancelled bump is then skipped. r must be non-nil; the typed-nil
+// F058: this helper tags the *Result envelope only — it does NOT bump
+// any run counter. The single Stats.Cancelled / Stats.Failed bump site
+// is handleStepError, which classifies off ec.Svc.Ctx.Err() so the
+// counter is correct regardless of handler return shape (handlers that
+// return (nil, err) never reach this function but must still count as
+// Cancelled on a mid-flight cancel). r must be non-nil; the typed-nil
 // guard lives at the call site.
-func syncResultEnvelope(runCtx context.Context, r *Result, err error, stats *ExecutionStats) {
+func syncResultEnvelope(runCtx context.Context, r *Result, err error) {
 	if err == nil {
 		return
 	}
@@ -574,12 +578,7 @@ func syncResultEnvelope(runCtx context.Context, r *Result, err error, stats *Exe
 	// that errored because the run was being torn down isn't a
 	// handler-level fault.
 	if runCtx != nil && runCtx.Err() != nil {
-		if !r.Cancelled {
-			r.Cancelled = true
-			if stats != nil {
-				incStat(stats.Cancelled)
-			}
-		}
+		r.Cancelled = true
 		if r.CancelledReason == "" {
 			r.CancelledReason = classifyCancelReason(runCtx)
 		}
@@ -637,20 +636,38 @@ func classifyCancelReason(runCtx context.Context) string {
 }
 
 func handleStepError(step config.Step, ec *ExecutionContext, stepErr error, stepID, stepName string, depth int, stepDuration time.Duration) error {
-	// F058: a step torn down mid-flight by run-wide cancel is already
-	// counted in Stats.Cancelled by syncResultEnvelope (and its Result is
-	// tagged Cancelled). Don't *also* count it as Failed — that breaks
-	// the proposal-02 contract: mapCancelExit gates exit 130 on
+	// F058: this is the single run-counter classification site for a
+	// failed step. A step torn down mid-flight by run-wide cancel counts
+	// as Cancelled, not Failed — counting it as both breaks the
+	// proposal-02 contract: mapCancelExit gates exit 130 on
 	// `Cancelled > 0 && Failed == 0`, so a double-counted step makes
 	// timeout/fleet/MCP cancels exit 1 (indistinguishable from a real
-	// failure). We still emit step.failed below so streaming consumers
-	// get a terminal event with the handler's stdout/stderr; only the
-	// run-counter bump is suppressed. (Handlers that return (nil, err)
-	// rather than a *Result never reach syncResultEnvelope, so they stay
-	// on the Failed path — closing that handler-shape skew is the larger
-	// deferred change tracked in F058.)
-	cancelled := ec.CurrentResult != nil && ec.CurrentResult.Cancelled
-	if !cancelled {
+	// failure).
+	//
+	// The classification reads ec.Svc.Ctx.Err() directly rather than
+	// ec.CurrentResult.Cancelled. syncResultEnvelope only tags the
+	// envelope for handlers that return a *Result; handlers that return
+	// (nil, err) (pkg install of a missing package, and most spec-69
+	// RawRunners on error) never reach it, so keying off the Result would
+	// leave their mid-flight cancels on the Failed path. The run ctx is
+	// the authoritative signal and is uniform across handler return
+	// shapes. We still emit step.failed below so streaming consumers get
+	// a terminal event with the handler's stdout/stderr; only the
+	// counter classification changes.
+	cancelled := ec.Svc != nil && ec.Svc.Ctx != nil && ec.Svc.Ctx.Err() != nil
+	if cancelled {
+		incStat(ec.Svc.Stats.Cancelled)
+		// Tag the envelope for the (nil, err) handlers whose Result never
+		// passed through syncResultEnvelope — ec.CurrentResult is a fresh
+		// NewResult() there. Keeps the runlog/streaming view of the step
+		// consistent with the counter regardless of return shape.
+		if ec.CurrentResult != nil && !ec.CurrentResult.Cancelled {
+			ec.CurrentResult.Cancelled = true
+			if ec.CurrentResult.CancelledReason == "" {
+				ec.CurrentResult.CancelledReason = classifyCancelReason(ec.Svc.Ctx)
+			}
+		}
+	} else {
 		incStat(ec.Svc.Stats.Failed)
 	}
 	failedData := events.StepFailedData{
@@ -978,12 +995,12 @@ func ExecuteSteps(steps []config.Step, ec *ExecutionContext) error {
 	for i, step := range steps {
 		if ctx := ec.Svc.Ctx; ctx != nil {
 			if err := ctx.Err(); err != nil {
-				// Proposal-02: the cancelled counter bump happens per-step
-				// in syncResultEnvelope (dispatchRunner path) — that
-				// attributes cancellation to the handler that actually
-				// observed the cancelled runCtx, which is more accurate
-				// than this loop-level guess about which step was in
-				// flight. Between-step cancellation just terminates the
+				// Proposal-02 / F058: the cancelled counter bump happens
+				// per-step in handleStepError, keyed off ec.Svc.Ctx.Err()
+				// — that attributes cancellation to the step that actually
+				// errored while the run ctx was cancelled, which is more
+				// accurate than this loop-level guess about which step was
+				// in flight. Between-step cancellation just terminates the
 				// loop; no step gets counted as cancelled because no
 				// step's mutation was interrupted.
 				ec.Svc.Logger.Infof("execution cancelled by context after %d/%d steps: %v", i, len(steps), err)
@@ -1662,7 +1679,7 @@ func dispatchRunner(step config.Step, ec *ExecutionContext, runner actions.Runne
 		if preAppliedDiff != nil {
 			r.AppliedDiff = preAppliedDiff
 		}
-		syncResultEnvelope(ec.Svc.Ctx, r, err, ec.Svc.Stats)
+		syncResultEnvelope(ec.Svc.Ctx, r, err)
 	} else {
 		ec.CurrentResult = NewResult()
 	}
