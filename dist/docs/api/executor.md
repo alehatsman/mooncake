@@ -252,7 +252,7 @@ DispatchStepAction executes the appropriate handler based on step type. All acti
 
 INTERNAL: This function is exported for testing purposes only and is not part of the public API. It may change or be removed in future versions without notice.
 
-## func [ExecutePlan](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/executor.go#L1288>)
+## func [ExecutePlan](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/executor.go#L1305>)
 
 ```go
 func ExecutePlan(ctx context.Context, p *plan.Plan, sudoPass string, mode actions.Mode, log logger.Logger, publisher events.Publisher) error
@@ -264,7 +264,7 @@ Callers that need the typed \*KernelResult substrate \(R1.1b\) should use Execut
 
 ctx is checked between steps — see Start for the cancellation contract.
 
-## func [ExecutePlanWithCapture](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/executor.go#L1304>)
+## func [ExecutePlanWithCapture](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/executor.go#L1321>)
 
 ```go
 func ExecutePlanWithCapture(ctx context.Context, p *plan.Plan, sudoPass string, mode actions.Mode, log logger.Logger, publisher events.Publisher, capture *RunCapture) error
@@ -276,7 +276,7 @@ This is the from\-saved\-plan analog of executor.Start with Capture set. Used by
 
 ctx is checked between steps — see Start for the cancellation contract.
 
-## func [ExecuteStep](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/executor.go#L800>)
+## func [ExecuteStep](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/executor.go#L817>)
 
 ```go
 func ExecuteStep(step config.Step, ec *ExecutionContext) error
@@ -284,7 +284,7 @@ func ExecuteStep(step config.Step, ec *ExecutionContext) error
 
 ExecuteStep executes a single configuration step within the given execution context.
 
-## func [ExecuteSteps](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/executor.go#L972>)
+## func [ExecuteSteps](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/executor.go#L989>)
 
 ```go
 func ExecuteSteps(steps []config.Step, ec *ExecutionContext) error
@@ -318,7 +318,7 @@ Panics on duplicate registration — silent overwrite would let a later handler 
 
 Called from each handler package's init\(\) alongside actions.Register. The wire round\-trip is the contract this registry implements: see Result.MarshalJSON / UnmarshalJSON \(spec R2.1c phase 2\).
 
-## func [Start](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/executor.go#L1132>)
+## func [Start](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/executor.go#L1149>)
 
 ```go
 func Start(ctx context.Context, startConfig StartConfig, log logger.Logger, publisher events.Publisher) error
@@ -1461,7 +1461,7 @@ func (e *SetupError) Error() string
 func (e *SetupError) Unwrap() error
 ```
 
-## type [StartConfig](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/executor.go#L1091-L1121>)
+## type [StartConfig](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/executor.go#L1108-L1138>)
 
 StartConfig contains configuration for starting a mooncake execution.
 
