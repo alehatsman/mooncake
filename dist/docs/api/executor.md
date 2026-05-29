@@ -234,7 +234,7 @@ var (
 )
 ```
 
-## func AddGlobalVariables
+## func [AddGlobalVariables](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/executor.go#L153>)
 
 ```go
 func AddGlobalVariables(scope *VariableScope)
@@ -242,7 +242,7 @@ func AddGlobalVariables(scope *VariableScope)
 
 AddGlobalVariables populates scope.Facts, scope.Metrics, and scope.Env from the system. Facts \(capabilities, configuration\) come from facts.Collect; metrics \(live CPU/GPU/memory/load/network\) come from metrics.Collect with per\-metric TTL caching; env is a snapshot of the parent process environment exposed to templates as \`env.\*\` so users can reference \`\{\{ env.HOME \}\}\`, \`\{\{ env.MY\_API\_KEY \}\}\`, etc. Keys across facts and metrics are disjoint by contract — see metrics.disjoint\_test.go.
 
-## func DispatchStepAction
+## func [DispatchStepAction](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/executor.go#L420>)
 
 ```go
 func DispatchStepAction(step config.Step, ec *ExecutionContext) error
@@ -252,7 +252,7 @@ DispatchStepAction executes the appropriate handler based on step type. All acti
 
 INTERNAL: This function is exported for testing purposes only and is not part of the public API. It may change or be removed in future versions without notice.
 
-## func ExecutePlan
+## func [ExecutePlan](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/executor.go#L1288>)
 
 ```go
 func ExecutePlan(ctx context.Context, p *plan.Plan, sudoPass string, mode actions.Mode, log logger.Logger, publisher events.Publisher) error
@@ -264,7 +264,7 @@ Callers that need the typed \*KernelResult substrate \(R1.1b\) should use Execut
 
 ctx is checked between steps — see Start for the cancellation contract.
 
-## func ExecutePlanWithCapture
+## func [ExecutePlanWithCapture](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/executor.go#L1304>)
 
 ```go
 func ExecutePlanWithCapture(ctx context.Context, p *plan.Plan, sudoPass string, mode actions.Mode, log logger.Logger, publisher events.Publisher, capture *RunCapture) error
@@ -276,7 +276,7 @@ This is the from\-saved\-plan analog of executor.Start with Capture set. Used by
 
 ctx is checked between steps — see Start for the cancellation contract.
 
-## func ExecuteStep
+## func [ExecuteStep](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/executor.go#L800>)
 
 ```go
 func ExecuteStep(step config.Step, ec *ExecutionContext) error
@@ -284,7 +284,7 @@ func ExecuteStep(step config.Step, ec *ExecutionContext) error
 
 ExecuteStep executes a single configuration step within the given execution context.
 
-## func ExecuteSteps
+## func [ExecuteSteps](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/executor.go#L972>)
 
 ```go
 func ExecuteSteps(steps []config.Step, ec *ExecutionContext) error
@@ -294,7 +294,7 @@ ExecuteSteps executes a sequence of configuration steps within the given executi
 
 F016 stage\-1\(a\): the loop checks ec.Svc.Ctx between steps and aborts with ctx.Err\(\) if the context is cancelled. Handler\-level cancellation \(shell child interrupts, network step short\-circuits\) is the stage\-3 audit and is not done here. nil ec.Svc.Ctx is treated as non\-cancellable.
 
-## func InspectPlan
+## func [InspectPlan](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/inspect.go#L26>)
 
 ```go
 func InspectPlan(p *plan.Plan, sudoPass string, log logger.Logger) ([]plan.StepInspection, error)
@@ -306,7 +306,7 @@ This is the primitive that powers \`mooncake plan\` after Spec 16: the plan comm
 
 Implementation: subscribes a collector to a fresh SyncPublisher, dispatches the plan through the standard executor in check mode \(which routes Runner handlers via dispatchRunner and legacy handlers via dispatchCheck — both emit EventStepChecked\), then returns the collected results.
 
-## func RegisterReverseDataType
+## func [RegisterReverseDataType](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/reverse_registry.go#L39>)
 
 ```go
 func RegisterReverseDataType(name string, factory ReverseDataFactory)
@@ -318,7 +318,7 @@ Panics on duplicate registration — silent overwrite would let a later handler 
 
 Called from each handler package's init\(\) alongside actions.Register. The wire round\-trip is the contract this registry implements: see Result.MarshalJSON / UnmarshalJSON \(spec R2.1c phase 2\).
 
-## func Start
+## func [Start](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/executor.go#L1132>)
 
 ```go
 func Start(ctx context.Context, startConfig StartConfig, log logger.Logger, publisher events.Publisher) error
@@ -328,7 +328,7 @@ Start begins execution of a mooncake configuration with the given settings. Alwa
 
 ctx is checked between steps in the step loop \(F016 stage\-1\(a\)\). A cancelled ctx causes the run to return early with ctx.Err\(\); the in\-flight step \(if any\) continues to completion — handler\-level cancellation is the stage\-3 audit. nil ctx is treated as context.Background\(\) — non\-cancellable, never aborts.
 
-## type AssertionError
+## type [AssertionError](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/errors.go#L126-L132>)
 
 AssertionError represents an assertion verification failure. Unlike other errors, assertions are expected to fail when conditions aren't met.
 
@@ -342,19 +342,19 @@ type AssertionError struct {
 }
 ```
 
-### func \(\*AssertionError\) Error
+### func \(\*AssertionError\) [Error](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/errors.go#L134>)
 
 ```go
 func (e *AssertionError) Error() string
 ```
 
-### func \(\*AssertionError\) Unwrap
+### func \(\*AssertionError\) [Unwrap](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/errors.go#L145>)
 
 ```go
 func (e *AssertionError) Unwrap() error
 ```
 
-## type CommandError
+## type [CommandError](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/errors.go#L53-L58>)
 
 CommandError represents a command execution failure
 
@@ -367,19 +367,19 @@ type CommandError struct {
 }
 ```
 
-### func \(\*CommandError\) Error
+### func \(\*CommandError\) [Error](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/errors.go#L60>)
 
 ```go
 func (e *CommandError) Error() string
 ```
 
-### func \(\*CommandError\) Unwrap
+### func \(\*CommandError\) [Unwrap](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/errors.go#L74>)
 
 ```go
 func (e *CommandError) Unwrap() error
 ```
 
-## type DryRunLogger
+## type [DryRunLogger](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/dryrun.go#L16-L18>)
 
 DryRunLogger provides consistent dry\-run message formatting across all handlers.
 
@@ -391,7 +391,7 @@ type DryRunLogger struct {
 }
 ```
 
-### func NewDryRunLogger
+### func [NewDryRunLogger](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/dryrun.go#L24>)
 
 ```go
 func NewDryRunLogger(log logger.Logger) *DryRunLogger
@@ -401,7 +401,7 @@ NewDryRunLogger creates a dry\-run logger wrapper.
 
 INTERNAL: This function is exported for testing purposes only and is not part of the public API. It may change or be removed in future versions without notice.
 
-### func \(\*DryRunLogger\) LogArchiveExtraction
+### func \(\*DryRunLogger\) [LogArchiveExtraction](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/dryrun.go#L169>)
 
 ```go
 func (d *DryRunLogger) LogArchiveExtraction(src, dest, format string, stripComponents int)
@@ -409,7 +409,7 @@ func (d *DryRunLogger) LogArchiveExtraction(src, dest, format string, stripCompo
 
 LogArchiveExtraction logs a dry\-run message for archive extraction.
 
-### func \(\*DryRunLogger\) LogAssertCheck
+### func \(\*DryRunLogger\) [LogAssertCheck](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/dryrun.go#L228>)
 
 ```go
 func (d *DryRunLogger) LogAssertCheck(assertType, expected string)
@@ -417,7 +417,7 @@ func (d *DryRunLogger) LogAssertCheck(assertType, expected string)
 
 LogAssertCheck logs a dry\-run message for assertion verification.
 
-### func \(\*DryRunLogger\) LogDirectoryCreate
+### func \(\*DryRunLogger\) [LogDirectoryCreate](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/dryrun.go#L69>)
 
 ```go
 func (d *DryRunLogger) LogDirectoryCreate(path string, mode os.FileMode)
@@ -425,7 +425,7 @@ func (d *DryRunLogger) LogDirectoryCreate(path string, mode os.FileMode)
 
 LogDirectoryCreate logs a dry\-run message for directory creation.
 
-### func \(\*DryRunLogger\) LogDirectoryRemove
+### func \(\*DryRunLogger\) [LogDirectoryRemove](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/dryrun.go#L94>)
 
 ```go
 func (d *DryRunLogger) LogDirectoryRemove(path string)
@@ -433,7 +433,7 @@ func (d *DryRunLogger) LogDirectoryRemove(path string)
 
 LogDirectoryRemove logs a dry\-run message for directory removal.
 
-### func \(\*DryRunLogger\) LogFileCopy
+### func \(\*DryRunLogger\) [LogFileCopy](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/dryrun.go#L159>)
 
 ```go
 func (d *DryRunLogger) LogFileCopy(src, dest string, mode os.FileMode, size int64)
@@ -441,7 +441,7 @@ func (d *DryRunLogger) LogFileCopy(src, dest string, mode os.FileMode, size int6
 
 LogFileCopy logs a dry\-run message for file copy.
 
-### func \(\*DryRunLogger\) LogFileCopyNoChange
+### func \(\*DryRunLogger\) [LogFileCopyNoChange](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/dryrun.go#L164>)
 
 ```go
 func (d *DryRunLogger) LogFileCopyNoChange(src, dest string)
@@ -449,7 +449,7 @@ func (d *DryRunLogger) LogFileCopyNoChange(src, dest string)
 
 LogFileCopyNoChange logs a dry\-run message when file copy is not needed.
 
-### func \(\*DryRunLogger\) LogFileCreate
+### func \(\*DryRunLogger\) [LogFileCreate](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/dryrun.go#L59>)
 
 ```go
 func (d *DryRunLogger) LogFileCreate(path string, mode os.FileMode, size int)
@@ -457,7 +457,7 @@ func (d *DryRunLogger) LogFileCreate(path string, mode os.FileMode, size int)
 
 LogFileCreate logs a dry\-run message for file creation.
 
-### func \(\*DryRunLogger\) LogFileDownload
+### func \(\*DryRunLogger\) [LogFileDownload](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/dryrun.go#L178>)
 
 ```go
 func (d *DryRunLogger) LogFileDownload(url, dest string, mode os.FileMode)
@@ -465,7 +465,7 @@ func (d *DryRunLogger) LogFileDownload(url, dest string, mode os.FileMode)
 
 LogFileDownload logs a dry\-run message for file download.
 
-### func \(\*DryRunLogger\) LogFileDownloadNoChange
+### func \(\*DryRunLogger\) [LogFileDownloadNoChange](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/dryrun.go#L183>)
 
 ```go
 func (d *DryRunLogger) LogFileDownloadNoChange(_, dest string)
@@ -473,7 +473,7 @@ func (d *DryRunLogger) LogFileDownloadNoChange(_, dest string)
 
 LogFileDownloadNoChange logs a dry\-run message when file download is not needed.
 
-### func \(\*DryRunLogger\) LogFileRemove
+### func \(\*DryRunLogger\) [LogFileRemove](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/dryrun.go#L89>)
 
 ```go
 func (d *DryRunLogger) LogFileRemove(path string, size int64)
@@ -481,7 +481,7 @@ func (d *DryRunLogger) LogFileRemove(path string, size int64)
 
 LogFileRemove logs a dry\-run message for file removal.
 
-### func \(\*DryRunLogger\) LogFileTouch
+### func \(\*DryRunLogger\) [LogFileTouch](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/dryrun.go#L99>)
 
 ```go
 func (d *DryRunLogger) LogFileTouch(path string)
@@ -489,7 +489,7 @@ func (d *DryRunLogger) LogFileTouch(path string)
 
 LogFileTouch logs a dry\-run message for updating file timestamps.
 
-### func \(\*DryRunLogger\) LogFileUpdate
+### func \(\*DryRunLogger\) [LogFileUpdate](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/dryrun.go#L64>)
 
 ```go
 func (d *DryRunLogger) LogFileUpdate(path string, mode os.FileMode, oldSize, newSize int)
@@ -497,7 +497,7 @@ func (d *DryRunLogger) LogFileUpdate(path string, mode os.FileMode, oldSize, new
 
 LogFileUpdate logs a dry\-run message for file update.
 
-### func \(\*DryRunLogger\) LogHardlinkCreate
+### func \(\*DryRunLogger\) [LogHardlinkCreate](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/dryrun.go#L118>)
 
 ```go
 func (d *DryRunLogger) LogHardlinkCreate(src, dest string, force bool)
@@ -505,7 +505,7 @@ func (d *DryRunLogger) LogHardlinkCreate(src, dest string, force bool)
 
 LogHardlinkCreate logs a dry\-run message for hardlink creation.
 
-### func \(\*DryRunLogger\) LogHardlinkNoChange
+### func \(\*DryRunLogger\) [LogHardlinkNoChange](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/dryrun.go#L127>)
 
 ```go
 func (d *DryRunLogger) LogHardlinkNoChange(src, dest string)
@@ -513,7 +513,7 @@ func (d *DryRunLogger) LogHardlinkNoChange(src, dest string)
 
 LogHardlinkNoChange logs a dry\-run message when hardlink already exists correctly.
 
-### func \(\*DryRunLogger\) LogPermissionsChange
+### func \(\*DryRunLogger\) [LogPermissionsChange](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/dryrun.go#L132>)
 
 ```go
 func (d *DryRunLogger) LogPermissionsChange(path, mode, owner, group string, recurse bool)
@@ -521,7 +521,7 @@ func (d *DryRunLogger) LogPermissionsChange(path, mode, owner, group string, rec
 
 LogPermissionsChange logs a dry\-run message for permission changes.
 
-### func \(\*DryRunLogger\) LogPermissionsNoChange
+### func \(\*DryRunLogger\) [LogPermissionsNoChange](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/dryrun.go#L154>)
 
 ```go
 func (d *DryRunLogger) LogPermissionsNoChange(path string)
@@ -529,7 +529,7 @@ func (d *DryRunLogger) LogPermissionsNoChange(path string)
 
 LogPermissionsNoChange logs a dry\-run message when permissions are already correct.
 
-### func \(\*DryRunLogger\) LogPresetOperation
+### func \(\*DryRunLogger\) [LogPresetOperation](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/dryrun.go#L233>)
 
 ```go
 func (d *DryRunLogger) LogPresetOperation(name string, paramsCount int)
@@ -537,7 +537,7 @@ func (d *DryRunLogger) LogPresetOperation(name string, paramsCount int)
 
 LogPresetOperation logs a preset expansion operation in dry\-run mode.
 
-### func \(\*DryRunLogger\) LogPrintMessage
+### func \(\*DryRunLogger\) [LogPrintMessage](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/dryrun.go#L242>)
 
 ```go
 func (d *DryRunLogger) LogPrintMessage(message string)
@@ -545,7 +545,7 @@ func (d *DryRunLogger) LogPrintMessage(message string)
 
 LogPrintMessage logs a print message in dry\-run mode.
 
-### func \(\*DryRunLogger\) LogRegister
+### func \(\*DryRunLogger\) [LogRegister](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/dryrun.go#L52>)
 
 ```go
 func (d *DryRunLogger) LogRegister(step config.Step)
@@ -553,7 +553,7 @@ func (d *DryRunLogger) LogRegister(step config.Step)
 
 LogRegister logs a dry\-run message for registering results.
 
-### func \(\*DryRunLogger\) LogServiceOperation
+### func \(\*DryRunLogger\) [LogServiceOperation](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/dryrun.go#L188>)
 
 ```go
 func (d *DryRunLogger) LogServiceOperation(serviceName string, serviceAction *config.ServiceAction, withSudo bool)
@@ -561,7 +561,7 @@ func (d *DryRunLogger) LogServiceOperation(serviceName string, serviceAction *co
 
 LogServiceOperation logs a dry\-run message for service management.
 
-### func \(\*DryRunLogger\) LogShellExecution
+### func \(\*DryRunLogger\) [LogShellExecution](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/dryrun.go#L29>)
 
 ```go
 func (d *DryRunLogger) LogShellExecution(command string, withSudo bool)
@@ -569,7 +569,7 @@ func (d *DryRunLogger) LogShellExecution(command string, withSudo bool)
 
 LogShellExecution logs a dry\-run message for shell command execution.
 
-### func \(\*DryRunLogger\) LogSymlinkCreate
+### func \(\*DryRunLogger\) [LogSymlinkCreate](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/dryrun.go#L104>)
 
 ```go
 func (d *DryRunLogger) LogSymlinkCreate(src, dest string, force bool)
@@ -577,7 +577,7 @@ func (d *DryRunLogger) LogSymlinkCreate(src, dest string, force bool)
 
 LogSymlinkCreate logs a dry\-run message for symlink creation.
 
-### func \(\*DryRunLogger\) LogSymlinkNoChange
+### func \(\*DryRunLogger\) [LogSymlinkNoChange](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/dryrun.go#L113>)
 
 ```go
 func (d *DryRunLogger) LogSymlinkNoChange(src, dest string)
@@ -585,7 +585,7 @@ func (d *DryRunLogger) LogSymlinkNoChange(src, dest string)
 
 LogSymlinkNoChange logs a dry\-run message when symlink already exists correctly.
 
-### func \(\*DryRunLogger\) LogTemplateCreate
+### func \(\*DryRunLogger\) [LogTemplateCreate](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/dryrun.go#L74>)
 
 ```go
 func (d *DryRunLogger) LogTemplateCreate(src, dest string, mode os.FileMode, size int)
@@ -593,7 +593,7 @@ func (d *DryRunLogger) LogTemplateCreate(src, dest string, mode os.FileMode, siz
 
 LogTemplateCreate logs a dry\-run message for template creation.
 
-### func \(\*DryRunLogger\) LogTemplateNoChange
+### func \(\*DryRunLogger\) [LogTemplateNoChange](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/dryrun.go#L84>)
 
 ```go
 func (d *DryRunLogger) LogTemplateNoChange(src, dest string)
@@ -601,7 +601,7 @@ func (d *DryRunLogger) LogTemplateNoChange(src, dest string)
 
 LogTemplateNoChange logs a dry\-run message when template produces no changes.
 
-### func \(\*DryRunLogger\) LogTemplateRender
+### func \(\*DryRunLogger\) [LogTemplateRender](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/dryrun.go#L37>)
 
 ```go
 func (d *DryRunLogger) LogTemplateRender(src, dest string, mode os.FileMode)
@@ -609,7 +609,7 @@ func (d *DryRunLogger) LogTemplateRender(src, dest string, mode os.FileMode)
 
 LogTemplateRender logs a dry\-run message for template rendering.
 
-### func \(\*DryRunLogger\) LogTemplateUpdate
+### func \(\*DryRunLogger\) [LogTemplateUpdate](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/dryrun.go#L79>)
 
 ```go
 func (d *DryRunLogger) LogTemplateUpdate(src, dest string, mode os.FileMode, oldSize, newSize int)
@@ -617,7 +617,7 @@ func (d *DryRunLogger) LogTemplateUpdate(src, dest string, mode os.FileMode, old
 
 LogTemplateUpdate logs a dry\-run message for template update.
 
-### func \(\*DryRunLogger\) LogVariableLoad
+### func \(\*DryRunLogger\) [LogVariableLoad](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/dryrun.go#L42>)
 
 ```go
 func (d *DryRunLogger) LogVariableLoad(count int, source string)
@@ -625,7 +625,7 @@ func (d *DryRunLogger) LogVariableLoad(count int, source string)
 
 LogVariableLoad logs a dry\-run message for loading variables.
 
-### func \(\*DryRunLogger\) LogVariableSet
+### func \(\*DryRunLogger\) [LogVariableSet](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/dryrun.go#L47>)
 
 ```go
 func (d *DryRunLogger) LogVariableSet(count int)
@@ -633,7 +633,7 @@ func (d *DryRunLogger) LogVariableSet(count int)
 
 LogVariableSet logs a dry\-run message for setting variables.
 
-## type EvaluationError
+## type [EvaluationError](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/errors.go#L36-L39>)
 
 EvaluationError represents an expression evaluation failure
 
@@ -644,19 +644,19 @@ type EvaluationError struct {
 }
 ```
 
-### func \(\*EvaluationError\) Error
+### func \(\*EvaluationError\) [Error](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/errors.go#L41>)
 
 ```go
 func (e *EvaluationError) Error() string
 ```
 
-### func \(\*EvaluationError\) Unwrap
+### func \(\*EvaluationError\) [Unwrap](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/errors.go#L48>)
 
 ```go
 func (e *EvaluationError) Unwrap() error
 ```
 
-## type ExecutionContext
+## type [ExecutionContext](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/context.go#L191-L272>)
 
 ExecutionContext holds per\-scope state for a step sequence. Cloned when entering nested scopes \(includes, loops\); Svc is shared.
 
@@ -747,7 +747,7 @@ type ExecutionContext struct {
 }
 ```
 
-### func \(\*ExecutionContext\) Clone
+### func \(\*ExecutionContext\) [Clone](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/context.go#L284>)
 
 ```go
 func (ec *ExecutionContext) Clone() ExecutionContext
@@ -755,7 +755,7 @@ func (ec *ExecutionContext) Clone() ExecutionContext
 
 Clone creates a new ExecutionContext for a nested execution scope \(include or loop\). Svc is shared by pointer; Scope is deep\-cloned \(User\+Results\); per\-step fields are reset.
 
-### func \(\*ExecutionContext\) Ctx
+### func \(\*ExecutionContext\) [Ctx](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/context.go#L405>)
 
 ```go
 func (ec *ExecutionContext) Ctx() context.Context
@@ -765,7 +765,7 @@ Ctx returns the run\-wide context \(ec.Svc.Ctx\). Handlers reach through this to
 
 Returns context.Background\(\) when Svc or Svc.Ctx is nil — production paths always populate both, but the guard keeps test\-built contexts that skip RunServices construction from panicking. Returning a live \(non\-nil, non\-cancellable\) ctx is safer than nil for handlers that chain WithTimeout / WithCancel onto it.
 
-### func \(\*ExecutionContext\) Effects
+### func \(\*ExecutionContext\) [Effects](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/context.go#L319>)
 
 ```go
 func (ec *ExecutionContext) Effects() actions.Performer
@@ -773,7 +773,7 @@ func (ec *ExecutionContext) Effects() actions.Performer
 
 Effects returns a Performer pre\-bound to the current step's AsUser. Like ec.Privileged\(\), the per\-step binding means handlers don't have to thread step.AsUser through PerformerOpts — the Performer consults its bound state to decide sudo wrap and post\-write chown.
 
-### func \(\*ExecutionContext\) EmitEvent
+### func \(\*ExecutionContext\) [EmitEvent](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/context.go#L299>)
 
 ```go
 func (ec *ExecutionContext) EmitEvent(eventType events.Type, data interface{})
@@ -781,7 +781,7 @@ func (ec *ExecutionContext) EmitEvent(eventType events.Type, data interface{})
 
 EmitEvent publishes an event to all subscribers
 
-### func \(\*ExecutionContext\) Evaluator
+### func \(\*ExecutionContext\) [Evaluator](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/context.go#L347>)
 
 ```go
 func (ec *ExecutionContext) Evaluator() expression.Evaluator
@@ -789,7 +789,7 @@ func (ec *ExecutionContext) Evaluator() expression.Evaluator
 
 Evaluator returns the expression evaluator.
 
-### func \(\*ExecutionContext\) EventPublisher
+### func \(\*ExecutionContext\) [EventPublisher](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/context.go#L387>)
 
 ```go
 func (ec *ExecutionContext) EventPublisher() events.Publisher
@@ -797,7 +797,7 @@ func (ec *ExecutionContext) EventPublisher() events.Publisher
 
 EventPublisher returns the event publisher.
 
-### func \(\*ExecutionContext\) Logger
+### func \(\*ExecutionContext\) [Logger](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/context.go#L352>)
 
 ```go
 func (ec *ExecutionContext) Logger() logger.Logger
@@ -805,7 +805,7 @@ func (ec *ExecutionContext) Logger() logger.Logger
 
 Logger returns the logger.
 
-### func \(\*ExecutionContext\) MergeUserVars
+### func \(\*ExecutionContext\) [MergeUserVars](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/context.go#L372>)
 
 ```go
 func (ec *ExecutionContext) MergeUserVars(vars map[string]interface{})
@@ -815,7 +815,7 @@ MergeUserVars merges the provided key\-value pairs into the user variable scope.
 
 Drops the \`if ec.Svc \!= nil\` guard the pre\-cleanup version carried — every other accessor on ExecutionContext \(EmitEvent, Mode, Effects, Privileged, Template / Evaluator / Logger / EventPublisher\) derefs ec.Svc unconditionally. Svc is always non\-nil in production paths \(Start / executePlanWithCapture sets it on every constructed context\); a future test that builds an EC without Svc panics here exactly the same way it would in any of the peer accessors. Convention drift closed.
 
-### func \(\*ExecutionContext\) Mode
+### func \(\*ExecutionContext\) [Mode](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/context.go#L310>)
 
 ```go
 func (ec *ExecutionContext) Mode() Mode
@@ -823,7 +823,7 @@ func (ec *ExecutionContext) Mode() Mode
 
 Mode returns the current dispatch mode \(ModeApply or ModePlan\).
 
-### func \(\*ExecutionContext\) Privileged
+### func \(\*ExecutionContext\) [Privileged](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/context.go#L331>)
 
 ```go
 func (ec *ExecutionContext) Privileged() *security.Privileged
@@ -831,7 +831,7 @@ func (ec *ExecutionContext) Privileged() *security.Privileged
 
 Privileged returns the spec\-72 Layer C escalation primitive, pre\-bound to the current step's AsUser. Handlers should call ctx.Privileged\(\).Run\(...\) / .Command\(...\) for shell\-outs and let the primitive decide the sudo wrap from the bound AsUser. No per\-call \`become bool\` plumbing; no per\-handler \`step.ShouldBecome\` reads. dispatchRunner sets ec.CurrentAsUser from step.AsUser before calling Run, so each step sees a primitive bound to its own declared identity.
 
-### func \(\*ExecutionContext\) RegisterResult
+### func \(\*ExecutionContext\) [RegisterResult](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/context.go#L382>)
 
 ```go
 func (ec *ExecutionContext) RegisterResult(r *Result, name string)
@@ -839,7 +839,7 @@ func (ec *ExecutionContext) RegisterResult(r *Result, name string)
 
 RegisterResult registers a Result under the given name for use in subsequent steps.
 
-### func \(\*ExecutionContext\) StepID
+### func \(\*ExecutionContext\) [StepID](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/context.go#L392>)
 
 ```go
 func (ec *ExecutionContext) StepID() string
@@ -847,7 +847,7 @@ func (ec *ExecutionContext) StepID() string
 
 StepID returns the current step ID.
 
-### func \(\*ExecutionContext\) Template
+### func \(\*ExecutionContext\) [Template](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/context.go#L342>)
 
 ```go
 func (ec *ExecutionContext) Template() template.Renderer
@@ -855,7 +855,7 @@ func (ec *ExecutionContext) Template() template.Renderer
 
 Template returns the template renderer.
 
-### func \(\*ExecutionContext\) Variables
+### func \(\*ExecutionContext\) [Variables](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/context.go#L357>)
 
 ```go
 func (ec *ExecutionContext) Variables() map[string]interface{}
@@ -863,7 +863,7 @@ func (ec *ExecutionContext) Variables() map[string]interface{}
 
 Variables returns all variables merged into a flat map for template/expression engines.
 
-## type ExecutionStats
+## type [ExecutionStats](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/context.go#L23-L59>)
 
 ExecutionStats holds shared statistics counters for execution tracking. All fields are pointers to enable shared state across nested execution contexts.
 
@@ -907,7 +907,7 @@ type ExecutionStats struct {
 }
 ```
 
-### func NewExecutionStats
+### func [NewExecutionStats](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/context.go#L62>)
 
 ```go
 func NewExecutionStats() *ExecutionStats
@@ -915,7 +915,7 @@ func NewExecutionStats() *ExecutionStats
 
 NewExecutionStats creates a new ExecutionStats with all counters initialized to zero
 
-## type FileOperationError
+## type [FileOperationError](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/errors.go#L79-L83>)
 
 FileOperationError represents a file operation failure
 
@@ -927,19 +927,19 @@ type FileOperationError struct {
 }
 ```
 
-### func \(\*FileOperationError\) Error
+### func \(\*FileOperationError\) [Error](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/errors.go#L85>)
 
 ```go
 func (e *FileOperationError) Error() string
 ```
 
-### func \(\*FileOperationError\) Unwrap
+### func \(\*FileOperationError\) [Unwrap](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/errors.go#L92>)
 
 ```go
 func (e *FileOperationError) Unwrap() error
 ```
 
-## type LoopContext
+## type [LoopContext](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/context.go#L177-L182>)
 
 LoopContext holds the current loop iteration state for a step executing inside a with\_items or with\_filetree loop. It is stored in VariableScope.Loop so ToMap\(\) can inject item/index/first/last without polluting the User map.
 
@@ -952,7 +952,7 @@ type LoopContext struct {
 }
 ```
 
-## type Mode
+## type [Mode](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/context.go#L114>)
 
 Mode and its constants live in the actions package; re\-exported here for backward source compatibility during the Spec 16 migration.
 
@@ -960,7 +960,7 @@ Mode and its constants live in the actions package; re\-exported here for backwa
 type Mode = actions.Mode
 ```
 
-## type Operation
+## type [Operation](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/result.go#L18>)
 
 Operation is the proposal\-01 result\-envelope verb describing what the step did to its target. Handlers should pick the value that best fits the action's lifecycle. Empty string is "unspecified" — legacy handlers that haven't migrated yet.
 
@@ -979,7 +979,7 @@ const (
 )
 ```
 
-## type RegisteredResult
+## type [RegisteredResult](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/result.go#L319-L335>)
 
 RegisteredResult is a snapshot of a Result stored in VariableScope.Results. It is a flat copy — no pointer aliasing — so the scope can be safely cloned.
 
@@ -1003,7 +1003,7 @@ type RegisteredResult struct {
 }
 ```
 
-### func \(RegisteredResult\) ToMap
+### func \(RegisteredResult\) [ToMap](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/result.go#L369>)
 
 ```go
 func (r RegisteredResult) ToMap() map[string]interface{}
@@ -1013,7 +1013,7 @@ ToMap converts a RegisteredResult to map\[string\]interface\{\} for template eng
 
 Mirrors Result.ToMap — proposal\-01 envelope at the top level, action payload nested under \`data\`.
 
-## type RenderError
+## type [RenderError](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/errors.go#L19-L22>)
 
 RenderError represents a template rendering failure
 
@@ -1024,19 +1024,19 @@ type RenderError struct {
 }
 ```
 
-### func \(\*RenderError\) Error
+### func \(\*RenderError\) [Error](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/errors.go#L24>)
 
 ```go
 func (e *RenderError) Error() string
 ```
 
-### func \(\*RenderError\) Unwrap
+### func \(\*RenderError\) [Unwrap](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/errors.go#L31>)
 
 ```go
 func (e *RenderError) Unwrap() error
 ```
 
-## type Result
+## type [Result](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/result.go#L92-L223>)
 
 Result represents the outcome of executing a step and can be registered to variables for use in subsequent steps via the "register" field.
 
@@ -1187,7 +1187,7 @@ type Result struct {
 }
 ```
 
-### func ChangedResult
+### func [ChangedResult](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/result.go#L418>)
 
 ```go
 func ChangedResult(op Operation, target string, data map[string]interface{}) *Result
@@ -1195,7 +1195,7 @@ func ChangedResult(op Operation, target string, data map[string]interface{}) *Re
 
 ChangedResult builds a successful mutation result. Op must be one of OpCreate, OpUpdate, or OpDelete. Changed=true.
 
-### func FailedResult
+### func [FailedResult](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/result.go#L441>)
 
 ```go
 func FailedResult(op Operation, target string, err error, data map[string]interface{}) *Result
@@ -1203,7 +1203,7 @@ func FailedResult(op Operation, target string, err error, data map[string]interf
 
 FailedResult builds a mutation\-failed result \(proposal\-06: mutation that didn't happen IS failure\). Op is the operation that was attempted; data may carry partial state captured before the failure. Failed=true, Rc=1, Error=err.Error\(\).
 
-### func NewResult
+### func [NewResult](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/result.go#L226>)
 
 ```go
 func NewResult() *Result
@@ -1211,7 +1211,7 @@ func NewResult() *Result
 
 NewResult creates a new Result with default values.
 
-### func NoopResult
+### func [NoopResult](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/result.go#L429>)
 
 ```go
 func NoopResult(target string, data map[string]interface{}) *Result
@@ -1219,7 +1219,7 @@ func NoopResult(target string, data map[string]interface{}) *Result
 
 NoopResult builds an idempotent "already at target state" result. Changed=false, Operation=OpNoop.
 
-### func QueryResult
+### func [QueryResult](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/result.go#L408>)
 
 ```go
 func QueryResult(target string, data map[string]interface{}) *Result
@@ -1227,7 +1227,7 @@ func QueryResult(target string, data map[string]interface{}) *Result
 
 QueryResult builds a read\-only observation result \(observe.\*, read.\*, repo.search/tree, wait.\* on success\). Changed=false, Failed=false, Error="" — per proposal\-06, "absent" / "not matching" is success.
 
-### func \(\*Result\) MarshalJSON
+### func \(\*Result\) [MarshalJSON](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/result.go#L570>)
 
 ```go
 func (r *Result) MarshalJSON() ([]byte, error)
@@ -1237,7 +1237,7 @@ MarshalJSON serialises Result with ReverseData wrapped in a discriminator envelo
 
 When ReverseData is nil, the output matches the pre\-phase\-2 shape — no \`reverse\_data\` key at all. Old daemons / clients that don't know about the field are unaffected on the read side, and new code that consumes them sees \`nil\` ReverseData \(which the existing "ReverseData is nil" refusal in handlers' Reverse\(\) already handles\).
 
-### func \(\*Result\) PublishObservation
+### func \(\*Result\) [PublishObservation](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/result.go#L469>)
 
 ```go
 func (r *Result) PublishObservation(env actions.ObserveResult, target string)
@@ -1257,7 +1257,7 @@ PublishObservation lands a spec\-59 ObserveResult onto this Result using the pro
 
 Plan\-mode handlers should leave env.Error empty; the handler's Reason field is the right place for the "deferred to apply" message.
 
-### func \(\*Result\) RegisterTo
+### func \(\*Result\) [RegisterTo](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/result.go#L313>)
 
 ```go
 func (r *Result) RegisterTo(variables map[string]interface{}, name string)
@@ -1265,7 +1265,7 @@ func (r *Result) RegisterTo(variables map[string]interface{}, name string)
 
 RegisterTo registers this result to the variables map under the given name. The result can be accessed using nested field syntax \(e.g., "result.stdout", "result.rc"\) in templates and when conditions.
 
-### func \(\*Result\) SetChanged
+### func \(\*Result\) [SetChanged](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/result.go#L491>)
 
 ```go
 func (r *Result) SetChanged(changed bool)
@@ -1273,7 +1273,7 @@ func (r *Result) SetChanged(changed bool)
 
 SetChanged marks whether the action made changes.
 
-### func \(\*Result\) SetData
+### func \(\*Result\) [SetData](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/result.go#L516>)
 
 ```go
 func (r *Result) SetData(data map[string]interface{})
@@ -1281,7 +1281,7 @@ func (r *Result) SetData(data map[string]interface{})
 
 SetData sets custom result data. This merges the provided data into the result's ToMap output, allowing actions to provide additional structured information.
 
-### func \(\*Result\) SetFailed
+### func \(\*Result\) [SetFailed](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/result.go#L506>)
 
 ```go
 func (r *Result) SetFailed(failed bool)
@@ -1289,7 +1289,7 @@ func (r *Result) SetFailed(failed bool)
 
 SetFailed marks the result as failed.
 
-### func \(\*Result\) SetStderr
+### func \(\*Result\) [SetStderr](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/result.go#L501>)
 
 ```go
 func (r *Result) SetStderr(stderr string)
@@ -1297,7 +1297,7 @@ func (r *Result) SetStderr(stderr string)
 
 SetStderr sets the stderr output.
 
-### func \(\*Result\) SetStdout
+### func \(\*Result\) [SetStdout](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/result.go#L496>)
 
 ```go
 func (r *Result) SetStdout(stdout string)
@@ -1305,7 +1305,7 @@ func (r *Result) SetStdout(stdout string)
 
 SetStdout sets the stdout output.
 
-### func \(\*Result\) Status
+### func \(\*Result\) [Status](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/result.go#L243>)
 
 ```go
 func (r *Result) Status() string
@@ -1315,7 +1315,7 @@ Status returns a string representation of the result status.
 
 Precedence \(proposal\-02\): failed \> cancelled \> skipped \> reverted \> changed \> ok. Cancelled and reverted are new buckets the recap counter cares about; status mirrors the same precedence so the per\-step text marker is consistent with the headline.
 
-### func \(\*Result\) ToMap
+### func \(\*Result\) [ToMap](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/result.go#L276>)
 
 ```go
 func (r *Result) ToMap() map[string]interface{}
@@ -1327,7 +1327,7 @@ Proposal\-01 envelope: action\-specific payload stays NESTED under \`data\` rath
 
 "reason" is included so step.completed consumers \(notably the pilot loop's stdoutCapture, which builds per\-step summaries fed back to the LLM\) can see the handler's own one\-liner without reaching into the executor.Result struct. Handlers that leave Reason empty get an empty string here — pilot's summarizer falls back to action\+status.
 
-### func \(\*Result\) ToRegisteredResult
+### func \(\*Result\) [ToRegisteredResult](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/result.go#L338>)
 
 ```go
 func (r *Result) ToRegisteredResult() RegisteredResult
@@ -1335,7 +1335,7 @@ func (r *Result) ToRegisteredResult() RegisteredResult
 
 ToRegisteredResult converts a \*Result into a RegisteredResult snapshot.
 
-### func \(\*Result\) UnmarshalJSON
+### func \(\*Result\) [UnmarshalJSON](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/result.go#L593>)
 
 ```go
 func (r *Result) UnmarshalJSON(b []byte) error
@@ -1343,7 +1343,7 @@ func (r *Result) UnmarshalJSON(b []byte) error
 
 UnmarshalJSON deserialises Result, looking up the ReverseData payload type via the registry and materialising the concrete type when known. Unknown discriminators decode to nil ReverseData — forward compatibility for newer daemons whose handler types this binary doesn't know about. Returns an error only when the envelope itself is malformed or the concrete type's Unmarshal fails \(the latter signals real corruption, not unknown types\).
 
-## type ReverseDataFactory
+## type [ReverseDataFactory](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/reverse_registry.go#L13>)
 
 ReverseDataFactory produces a fresh zero value of a typed ReverseData payload \(e.g. \`func\(\) any \{ return &FileReverseInfo\{\} \}\`\). Callers register one factory per concrete type at init\(\) time; Result.UnmarshalJSON looks it up by discriminator to materialise the concrete type from the wire envelope.
 
@@ -1351,7 +1351,7 @@ ReverseDataFactory produces a fresh zero value of a typed ReverseData payload \(
 type ReverseDataFactory func() any
 ```
 
-## type RunCapture
+## type [RunCapture](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/capture.go#L23-L27>)
 
 RunCapture is an optional sink the executor populates during Start / ExecutePlan with the compiled plan and per\-step outcomes. Built specifically for R1.1b's typed \*KernelResult on internal/apply.Runner: the Runner installs a \*RunCapture before Start, reads its contents after Start returns, and converts them into the kernel\-surface KernelResult.
 
@@ -1365,7 +1365,7 @@ type RunCapture struct {
 }
 ```
 
-### func \(\*RunCapture\) Plan
+### func \(\*RunCapture\) [Plan](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/capture.go#L119>)
 
 ```go
 func (c *RunCapture) Plan() *plan.Plan
@@ -1373,7 +1373,7 @@ func (c *RunCapture) Plan() *plan.Plan
 
 Plan returns the compiled plan recorded during the run, or nil if the run never reached plan compilation.
 
-### func \(\*RunCapture\) Steps
+### func \(\*RunCapture\) [Steps](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/capture.go#L131>)
 
 ```go
 func (c *RunCapture) Steps() []StepRecord
@@ -1381,7 +1381,7 @@ func (c *RunCapture) Steps() []StepRecord
 
 Steps returns a snapshot of the per\-step records in execution order. The returned slice is owned by the caller; subsequent appends to the capture will not affect it.
 
-## type RunServices
+## type [RunServices](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/context.go#L124-L172>)
 
 RunServices holds the shared, immutable\-after\-construction services and configuration for a mooncake run. One instance is created per run and referenced by all nested ExecutionContexts via pointer.
 
@@ -1437,7 +1437,7 @@ type RunServices struct {
 }
 ```
 
-## type SetupError
+## type [SetupError](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/errors.go#L107-L111>)
 
 SetupError represents infrastructure or configuration setup failures
 
@@ -1449,19 +1449,19 @@ type SetupError struct {
 }
 ```
 
-### func \(\*SetupError\) Error
+### func \(\*SetupError\) [Error](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/errors.go#L113>)
 
 ```go
 func (e *SetupError) Error() string
 ```
 
-### func \(\*SetupError\) Unwrap
+### func \(\*SetupError\) [Unwrap](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/errors.go#L120>)
 
 ```go
 func (e *SetupError) Unwrap() error
 ```
 
-## type StartConfig
+## type [StartConfig](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/executor.go#L1091-L1121>)
 
 StartConfig contains configuration for starting a mooncake execution.
 
@@ -1499,7 +1499,7 @@ type StartConfig struct {
 }
 ```
 
-## type StepRecord
+## type [StepRecord](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/capture.go#L32-L50>)
 
 StepRecord is a single per\-step entry — the typed step the executor dispatched plus the executor.Result it produced. apply.StepResult is the public mirror.
 
@@ -1525,7 +1525,7 @@ type StepRecord struct {
 }
 ```
 
-## type StepValidationError
+## type [StepValidationError](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/errors.go#L97-L100>)
 
 StepValidationError represents step parameter validation failure during execution
 
@@ -1536,13 +1536,13 @@ type StepValidationError struct {
 }
 ```
 
-### func \(\*StepValidationError\) Error
+### func \(\*StepValidationError\) [Error](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/errors.go#L102>)
 
 ```go
 func (e *StepValidationError) Error() string
 ```
 
-## type TxnCompletedChild
+## type [TxnCompletedChild](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/context.go#L277-L280>)
 
 TxnCompletedChild captures one body child's step \+ result for later Reverse\(\) consumption. Stored in ExecutionContext.CompletedByTxn — the \*Result field keeps this type out of internal/control.
 
@@ -1553,7 +1553,7 @@ type TxnCompletedChild struct {
 }
 ```
 
-## type VariableScope
+## type [VariableScope](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/scope.go#L31-L74>)
 
 VariableScope holds all variables available to a step, each in its native type. ToMap\(\) merges them at the template/expression engine boundary.
 
@@ -1604,7 +1604,7 @@ type VariableScope struct {
 }
 ```
 
-### func NewVariableScope
+### func [NewVariableScope](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/scope.go#L77>)
 
 ```go
 func NewVariableScope() *VariableScope
@@ -1612,7 +1612,7 @@ func NewVariableScope() *VariableScope
 
 NewVariableScope returns an empty scope ready for use.
 
-### func \(\*VariableScope\) Clone
+### func \(\*VariableScope\) [Clone](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/scope.go#L234>)
 
 ```go
 func (s *VariableScope) Clone() *VariableScope
@@ -1620,7 +1620,7 @@ func (s *VariableScope) Clone() *VariableScope
 
 Clone deep\-copies User and Results; shares Facts and Metrics pointers \(read\-only after init\). Loop is intentionally NOT copied — it is per\-step state.
 
-### func \(\*VariableScope\) ToMap
+### func \(\*VariableScope\) [ToMap](<https://github.com/alehatsman/mooncake/blob/master/internal/executor/scope.go#L90>)
 
 ```go
 func (s *VariableScope) ToMap() map[string]interface{}

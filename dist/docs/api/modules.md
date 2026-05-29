@@ -28,7 +28,7 @@ Package modules implements the Git\-native module system from spec\-67. A module
   - [func (r *Resolver) Resolve(ctx context.Context, refStr string) (Resolved, error)](<#func-resolver-resolve>)
 
 
-## func DefaultCacheRoot
+## func [DefaultCacheRoot](<https://github.com/alehatsman/mooncake/blob/master/internal/modules/fetch.go#L32>)
 
 ```go
 func DefaultCacheRoot() (string, error)
@@ -38,7 +38,7 @@ DefaultCacheRoot is \~/.cache/mooncake/modules.
 
 Resolved lazily because $HOME may be unset \(tests\) or differ from the user who started the process \(sudo\-driven applies\).
 
-## type Fetcher
+## type [Fetcher](<https://github.com/alehatsman/mooncake/blob/master/internal/modules/fetch.go#L46-L56>)
 
 Fetcher manages the on\-disk module cache. The zero value uses the default cache root and the system \`git\` binary.
 
@@ -58,7 +58,7 @@ type Fetcher struct {
 }
 ```
 
-### func \(\*Fetcher\) CacheDir
+### func \(\*Fetcher\) [CacheDir](<https://github.com/alehatsman/mooncake/blob/master/internal/modules/fetch.go#L60>)
 
 ```go
 func (f *Fetcher) CacheDir(ref Reference) (string, error)
@@ -66,7 +66,7 @@ func (f *Fetcher) CacheDir(ref Reference) (string, error)
 
 CacheDir returns the absolute cache directory for a module reference. The directory may or may not exist.
 
-### func \(\*Fetcher\) Fetch
+### func \(\*Fetcher\) [Fetch](<https://github.com/alehatsman/mooncake/blob/master/internal/modules/fetch.go#L76>)
 
 ```go
 func (f *Fetcher) Fetch(ctx context.Context, ref Reference) (string, error)
@@ -74,7 +74,7 @@ func (f *Fetcher) Fetch(ctx context.Context, ref Reference) (string, error)
 
 Fetch ensures the module identified by ref is present in the cache and returns the absolute directory. A cache hit skips the clone entirely.
 
-## type Index
+## type [Index](<https://github.com/alehatsman/mooncake/blob/master/internal/modules/index.go#L21-L25>)
 
 Index represents a module's index.yml manifest. It declares the module's identity and maps export names to component file paths relative to the module root.
 
@@ -93,7 +93,7 @@ type Index struct {
 }
 ```
 
-### func LoadIndex
+### func [LoadIndex](<https://github.com/alehatsman/mooncake/blob/master/internal/modules/index.go#L30>)
 
 ```go
 func LoadIndex(moduleRoot string) (*Index, error)
@@ -101,7 +101,7 @@ func LoadIndex(moduleRoot string) (*Index, error)
 
 LoadIndex reads and parses moduleRoot/index.yml. moduleRoot is the directory holding the manifest \(typically a cache directory like \~/.cache/mooncake/modules/\<host\>/\<owner\>/\<repo\>@\<version\>/\).
 
-### func \(\*Index\) ResolveExport
+### func \(\*Index\) [ResolveExport](<https://github.com/alehatsman/mooncake/blob/master/internal/modules/index.go#L59>)
 
 ```go
 func (idx *Index) ResolveExport(moduleRoot, export string) (string, error)
@@ -116,7 +116,7 @@ otherwise                 → uses the entry named exactly `export`
 
 The returned path is verified to exist on disk before returning.
 
-## type Reference
+## type [Reference](<https://github.com/alehatsman/mooncake/blob/master/internal/modules/reference.go#L16-L22>)
 
 Reference is a parsed module reference of the form \<host\>/\<owner\>/\<repo\>\[/\<subpath\>\]@\<version\>.
 
@@ -132,7 +132,7 @@ type Reference struct {
 }
 ```
 
-### func ParseReference
+### func [ParseReference](<https://github.com/alehatsman/mooncake/blob/master/internal/modules/reference.go#L26>)
 
 ```go
 func ParseReference(s string) (Reference, error)
@@ -140,7 +140,7 @@ func ParseReference(s string) (Reference, error)
 
 ParseReference parses a module reference string. The version is required — references without "@\<version\>" are rejected.
 
-### func \(Reference\) CloneURL
+### func \(Reference\) [CloneURL](<https://github.com/alehatsman/mooncake/blob/master/internal/modules/reference.go#L79>)
 
 ```go
 func (r Reference) CloneURL() string
@@ -148,7 +148,7 @@ func (r Reference) CloneURL() string
 
 CloneURL returns the https URL of the underlying Git repository \(subpath is not part of the clone URL\).
 
-### func \(Reference\) ModulePath
+### func \(Reference\) [ModulePath](<https://github.com/alehatsman/mooncake/blob/master/internal/modules/reference.go#L65>)
 
 ```go
 func (r Reference) ModulePath() string
@@ -156,7 +156,7 @@ func (r Reference) ModulePath() string
 
 ModulePath returns the path portion \(no version\), e.g. "github.com/owner/repo" or "github.com/owner/repo/subpath".
 
-### func \(Reference\) String
+### func \(Reference\) [String](<https://github.com/alehatsman/mooncake/blob/master/internal/modules/reference.go#L73>)
 
 ```go
 func (r Reference) String() string
@@ -164,7 +164,7 @@ func (r Reference) String() string
 
 String returns the canonical "\<path\>@\<version\>" form.
 
-## type Resolved
+## type [Resolved](<https://github.com/alehatsman/mooncake/blob/master/internal/modules/resolver.go#L28-L31>)
 
 Resolved is what the resolver returns: the file path to load as a component plus the module root \(needed so further imports inside the component resolve relative to the module, not the playbook\).
 
@@ -175,7 +175,7 @@ type Resolved struct {
 }
 ```
 
-## type Resolver
+## type [Resolver](<https://github.com/alehatsman/mooncake/blob/master/internal/modules/resolver.go#L14-L17>)
 
 Resolver turns a use: reference into a concrete component file path. It combines reference parsing, module fetching, and index.yml export lookup.
 
@@ -188,7 +188,7 @@ type Resolver struct {
 }
 ```
 
-### func NewResolver
+### func [NewResolver](<https://github.com/alehatsman/mooncake/blob/master/internal/modules/resolver.go#L21>)
 
 ```go
 func NewResolver(modules map[string]string) *Resolver
@@ -196,7 +196,7 @@ func NewResolver(modules map[string]string) *Resolver
 
 NewResolver constructs a resolver with the default fetcher and the supplied alias map. Passing nil for the map disables alias resolution.
 
-### func \(\*Resolver\) Resolve
+### func \(\*Resolver\) [Resolve](<https://github.com/alehatsman/mooncake/blob/master/internal/modules/resolver.go#L42>)
 
 ```go
 func (r *Resolver) Resolve(ctx context.Context, refStr string) (Resolved, error)
