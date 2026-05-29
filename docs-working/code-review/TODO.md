@@ -7,13 +7,49 @@ Queue**, produces a finding (or several), and the queue updates.
 > moved to `docs-working/archive/code-review/findings/`. New findings
 > go in that same folder; add a row to the index below.
 
-## At-a-glance status (2026-05-27)
+## At-a-glance status (2026-05-29)
 
 | | Count |
 |---|---:|
-| ✅ Findings filed and resolved (F001–F057, F036 skipped) | **56** |
+| ✅ Findings filed and resolved (F001–F058, F036 skipped) | **57** |
 | 🟡 Findings open (filed, not yet fixed) | **0** |
 | 📋 Packages still queued for review | **0 substantive** (1 broad follow-up — see below) |
+
+**2026-05-29 re-review of post-2026-05-27 executor deltas.**
+`internal/executor/` was last cold-read 2026-05-27, but `executor.go`
+(now 1,742 LOC) changed substantially after: heal seam (proposal-11
+`b35a1986`), F6 ok-counter (`f46a0135`), F4 cancel classification
+(`e35593b6`), proposal-01/02 envelope (`076af5b8`/`fe30524a`), F2.1
+`Ctx()` (`d8c0e6ee`), plus two style refactors. Read end-to-end:
+`DispatchStepAction`/`tryHeal` (heal accounting), `postExecuteSuccess`
++ `dispatchPlanMode` (F6 OK+Changed==Executed invariant — verified
+clean across plan and apply), `syncResultEnvelope` +
+`classifyCancelReason` (F4), the recap wiring in `console_subscriber.go`
++ `apply/runner.go` + `cmd/kernel/apply.go`. One finding:
+
+- **F058** — a step interrupted **mid-flight** by run-wide cancel was
+  double-counted as both `Cancelled` (bumped by `syncResultEnvelope`)
+  and `Failed` (bumped by the cancel-unaware `handleStepError`). The
+  recap showed `failed=1 cancelled=1` for one step, and `mapCancelExit`'s
+  `Failed == 0` gate failed → timeout/fleet/MCP cancels exited 1 instead
+  of 130 (the SIGINT path is masked only by the `os.Exit(130)` hard-exit
+  in `runWithSignalCtx`). Risk. **Fixed** (2026-05-29): `handleStepError`
+  now gates the `incStat(Stats.Failed)` bump on the step not already
+  being classified Cancelled. Two regression tests in
+  `cancel_classification_test.go`. The handler-shape skew (handlers
+  returning `(nil, err)` never reach `syncResultEnvelope`) is deferred —
+  see F058 §"Proposed fix" choice 2. Ties into the F2.11
+  deferred-os.Exit cleanup.
+
+Verified clean (no finding): the heal seam runs children exactly once
+(planner-expanded `HealParent` preview siblings silent-skip at apply,
+`executor.go:828`), the parent assert gets a single `postExecuteSuccess`
+even though `tryHeal` re-dispatches it, and `ec.CurrentResult` is
+correctly overwritten by the re-dispatch so a healed step counts as
+`OK` not stale-`Changed`. Soft-cap note: `dispatchRunner` is gocyclo=41
+(already a tracked `budget-status` violation, not new); `Step`
+universal-field count is now **39/40** after proposal-11's `Heal` +
+`HealParent` — two fields from the hard cap.
 
 **2026-05-27 cold-read pass closed the queue.** Eight package
 areas read cold (agentd handlers + sinks + self-shutdown,
@@ -252,6 +288,7 @@ closed — see that folder's README.
 | F055 | executor `unless:` runs without ctx/timeout | risk | **done** | [findings/F055](../archive/code-review/findings/F055-idempotency-unless-no-ctx-no-timeout.md) |
 | F056 | plan.SavePlanToFile uses default umask (0644 on shared hosts) | smell | **done** | [findings/F056](../archive/code-review/findings/F056-plan-io-default-umask-perms.md) |
 | F057 | Pongo2Renderer per-renderer mutex misses pongo2's global TemplateSet | smell | **done** | [findings/F057](../archive/code-review/findings/F057-pongo2-per-renderer-mutex-misses-global-state.md) |
+| F058 | mid-flight cancel double-counts as Cancelled+Failed; breaks mapCancelExit exit-130 gate | risk | **done** | [findings/F058](../archive/code-review/findings/F058-cancel-double-counts-as-failed.md) |
 
 ## Still to review
 

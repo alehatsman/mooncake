@@ -637,7 +637,22 @@ func classifyCancelReason(runCtx context.Context) string {
 }
 
 func handleStepError(step config.Step, ec *ExecutionContext, stepErr error, stepID, stepName string, depth int, stepDuration time.Duration) error {
-	incStat(ec.Svc.Stats.Failed)
+	// F058: a step torn down mid-flight by run-wide cancel is already
+	// counted in Stats.Cancelled by syncResultEnvelope (and its Result is
+	// tagged Cancelled). Don't *also* count it as Failed — that breaks
+	// the proposal-02 contract: mapCancelExit gates exit 130 on
+	// `Cancelled > 0 && Failed == 0`, so a double-counted step makes
+	// timeout/fleet/MCP cancels exit 1 (indistinguishable from a real
+	// failure). We still emit step.failed below so streaming consumers
+	// get a terminal event with the handler's stdout/stderr; only the
+	// run-counter bump is suppressed. (Handlers that return (nil, err)
+	// rather than a *Result never reach syncResultEnvelope, so they stay
+	// on the Failed path — closing that handler-shape skew is the larger
+	// deferred change tracked in F058.)
+	cancelled := ec.CurrentResult != nil && ec.CurrentResult.Cancelled
+	if !cancelled {
+		incStat(ec.Svc.Stats.Failed)
+	}
 	failedData := events.StepFailedData{
 		StepID:       stepID,
 		Name:         stepName,
