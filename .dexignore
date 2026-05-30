@@ -7,3 +7,12 @@ mooncake_codes.txt
 # Raw proc/darwin command-output fixtures: uniform numeric dumps that
 # pollute semantic results without adding code intel.
 internal/metrics/testdata/
+
+# Generated docs tree (produced by the docs pipeline from source-of-truth in
+# code/schemagen). Stays in git for MkDocs + the docs-check gate; indexing the
+# generated copies just duplicates the real action/CLI/schema source and floods
+# the summarization queue.
+dist/docs/
+
+# Inert example fixture payloads — template/script bodies with no code intel.
+examples/**/files/
