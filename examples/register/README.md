@@ -111,6 +111,49 @@ Know if operations actually changed something:
   when: result.changed == true
 ```
 
+## Migration Notes
+
+### `failed_when` / `result.failed` semantics (changed 2026-05-28)
+
+The proposal-06 result-envelope work made `result.failed` **truthful** for a
+class of actions that previously reported `failed: false` even when the
+underlying operation errored. Affected handlers returned a result with
+`Failed=false` alongside a non-nil error — `wait.*`, `os.mount`,
+`os.firewall`, and the spec-69 error-distinction cluster. The executor now
+syncs that error into the envelope, so `result.failed` is `true` in those
+cases.
+
+This is observable from YAML if a playbook depended on the old (buggy)
+silent-success behavior:
+
+```yaml
+- wait.http: { url: http://localhost:9999/never, timeout: 1s }
+  register: r
+- shell: echo "wait failed"
+  when: r.failed
+```
+
+- **Before:** `r.failed` stayed `false` on timeout, so the `when:` skipped.
+- **After:** `r.failed` is `true` on timeout, so the `when:` fires.
+
+The new behavior is correct. If you were relying on the old shape, you have
+two options:
+
+- Drop the workaround and let `r.failed` mean what it says.
+- Explicitly suppress the failure with `failed_when: false` on the step —
+  an operator override always wins over the handler verdict:
+
+  ```yaml
+  - wait.http: { url: http://localhost:9999/never, timeout: 1s }
+    register: r
+    failed_when: false   # r.failed is now forced false regardless
+  ```
+
+Related: `result.status` gained two values, `cancelled` and `reverted`, in
+addition to `ok` / `changed` / `failed` / `skipped`. A guard like
+`when: result.status in ['ok', 'changed']` is too narrow if you mean "did
+not fail" — check `when: not result.failed` instead.
+
 ## Common Patterns
 
 ### Checking for Command Existence
