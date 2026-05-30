@@ -223,7 +223,7 @@ var SystemPathPrefixes = []string{
 }
 ```
 
-## func [Count](<https://github.com/alehatsman/mooncake/blob/master/internal/actions/registry.go#L150>)
+## func [Count](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/registry.go#L150>)
 
 ```go
 func Count() int
@@ -231,7 +231,7 @@ func Count() int
 
 Count returns the number of handlers in the global registry.
 
-## func [EvaluateBoolExpression](<https://github.com/alehatsman/mooncake/blob/master/internal/actions/eval.go#L18>)
+## func [EvaluateBoolExpression](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/eval.go#L18>)
 
 ```go
 func EvaluateBoolExpression(ctx Context, fieldName, expression string, evalContext map[string]interface{}) (bool, error)
@@ -241,7 +241,7 @@ EvaluateBoolExpression renders \`expression\` through the Context's template eng
 
 Previously each of the shell, command, and assert handlers carried its own copy of this helper. The shell variant tagged errors with a field name; command \+ assert wrapped the inner error with the field name at the call site. Both shapes collapse here: handler callers pass the field name, the helper produces a single uniform error format, and the three copies become one.
 
-## func [GetActionHint](<https://github.com/alehatsman/mooncake/blob/master/internal/actions/validation.go#L55>)
+## func [GetActionHint](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/validation.go#L55>)
 
 ```go
 func GetActionHint(actionName string, missingField string) string
@@ -249,7 +249,7 @@ func GetActionHint(actionName string, missingField string) string
 
 GetActionHint generates a helpful hint for an action based on the schema. It includes: \- Action description \- Required parameters with descriptions \- Optional parameters with descriptions \- Examples where available
 
-## func [GetFieldExample](<https://github.com/alehatsman/mooncake/blob/master/internal/actions/validation.go#L136>)
+## func [GetFieldExample](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/validation.go#L136>)
 
 ```go
 func GetFieldExample(actionName, fieldName string) string
@@ -257,7 +257,7 @@ func GetFieldExample(actionName, fieldName string) string
 
 GetFieldExample returns an example value for a field based on schema
 
-## func [Has](<https://github.com/alehatsman/mooncake/blob/master/internal/actions/registry.go#L145>)
+## func [Has](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/registry.go#L145>)
 
 ```go
 func Has(actionType string) bool
@@ -265,13 +265,13 @@ func Has(actionType string) bool
 
 Has checks if a handler exists in the global registry.
 
-## func [IsCoster](<https://github.com/alehatsman/mooncake/blob/master/internal/actions/registry_abi.go#L76>)
+## func [IsCoster](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/registry_abi.go#L76>)
 
 ```go
 func IsCoster(h Handler) bool
 ```
 
-## func [IsDiffer](<https://github.com/alehatsman/mooncake/blob/master/internal/actions/registry_abi.go#L74>)
+## func [IsDiffer](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/registry_abi.go#L74>)
 
 ```go
 func IsDiffer(h Handler) bool
@@ -279,19 +279,19 @@ func IsDiffer(h Handler) bool
 
 IsDiffer / IsReverser / IsCoster / IsPermitter report whether h natively implements the corresponding sub\-interface \(without returning the default wrapper\). Useful for capability reporting in \`mooncake actions list\` / docs generation / metadata APIs, where we want to distinguish "implements natively" from "has a default."
 
-## func [IsPermitter](<https://github.com/alehatsman/mooncake/blob/master/internal/actions/registry_abi.go#L77>)
+## func [IsPermitter](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/registry_abi.go#L77>)
 
 ```go
 func IsPermitter(h Handler) bool
 ```
 
-## func [IsReverser](<https://github.com/alehatsman/mooncake/blob/master/internal/actions/registry_abi.go#L75>)
+## func [IsReverser](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/registry_abi.go#L75>)
 
 ```go
 func IsReverser(h Handler) bool
 ```
 
-## func [ObserveValueToMap](<https://github.com/alehatsman/mooncake/blob/master/internal/actions/observe.go#L57>)
+## func [ObserveValueToMap](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/observe.go#L57>)
 
 ```go
 func ObserveValueToMap(v any) any
@@ -301,7 +301,7 @@ ObserveValueToMap converts an observe handler's typed Value struct into a map\[s
 
 On marshal failure \(e.g. value contains an unmarshallable type\) returns the original value unchanged. Defensive — observe handlers control their own Value types, so this path should never fire in practice.
 
-## func [PathNeedsSudo](<https://github.com/alehatsman/mooncake/blob/master/internal/actions/handler_abi.go#L272>)
+## func [PathNeedsSudo](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/handler_abi.go#L272>)
 
 ```go
 func PathNeedsSudo(p string) bool
@@ -319,7 +319,7 @@ func (Handler) Permissions(step *config.Step) actions.PermissionSet {
 }
 ```
 
-## func [Register](<https://github.com/alehatsman/mooncake/blob/master/internal/actions/registry.go#L128>)
+## func [Register](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/registry.go#L128>)
 
 ```go
 func Register(handler Handler)
@@ -335,7 +335,7 @@ func init() {
 }
 ```
 
-## type [Action](<https://github.com/alehatsman/mooncake/blob/master/internal/actions/performer.go#L7>)
+## type [Action](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/performer.go#L7>)
 
 Action names a primitive an Effect represents. Used in plan output, logging, and event emission. See Performer.
 
@@ -358,7 +358,7 @@ const (
 )
 ```
 
-## type [ActionCategory](<https://github.com/alehatsman/mooncake/blob/master/internal/actions/handler.go#L40>)
+## type [ActionCategory](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/handler.go#L40>)
 
 ActionCategory groups related actions by their primary function.
 
@@ -388,7 +388,7 @@ const (
 )
 ```
 
-## type [ActionDefinition](<https://github.com/alehatsman/mooncake/blob/master/internal/actions/validation.go#L18-L23>)
+## type [ActionDefinition](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/validation.go#L18-L23>)
 
 ActionDefinition represents an action's schema definition
 
@@ -401,7 +401,7 @@ type ActionDefinition struct {
 }
 ```
 
-## type [ActionMetadata](<https://github.com/alehatsman/mooncake/blob/master/internal/actions/handler.go#L63-L127>)
+## type [ActionMetadata](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/handler.go#L63-L127>)
 
 ActionMetadata describes an action type and its capabilities.
 
@@ -473,7 +473,7 @@ type ActionMetadata struct {
 }
 ```
 
-### func [List](<https://github.com/alehatsman/mooncake/blob/master/internal/actions/registry.go#L140>)
+### func [List](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/registry.go#L140>)
 
 ```go
 func List() []ActionMetadata
@@ -481,7 +481,7 @@ func List() []ActionMetadata
 
 List returns all handlers from the global registry.
 
-## type [Context](<https://github.com/alehatsman/mooncake/blob/master/internal/actions/interfaces.go#L47-L160>)
+## type [Context](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/interfaces.go#L47-L160>)
 
 Context provides the execution environment for action handlers.
 
@@ -629,7 +629,7 @@ type Context interface {
 }
 ```
 
-## type [CostEstimate](<https://github.com/alehatsman/mooncake/blob/master/internal/actions/handler_abi.go#L128-L150>)
+## type [CostEstimate](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/handler_abi.go#L128-L150>)
 
 CostEstimate is a coarse, pre\-execution signal of a step's blast radius. Consumed by run\-recap \(averaged risk \+ summed resources\), JSON plan output \(per\-step\), and future policy layers. Not a hard gate — informational unless something downstream chooses to enforce.
 
@@ -659,7 +659,7 @@ type CostEstimate struct {
 }
 ```
 
-## type [Coster](<https://github.com/alehatsman/mooncake/blob/master/internal/actions/handler_abi.go#L216-L218>)
+## type [Coster](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/handler_abi.go#L216-L218>)
 
 Coster is the optional interface for pre\-execution blast\-radius signal. Handlers that don't implement it get a neutral default of Risk=5 with Reversible inferred from whether Reverser is implemented.
 
@@ -669,7 +669,7 @@ type Coster interface {
 }
 ```
 
-### func [ResolveCoster](<https://github.com/alehatsman/mooncake/blob/master/internal/actions/registry_abi.go#L50>)
+### func [ResolveCoster](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/registry_abi.go#L50>)
 
 ```go
 func ResolveCoster(h Handler) Coster
@@ -677,7 +677,7 @@ func ResolveCoster(h Handler) Coster
 
 ResolveCoster returns h as a Coster. If h doesn't implement Coster, a neutral default is returned \(Risk=5, Reversible inferred from whether h implements Reverser, Resources=\-1, Bytes=\-1\).
 
-## type [CronDiff](<https://github.com/alehatsman/mooncake/blob/master/internal/actions/diff_payloads.go#L150-L166>)
+## type [CronDiff](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/diff_payloads.go#L150-L166>)
 
 CronDiff is the typed Before/After payload when an actions.Diff describes an os.cron mutation. The handler reports intent only \(no /etc/cron.d read at plan time\). Consumers dispatch on Resource.Attributes\["kind"\] == "os.cron".
 
@@ -701,7 +701,7 @@ type CronDiff struct {
 }
 ```
 
-## type [Diff](<https://github.com/alehatsman/mooncake/blob/master/internal/actions/handler_abi.go#L35-L61>)
+## type [Diff](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/handler_abi.go#L35-L61>)
 
 Diff is a machine\-readable structural delta of what a step would change. Returned by handlers implementing the Differ interface; consumed by mooncake plan \-\-format json, the agent SDK, and \(later\) the policy / transaction layers.
 
@@ -737,7 +737,7 @@ type Diff struct {
 }
 ```
 
-## type [DiffLine](<https://github.com/alehatsman/mooncake/blob/master/internal/actions/handler_abi.go#L107-L111>)
+## type [DiffLine](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/handler_abi.go#L107-L111>)
 
 DiffLine is one entry in a unified\-diff\-style breakdown of text content. Op uses single\-character markers matching \`diff \-u\` output: "\+" added, "\-" removed, " " context. LineNumber refers to the post\-change file when Op \!= "\-", to the pre\-change file when "\-", and to either when " ".
 
@@ -749,7 +749,7 @@ type DiffLine struct {
 }
 ```
 
-## type [DiffOp](<https://github.com/alehatsman/mooncake/blob/master/internal/actions/handler_abi.go#L114>)
+## type [DiffOp](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/handler_abi.go#L114>)
 
 DiffOp is the one\-character marker for a DiffLine.
 
@@ -765,7 +765,7 @@ const (
 )
 ```
 
-## type [Differ](<https://github.com/alehatsman/mooncake/blob/master/internal/actions/handler_abi.go#L190-L192>)
+## type [Differ](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/handler_abi.go#L190-L192>)
 
 Differ is the optional interface handlers implement to produce a structured per\-step Diff. Called in plan mode by the planner; consumed by JSON plan output, the agent SDK, and any UI past \`mooncake plan\`.
 
@@ -777,7 +777,7 @@ type Differ interface {
 }
 ```
 
-### func [ResolveDiffer](<https://github.com/alehatsman/mooncake/blob/master/internal/actions/registry_abi.go#L28>)
+### func [ResolveDiffer](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/registry_abi.go#L28>)
 
 ```go
 func ResolveDiffer(h Handler) Differ
@@ -785,7 +785,7 @@ func ResolveDiffer(h Handler) Differ
 
 ResolveDiffer returns h as a Differ. If h doesn't implement Differ, a default wrapper is returned that derives a coarse Diff from h.Run in plan mode.
 
-## type [Effect](<https://github.com/alehatsman/mooncake/blob/master/internal/actions/performer.go#L40-L49>)
+## type [Effect](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/performer.go#L40-L49>)
 
 Effect is the result of a Performer call.
 
@@ -820,7 +820,7 @@ type Effect struct {
 }
 ```
 
-### func \(Effect\) [Changed](<https://github.com/alehatsman/mooncake/blob/master/internal/actions/performer.go#L53>)
+### func \(Effect\) [Changed](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/performer.go#L53>)
 
 ```go
 func (e Effect) Changed() bool
@@ -828,7 +828,7 @@ func (e Effect) Changed() bool
 
 Changed reports whether this Effect represents a state change — either performed \(ModeApply\) or predicted \(ModePlan\).
 
-## type [FirewallDiff](<https://github.com/alehatsman/mooncake/blob/master/internal/actions/diff_payloads.go#L98-L110>)
+## type [FirewallDiff](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/diff_payloads.go#L98-L110>)
 
 FirewallDiff is the typed Before/After payload when an actions.Diff describes an os.firewall mutation. The handler reports intent only — rule details are intentionally NOT echoed in After because rule lists may carry security\-sensitive ports / source addresses. The renderer surfaces backend \+ count \+ state. Consumers dispatch on Resource.Attributes\["kind"\] == "os.firewall".
 
@@ -848,7 +848,7 @@ type FirewallDiff struct {
 }
 ```
 
-## type [GitCheckoutDiff](<https://github.com/alehatsman/mooncake/blob/master/internal/actions/diff_payloads.go#L196-L206>)
+## type [GitCheckoutDiff](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/diff_payloads.go#L196-L206>)
 
 GitCheckoutDiff is the typed Before/After payload when an actions.Diff describes a git.checkout mutation. Consumers dispatch on Resource.Attributes\["kind"\] == "git.checkout". Before holds the observed HeadSHA when dest is a git repo at plan time; After holds the requested Ref. After.HeadSHA is empty at plan time — ref resolution happens at apply.
 
@@ -866,7 +866,7 @@ type GitCheckoutDiff struct {
 }
 ```
 
-## type [GitCloneDiff](<https://github.com/alehatsman/mooncake/blob/master/internal/actions/diff_payloads.go#L282-L296>)
+## type [GitCloneDiff](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/diff_payloads.go#L282-L296>)
 
 GitCloneDiff is the typed Before/After payload when an actions.Diff describes a git.clone mutation. Before holds the observed HeadSHA when dest is already a git repo at plan time; After holds the requested repo URL \+ ref. After.HeadSHA is empty at plan time — resolution happens at apply. Consumers dispatch on Resource.Attributes\["kind"\] == "git.clone".
 
@@ -888,7 +888,7 @@ type GitCloneDiff struct {
 }
 ```
 
-## type [GitConfigDiff](<https://github.com/alehatsman/mooncake/blob/master/internal/actions/diff_payloads.go#L214-L225>)
+## type [GitConfigDiff](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/diff_payloads.go#L214-L225>)
 
 GitConfigDiff is the typed Before/After payload when an actions.Diff describes a git.config mutation. The handler reports declared intent \(set / unset per key\) — it does not shell out to git at plan time to compare current values. Consumers dispatch on Resource.Attributes\["kind"\] == "git.config".
 
@@ -907,7 +907,7 @@ type GitConfigDiff struct {
 }
 ```
 
-## type [GitConfigEntry](<https://github.com/alehatsman/mooncake/blob/master/internal/actions/diff_payloads.go#L228-L232>)
+## type [GitConfigEntry](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/diff_payloads.go#L228-L232>)
 
 GitConfigEntry is one key\-level intent in a GitConfigDiff.
 
@@ -919,7 +919,7 @@ type GitConfigEntry struct {
 }
 ```
 
-## type [GroupDiff](<https://github.com/alehatsman/mooncake/blob/master/internal/actions/diff_payloads.go#L78-L90>)
+## type [GroupDiff](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/diff_payloads.go#L78-L90>)
 
 GroupDiff is the typed Before/After payload when an actions.Diff describes an os.group mutation. Same intent\-only convention as UserDiff. Consumers dispatch on Resource.Attributes\["kind"\] == "os.group".
 
@@ -939,7 +939,7 @@ type GroupDiff struct {
 }
 ```
 
-## type [Handler](<https://github.com/alehatsman/mooncake/blob/master/internal/actions/handler.go#L144-L166>)
+## type [Handler](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/handler.go#L144-L166>)
 
 Handler defines the interface that all action handlers must implement.
 
@@ -975,7 +975,7 @@ type Handler interface {
 }
 ```
 
-### func [Get](<https://github.com/alehatsman/mooncake/blob/master/internal/actions/registry.go#L135>)
+### func [Get](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/registry.go#L135>)
 
 ```go
 func Get(actionType string) (Handler, bool)
@@ -983,7 +983,7 @@ func Get(actionType string) (Handler, bool)
 
 Get retrieves a handler from the global registry.
 
-### func [NewHandlerFunc](<https://github.com/alehatsman/mooncake/blob/master/internal/actions/handler.go#L178-L183>)
+### func [NewHandlerFunc](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/handler.go#L178-L183>)
 
 ```go
 func NewHandlerFunc(metadata ActionMetadata, validate func(*config.Step) error, execute func(Context, *config.Step) (Result, error), dryRun func(Context, *config.Step) error) Handler
@@ -991,7 +991,7 @@ func NewHandlerFunc(metadata ActionMetadata, validate func(*config.Step) error, 
 
 NewHandlerFunc creates a Handler from function implementations.
 
-## type [HandlerFunc](<https://github.com/alehatsman/mooncake/blob/master/internal/actions/handler.go#L170-L175>)
+## type [HandlerFunc](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/handler.go#L170-L175>)
 
 HandlerFunc is a function type that implements Handler for simple actions. This allows creating handlers without defining a new type.
 
@@ -1001,25 +1001,25 @@ type HandlerFunc struct {
 }
 ```
 
-### func \(\*HandlerFunc\) [DryRun](<https://github.com/alehatsman/mooncake/blob/master/internal/actions/handler.go#L207>)
+### func \(\*HandlerFunc\) [DryRun](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/handler.go#L207>)
 
 ```go
 func (h *HandlerFunc) DryRun(ctx Context, step *config.Step) error
 ```
 
-### func \(\*HandlerFunc\) [Execute](<https://github.com/alehatsman/mooncake/blob/master/internal/actions/handler.go#L203>)
+### func \(\*HandlerFunc\) [Execute](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/handler.go#L203>)
 
 ```go
 func (h *HandlerFunc) Execute(ctx Context, step *config.Step) (Result, error)
 ```
 
-### func \(\*HandlerFunc\) [Metadata](<https://github.com/alehatsman/mooncake/blob/master/internal/actions/handler.go#L192>)
+### func \(\*HandlerFunc\) [Metadata](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/handler.go#L192>)
 
 ```go
 func (h *HandlerFunc) Metadata() ActionMetadata
 ```
 
-### func \(\*HandlerFunc\) [Run](<https://github.com/alehatsman/mooncake/blob/master/internal/actions/handler.go#L220>)
+### func \(\*HandlerFunc\) [Run](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/handler.go#L220>)
 
 ```go
 func (h *HandlerFunc) Run(ctx Context, step *config.Step) (Result, error)
@@ -1027,13 +1027,13 @@ func (h *HandlerFunc) Run(ctx Context, step *config.Step) (Result, error)
 
 Run satisfies the Spec 16 Handler contract. In ModePlan it reports "not checkable" by default; in ModeApply it delegates to the underlying execute function. HandlerFunc users wanting accurate plan\-mode behavior should construct a typed Handler with its own Run method instead.
 
-### func \(\*HandlerFunc\) [Validate](<https://github.com/alehatsman/mooncake/blob/master/internal/actions/handler.go#L196>)
+### func \(\*HandlerFunc\) [Validate](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/handler.go#L196>)
 
 ```go
 func (h *HandlerFunc) Validate(step *config.Step) error
 ```
 
-## type [Mode](<https://github.com/alehatsman/mooncake/blob/master/internal/actions/mode.go#L12>)
+## type [Mode](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/mode.go#L12>)
 
 Mode is the high\-level dispatch mode for an action handler.
 
@@ -1055,7 +1055,7 @@ const (
 )
 ```
 
-### func \(Mode\) [String](<https://github.com/alehatsman/mooncake/blob/master/internal/actions/mode.go#L23>)
+### func \(Mode\) [String](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/mode.go#L23>)
 
 ```go
 func (m Mode) String() string
@@ -1063,7 +1063,7 @@ func (m Mode) String() string
 
 String returns a stable human\-readable name for the mode.
 
-## type [MountDiff](<https://github.com/alehatsman/mooncake/blob/master/internal/actions/diff_payloads.go#L172-L188>)
+## type [MountDiff](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/diff_payloads.go#L172-L188>)
 
 MountDiff is the typed Before/After payload when an actions.Diff describes an os.mount mutation. The handler reports intent only \(no /etc/fstab or /proc/mounts read at plan time\). Consumers dispatch on Resource.Attributes\["kind"\] == "os.mount".
 
@@ -1087,7 +1087,7 @@ type MountDiff struct {
 }
 ```
 
-## type [ObserveResult](<https://github.com/alehatsman/mooncake/blob/master/internal/actions/observe.go#L26-L44>)
+## type [ObserveResult](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/observe.go#L26-L44>)
 
 ObserveResult is the shared envelope returned by every observe.\* handler \(spec\-59\). The typed per\-handler payload lives in Value; the universal fields \(Found, AsOf, Error\) wrap it so consumers can branch on observation outcome without knowing the per\-handler type.
 
@@ -1124,7 +1124,7 @@ type ObserveResult struct {
 }
 ```
 
-### func [PlanDeferred](<https://github.com/alehatsman/mooncake/blob/master/internal/actions/observe.go#L82>)
+### func [PlanDeferred](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/observe.go#L82>)
 
 ```go
 func PlanDeferred(emptyValue any) ObserveResult
@@ -1136,7 +1136,7 @@ Proposal\-06: Error stays empty here. A deferred observation is not a probe fail
 
 emptyValue should be a zero\-value of the handler's typed payload struct, so templates that index into it still type\-check.
 
-## type [Operation](<https://github.com/alehatsman/mooncake/blob/master/internal/actions/handler_abi.go#L93>)
+## type [Operation](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/handler_abi.go#L93>)
 
 Operation is a coarse classifier shared by every action's Diff. Lets a UI sort/group changes \("3 creates, 1 update, 0 deletes"\) without looking at the typed Before/After.
 
@@ -1153,7 +1153,7 @@ const (
 )
 ```
 
-## type [PackageDiff](<https://github.com/alehatsman/mooncake/blob/master/internal/actions/diff_payloads.go#L26-L40>)
+## type [PackageDiff](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/diff_payloads.go#L26-L40>)
 
 PackageDiff is the typed Before/After payload when an actions.Diff has Resource.Kind == ResourcePackage. Today's pkg handler reports intent only — it does not probe the package manager from Diff — so After describes the desired terminal state and Before is left nil. A future "with measurement" mode \(e.g. \`plan \-\-probe\`\) could fill in Before.Installed once probing is in scope.
 
@@ -1175,7 +1175,7 @@ type PackageDiff struct {
 }
 ```
 
-## type [Performer](<https://github.com/alehatsman/mooncake/blob/master/internal/actions/performer.go#L85-L138>)
+## type [Performer](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/performer.go#L85-L138>)
 
 Performer executes filesystem and command primitives in either ModeApply \(real side effects\) or ModePlan \(state inspection only, returning a prediction\).
 
@@ -1238,7 +1238,7 @@ type Performer interface {
 }
 ```
 
-## type [PerformerOpts](<https://github.com/alehatsman/mooncake/blob/master/internal/actions/performer.go#L72-L75>)
+## type [PerformerOpts](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/performer.go#L72-L75>)
 
 PerformerOpts carries optional flags that apply to most Performer calls. Become/BecomeUser were removed in spec\-72 Layer C: the step's AsUser is bound onto the Performer at ec.Effects\(\) time and drives escalation transparently, so handlers no longer pass a per\-call become flag.
 
@@ -1253,7 +1253,7 @@ type PerformerOpts struct {
 }
 ```
 
-## type [PermissionSet](<https://github.com/alehatsman/mooncake/blob/master/internal/actions/handler_abi.go#L159-L179>)
+## type [PermissionSet](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/handler_abi.go#L159-L179>)
 
 PermissionSet declares the privileges and external dependencies a step needs to run. Consumed by executor preflight \(fail\-fast if a required binary is missing or Sudo is required and we're not elevated\), plan output \(surface \`requires:\` lines per step\), and the future policy DSL.
 
@@ -1281,7 +1281,7 @@ type PermissionSet struct {
 }
 ```
 
-## type [Permitter](<https://github.com/alehatsman/mooncake/blob/master/internal/actions/handler_abi.go#L223-L225>)
+## type [Permitter](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/handler_abi.go#L223-L225>)
 
 Permitter is the optional interface for declaring required privileges. Cheap to implement \(often a static return\) and high\-leverage: surfaces permission requirements at plan time instead of as runtime failures.
 
@@ -1291,7 +1291,7 @@ type Permitter interface {
 }
 ```
 
-### func [ResolvePermitter](<https://github.com/alehatsman/mooncake/blob/master/internal/actions/registry_abi.go#L62>)
+### func [ResolvePermitter](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/registry_abi.go#L62>)
 
 ```go
 func ResolvePermitter(h Handler) Permitter
@@ -1299,7 +1299,7 @@ func ResolvePermitter(h Handler) Permitter
 
 ResolvePermitter returns h as a Permitter. If h doesn't implement Permitter, an empty PermissionSet is returned — meaning "no special privileges declared." Callers should treat this as "unknown requirements," not "guaranteed safe."
 
-## type [PkgUpgradeDiff](<https://github.com/alehatsman/mooncake/blob/master/internal/actions/diff_payloads.go#L342-L354>)
+## type [PkgUpgradeDiff](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/diff_payloads.go#L342-L354>)
 
 PkgUpgradeDiff is the typed Before/After payload when an actions.Diff describes a pkg.upgrade mutation. Before is nil — Diff doesn't query the package manager for the per\-package version delta. Consumers dispatch on Resource.Attributes\["kind"\] == "pkg.upgrade".
 
@@ -1319,7 +1319,7 @@ type PkgUpgradeDiff struct {
 }
 ```
 
-## type [PropertySchema](<https://github.com/alehatsman/mooncake/blob/master/internal/actions/validation.go#L26-L30>)
+## type [PropertySchema](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/validation.go#L26-L30>)
 
 PropertySchema represents a property's schema
 
@@ -1331,7 +1331,7 @@ type PropertySchema struct {
 }
 ```
 
-## type [RawRunner](<https://github.com/alehatsman/mooncake/blob/master/internal/actions/interfaces.go#L299-L301>)
+## type [RawRunner](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/interfaces.go#L299-L301>)
 
 RawRunner is the spec\-69 phase 2\-3 opt\-in alternative to Runner. Handlers that implement RawRunner delegate retry\-loop and result\- override \(changed\_when / failed\_when\) responsibility to the executor. RunRaw must:
 
@@ -1353,7 +1353,7 @@ type RawRunner interface {
 }
 ```
 
-## type [Registry](<https://github.com/alehatsman/mooncake/blob/master/internal/actions/registry.go#L36-L39>)
+## type [Registry](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/registry.go#L36-L39>)
 
 Registry manages registered action handlers through a thread\-safe map.
 
@@ -1371,7 +1371,7 @@ type Registry struct {
 }
 ```
 
-### func [NewRegistry](<https://github.com/alehatsman/mooncake/blob/master/internal/actions/registry.go#L42>)
+### func [NewRegistry](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/registry.go#L42>)
 
 ```go
 func NewRegistry() *Registry
@@ -1379,7 +1379,7 @@ func NewRegistry() *Registry
 
 NewRegistry creates a new action registry.
 
-### func \(\*Registry\) [Count](<https://github.com/alehatsman/mooncake/blob/master/internal/actions/registry.go#L109>)
+### func \(\*Registry\) [Count](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/registry.go#L109>)
 
 ```go
 func (r *Registry) Count() int
@@ -1387,7 +1387,7 @@ func (r *Registry) Count() int
 
 Count returns the number of registered handlers.
 
-### func \(\*Registry\) [Get](<https://github.com/alehatsman/mooncake/blob/master/internal/actions/registry.go#L67>)
+### func \(\*Registry\) [Get](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/registry.go#L67>)
 
 ```go
 func (r *Registry) Get(actionType string) (Handler, bool)
@@ -1395,7 +1395,7 @@ func (r *Registry) Get(actionType string) (Handler, bool)
 
 Get retrieves a handler by action type name. Returns the handler and true if found, nil and false otherwise.
 
-### func \(\*Registry\) [Has](<https://github.com/alehatsman/mooncake/blob/master/internal/actions/registry.go#L100>)
+### func \(\*Registry\) [Has](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/registry.go#L100>)
 
 ```go
 func (r *Registry) Has(actionType string) bool
@@ -1403,7 +1403,7 @@ func (r *Registry) Has(actionType string) bool
 
 Has checks if a handler is registered for the given action type.
 
-### func \(\*Registry\) [List](<https://github.com/alehatsman/mooncake/blob/master/internal/actions/registry.go#L83>)
+### func \(\*Registry\) [List](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/registry.go#L83>)
 
 ```go
 func (r *Registry) List() []ActionMetadata
@@ -1413,7 +1413,7 @@ List returns metadata for all registered handlers. Useful for introspection and 
 
 proposal\-05: the four spec\-22 ABI capability bools \(ImplementsDiff/Cost/Reverse/Permissions\) are populated here from the handler's live interface satisfaction — handler authors do not declare them by hand, so the columns can't drift from reality as new methods are added.
 
-### func \(\*Registry\) [Register](<https://github.com/alehatsman/mooncake/blob/master/internal/actions/registry.go#L51>)
+### func \(\*Registry\) [Register](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/registry.go#L51>)
 
 ```go
 func (r *Registry) Register(handler Handler) error
@@ -1421,7 +1421,7 @@ func (r *Registry) Register(handler Handler) error
 
 Register adds a handler to the registry. This is typically called from init\(\) functions in action packages. Returns an error if a handler with the same name is already registered.
 
-## type [RepoDiff](<https://github.com/alehatsman/mooncake/blob/master/internal/actions/diff_payloads.go#L240-L251>)
+## type [RepoDiff](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/diff_payloads.go#L240-L251>)
 
 RepoDiff is the typed Before/After payload when an actions.Diff describes a pkg.repo mutation. The handler reports intent only — reading the existing sources list and matching it to the requested shape is non\-trivial across managers and out of scope for the cheap\-Diff contract. Before stays nil. Consumers dispatch on Resource.Attributes\["kind"\] == "pkg.repo".
 
@@ -1440,7 +1440,7 @@ type RepoDiff struct {
 }
 ```
 
-## type [ResourceKind](<https://github.com/alehatsman/mooncake/blob/master/internal/actions/handler_abi.go#L77>)
+## type [ResourceKind](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/handler_abi.go#L77>)
 
 ResourceKind tags a ResourceRef so consumers can dispatch on the expected shape of Before / After. Kept open\-ended as a string type so future actions \(k8s objects, cloud resources\) can add their own kinds without breaking consumers that don't recognize them.
 
@@ -1461,7 +1461,7 @@ const (
 )
 ```
 
-## type [ResourceRef](<https://github.com/alehatsman/mooncake/blob/master/internal/actions/handler_abi.go#L67-L71>)
+## type [ResourceRef](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/handler_abi.go#L67-L71>)
 
 ResourceRef identifies the target of a step's change. Kind selects the schema of any typed metadata the consumer might need; Identifier is the human\-readable handle \(path / package name / service unit\). Attributes carries optional extras without forcing a per\-kind struct.
 
@@ -1473,7 +1473,7 @@ type ResourceRef struct {
 }
 ```
 
-## type [Result](<https://github.com/alehatsman/mooncake/blob/master/internal/actions/interfaces.go#L188-L268>)
+## type [Result](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/interfaces.go#L188-L268>)
 
 Result represents the outcome of an action execution.
 
@@ -1583,7 +1583,7 @@ type Result interface {
 }
 ```
 
-## type [Retryable](<https://github.com/alehatsman/mooncake/blob/master/internal/actions/interfaces.go#L318-L320>)
+## type [Retryable](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/interfaces.go#L318-L320>)
 
 Retryable is an optional companion to RawRunner. Handlers that implement it can decide per\-attempt whether a retry should be tried — useful for actions like http.request where 5xx/429/ timeout errors are retryable but 4xx errors aren't.
 
@@ -1597,7 +1597,7 @@ type Retryable interface {
 }
 ```
 
-## type [Reverser](<https://github.com/alehatsman/mooncake/blob/master/internal/actions/handler_abi.go#L209-L211>)
+## type [Reverser](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/handler_abi.go#L209-L211>)
 
 Reverser is the optional interface handlers implement to declare how their effect is undone. Spec\-30 \(\`transaction:\` blocks\) is the primary consumer: on transaction failure the executor walks completed steps in reverse order and applies the Step each Reverser returns.
 
@@ -1611,7 +1611,7 @@ type Reverser interface {
 }
 ```
 
-### func [ResolveReverser](<https://github.com/alehatsman/mooncake/blob/master/internal/actions/registry_abi.go#L40>)
+### func [ResolveReverser](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/registry_abi.go#L40>)
 
 ```go
 func ResolveReverser(h Handler) Reverser
@@ -1619,7 +1619,7 @@ func ResolveReverser(h Handler) Reverser
 
 ResolveReverser returns h as a Reverser. If h doesn't implement Reverser, a default that returns \(nil, nil\) is returned — i.e. "no reverse needed", NOT "irreversible." Handlers that want to declare themselves irreversible should implement Reverser and return an explicit error.
 
-## type [Runner](<https://github.com/alehatsman/mooncake/blob/master/internal/actions/interfaces.go#L274-L276>)
+## type [Runner](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/interfaces.go#L274-L276>)
 
 Runner is the unified handler entry point introduced by Spec 16. The Handler interface now embeds Run as a required method; Runner remains as a named type alias for clarity in call sites that want to express "the Run capability" specifically.
 
@@ -1629,7 +1629,7 @@ type Runner interface {
 }
 ```
 
-## type [SSHKeyDiff](<https://github.com/alehatsman/mooncake/blob/master/internal/actions/diff_payloads.go#L303-L319>)
+## type [SSHKeyDiff](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/diff_payloads.go#L303-L319>)
 
 SSHKeyDiff is the typed Before/After payload when an actions.Diff describes an os.ssh\_key mutation. Intent\-only \(no authorized\_keys read at plan time\). Key material is intentionally NOT echoed — user\-supplied secrets adjacent. Consumers dispatch on Resource.Attributes\["kind"\] == "os.ssh\_key".
 
@@ -1653,7 +1653,7 @@ type SSHKeyDiff struct {
 }
 ```
 
-## type [Schema](<https://github.com/alehatsman/mooncake/blob/master/internal/actions/validation.go#L13-L15>)
+## type [Schema](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/validation.go#L13-L15>)
 
 Schema represents the JSON schema structure
 
@@ -1663,7 +1663,7 @@ type Schema struct {
 }
 ```
 
-## type [ServiceDiff](<https://github.com/alehatsman/mooncake/blob/master/internal/actions/diff_payloads.go#L118-L144>)
+## type [ServiceDiff](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/diff_payloads.go#L118-L144>)
 
 ServiceDiff is the typed Before/After payload when an actions.Diff describes an os.systemd mutation. Spec\-66 wave 4 targets os.systemd only; the legacy os.service handler keeps its package\-local payload until a later wave migrates it. Consumers dispatch on the typed After value \(not on Resource.Kind, which is shared with os.service via ResourceService\).
 
@@ -1697,7 +1697,7 @@ type ServiceDiff struct {
 }
 ```
 
-## type [SysctlDiff](<https://github.com/alehatsman/mooncake/blob/master/internal/actions/diff_payloads.go#L325-L335>)
+## type [SysctlDiff](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/diff_payloads.go#L325-L335>)
 
 SysctlDiff is the typed Before/After payload when an actions.Diff describes an os.sysctl mutation. Intent\-only — no /proc/sys read at plan time. Consumers dispatch on Resource.Attributes\["kind"\] == "os.sysctl".
 
@@ -1715,7 +1715,7 @@ type SysctlDiff struct {
 }
 ```
 
-## type [TransactionDiff](<https://github.com/alehatsman/mooncake/blob/master/internal/actions/diff_payloads.go#L258-L274>)
+## type [TransactionDiff](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/diff_payloads.go#L258-L274>)
 
 TransactionDiff is the synthesized After payload for a transaction\- parent step. Transactions have no handler, so the planner cannot emit a Differ.Diff — instead the plan\-render call site synthesizes one from the parent step \+ its sibling children. Consumers dispatch on Resource.Attributes\["kind"\] == "transaction".
 
@@ -1739,7 +1739,7 @@ type TransactionDiff struct {
 }
 ```
 
-## type [TryDiff](<https://github.com/alehatsman/mooncake/blob/master/internal/actions/diff_payloads.go#L359-L374>)
+## type [TryDiff](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/diff_payloads.go#L359-L374>)
 
 TryDiff is the synthesized After payload for a try\-parent step. Same shape rationale as TransactionDiff. Consumers dispatch on Resource.Attributes\["kind"\] == "try".
 
@@ -1762,7 +1762,7 @@ type TryDiff struct {
 }
 ```
 
-## type [UserDiff](<https://github.com/alehatsman/mooncake/blob/master/internal/actions/diff_payloads.go#L47-L72>)
+## type [UserDiff](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/diff_payloads.go#L47-L72>)
 
 UserDiff is the typed Before/After payload when an actions.Diff describes an os.user mutation. The handler emits intent only \(no getent probe at plan time\); Before stays nil. Resource.Kind is ResourceOther on the wire today \(no dedicated kind\); consumers dispatch on Resource.Attributes\["kind"\] == "os.user".
 
