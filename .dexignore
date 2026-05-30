@@ -1,0 +1,9 @@
+# Files skipped by the dex semantic-search index (gitignore syntax).
+# They stay in git; only RAG indexing ignores them.
+
+# ASCII-art banner — decoration, no search value.
+mooncake_codes.txt
+
+# Raw proc/darwin command-output fixtures: uniform numeric dumps that
+# pollute semantic results without adding code intel.
+internal/metrics/testdata/
