@@ -206,7 +206,7 @@ type ParsedConfig struct {
 
 // File represents a file or directory operation in a configuration step.
 type File struct {
-	Path    string `yaml:"path" json:"path" plan:"path"`
+	Path    string `yaml:"path" json:"path" plan:"outpath"`
 	State   string `yaml:"state" json:"state,omitempty"` // file|directory|absent|link|hardlink|touch|perms
 	Content string `yaml:"content" json:"content,omitempty"`
 	Mode    string `yaml:"mode" json:"mode,omitempty"` // Octal file permissions (e.g., "0644", "0755")
@@ -227,7 +227,7 @@ type File struct {
 // Template represents a template rendering operation in a configuration step.
 type Template struct {
 	Src  string                  `yaml:"src" json:"src" plan:"path"`
-	Dest string                  `yaml:"dest" json:"dest" plan:"path"`
+	Dest string                  `yaml:"dest" json:"dest" plan:"outpath"`
 	Vars *map[string]interface{} `yaml:"vars" json:"vars,omitempty"`
 	Mode string                  `yaml:"mode" json:"mode,omitempty"` // Octal file permissions (e.g., "0644", "0755")
 }
@@ -327,7 +327,7 @@ type CommandAction struct {
 // Copy represents a file copy operation in a configuration step.
 type Copy struct {
 	Src      string `yaml:"src" json:"src" plan:"path"`         // Source file path
-	Dest     string `yaml:"dest" json:"dest" plan:"path"`       // Destination file path
+	Dest     string `yaml:"dest" json:"dest" plan:"outpath"`    // Destination file path
 	Mode     string `yaml:"mode" json:"mode,omitempty"`         // Octal file permissions (e.g., "0644", "0755")
 	Owner    string `yaml:"owner" json:"owner,omitempty"`       // Username or UID
 	Group    string `yaml:"group" json:"group,omitempty"`       // Groupname or GID

@@ -21,7 +21,7 @@ Package facts provides system information collection for different operating sys
 - [type ToolSpec](<#type-toolspec>)
 
 
-## func [ClearCache](<https://github.com/alehatsman/mooncake/blob/main/internal/facts/cache.go#L21>)
+## func ClearCache
 
 ```go
 func ClearCache()
@@ -29,7 +29,7 @@ func ClearCache()
 
 ClearCache forces re\-collection on next Collect\(\) call. This is primarily intended for testing purposes.
 
-## type [Disk](<https://github.com/alehatsman/mooncake/blob/main/internal/facts/facts.go#L97-L105>)
+## type Disk
 
 Disk represents a storage device.
 
@@ -45,7 +45,7 @@ type Disk struct {
 }
 ```
 
-## type [Facts](<https://github.com/alehatsman/mooncake/blob/main/internal/facts/facts.go#L22-L85>)
+## type Facts
 
 Facts contains collected system information.
 
@@ -116,7 +116,7 @@ type Facts struct {
 }
 ```
 
-### func [Collect](<https://github.com/alehatsman/mooncake/blob/main/internal/facts/cache.go#L12>)
+### func Collect
 
 ```go
 func Collect() *Facts
@@ -124,7 +124,7 @@ func Collect() *Facts
 
 Collect gathers system facts with per\-process caching. Facts are collected only once per execution and cached in memory.
 
-### func \(\*Facts\) [ToMap](<https://github.com/alehatsman/mooncake/blob/main/internal/facts/facts.go#L186>)
+### func \(\*Facts\) ToMap
 
 ```go
 func (f *Facts) ToMap() map[string]interface{}
@@ -132,7 +132,7 @@ func (f *Facts) ToMap() map[string]interface{}
 
 ToMap converts Facts to a map for use in templates.
 
-## type [GPU](<https://github.com/alehatsman/mooncake/blob/main/internal/facts/facts.go#L108-L114>)
+## type GPU
 
 GPU represents a graphics card.
 
@@ -146,7 +146,7 @@ type GPU struct {
 }
 ```
 
-## type [NetworkInterface](<https://github.com/alehatsman/mooncake/blob/main/internal/facts/facts.go#L88-L94>)
+## type NetworkInterface
 
 NetworkInterface represents a network interface.
 
@@ -160,7 +160,7 @@ type NetworkInterface struct {
 }
 ```
 
-## type [OllamaModel](<https://github.com/alehatsman/mooncake/blob/main/internal/facts/facts.go#L117-L122>)
+## type OllamaModel
 
 OllamaModel represents an installed Ollama model.
 
@@ -173,7 +173,7 @@ type OllamaModel struct {
 }
 ```
 
-## type [ToolSpec](<https://github.com/alehatsman/mooncake/blob/main/internal/facts/toolchains.go#L160-L167>)
+## type ToolSpec
 
 ToolSpec describes how to probe one CLI tool for its version. This is the public form used in YAML and by callers.
 

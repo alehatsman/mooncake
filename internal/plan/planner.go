@@ -109,6 +109,28 @@ type ExpansionContext struct {
 	// entries. Untagged steps still run on a tag filter; unnamed steps
 	// are dropped on a name filter (see utils.MatchesNames).
 	Names []string
+	// FromComponent marks steps expanded out of a `use:`d component (epic
+	// #93, M2). For those, CurrentDir is the module-cache dir — not a valid
+	// output base — so output paths (plan:"outpath") resolve against the
+	// invocation dir (the consumer's tree) instead. Top-level and plain
+	// include steps keep output paths origin-relative (the established,
+	// depended-upon behavior). Inherited by nested includes.
+	FromComponent bool
+}
+
+// outputBaseDir returns the dir that output paths (plan:"outpath") resolve
+// against at plan time. For component steps that is the invocation dir (the
+// consumer's tree); otherwise the origin dir (CurrentDir). Returns "" only
+// when a component step has no invocation_dir in scope, in which case the
+// join is deferred to apply time rather than baked against the wrong base.
+func (ctx *ExpansionContext) outputBaseDir() string {
+	if ctx.FromComponent {
+		if inv, ok := ctx.Variables["invocation_dir"].(string); ok && inv != "" {
+			return inv
+		}
+		return ""
+	}
+	return ctx.CurrentDir
 }
 
 // renderVars returns ctx.Variables overlaid with the per-step
@@ -550,11 +572,12 @@ func (p *Planner) expandInclude(step config.Step, ctx *ExpansionContext, plan *P
 
 	// Create new context with updated current directory
 	newCtx := &ExpansionContext{
-		Variables:  ctx.Variables, // Share variables
-		CurrentDir: filepath.Dir(absIncludePath),
-		Tags:       ctx.Tags,
-		SkipTags:   ctx.SkipTags,
-		Names:      ctx.Names,
+		Variables:     ctx.Variables, // Share variables
+		CurrentDir:    filepath.Dir(absIncludePath),
+		Tags:          ctx.Tags,
+		SkipTags:      ctx.SkipTags,
+		Names:         ctx.Names,
+		FromComponent: ctx.FromComponent, // a file included from a component is still component output
 	}
 
 	// Tags propagate BEFORE expansion. The per-step `Skipped` flag (set by
@@ -689,11 +712,12 @@ func (p *Planner) tryExpandUse(step config.Step, ctx *ExpansionContext, plan *Pl
 	// need palette.* / editor.* etc. in scope). CurrentDir flips to the
 	// component's base dir for relative paths in its own includes.
 	childCtx := &ExpansionContext{
-		Variables:  ctx.Variables,
-		CurrentDir: def.BaseDir,
-		Tags:       ctx.Tags,
-		SkipTags:   ctx.SkipTags,
-		Names:      ctx.Names,
+		Variables:     ctx.Variables,
+		CurrentDir:    def.BaseDir,
+		Tags:          ctx.Tags,
+		SkipTags:      ctx.SkipTags,
+		Names:         ctx.Names,
+		FromComponent: true, // steps below originate from the module cache
 	}
 
 	// Clone the component's steps + propagate parent tags before expansion.
@@ -1086,7 +1110,10 @@ func (p *Planner) renderActionTemplates(step *config.Step, ctx *ExpansionContext
 		cp := reflect.New(orig.Type())
 		cp.Elem().Set(orig)
 		fv.Set(cp)
-		if err := walkAndRender(cp.Elem(), render, ctx.CurrentDir); err != nil {
+		// Output path fields (plan:"outpath") resolve against outputBaseDir
+		// (invocation dir for component steps, origin otherwise); source path
+		// fields (plan:"path") always against the origin (CurrentDir).
+		if err := walkAndRender(cp.Elem(), render, ctx.CurrentDir, ctx.outputBaseDir()); err != nil {
 			return fmt.Errorf("step %q: %w", step.Name, err)
 		}
 		break
@@ -1200,12 +1227,23 @@ func propsHaveUnresolvedTemplates(v interface{}) bool {
 // unchanged; nested templates inside non-string entries would need a
 // deeper recursive walk and are not common enough to handle inline.
 // Track separately if a user hits that.
-func walkAndRender(rv reflect.Value, render func(string) (string, error), currentDir string) error {
+func walkAndRender(rv reflect.Value, render func(string) (string, error), currentDir, outputDir string) error {
 	rt := rv.Type()
 	for i := 0; i < rv.NumField(); i++ {
 		fv := rv.Field(i)
 		sf := rt.Field(i)
-		isPath := sf.Tag.Get("plan") == "path"
+		// plan:"path" → source paths, resolved against the origin dir
+		// (currentDir). plan:"outpath" → output paths (file.copy/template
+		// dest, file.write path), resolved against outputDir — the consumer's
+		// tree for `use:`d component steps so a relative dest doesn't land in
+		// the module cache (epic #93, M2). joinBase selects which; an empty
+		// outputDir defers the join to apply time.
+		planTag := sf.Tag.Get("plan")
+		isPath := planTag == "path" || planTag == "outpath"
+		joinBase := currentDir
+		if planTag == "outpath" {
+			joinBase = outputDir
+		}
 
 		switch fv.Kind() {
 		case reflect.String:
@@ -1216,8 +1254,8 @@ func walkAndRender(rv reflect.Value, render func(string) (string, error), curren
 			if err != nil {
 				return fmt.Errorf("%s: %w", sf.Name, err)
 			}
-			if isPath && shouldJoinPlanPath(rendered) {
-				rendered = filepath.Join(currentDir, rendered)
+			if isPath && joinBase != "" && shouldJoinPlanPath(rendered) {
+				rendered = filepath.Join(joinBase, rendered)
 			}
 			fv.SetString(rendered)
 
@@ -1234,8 +1272,8 @@ func walkAndRender(rv reflect.Value, render func(string) (string, error), curren
 				if err != nil {
 					return fmt.Errorf("%s: %w", sf.Name, err)
 				}
-				if isPath && shouldJoinPlanPath(rendered) {
-					rendered = filepath.Join(currentDir, rendered)
+				if isPath && joinBase != "" && shouldJoinPlanPath(rendered) {
+					rendered = filepath.Join(joinBase, rendered)
 				}
 				cp := reflect.New(fv.Type().Elem())
 				cp.Elem().SetString(rendered)
@@ -1245,7 +1283,7 @@ func walkAndRender(rv reflect.Value, render func(string) (string, error), curren
 				cp := reflect.New(orig.Type())
 				cp.Elem().Set(orig)
 				fv.Set(cp)
-				if err := walkAndRender(cp.Elem(), render, currentDir); err != nil {
+				if err := walkAndRender(cp.Elem(), render, currentDir, outputDir); err != nil {
 					return err
 				}
 			}
