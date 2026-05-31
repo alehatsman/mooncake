@@ -1135,6 +1135,15 @@ type StartConfig struct {
 	// plan and per-step records. R1.1b's internal/apply.Runner uses
 	// this to build its typed *KernelResult. Other callers leave nil.
 	Capture *RunCapture
+
+	// Policy, if non-nil, is the per-run permissions-as-contract gate
+	// (#11) the executor enforces at preflight: an action allow/deny
+	// list, a network-egress switch, and a risk cap. A step that
+	// exceeds it fails the run before its side effects. nil = enforce
+	// nothing (today's behavior). This is the surface moongit hands a
+	// shell-less agent run so the typed-ABI guarantees become an
+	// enforced contract rather than a convention. See policy.go.
+	Policy *Policy
 }
 
 // Start begins execution of a mooncake configuration with the given settings.
@@ -1289,7 +1298,7 @@ func Start(ctx context.Context, startConfig StartConfig, log logger.Logger, publ
 	startConfig.Capture.setPlan(planData)
 
 	// Execute the plan with event publisher
-	return executePlanWithCapture(ctx, planData, sudoPassword, actions.ModeApply, log, publisher, startConfig.Capture)
+	return executePlanWithCapture(ctx, planData, sudoPassword, actions.ModeApply, log, publisher, startConfig.Capture, startConfig.Policy)
 }
 
 // ExecutePlan executes a pre-compiled plan.
@@ -1303,7 +1312,7 @@ func Start(ctx context.Context, startConfig StartConfig, log logger.Logger, publ
 // ctx is checked between steps — see Start for the cancellation
 // contract.
 func ExecutePlan(ctx context.Context, p *plan.Plan, sudoPass string, mode actions.Mode, log logger.Logger, publisher events.Publisher) error {
-	return executePlanWithCapture(ctx, p, sudoPass, mode, log, publisher, nil)
+	return executePlanWithCapture(ctx, p, sudoPass, mode, log, publisher, nil, nil)
 }
 
 // ExecutePlanWithCapture runs a pre-compiled plan and fills the
@@ -1319,13 +1328,13 @@ func ExecutePlan(ctx context.Context, p *plan.Plan, sudoPass string, mode action
 // ctx is checked between steps — see Start for the cancellation
 // contract.
 func ExecutePlanWithCapture(ctx context.Context, p *plan.Plan, sudoPass string, mode actions.Mode, log logger.Logger, publisher events.Publisher, capture *RunCapture) error {
-	return executePlanWithCapture(ctx, p, sudoPass, mode, log, publisher, capture)
+	return executePlanWithCapture(ctx, p, sudoPass, mode, log, publisher, capture, nil)
 }
 
 // executePlanWithCapture is the shared implementation behind
 // ExecutePlan and Start. Pass capture=nil to disable the
 // kernel-result substrate (legacy callers).
-func executePlanWithCapture(ctx context.Context, p *plan.Plan, sudoPass string, mode actions.Mode, log logger.Logger, publisher events.Publisher, capture *RunCapture) error {
+func executePlanWithCapture(ctx context.Context, p *plan.Plan, sudoPass string, mode actions.Mode, log logger.Logger, publisher events.Publisher, capture *RunCapture, policy *Policy) error {
 	steps := p.Steps
 	variables := p.InitialVars
 
@@ -1430,6 +1439,7 @@ func executePlanWithCapture(ctx context.Context, p *plan.Plan, sudoPass string, 
 		Capture:        capture,
 		Ctx:            ctx,
 		Modules:        p.Modules,
+		Policy:         policy,
 	}
 	// R1.1b: Capture.Plan was already set by Start; for the direct
 	// ExecutePlan entry point (where capture is nil) this is a no-op.
@@ -1535,9 +1545,36 @@ func truncateTail(s string, maxLen int) string {
 // the Permitter interface stands alone, so we can introspect without
 // up-casting.
 func dispatchRunner(step config.Step, ec *ExecutionContext, runner actions.Runner) error {
+	// perms is the step's declared PermissionSet, resolved once and
+	// reused by both the spec-22 preflight (Sudo/RequiredBinaries) and
+	// the #11 policy gate below. Empty when the handler implements no
+	// Permitter — meaning "no requirements declared", not "safe".
+	var perms actions.PermissionSet
 	if p, ok := runner.(actions.Permitter); ok {
+		perms = p.Permissions(&step)
 		sudoAvailable := ec.Svc != nil && (ec.Svc.SudoPass != "" || ec.Svc.PasswordlessSudo)
-		if err := preflightPermissions(p.Permissions(&step), &step, sudoAvailable); err != nil {
+		if err := preflightPermissions(perms, &step, sudoAvailable); err != nil {
+			return err
+		}
+	}
+
+	// #11 permissions-as-contract: enforce the per-run policy before any
+	// side effect. This runs for EVERY step — not just Permitters — so
+	// the action allow/deny list can gate handlers like shell/cmd that
+	// declare no PermissionSet (those are exactly the escape hatches a
+	// policy most wants to deny). nil policy enforces nothing. Cost.Risk
+	// is resolved only when a cap is set, so the common no-policy and
+	// no-MaxRisk paths don't pay for an extra handler call.
+	if ec.Svc != nil && ec.Svc.Policy != nil {
+		risk := defaultPolicyRisk
+		if ec.Svc.Policy.MaxRisk > 0 {
+			if c, ok := runner.(actions.Coster); ok {
+				if est, costErr := c.Cost(ec, &step); costErr == nil {
+					risk = est.Risk
+				}
+			}
+		}
+		if err := ec.Svc.Policy.check(&step, perms, risk); err != nil {
 			return err
 		}
 	}

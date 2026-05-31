@@ -169,6 +169,14 @@ type RunServices struct {
 	// `use:` action handler so alias references like `use: postgres` resolve
 	// to a cached module. Empty when the playbook declares no modules.
 	Modules map[string]string
+
+	// Policy is the per-run permissions-as-contract gate (#11). When
+	// non-nil, dispatchRunner checks every step against it before any
+	// side effect — denying disallowed actions, network egress, or
+	// over-risk steps. nil means "no policy; allow everything", which is
+	// every run path that doesn't opt in (CLI apply, fleet, tests). Set
+	// from StartConfig.Policy at run construction. See policy.go.
+	Policy *Policy
 }
 
 // LoopContext holds the current loop iteration state for a step executing

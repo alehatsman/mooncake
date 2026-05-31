@@ -177,7 +177,7 @@ func RunLoop(opts RunOptions) (*LoopResult, error) {
 			}
 		}
 
-		outcome, err := applyPlanIteration(wrappedBytes, opts.RepoRoot, log, gate)
+		outcome, err := applyPlanIteration(wrappedBytes, opts.RepoRoot, log, gate, opts.Policy)
 		if err != nil {
 			return nil, err
 		}
@@ -425,7 +425,7 @@ type planGate func() (ConfirmResult, error)
 // gate is the plan-confirm gate callback. Pass nil to skip the gate
 // (--auto-apply path). When gate returns an edited plan, the tempfile
 // is rewritten with the edited bytes before executor.Start runs.
-func applyPlanIteration(wrappedBytes []byte, repoRoot string, log logger.Logger, gate planGate) (iterationOutcome, error) {
+func applyPlanIteration(wrappedBytes []byte, repoRoot string, log logger.Logger, gate planGate, policy *executor.Policy) (iterationOutcome, error) {
 	var out iterationOutcome
 	tmpFile, err := createPlanTempFile(repoRoot)
 	if err != nil {
@@ -491,6 +491,7 @@ func applyPlanIteration(wrappedBytes []byte, repoRoot string, log logger.Logger,
 	publisher.Subscribe(capture)
 	out.ExecErr = executor.Start(context.Background(), executor.StartConfig{
 		ConfigFilePath: tmpFile.Name(),
+		Policy:         policy,
 	}, log, publisher)
 	publisher.Close()
 	out.LastStepStdout = capture.Last()

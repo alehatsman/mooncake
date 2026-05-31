@@ -1,5 +1,7 @@
 package pilot
 
+import "github.com/alehatsman/mooncake/internal/executor"
+
 type Snapshot struct {
 	Branch       string   `json:"branch"`
 	Head         string   `json:"head"`
@@ -44,6 +46,13 @@ type RunOptions struct {
 	// Style selects the planning style (spec-67 §12.3). Zero value is
 	// StylePlan (the historical default).
 	Style Style
+	// Policy is the per-run permissions-as-contract gate (#11) applied
+	// to every plan the loop executes. nil = enforce nothing. This is
+	// how an unattended agent run (moongit spawning a containerized
+	// Claude) drops the shell escape hatch: Policy{DeniedActions:
+	// ["shell","cmd"]} lets the model propose a shell step but the
+	// executor refuses it before any side effect. See executor.Policy.
+	Policy *executor.Policy
 }
 
 type PlanInput struct {

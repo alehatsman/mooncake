@@ -7,6 +7,7 @@ import (
 
 	"github.com/urfave/cli/v2"
 
+	"github.com/alehatsman/mooncake/internal/executor"
 	"github.com/alehatsman/mooncake/internal/pilot"
 )
 
@@ -61,6 +62,22 @@ func PilotCommand() *cli.Command {
 						Name:  "style",
 						Usage: "Planning style: plan (single complete plan, default) or step (one action per turn). Overrides MOONCAKE_PILOT_STYLE.",
 					},
+					&cli.StringSliceFlag{
+						Name:  "allow-action",
+						Usage: "Permissions-as-contract allowlist (#11): action types the agent may use (repeatable). Empty = any action unless denied.",
+					},
+					&cli.StringSliceFlag{
+						Name:  "deny-action",
+						Usage: "Permissions-as-contract denylist (#11): action types the agent may NOT use (repeatable), e.g. --deny-action shell --deny-action cmd. Wins over the allowlist.",
+					},
+					&cli.BoolFlag{
+						Name:  "deny-network",
+						Usage: "Refuse any step that declares network egress (pkg install, download, http.request, remote git clone).",
+					},
+					&cli.IntFlag{
+						Name:  "max-risk",
+						Usage: "Refuse any step whose estimated risk band (1..10) exceeds this cap. 0 = no cap.",
+					},
 				},
 				Action: pilotRunAction,
 			},
@@ -101,6 +118,7 @@ func pilotRunAction(c *cli.Context) error {
 		MaxIterations: maxIterations,
 		AutoApply:     c.Bool("auto-apply"),
 		Style:         style,
+		Policy:        buildPilotPolicy(c),
 	}
 
 	if planPath == "" && !useStdin {
@@ -161,6 +179,30 @@ func resolvePilotStyle(cliVal, envVal string) (pilot.Style, error) {
 		return pilot.StyleStep, nil
 	default:
 		return "", fmt.Errorf("invalid --style %q (want plan or step)", raw)
+	}
+}
+
+// buildPilotPolicy assembles the per-run permissions-as-contract gate
+// (#11) from the policy flags. Returns nil when no policy flag is set,
+// so an unrestricted pilot run stays byte-identical to the pre-flag
+// behavior (the executor treats a nil Policy as "enforce nothing").
+// This is the surface a moongit-spawned agent container invokes to drop
+// the shell escape hatch: `mooncake pilot run ... --deny-action shell
+// --deny-action cmd`.
+func buildPilotPolicy(c *cli.Context) *executor.Policy {
+	allow := c.StringSlice("allow-action")
+	deny := c.StringSlice("deny-action")
+	denyNet := c.Bool("deny-network")
+	maxRisk := c.Int("max-risk")
+
+	if len(allow) == 0 && len(deny) == 0 && !denyNet && maxRisk <= 0 {
+		return nil
+	}
+	return &executor.Policy{
+		AllowedActions: allow,
+		DeniedActions:  deny,
+		DenyNetwork:    denyNet,
+		MaxRisk:        maxRisk,
 	}
 }
 

@@ -127,6 +127,7 @@ func Run(opts RunOptions) (*IterationLog, error) {
 	// process. Use Background until a follow-up plumbs ctx through Run.
 	execErr := executor.Start(context.Background(), executor.StartConfig{
 		ConfigFilePath: tmpFile.Name(),
+		Policy:         opts.Policy,
 	}, log, publisher)
 
 	if execErr != nil {
