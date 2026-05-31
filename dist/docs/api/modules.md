@@ -20,6 +20,7 @@ Package modules implements the Git\-native module system from spec\-67. A module
 - [type Reference](<#type-reference>)
   - [func ParseReference(s string) (Reference, error)](<#func-parsereference>)
   - [func (r Reference) CloneURL() string](<#func-reference-cloneurl>)
+  - [func (r Reference) CloneURLWithScheme(scheme string) string](<#func-reference-cloneurlwithscheme>)
   - [func (r Reference) ModulePath() string](<#func-reference-modulepath>)
   - [func (r Reference) String() string](<#func-reference-string>)
 - [type Resolved](<#type-resolved>)
@@ -55,6 +56,13 @@ type Fetcher struct {
     // CloneURL overrides the URL used for `git clone`. If nil,
     // Reference.CloneURL() is used. Set in tests to point at a file:// repo.
     CloneURL func(Reference) string
+
+    // InsecureHosts lists hosts (host or host:port, matched exactly against
+    // Reference.Host) that may be cloned over plain http instead of the
+    // https default. Use only for trusted/local hosts — e.g. a self-hosted
+    // moongit on "127.0.0.1:8080". The MOONCAKE_MODULE_INSECURE env var
+    // (comma-separated) is merged in on top of this list.
+    InsecureHosts []string
 }
 ```
 
@@ -147,6 +155,14 @@ func (r Reference) CloneURL() string
 ```
 
 CloneURL returns the https URL of the underlying Git repository \(subpath is not part of the clone URL\).
+
+### func \(Reference\) CloneURLWithScheme
+
+```go
+func (r Reference) CloneURLWithScheme(scheme string) string
+```
+
+CloneURLWithScheme returns the clone URL using the given scheme \("https" or "http"\). https is the default \(CloneURL\); http is used only for hosts the operator has explicitly trusted as insecure \(e.g. a local moongit on http://127.0.0.1:8080\) — see Fetcher and MOONCAKE\_MODULE\_INSECURE.
 
 ### func \(Reference\) ModulePath
 
