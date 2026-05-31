@@ -14,6 +14,11 @@ func TestReference_CloneURLWithScheme(t *testing.T) {
 }
 
 func TestFetcher_cloneURLFor(t *testing.T) {
+	// Hermetic: ignore any ambient MOONCAKE_MODULE_INSECURE (e.g. when this
+	// suite runs under a CI gate that fetches modules from a local http host).
+	// The cases below exercise the field + override paths explicitly.
+	t.Setenv("MOONCAKE_MODULE_INSECURE", "")
+
 	ref := Reference{Host: "127.0.0.1:8080", Owner: "o", Repo: "r", Version: "v1"}
 	github := Reference{Host: "github.com", Owner: "o", Repo: "r", Version: "v1"}
 
