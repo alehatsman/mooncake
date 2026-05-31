@@ -150,6 +150,8 @@ log.Infof("Summary: %d changed, %d unchanged, %d failed",
 - [type LoopContext](<#type-loopcontext>)
 - [type Mode](<#type-mode>)
 - [type Operation](<#type-operation>)
+- [type Policy](<#type-policy>)
+  - [func (p *Policy) IsZero() bool](<#func-policy-iszero>)
 - [type RegisteredResult](<#type-registeredresult>)
   - [func (r RegisteredResult) ToMap() map[string]interface{}](<#func-registeredresult-tomap>)
 - [type RenderError](<#type-rendererror>)
@@ -252,7 +254,7 @@ DispatchStepAction executes the appropriate handler based on step type. All acti
 
 INTERNAL: This function is exported for testing purposes only and is not part of the public API. It may change or be removed in future versions without notice.
 
-## func [ExecutePlan](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/executor.go#L1305>)
+## func [ExecutePlan](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/executor.go#L1314>)
 
 ```go
 func ExecutePlan(ctx context.Context, p *plan.Plan, sudoPass string, mode actions.Mode, log logger.Logger, publisher events.Publisher) error
@@ -264,7 +266,7 @@ Callers that need the typed \*KernelResult substrate \(R1.1b\) should use Execut
 
 ctx is checked between steps — see Start for the cancellation contract.
 
-## func [ExecutePlanWithCapture](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/executor.go#L1321>)
+## func [ExecutePlanWithCapture](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/executor.go#L1330>)
 
 ```go
 func ExecutePlanWithCapture(ctx context.Context, p *plan.Plan, sudoPass string, mode actions.Mode, log logger.Logger, publisher events.Publisher, capture *RunCapture) error
@@ -318,7 +320,7 @@ Panics on duplicate registration — silent overwrite would let a later handler 
 
 Called from each handler package's init\(\) alongside actions.Register. The wire round\-trip is the contract this registry implements: see Result.MarshalJSON / UnmarshalJSON \(spec R2.1c phase 2\).
 
-## func [Start](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/executor.go#L1149>)
+## func [Start](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/executor.go#L1158>)
 
 ```go
 func Start(ctx context.Context, startConfig StartConfig, log logger.Logger, publisher events.Publisher) error
@@ -656,7 +658,7 @@ func (e *EvaluationError) Error() string
 func (e *EvaluationError) Unwrap() error
 ```
 
-## type [ExecutionContext](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/context.go#L191-L272>)
+## type [ExecutionContext](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/context.go#L199-L280>)
 
 ExecutionContext holds per\-scope state for a step sequence. Cloned when entering nested scopes \(includes, loops\); Svc is shared.
 
@@ -747,7 +749,7 @@ type ExecutionContext struct {
 }
 ```
 
-### func \(\*ExecutionContext\) [Clone](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/context.go#L284>)
+### func \(\*ExecutionContext\) [Clone](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/context.go#L292>)
 
 ```go
 func (ec *ExecutionContext) Clone() ExecutionContext
@@ -755,7 +757,7 @@ func (ec *ExecutionContext) Clone() ExecutionContext
 
 Clone creates a new ExecutionContext for a nested execution scope \(include or loop\). Svc is shared by pointer; Scope is deep\-cloned \(User\+Results\); per\-step fields are reset.
 
-### func \(\*ExecutionContext\) [Ctx](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/context.go#L415>)
+### func \(\*ExecutionContext\) [Ctx](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/context.go#L423>)
 
 ```go
 func (ec *ExecutionContext) Ctx() context.Context
@@ -765,7 +767,7 @@ Ctx returns the run\-wide context \(ec.Svc.Ctx\). Handlers reach through this to
 
 Returns context.Background\(\) when Svc or Svc.Ctx is nil — production paths always populate both, but the guard keeps test\-built contexts that skip RunServices construction from panicking. Returning a live \(non\-nil, non\-cancellable\) ctx is safer than nil for handlers that chain WithTimeout / WithCancel onto it.
 
-### func \(\*ExecutionContext\) [Effects](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/context.go#L319>)
+### func \(\*ExecutionContext\) [Effects](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/context.go#L327>)
 
 ```go
 func (ec *ExecutionContext) Effects() actions.Performer
@@ -773,7 +775,7 @@ func (ec *ExecutionContext) Effects() actions.Performer
 
 Effects returns a Performer pre\-bound to the current step's AsUser. Like ec.Privileged\(\), the per\-step binding means handlers don't have to thread step.AsUser through PerformerOpts — the Performer consults its bound state to decide sudo wrap and post\-write chown.
 
-### func \(\*ExecutionContext\) [EmitEvent](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/context.go#L299>)
+### func \(\*ExecutionContext\) [EmitEvent](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/context.go#L307>)
 
 ```go
 func (ec *ExecutionContext) EmitEvent(eventType events.Type, data interface{})
@@ -781,7 +783,7 @@ func (ec *ExecutionContext) EmitEvent(eventType events.Type, data interface{})
 
 EmitEvent publishes an event to all subscribers
 
-### func \(\*ExecutionContext\) [Evaluator](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/context.go#L347>)
+### func \(\*ExecutionContext\) [Evaluator](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/context.go#L355>)
 
 ```go
 func (ec *ExecutionContext) Evaluator() expression.Evaluator
@@ -789,7 +791,7 @@ func (ec *ExecutionContext) Evaluator() expression.Evaluator
 
 Evaluator returns the expression evaluator.
 
-### func \(\*ExecutionContext\) [EventPublisher](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/context.go#L397>)
+### func \(\*ExecutionContext\) [EventPublisher](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/context.go#L405>)
 
 ```go
 func (ec *ExecutionContext) EventPublisher() events.Publisher
@@ -797,7 +799,7 @@ func (ec *ExecutionContext) EventPublisher() events.Publisher
 
 EventPublisher returns the event publisher.
 
-### func \(\*ExecutionContext\) [Logger](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/context.go#L352>)
+### func \(\*ExecutionContext\) [Logger](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/context.go#L360>)
 
 ```go
 func (ec *ExecutionContext) Logger() logger.Logger
@@ -805,7 +807,7 @@ func (ec *ExecutionContext) Logger() logger.Logger
 
 Logger returns the logger.
 
-### func \(\*ExecutionContext\) [MergeUserVars](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/context.go#L382>)
+### func \(\*ExecutionContext\) [MergeUserVars](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/context.go#L390>)
 
 ```go
 func (ec *ExecutionContext) MergeUserVars(vars map[string]interface{})
@@ -815,7 +817,7 @@ MergeUserVars merges the provided key\-value pairs into the user variable scope.
 
 Drops the \`if ec.Svc \!= nil\` guard the pre\-cleanup version carried — every other accessor on ExecutionContext \(EmitEvent, Mode, Effects, Privileged, Template / Evaluator / Logger / EventPublisher\) derefs ec.Svc unconditionally. Svc is always non\-nil in production paths \(Start / executePlanWithCapture sets it on every constructed context\); a future test that builds an EC without Svc panics here exactly the same way it would in any of the peer accessors. Convention drift closed.
 
-### func \(\*ExecutionContext\) [Mode](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/context.go#L310>)
+### func \(\*ExecutionContext\) [Mode](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/context.go#L318>)
 
 ```go
 func (ec *ExecutionContext) Mode() Mode
@@ -823,7 +825,7 @@ func (ec *ExecutionContext) Mode() Mode
 
 Mode returns the current dispatch mode \(ModeApply or ModePlan\).
 
-### func \(\*ExecutionContext\) [Privileged](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/context.go#L331>)
+### func \(\*ExecutionContext\) [Privileged](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/context.go#L339>)
 
 ```go
 func (ec *ExecutionContext) Privileged() *security.Privileged
@@ -831,7 +833,7 @@ func (ec *ExecutionContext) Privileged() *security.Privileged
 
 Privileged returns the spec\-72 Layer C escalation primitive, pre\-bound to the current step's AsUser. Handlers should call ctx.Privileged\(\).Run\(...\) / .Command\(...\) for shell\-outs and let the primitive decide the sudo wrap from the bound AsUser. No per\-call \`become bool\` plumbing; no per\-handler \`step.ShouldBecome\` reads. dispatchRunner sets ec.CurrentAsUser from step.AsUser before calling Run, so each step sees a primitive bound to its own declared identity.
 
-### func \(\*ExecutionContext\) [RegisterResult](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/context.go#L392>)
+### func \(\*ExecutionContext\) [RegisterResult](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/context.go#L400>)
 
 ```go
 func (ec *ExecutionContext) RegisterResult(r *Result, name string)
@@ -839,7 +841,7 @@ func (ec *ExecutionContext) RegisterResult(r *Result, name string)
 
 RegisterResult registers a Result under the given name for use in subsequent steps.
 
-### func \(\*ExecutionContext\) [StepID](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/context.go#L402>)
+### func \(\*ExecutionContext\) [StepID](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/context.go#L410>)
 
 ```go
 func (ec *ExecutionContext) StepID() string
@@ -847,7 +849,7 @@ func (ec *ExecutionContext) StepID() string
 
 StepID returns the current step ID.
 
-### func \(\*ExecutionContext\) [Template](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/context.go#L342>)
+### func \(\*ExecutionContext\) [Template](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/context.go#L350>)
 
 ```go
 func (ec *ExecutionContext) Template() template.Renderer
@@ -855,7 +857,7 @@ func (ec *ExecutionContext) Template() template.Renderer
 
 Template returns the template renderer.
 
-### func \(\*ExecutionContext\) [Variables](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/context.go#L357>)
+### func \(\*ExecutionContext\) [Variables](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/context.go#L365>)
 
 ```go
 func (ec *ExecutionContext) Variables() map[string]interface{}
@@ -939,7 +941,7 @@ func (e *FileOperationError) Error() string
 func (e *FileOperationError) Unwrap() error
 ```
 
-## type [LoopContext](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/context.go#L177-L182>)
+## type [LoopContext](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/context.go#L185-L190>)
 
 LoopContext holds the current loop iteration state for a step executing inside a with\_items or with\_filetree loop. It is stored in VariableScope.Loop so ToMap\(\) can inject item/index/first/last without polluting the User map.
 
@@ -978,6 +980,53 @@ const (
     OpReverted Operation = "reverted"
 )
 ```
+
+## type [Policy](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/policy.go#L41-L66>)
+
+Policy is a per\-run allow/deny contract enforced at executor preflight, before any step's side effects run. It is the "permissions as contract" keystone \(\#11\): the actor spawning a run — an operator, or moongit launching an unattended agent — declares what the run may do, and the executor refuses any step that exceeds it. This is what lets a shell\-less agent run be \*safe\* rather than merely structured: it replaces the host permission wall the caller gives up when execution moves into the kernel.
+
+Scope is deliberately a flat struct — action allow/deny lists, a network switch, and a risk cap. It is NOT an expression language: docs\-working/vision/non\_goals.md forbids an expressive policy DSL \(the OPA/Rego sprawl trap\). The richer \`deny: agent.touches\(...\)\` framing belongs to the agent\-safety spec, not here.
+
+A nil \*Policy \(and the zero value\) enforces nothing: every step is allowed. Callers opt in by populating fields, so every existing run path — CLI apply, fleet, the pilot loop, tests — is unchanged when no policy is set.
+
+Gating draws only on the spec\-22 ABI a handler already declares \(PermissionSet and Cost.Risk — see internal/actions/handler\_abi.go\), so no handler needs to change for a run to be policy\-gated.
+
+```go
+type Policy struct {
+    // AllowedActions, when non-empty, is an allowlist: a step's action
+    // type must appear here or the step is denied. Empty disables the
+    // allowlist (any action is permitted unless denied below). Entries
+    // are action types as config.Step.DetermineActionType reports them —
+    // e.g. "shell", "file.write", "pkg".
+    AllowedActions []string
+
+    // DeniedActions is a denylist applied after the allowlist; an action
+    // type listed here is always denied (denylist wins over allowlist).
+    // This is the primary lever for unattended agent runs:
+    // DeniedActions ["shell", "cmd"] removes the arbitrary-command escape
+    // hatch while leaving the typed actions usable.
+    DeniedActions []string
+
+    // DenyNetwork rejects any step whose declared PermissionSet has
+    // Network: true (package installs, downloads, http.request, remote
+    // git clone). Handlers that declare no PermissionSet are treated as
+    // Network:false and pass — gate those by action name if needed.
+    DenyNetwork bool
+
+    // MaxRisk, when > 0, caps the Cost.Risk band (1..10) a step may
+    // carry; a step whose estimated risk exceeds it is denied. Handlers
+    // without a Coster default to defaultPolicyRisk. 0 = no cap.
+    MaxRisk int
+}
+```
+
+### func \(\*Policy\) [IsZero](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/policy.go#L72>)
+
+```go
+func (p *Policy) IsZero() bool
+```
+
+IsZero reports whether the policy enforces nothing. A nil \*Policy is also "enforces nothing"; dispatch guards on \`policy \!= nil\` before calling check, so this is mainly for tests and callers that want to skip wiring an empty policy.
 
 ## type [RegisteredResult](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/result.go#L319-L335>)
 
@@ -1381,7 +1430,7 @@ func (c *RunCapture) Steps() []StepRecord
 
 Steps returns a snapshot of the per\-step records in execution order. The returned slice is owned by the caller; subsequent appends to the capture will not affect it.
 
-## type [RunServices](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/context.go#L124-L172>)
+## type [RunServices](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/context.go#L124-L180>)
 
 RunServices holds the shared, immutable\-after\-construction services and configuration for a mooncake run. One instance is created per run and referenced by all nested ExecutionContexts via pointer.
 
@@ -1434,6 +1483,14 @@ type RunServices struct {
     // `use:` action handler so alias references like `use: postgres` resolve
     // to a cached module. Empty when the playbook declares no modules.
     Modules map[string]string
+
+    // Policy is the per-run permissions-as-contract gate (#11). When
+    // non-nil, dispatchRunner checks every step against it before any
+    // side effect — denying disallowed actions, network egress, or
+    // over-risk steps. nil means "no policy; allow everything", which is
+    // every run path that doesn't opt in (CLI apply, fleet, tests). Set
+    // from StartConfig.Policy at run construction. See policy.go.
+    Policy *Policy
 }
 ```
 
@@ -1461,7 +1518,7 @@ func (e *SetupError) Error() string
 func (e *SetupError) Unwrap() error
 ```
 
-## type [StartConfig](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/executor.go#L1108-L1138>)
+## type [StartConfig](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/executor.go#L1108-L1147>)
 
 StartConfig contains configuration for starting a mooncake execution.
 
@@ -1496,6 +1553,15 @@ type StartConfig struct {
     // plan and per-step records. R1.1b's internal/apply.Runner uses
     // this to build its typed *KernelResult. Other callers leave nil.
     Capture *RunCapture
+
+    // Policy, if non-nil, is the per-run permissions-as-contract gate
+    // (#11) the executor enforces at preflight: an action allow/deny
+    // list, a network-egress switch, and a risk cap. A step that
+    // exceeds it fails the run before its side effects. nil = enforce
+    // nothing (today's behavior). This is the surface moongit hands a
+    // shell-less agent run so the typed-ABI guarantees become an
+    // enforced contract rather than a convention. See policy.go.
+    Policy *Policy
 }
 ```
 
@@ -1542,7 +1608,7 @@ type StepValidationError struct {
 func (e *StepValidationError) Error() string
 ```
 
-## type [TxnCompletedChild](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/context.go#L277-L280>)
+## type [TxnCompletedChild](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/context.go#L285-L288>)
 
 TxnCompletedChild captures one body child's step \+ result for later Reverse\(\) consumption. Stored in ExecutionContext.CompletedByTxn — the \*Result field keeps this type out of internal/control.
 
