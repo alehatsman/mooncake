@@ -53,6 +53,45 @@ type Fetcher struct {
 	// CloneURL overrides the URL used for `git clone`. If nil,
 	// Reference.CloneURL() is used. Set in tests to point at a file:// repo.
 	CloneURL func(Reference) string
+
+	// InsecureHosts lists hosts (host or host:port, matched exactly against
+	// Reference.Host) that may be cloned over plain http instead of the
+	// https default. Use only for trusted/local hosts — e.g. a self-hosted
+	// moongit on "127.0.0.1:8080". The MOONCAKE_MODULE_INSECURE env var
+	// (comma-separated) is merged in on top of this list.
+	InsecureHosts []string
+}
+
+// insecureHost reports whether host is trusted for plain-http clone, per the
+// Fetcher's InsecureHosts plus the MOONCAKE_MODULE_INSECURE env var.
+func (f *Fetcher) insecureHost(host string) bool {
+	if host == "" {
+		return false
+	}
+	for _, h := range f.InsecureHosts {
+		if strings.TrimSpace(h) == host {
+			return true
+		}
+	}
+	for _, h := range strings.Split(os.Getenv("MOONCAKE_MODULE_INSECURE"), ",") {
+		if strings.TrimSpace(h) == host {
+			return true
+		}
+	}
+	return false
+}
+
+// cloneURLFor returns the git clone URL for ref. The CloneURL override (tests)
+// wins; otherwise the scheme is http for an operator-trusted insecure host and
+// https everywhere else.
+func (f *Fetcher) cloneURLFor(ref Reference) string {
+	if f.CloneURL != nil {
+		return f.CloneURL(ref)
+	}
+	if f.insecureHost(ref.Host) {
+		return ref.CloneURLWithScheme("http")
+	}
+	return ref.CloneURL()
 }
 
 // CacheDir returns the absolute cache directory for a module reference. The
@@ -121,10 +160,7 @@ func (f *Fetcher) Fetch(ctx context.Context, ref Reference) (string, error) {
 
 // cloneAndCheckout runs the git clone + tag checkout into dst.
 func (f *Fetcher) cloneAndCheckout(ctx context.Context, ref Reference, dst string) error {
-	cloneURL := ref.CloneURL()
-	if f.CloneURL != nil {
-		cloneURL = f.CloneURL(ref)
-	}
+	cloneURL := f.cloneURLFor(ref)
 	git := f.Git
 	if git == "" {
 		git = "git"

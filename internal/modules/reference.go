@@ -77,5 +77,13 @@ func (r Reference) String() string {
 // CloneURL returns the https URL of the underlying Git repository
 // (subpath is not part of the clone URL).
 func (r Reference) CloneURL() string {
-	return "https://" + r.Host + "/" + r.Owner + "/" + r.Repo + ".git"
+	return r.CloneURLWithScheme("https")
+}
+
+// CloneURLWithScheme returns the clone URL using the given scheme ("https"
+// or "http"). https is the default (CloneURL); http is used only for hosts
+// the operator has explicitly trusted as insecure (e.g. a local moongit on
+// http://127.0.0.1:8080) — see Fetcher and MOONCAKE_MODULE_INSECURE.
+func (r Reference) CloneURLWithScheme(scheme string) string {
+	return scheme + "://" + r.Host + "/" + r.Owner + "/" + r.Repo + ".git"
 }

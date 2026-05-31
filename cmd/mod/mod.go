@@ -13,6 +13,10 @@
 // writes/updates the `modules:` block in the nearest mooncake.yml. The cache
 // directory lives at ~/.cache/mooncake/modules (overridable via
 // $MOONCAKE_MODULE_CACHE).
+//
+// Modules clone over https by default. To fetch from a trusted host that
+// serves plain http (e.g. a self-hosted moongit on 127.0.0.1:8080), set
+// $MOONCAKE_MODULE_INSECURE to a comma-separated list of host[:port] entries.
 package mod
 
 import (
