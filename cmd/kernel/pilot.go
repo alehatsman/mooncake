@@ -1,12 +1,16 @@
 package kernel
 
 import (
+	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/urfave/cli/v2"
 
+	"github.com/alehatsman/mooncake/internal/events"
 	"github.com/alehatsman/mooncake/internal/pilot"
 )
 
@@ -61,6 +65,11 @@ func PilotCommand() *cli.Command {
 						Name:  "style",
 						Usage: "Planning style: plan (single complete plan, default) or step (one action per turn). Overrides MOONCAKE_PILOT_STYLE.",
 					},
+					&cli.StringFlag{
+						Name:  "output-format",
+						Value: "text",
+						Usage: "Output format: text (human-readable, default) or json (NDJSON event stream, one events.Event per line, terminated by a pilot.completed event).",
+					},
 				},
 				Action: pilotRunAction,
 			},
@@ -85,6 +94,12 @@ func pilotRunAction(c *cli.Context) error {
 		return err
 	}
 
+	outputFormat, err := resolvePilotOutputFormat(c.String("output-format"))
+	if err != nil {
+		return err
+	}
+	jsonOut := outputFormat == pilot.OutputFormatJSON
+
 	repoRoot, err := os.Getwd()
 	if err != nil {
 		return fmt.Errorf("failed to get working directory: %w", err)
@@ -101,23 +116,32 @@ func pilotRunAction(c *cli.Context) error {
 		MaxIterations: maxIterations,
 		AutoApply:     c.Bool("auto-apply"),
 		Style:         style,
+		OutputFormat:  outputFormat,
 	}
 
 	if planPath == "" && !useStdin {
 		result, loopErr := pilot.RunLoop(opts)
 		if loopErr != nil {
+			// The loop's own NDJSON/text stream already conveyed per-step
+			// detail; the human-readable summary goes to stdout only in
+			// text mode (it would corrupt the JSON stream otherwise — the
+			// error itself is on stderr).
 			fmt.Fprintf(os.Stderr, "Pilot loop failed: %v\n", loopErr)
-			if result != nil && result.FinalLog != nil {
+			if result != nil && result.FinalLog != nil && !jsonOut {
 				printPilotSummary(result.FinalLog)
 			}
 			return loopErr
 		}
 
-		fmt.Printf("Pilot completed: %d iterations\n", len(result.Iterations))
-		fmt.Printf("Stop reason: %s\n", result.StopReason)
-		if result.FinalLog != nil {
-			fmt.Println()
-			printPilotSummary(result.FinalLog)
+		if jsonOut {
+			emitPilotCompleted(os.Stdout, result)
+		} else {
+			fmt.Printf("Pilot completed: %d iterations\n", len(result.Iterations))
+			fmt.Printf("Stop reason: %s\n", result.StopReason)
+			if result.FinalLog != nil {
+				fmt.Println()
+				printPilotSummary(result.FinalLog)
+			}
 		}
 		return nil
 	}
@@ -137,8 +161,65 @@ func pilotRunAction(c *cli.Context) error {
 		return err
 	}
 
-	printPilotSummary(log)
+	if jsonOut {
+		emitPilotCompletedFromLog(os.Stdout, log)
+	} else {
+		printPilotSummary(log)
+	}
 	return nil
+}
+
+// resolvePilotOutputFormat validates the --output-format flag. Empty
+// defaults to text; only text and json are accepted (a typo is a hard
+// error so a consumer asking for json never silently gets prose).
+func resolvePilotOutputFormat(raw string) (string, error) {
+	switch raw {
+	case "", pilot.OutputFormatText:
+		return pilot.OutputFormatText, nil
+	case pilot.OutputFormatJSON:
+		return pilot.OutputFormatJSON, nil
+	default:
+		return "", fmt.Errorf("invalid --output-format %q (want text or json)", raw)
+	}
+}
+
+// emitPilotCompleted writes the terminal pilot.completed event for a loop
+// run. It carries the same outcome the text summary prints so a JSON
+// consumer can finalize without parsing prose.
+func emitPilotCompleted(w io.Writer, result *pilot.LoopResult) {
+	data := pilot.PilotCompletedData{
+		Iterations: len(result.Iterations),
+		StopReason: string(result.StopReason),
+	}
+	if result.FinalLog != nil {
+		data.Status = result.FinalLog.Status
+		data.DiffStat = result.FinalLog.DiffStat
+		data.ChangedFiles = result.FinalLog.ChangedFiles
+	}
+	emitPilotEvent(w, events.EventPilotCompleted, data)
+}
+
+// emitPilotCompletedFromLog is the single-shot (--plan / --stdin) analogue
+// of emitPilotCompleted: that path applies exactly one iteration and
+// returns its log directly, so it's iteration 1 with a success stop.
+func emitPilotCompletedFromLog(w io.Writer, log *pilot.IterationLog) {
+	emitPilotEvent(w, events.EventPilotCompleted, pilot.PilotCompletedData{
+		Iterations:   1,
+		StopReason:   string(pilot.StopSuccess),
+		Status:       log.Status,
+		DiffStat:     log.DiffStat,
+		ChangedFiles: log.ChangedFiles,
+	})
+}
+
+// emitPilotEvent encodes one events.Event as a single NDJSON line,
+// matching the shape the ConsoleSubscriber's renderJSON emits for the
+// per-step stream so a consumer parses every line uniformly.
+func emitPilotEvent(w io.Writer, t events.Type, data interface{}) {
+	ev := events.Event{Type: t, Timestamp: time.Now(), Data: data}
+	if err := json.NewEncoder(w).Encode(ev); err != nil {
+		fmt.Fprintf(os.Stderr, "pilot: encode %s event: %v\n", t, err)
+	}
 }
 
 // resolvePilotStyle implements the precedence chain documented in
