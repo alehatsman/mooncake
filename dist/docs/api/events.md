@@ -60,7 +60,7 @@ Package events provides the event system for Mooncake execution lifecycle. Event
 - [type VarsSetData](<#type-varssetdata>)
 
 
-## type ArchiveExtractedData
+## type [ArchiveExtractedData](<https://github.com/alehatsman/mooncake/blob/main/internal/events/event.go#L369-L379>)
 
 ArchiveExtractedData contains data for archive.extracted events
 
@@ -78,7 +78,7 @@ type ArchiveExtractedData struct {
 }
 ```
 
-## type ArtifactCaptureData
+## type [ArtifactCaptureData](<https://github.com/alehatsman/mooncake/blob/main/internal/events/event.go#L409-L415>)
 
 ArtifactCaptureData contains data for artifact\_capture events
 
@@ -92,7 +92,7 @@ type ArtifactCaptureData struct {
 }
 ```
 
-## type AssertionData
+## type [AssertionData](<https://github.com/alehatsman/mooncake/blob/main/internal/events/event.go#L392-L398>)
 
 AssertionData contains data for assert.passed and assert.failed events
 
@@ -106,7 +106,7 @@ type AssertionData struct {
 }
 ```
 
-## type ChannelPublisher
+## type [ChannelPublisher](<https://github.com/alehatsman/mooncake/blob/main/internal/events/publisher.go#L24-L33>)
 
 ChannelPublisher implements Publisher using buffered channels
 
@@ -116,7 +116,7 @@ type ChannelPublisher struct {
 }
 ```
 
-### func \(\*ChannelPublisher\) Close
+### func \(\*ChannelPublisher\) [Close](<https://github.com/alehatsman/mooncake/blob/main/internal/events/publisher.go#L126>)
 
 ```go
 func (p *ChannelPublisher) Close()
@@ -124,7 +124,7 @@ func (p *ChannelPublisher) Close()
 
 Close closes the publisher and all subscriber channels
 
-### func \(\*ChannelPublisher\) Flush
+### func \(\*ChannelPublisher\) [Flush](<https://github.com/alehatsman/mooncake/blob/main/internal/events/publisher.go#L117>)
 
 ```go
 func (p *ChannelPublisher) Flush()
@@ -132,7 +132,7 @@ func (p *ChannelPublisher) Flush()
 
 Flush waits for all pending events to be processed by subscribers
 
-### func \(\*ChannelPublisher\) Publish
+### func \(\*ChannelPublisher\) [Publish](<https://github.com/alehatsman/mooncake/blob/main/internal/events/publisher.go#L47>)
 
 ```go
 func (p *ChannelPublisher) Publish(event Event)
@@ -140,7 +140,7 @@ func (p *ChannelPublisher) Publish(event Event)
 
 Publish sends an event to all subscribers This is non\-blocking \- if a subscriber's channel is full, the event is dropped
 
-### func \(\*ChannelPublisher\) Subscribe
+### func \(\*ChannelPublisher\) [Subscribe](<https://github.com/alehatsman/mooncake/blob/main/internal/events/publisher.go#L70>)
 
 ```go
 func (p *ChannelPublisher) Subscribe(subscriber Subscriber) int
@@ -148,7 +148,7 @@ func (p *ChannelPublisher) Subscribe(subscriber Subscriber) int
 
 Subscribe adds a new subscriber and returns its ID
 
-### func \(\*ChannelPublisher\) Unsubscribe
+### func \(\*ChannelPublisher\) [Unsubscribe](<https://github.com/alehatsman/mooncake/blob/main/internal/events/publisher.go#L106>)
 
 ```go
 func (p *ChannelPublisher) Unsubscribe(id int)
@@ -156,7 +156,7 @@ func (p *ChannelPublisher) Unsubscribe(id int)
 
 Unsubscribe removes a subscriber
 
-## type Event
+## type [Event](<https://github.com/alehatsman/mooncake/blob/main/internal/events/event.go#L11-L15>)
 
 Event represents a single event in the execution lifecycle
 
@@ -168,7 +168,7 @@ type Event struct {
 }
 ```
 
-## type FileCopiedData
+## type [FileCopiedData](<https://github.com/alehatsman/mooncake/blob/main/internal/events/event.go#L309-L316>)
 
 FileCopiedData contains data for file.copied events
 
@@ -183,7 +183,7 @@ type FileCopiedData struct {
 }
 ```
 
-## type FileDownloadedData
+## type [FileDownloadedData](<https://github.com/alehatsman/mooncake/blob/main/internal/events/event.go#L319-L326>)
 
 FileDownloadedData contains data for file.downloaded events
 
@@ -198,7 +198,7 @@ type FileDownloadedData struct {
 }
 ```
 
-## type FileOperationData
+## type [FileOperationData](<https://github.com/alehatsman/mooncake/blob/main/internal/events/event.go#L264-L280>)
 
 FileOperationData contains data for file operation events
 
@@ -222,7 +222,7 @@ type FileOperationData struct {
 }
 ```
 
-## type FileRemovedData
+## type [FileRemovedData](<https://github.com/alehatsman/mooncake/blob/main/internal/events/event.go#L283-L288>)
 
 FileRemovedData contains data for file/directory removal events
 
@@ -235,7 +235,7 @@ type FileRemovedData struct {
 }
 ```
 
-## type HTTPRequestedData
+## type [HTTPRequestedData](<https://github.com/alehatsman/mooncake/blob/main/internal/events/event.go#L335-L342>)
 
 HTTPRequestedData carries event payload for http.requested. proposal\-16 keeps this deliberately minimal: scheme/host/path \(no query string\), method, status, duration. The request and response bodies live in the registered fact, not in the audit event — bodies may contain secrets, PII, or large payloads that don't belong in the event stream. Auth headers and other sensitive headers are already redacted before the event is emitted.
 
@@ -250,7 +250,7 @@ type HTTPRequestedData struct {
 }
 ```
 
-## type LinkCreatedData
+## type [LinkCreatedData](<https://github.com/alehatsman/mooncake/blob/main/internal/events/event.go#L291-L296>)
 
 LinkCreatedData contains data for link creation events
 
@@ -263,7 +263,7 @@ type LinkCreatedData struct {
 }
 ```
 
-## type PackageManagedData
+## type [PackageManagedData](<https://github.com/alehatsman/mooncake/blob/main/internal/events/event.go#L436-L441>)
 
 PackageManagedData contains data for package.managed events
 
@@ -276,7 +276,7 @@ type PackageManagedData struct {
 }
 ```
 
-## type PermissionsChangedData
+## type [PermissionsChangedData](<https://github.com/alehatsman/mooncake/blob/main/internal/events/event.go#L299-L306>)
 
 PermissionsChangedData contains data for permissions.changed events
 
@@ -291,7 +291,7 @@ type PermissionsChangedData struct {
 }
 ```
 
-## type PlanLoadedData
+## type [PlanLoadedData](<https://github.com/alehatsman/mooncake/blob/main/internal/events/event.go#L137-L141>)
 
 PlanLoadedData contains data for plan.loaded events
 
@@ -303,7 +303,7 @@ type PlanLoadedData struct {
 }
 ```
 
-## type PresetData
+## type [PresetData](<https://github.com/alehatsman/mooncake/blob/main/internal/events/event.go#L401-L406>)
 
 PresetData contains data for preset events
 
@@ -316,7 +316,7 @@ type PresetData struct {
 }
 ```
 
-## type PrintData
+## type [PrintData](<https://github.com/alehatsman/mooncake/blob/main/internal/events/event.go#L428-L433>)
 
 PrintData contains data for print.message events.
 
@@ -333,7 +333,7 @@ type PrintData struct {
 }
 ```
 
-## type Publisher
+## type [Publisher](<https://github.com/alehatsman/mooncake/blob/main/internal/events/publisher.go#L9-L15>)
 
 Publisher publishes events to subscribers
 
@@ -347,7 +347,7 @@ type Publisher interface {
 }
 ```
 
-### func NewPublisher
+### func [NewPublisher](<https://github.com/alehatsman/mooncake/blob/main/internal/events/publisher.go#L36>)
 
 ```go
 func NewPublisher() Publisher
@@ -355,7 +355,7 @@ func NewPublisher() Publisher
 
 NewPublisher creates a new channel\-based event publisher
 
-### func NewSyncPublisher
+### func [NewSyncPublisher](<https://github.com/alehatsman/mooncake/blob/main/internal/events/publisher.go#L156>)
 
 ```go
 func NewSyncPublisher() Publisher
@@ -363,7 +363,7 @@ func NewSyncPublisher() Publisher
 
 NewSyncPublisher creates a new synchronous event publisher for testing.
 
-## type RunCompletedData
+## type [RunCompletedData](<https://github.com/alehatsman/mooncake/blob/main/internal/events/event.go#L144-L177>)
 
 RunCompletedData contains data for run.completed events
 
@@ -404,7 +404,7 @@ type RunCompletedData struct {
 }
 ```
 
-## type RunStartedData
+## type [RunStartedData](<https://github.com/alehatsman/mooncake/blob/main/internal/events/event.go#L129-L134>)
 
 RunStartedData contains data for run.started events
 
@@ -417,7 +417,7 @@ type RunStartedData struct {
 }
 ```
 
-## type ServiceManagementData
+## type [ServiceManagementData](<https://github.com/alehatsman/mooncake/blob/main/internal/events/event.go#L382-L389>)
 
 ServiceManagementData contains data for service.managed events
 
@@ -432,7 +432,7 @@ type ServiceManagementData struct {
 }
 ```
 
-## type StepCheckedData
+## type [StepCheckedData](<https://github.com/alehatsman/mooncake/blob/main/internal/events/event.go#L444-L469>)
 
 StepCheckedData contains data for step.checked events \(check mode\)
 
@@ -465,7 +465,7 @@ type StepCheckedData struct {
 }
 ```
 
-## type StepCompletedData
+## type [StepCompletedData](<https://github.com/alehatsman/mooncake/blob/main/internal/events/event.go#L204-L220>)
 
 StepCompletedData contains data for step.completed events
 
@@ -489,7 +489,7 @@ type StepCompletedData struct {
 }
 ```
 
-## type StepFailedData
+## type [StepFailedData](<https://github.com/alehatsman/mooncake/blob/main/internal/events/event.go#L241-L253>)
 
 StepFailedData contains data for step.failed events
 
@@ -509,7 +509,7 @@ type StepFailedData struct {
 }
 ```
 
-## type StepOutputData
+## type [StepOutputData](<https://github.com/alehatsman/mooncake/blob/main/internal/events/event.go#L256-L261>)
 
 StepOutputData contains data for step.stdout/stderr events
 
@@ -522,7 +522,7 @@ type StepOutputData struct {
 }
 ```
 
-## type StepSkippedData
+## type [StepSkippedData](<https://github.com/alehatsman/mooncake/blob/main/internal/events/event.go#L223-L238>)
 
 StepSkippedData contains data for step.skipped events
 
@@ -545,7 +545,7 @@ type StepSkippedData struct {
 }
 ```
 
-## type StepStartedData
+## type [StepStartedData](<https://github.com/alehatsman/mooncake/blob/main/internal/events/event.go#L180-L201>)
 
 StepStartedData contains data for step.started events
 
@@ -574,7 +574,7 @@ type StepStartedData struct {
 }
 ```
 
-## type Subscriber
+## type [Subscriber](<https://github.com/alehatsman/mooncake/blob/main/internal/events/publisher.go#L18-L21>)
 
 Subscriber receives events from a publisher
 
@@ -585,7 +585,7 @@ type Subscriber interface {
 }
 ```
 
-## type SyncPublisher
+## type [SyncPublisher](<https://github.com/alehatsman/mooncake/blob/main/internal/events/publisher.go#L148-L153>)
 
 SyncPublisher implements Publisher with synchronous event delivery. Events are delivered immediately via direct OnEvent\(\) calls. This is useful for tests to avoid race conditions with async delivery.
 
@@ -595,7 +595,7 @@ type SyncPublisher struct {
 }
 ```
 
-### func \(\*SyncPublisher\) Close
+### func \(\*SyncPublisher\) [Close](<https://github.com/alehatsman/mooncake/blob/main/internal/events/publisher.go#L206>)
 
 ```go
 func (p *SyncPublisher) Close()
@@ -603,7 +603,7 @@ func (p *SyncPublisher) Close()
 
 Close closes the publisher.
 
-### func \(\*SyncPublisher\) Flush
+### func \(\*SyncPublisher\) [Flush](<https://github.com/alehatsman/mooncake/blob/main/internal/events/publisher.go#L201>)
 
 ```go
 func (p *SyncPublisher) Flush()
@@ -611,7 +611,7 @@ func (p *SyncPublisher) Flush()
 
 Flush is a no\-op for SyncPublisher \(already synchronous\).
 
-### func \(\*SyncPublisher\) Publish
+### func \(\*SyncPublisher\) [Publish](<https://github.com/alehatsman/mooncake/blob/main/internal/events/publisher.go#L164>)
 
 ```go
 func (p *SyncPublisher) Publish(event Event)
@@ -619,7 +619,7 @@ func (p *SyncPublisher) Publish(event Event)
 
 Publish sends an event to all subscribers synchronously.
 
-### func \(\*SyncPublisher\) Subscribe
+### func \(\*SyncPublisher\) [Subscribe](<https://github.com/alehatsman/mooncake/blob/main/internal/events/publisher.go#L178>)
 
 ```go
 func (p *SyncPublisher) Subscribe(subscriber Subscriber) int
@@ -627,7 +627,7 @@ func (p *SyncPublisher) Subscribe(subscriber Subscriber) int
 
 Subscribe adds a new subscriber and returns its ID.
 
-### func \(\*SyncPublisher\) Unsubscribe
+### func \(\*SyncPublisher\) [Unsubscribe](<https://github.com/alehatsman/mooncake/blob/main/internal/events/publisher.go#L193>)
 
 ```go
 func (p *SyncPublisher) Unsubscribe(id int)
@@ -635,7 +635,7 @@ func (p *SyncPublisher) Unsubscribe(id int)
 
 Unsubscribe removes a subscriber.
 
-## type TemplateRenderData
+## type [TemplateRenderData](<https://github.com/alehatsman/mooncake/blob/main/internal/events/event.go#L345-L351>)
 
 TemplateRenderData contains data for template.rendered events
 
@@ -649,7 +649,7 @@ type TemplateRenderData struct {
 }
 ```
 
-## type TransactionRollbackBeginData
+## type [TransactionRollbackBeginData](<https://github.com/alehatsman/mooncake/blob/main/internal/events/event.go#L476-L486>)
 
 TransactionRollbackBeginData fires once at the start of a transaction's LIFO rollback walk — i.e. the first time a body child fails. Carries the failed step's identity \+ the originating error so machine\-readable consumers \(runlog, agent telemetry\) can trace which body step triggered the unwind.
 
@@ -667,7 +667,7 @@ type TransactionRollbackBeginData struct {
 }
 ```
 
-## type TransactionRollbackCompleteData
+## type [TransactionRollbackCompleteData](<https://github.com/alehatsman/mooncake/blob/main/internal/events/event.go#L510-L513>)
 
 TransactionRollbackCompleteData fires at the end of a fully\- successful rollback \(every previously\-completed body child got reversed cleanly\).
 
@@ -678,7 +678,7 @@ type TransactionRollbackCompleteData struct {
 }
 ```
 
-## type TransactionRollbackFailedData
+## type [TransactionRollbackFailedData](<https://github.com/alehatsman/mooncake/blob/main/internal/events/event.go#L521-L527>)
 
 TransactionRollbackFailedData fires when at least one Reverse\(\) failed during the LIFO walk. ReversedSteps counts the inverses that ran successfully BEFORE the first failure — i.e. the steps that ARE rolled back. The system state past that step is indeterminate; the spec\-30 "ROLLBACK INCOMPLETE — manual intervention required" UX is built from this event.
 
@@ -692,7 +692,7 @@ type TransactionRollbackFailedData struct {
 }
 ```
 
-## type TransactionStepReversedData
+## type [TransactionStepReversedData](<https://github.com/alehatsman/mooncake/blob/main/internal/events/event.go#L493-L505>)
 
 TransactionStepReversedData fires after each successful inverse step dispatch during rollback. Identifies the ORIGINAL body step \(the one whose effect just got undone\), not the inverse step — readers of \`mooncake history\` care which user\-authored step was reverted, not which synthesized inverse handler ran.
 
@@ -712,7 +712,7 @@ type TransactionStepReversedData struct {
 }
 ```
 
-## type Type
+## type [Type](<https://github.com/alehatsman/mooncake/blob/main/internal/events/event.go#L18>)
 
 Type identifies the type of event
 
@@ -859,7 +859,7 @@ const (
 )
 ```
 
-## type VarsLoadedData
+## type [VarsLoadedData](<https://github.com/alehatsman/mooncake/blob/main/internal/events/event.go#L361-L366>)
 
 VarsLoadedData contains data for variables.loaded events
 
@@ -872,7 +872,7 @@ type VarsLoadedData struct {
 }
 ```
 
-## type VarsSetData
+## type [VarsSetData](<https://github.com/alehatsman/mooncake/blob/main/internal/events/event.go#L354-L358>)
 
 VarsSetData contains data for variables.set events
 

@@ -162,7 +162,7 @@ var KnownRanges = map[string]struct{ Min, Max float64 }{
 }
 ```
 
-## type Definition
+## type [Definition](<https://github.com/alehatsman/mooncake/blob/main/internal/schemagen/types.go#L30-L55>)
 
 Definition represents a schema definition \(typically for an action\).
 
@@ -195,7 +195,7 @@ type Definition struct {
 }
 ```
 
-## type Generator
+## type [Generator](<https://github.com/alehatsman/mooncake/blob/main/internal/schemagen/generator.go#L14-L16>)
 
 Generator generates JSON Schema from action metadata and struct definitions.
 
@@ -205,7 +205,7 @@ type Generator struct {
 }
 ```
 
-### func NewGenerator
+### func [NewGenerator](<https://github.com/alehatsman/mooncake/blob/main/internal/schemagen/generator.go#L19>)
 
 ```go
 func NewGenerator(opts GeneratorOptions) *Generator
@@ -213,7 +213,7 @@ func NewGenerator(opts GeneratorOptions) *Generator
 
 NewGenerator creates a new schema generator with options.
 
-### func \(\*Generator\) Generate
+### func \(\*Generator\) [Generate](<https://github.com/alehatsman/mooncake/blob/main/internal/schemagen/generator.go#L24>)
 
 ```go
 func (g *Generator) Generate() (*Schema, error)
@@ -221,7 +221,7 @@ func (g *Generator) Generate() (*Schema, error)
 
 Generate creates a complete JSON Schema from the action registry.
 
-### func \(\*Generator\) GenerateOpenAPI
+### func \(\*Generator\) [GenerateOpenAPI](<https://github.com/alehatsman/mooncake/blob/main/internal/schemagen/generator.go#L779>)
 
 ```go
 func (g *Generator) GenerateOpenAPI() (*OpenAPISpec, error)
@@ -229,7 +229,7 @@ func (g *Generator) GenerateOpenAPI() (*OpenAPISpec, error)
 
 GenerateOpenAPI generates an OpenAPI 3.0 specification.
 
-### func \(\*Generator\) GenerateTypeScript
+### func \(\*Generator\) [GenerateTypeScript](<https://github.com/alehatsman/mooncake/blob/main/internal/schemagen/generator.go#L793>)
 
 ```go
 func (g *Generator) GenerateTypeScript() (string, error)
@@ -237,7 +237,7 @@ func (g *Generator) GenerateTypeScript() (string, error)
 
 GenerateTypeScript generates TypeScript definitions.
 
-## type GeneratorOptions
+## type [GeneratorOptions](<https://github.com/alehatsman/mooncake/blob/main/internal/schemagen/types.go#L119-L131>)
 
 GeneratorOptions configures schema generation behavior.
 
@@ -257,7 +257,7 @@ type GeneratorOptions struct {
 }
 ```
 
-## type NotConstraint
+## type [NotConstraint](<https://github.com/alehatsman/mooncake/blob/main/internal/schemagen/types.go#L73-L75>)
 
 NotConstraint represents a "not" constraint with anyOf clauses.
 
@@ -267,7 +267,7 @@ type NotConstraint struct {
 }
 ```
 
-## type OneOfConstraint
+## type [OneOfConstraint](<https://github.com/alehatsman/mooncake/blob/main/internal/schemagen/types.go#L59-L70>)
 
 OneOfConstraint represents a oneOf constraint with required and not clauses. It can also represent complete schema alternatives \(for root\-level oneOf\).
 
@@ -286,7 +286,7 @@ type OneOfConstraint struct {
 }
 ```
 
-## type OpenAPIComponents
+## type [OpenAPIComponents](<https://github.com/alehatsman/mooncake/blob/main/internal/schemagen/openapi.go#L86-L88>)
 
 OpenAPIComponents contains reusable components.
 
@@ -296,7 +296,7 @@ type OpenAPIComponents struct {
 }
 ```
 
-## type OpenAPIContact
+## type [OpenAPIContact](<https://github.com/alehatsman/mooncake/blob/main/internal/schemagen/openapi.go#L22-L26>)
 
 OpenAPIContact contains contact information.
 
@@ -308,7 +308,7 @@ type OpenAPIContact struct {
 }
 ```
 
-## type OpenAPIExample
+## type [OpenAPIExample](<https://github.com/alehatsman/mooncake/blob/main/internal/schemagen/openapi.go#L79-L83>)
 
 OpenAPIExample represents an example.
 
@@ -320,7 +320,7 @@ type OpenAPIExample struct {
 }
 ```
 
-## type OpenAPIInfo
+## type [OpenAPIInfo](<https://github.com/alehatsman/mooncake/blob/main/internal/schemagen/openapi.go#L13-L19>)
 
 OpenAPIInfo contains API metadata.
 
@@ -334,7 +334,7 @@ type OpenAPIInfo struct {
 }
 ```
 
-## type OpenAPILicense
+## type [OpenAPILicense](<https://github.com/alehatsman/mooncake/blob/main/internal/schemagen/openapi.go#L29-L32>)
 
 OpenAPILicense contains license information.
 
@@ -345,7 +345,7 @@ type OpenAPILicense struct {
 }
 ```
 
-## type OpenAPIMediaType
+## type [OpenAPIMediaType](<https://github.com/alehatsman/mooncake/blob/main/internal/schemagen/openapi.go#L72-L76>)
 
 OpenAPIMediaType describes a media type.
 
@@ -357,7 +357,7 @@ type OpenAPIMediaType struct {
 }
 ```
 
-## type OpenAPIOperation
+## type [OpenAPIOperation](<https://github.com/alehatsman/mooncake/blob/main/internal/schemagen/openapi.go#L49-L56>)
 
 OpenAPIOperation describes a single API operation.
 
@@ -372,7 +372,7 @@ type OpenAPIOperation struct {
 }
 ```
 
-## type OpenAPIPath
+## type [OpenAPIPath](<https://github.com/alehatsman/mooncake/blob/main/internal/schemagen/openapi.go#L41-L46>)
 
 OpenAPIPath represents API path operations.
 
@@ -385,7 +385,7 @@ type OpenAPIPath struct {
 }
 ```
 
-## type OpenAPIRequestBody
+## type [OpenAPIRequestBody](<https://github.com/alehatsman/mooncake/blob/main/internal/schemagen/openapi.go#L59-L63>)
 
 OpenAPIRequestBody describes a request body.
 
@@ -397,7 +397,7 @@ type OpenAPIRequestBody struct {
 }
 ```
 
-## type OpenAPIResponse
+## type [OpenAPIResponse](<https://github.com/alehatsman/mooncake/blob/main/internal/schemagen/openapi.go#L66-L69>)
 
 OpenAPIResponse describes a response.
 
@@ -408,7 +408,7 @@ type OpenAPIResponse struct {
 }
 ```
 
-## type OpenAPISchema
+## type [OpenAPISchema](<https://github.com/alehatsman/mooncake/blob/main/internal/schemagen/openapi.go#L92-L132>)
 
 OpenAPISchema represents a schema \(simplified from JSON Schema\). OpenAPI 3.0 uses a subset of JSON Schema with some modifications.
 
@@ -456,7 +456,7 @@ type OpenAPISchema struct {
 }
 ```
 
-## type OpenAPIServer
+## type [OpenAPIServer](<https://github.com/alehatsman/mooncake/blob/main/internal/schemagen/openapi.go#L35-L38>)
 
 OpenAPIServer describes a server.
 
@@ -467,7 +467,7 @@ type OpenAPIServer struct {
 }
 ```
 
-## type OpenAPISpec
+## type [OpenAPISpec](<https://github.com/alehatsman/mooncake/blob/main/internal/schemagen/openapi.go#L4-L10>)
 
 OpenAPISpec represents an OpenAPI 3.0 specification document.
 
@@ -481,7 +481,7 @@ type OpenAPISpec struct {
 }
 ```
 
-## type Property
+## type [Property](<https://github.com/alehatsman/mooncake/blob/main/internal/schemagen/types.go#L78-L100>)
 
 Property represents a schema property \(field in an action struct\).
 
@@ -511,7 +511,7 @@ type Property struct {
 }
 ```
 
-## type RequiredConstraint
+## type [RequiredConstraint](<https://github.com/alehatsman/mooncake/blob/main/internal/schemagen/types.go#L103-L105>)
 
 RequiredConstraint represents a simple required constraint.
 
@@ -521,7 +521,7 @@ type RequiredConstraint struct {
 }
 ```
 
-## type Schema
+## type [Schema](<https://github.com/alehatsman/mooncake/blob/main/internal/schemagen/types.go#L18-L27>)
 
 Schema represents a complete JSON Schema document.
 
@@ -538,7 +538,7 @@ type Schema struct {
 }
 ```
 
-### func \(\*Schema\) ConvertToOpenAPI
+### func \(\*Schema\) [ConvertToOpenAPI](<https://github.com/alehatsman/mooncake/blob/main/internal/schemagen/openapi.go#L135>)
 
 ```go
 func (s *Schema) ConvertToOpenAPI() *OpenAPISpec
@@ -546,7 +546,7 @@ func (s *Schema) ConvertToOpenAPI() *OpenAPISpec
 
 ConvertToOpenAPI converts a JSON Schema to OpenAPI 3.0 format.
 
-### func \(\*Schema\) GenerateTypeScript
+### func \(\*Schema\) [GenerateTypeScript](<https://github.com/alehatsman/mooncake/blob/main/internal/schemagen/typescript.go#L21>)
 
 ```go
 func (s *Schema) GenerateTypeScript() string
@@ -554,7 +554,7 @@ func (s *Schema) GenerateTypeScript() string
 
 GenerateTypeScript generates TypeScript definitions from a schema.
 
-### func \(\*Schema\) MarshalJSON
+### func \(\*Schema\) [MarshalJSON](<https://github.com/alehatsman/mooncake/blob/main/internal/schemagen/generator.go#L765>)
 
 ```go
 func (s *Schema) MarshalJSON() ([]byte, error)
@@ -562,7 +562,7 @@ func (s *Schema) MarshalJSON() ([]byte, error)
 
 MarshalJSON converts the schema to JSON.
 
-### func \(\*Schema\) MarshalPrettyJSON
+### func \(\*Schema\) [MarshalPrettyJSON](<https://github.com/alehatsman/mooncake/blob/main/internal/schemagen/generator.go#L772>)
 
 ```go
 func (s *Schema) MarshalPrettyJSON() ([]byte, error)
@@ -570,7 +570,7 @@ func (s *Schema) MarshalPrettyJSON() ([]byte, error)
 
 MarshalPrettyJSON converts the schema to pretty\-printed JSON.
 
-## type SchemaRef
+## type [SchemaRef](<https://github.com/alehatsman/mooncake/blob/main/internal/schemagen/types.go#L111-L116>)
 
 SchemaRef represents a reference to another schema definition. Also used inside anyOf/allOf branches as a lightweight "shape with just a required clause" fragment when neither $ref nor type fits — e.g. runConfig's anyOf: \[\{required: \[steps\]\}, \{required: \[tasks\]\}\].
 
@@ -583,7 +583,7 @@ type SchemaRef struct {
 }
 ```
 
-## type TypeScriptGenerator
+## type [TypeScriptGenerator](<https://github.com/alehatsman/mooncake/blob/main/internal/schemagen/typescript.go#L16-L18>)
 
 TypeScriptGenerator generates TypeScript definitions from schema.
 
@@ -593,7 +593,7 @@ type TypeScriptGenerator struct {
 }
 ```
 
-## type Writer
+## type [Writer](<https://github.com/alehatsman/mooncake/blob/main/internal/schemagen/writer.go#L12-L14>)
 
 Writer handles writing schemas in different formats.
 
@@ -603,7 +603,7 @@ type Writer struct {
 }
 ```
 
-### func NewWriter
+### func [NewWriter](<https://github.com/alehatsman/mooncake/blob/main/internal/schemagen/writer.go#L17>)
 
 ```go
 func NewWriter(format string) *Writer
@@ -611,7 +611,7 @@ func NewWriter(format string) *Writer
 
 NewWriter creates a new writer for the specified format.
 
-### func \(\*Writer\) Write
+### func \(\*Writer\) [Write](<https://github.com/alehatsman/mooncake/blob/main/internal/schemagen/writer.go#L22>)
 
 ```go
 func (w *Writer) Write(schema *Schema, out io.Writer) error
@@ -619,7 +619,7 @@ func (w *Writer) Write(schema *Schema, out io.Writer) error
 
 Write writes the schema to the given writer.
 
-### func \(\*Writer\) WriteOpenAPI
+### func \(\*Writer\) [WriteOpenAPI](<https://github.com/alehatsman/mooncake/blob/main/internal/schemagen/writer.go#L34>)
 
 ```go
 func (w *Writer) WriteOpenAPI(spec *OpenAPISpec, out io.Writer) error
@@ -627,7 +627,7 @@ func (w *Writer) WriteOpenAPI(spec *OpenAPISpec, out io.Writer) error
 
 WriteOpenAPI writes an OpenAPI spec to the given writer.
 
-### func \(\*Writer\) WriteTypeScript
+### func \(\*Writer\) [WriteTypeScript](<https://github.com/alehatsman/mooncake/blob/main/internal/schemagen/writer.go#L46>)
 
 ```go
 func (w *Writer) WriteTypeScript(tsContent string, out io.Writer) error
