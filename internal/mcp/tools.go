@@ -70,6 +70,59 @@ func objSchema(props map[string]interface{}, required []string) map[string]inter
 	return s
 }
 
+func strArrayProp(desc string) map[string]interface{} {
+	return map[string]interface{}{
+		"type":        "array",
+		"items":       map[string]interface{}{"type": "string"},
+		"description": desc,
+	}
+}
+
+// policyProp is the JSON-Schema for the optional permissions-as-contract
+// gate (#11) on run_plan. The agent (or the operator wiring the MCP
+// client) declares what the run may do; the executor refuses any step
+// that exceeds it, before its side effect. Omit for an ungated run.
+func policyProp() map[string]interface{} {
+	return map[string]interface{}{
+		"type":        "object",
+		"description": "Optional permissions-as-contract gate (#11): refuse steps that exceed the declared limits, before any side effect. Omit to run ungated.",
+		"properties": map[string]interface{}{
+			"allowed_actions": strArrayProp("Allowlist of action types the run may use (e.g. ['file.write','text.replace']). Empty = any action allowed unless denied."),
+			"denied_actions":  strArrayProp("Denylist of action types the run may NOT use (e.g. ['shell','cmd']). Wins over the allowlist."),
+			"deny_network":    boolProp("Refuse any step that declares network egress (pkg install, download, http.request, remote git clone)."),
+			"max_risk":        map[string]interface{}{"type": "integer", "minimum": 0, "maximum": 10, "description": "Refuse any step whose estimated risk band (1..10) exceeds this cap. 0 = no cap."},
+		},
+	}
+}
+
+// policyArg is the wire shape of the run_plan `policy` argument; it
+// mirrors executor.Policy with snake_case JSON keys for MCP clients.
+type policyArg struct {
+	AllowedActions []string `json:"allowed_actions"`
+	DeniedActions  []string `json:"denied_actions"`
+	DenyNetwork    bool     `json:"deny_network"`
+	MaxRisk        int      `json:"max_risk"`
+}
+
+// toExecutorPolicy lowers the wire shape into an *executor.Policy,
+// returning nil when no field is set so an empty/absent policy object is
+// treated identically to "no policy" (ungated run).
+func (p *policyArg) toExecutorPolicy() *executor.Policy {
+	if p == nil {
+		return nil
+	}
+	pol := &executor.Policy{
+		AllowedActions: p.AllowedActions,
+		DeniedActions:  p.DeniedActions,
+		DenyNetwork:    p.DenyNetwork,
+		MaxRisk:        p.MaxRisk,
+	}
+	if pol.IsZero() {
+		return nil
+	}
+	return pol
+}
+
 // ---- tool definitions -------------------------------------------------------
 
 // AllTools returns the complete list of tool definitions.
@@ -100,6 +153,7 @@ func AllTools() []ToolDef {
 			InputSchema: objSchema(map[string]interface{}{
 				"config":  strProp("Path to mooncake config YAML file"),
 				"dry_run": boolProp("If true, simulate without making changes"),
+				"policy":  policyProp(),
 			}, []string{"config"}),
 		},
 		{
@@ -388,7 +442,7 @@ func buildInspectionIndex(inspections []plan.StepInspection) map[string]plan.Ste
 	return idx
 }
 
-func runConfig(ctx context.Context, configPath string) (string, error) {
+func runConfig(ctx context.Context, configPath string, policy *executor.Policy) (string, error) {
 	// Pre-inspect: collect predicted Diff + Cost per step (ModePlan).
 	// Runs before the apply so run_plan can return per-step diffs alongside
 	// apply-time outcomes. Step IDs are deterministic (step-0001, etc.) so
@@ -413,6 +467,7 @@ func runConfig(ctx context.Context, configPath string) (string, error) {
 	kr, runErr := apply.NewRunner(&apply.Config{
 		ConfigPath:   configPath,
 		OutputFormat: "quiet",
+		Policy:       policy,
 	}).Run(ctx)
 
 	// Extract per-step duration from the event audit trail; executor.Result
@@ -477,12 +532,13 @@ func runConfig(ctx context.Context, configPath string) (string, error) {
 
 func HandleRunPlan(ctx context.Context, args json.RawMessage) (string, error) {
 	var params struct {
-		Config string `json:"config"`
+		Config string     `json:"config"`
+		Policy *policyArg `json:"policy"`
 	}
 	if err := json.Unmarshal(args, &params); err != nil || params.Config == "" {
 		return "", fmt.Errorf("config parameter required")
 	}
-	return runConfig(ctx, params.Config)
+	return runConfig(ctx, params.Config, params.Policy.toExecutorPolicy())
 }
 
 // explainExamplesLimitMax is the upper bound advertised in the

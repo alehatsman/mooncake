@@ -201,6 +201,7 @@ func (r *Runner) Run(ctx context.Context) (*KernelResult, error) {
 		MaxOutputLines:    r.cfg.MaxOutputLines,
 
 		Capture: capture,
+		Policy:  r.cfg.Policy,
 	}, internalLog, publisher)
 
 	// Drain pending events so the audit tail is complete before we

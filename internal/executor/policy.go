@@ -138,3 +138,27 @@ func containsFold(list []string, want string) bool {
 	}
 	return false
 }
+
+// enforcePolicy applies the per-run Policy gate to a step about to be
+// dispatched. It is a no-op when no policy is set (the common path), so
+// callers can invoke it unconditionally. perms is the step's already-
+// resolved PermissionSet; risk is resolved from the handler's Coster
+// (defaultPolicyRisk fallback) only when a MaxRisk cap is in effect, so
+// the no-cap path skips the extra handler call.
+//
+// Extracted from dispatchRunner so the hot dispatch path stays under
+// the gocyclo budget as the policy surface grows.
+func enforcePolicy(ec *ExecutionContext, step *config.Step, runner actions.Runner, perms actions.PermissionSet) error {
+	if ec.Svc == nil || ec.Svc.Policy == nil {
+		return nil
+	}
+	risk := defaultPolicyRisk
+	if ec.Svc.Policy.MaxRisk > 0 {
+		if c, ok := runner.(actions.Coster); ok {
+			if est, costErr := c.Cost(ec, step); costErr == nil {
+				risk = est.Risk
+			}
+		}
+	}
+	return ec.Svc.Policy.check(step, perms, risk)
+}

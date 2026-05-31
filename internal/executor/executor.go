@@ -1559,24 +1559,12 @@ func dispatchRunner(step config.Step, ec *ExecutionContext, runner actions.Runne
 	}
 
 	// #11 permissions-as-contract: enforce the per-run policy before any
-	// side effect. This runs for EVERY step — not just Permitters — so
-	// the action allow/deny list can gate handlers like shell/cmd that
-	// declare no PermissionSet (those are exactly the escape hatches a
-	// policy most wants to deny). nil policy enforces nothing. Cost.Risk
-	// is resolved only when a cap is set, so the common no-policy and
-	// no-MaxRisk paths don't pay for an extra handler call.
-	if ec.Svc != nil && ec.Svc.Policy != nil {
-		risk := defaultPolicyRisk
-		if ec.Svc.Policy.MaxRisk > 0 {
-			if c, ok := runner.(actions.Coster); ok {
-				if est, costErr := c.Cost(ec, &step); costErr == nil {
-					risk = est.Risk
-				}
-			}
-		}
-		if err := ec.Svc.Policy.check(&step, perms, risk); err != nil {
-			return err
-		}
+	// side effect. Runs for EVERY step — not just Permitters — so the
+	// action allow/deny list can gate handlers like shell/cmd that
+	// declare no PermissionSet (the escape hatches a policy most wants to
+	// deny). No-op when no policy is set. See enforcePolicy in policy.go.
+	if err := enforcePolicy(ec, &step, runner, perms); err != nil {
+		return err
 	}
 
 	// Spec-72 Layer C: bind the step's AsUser to ec for the duration

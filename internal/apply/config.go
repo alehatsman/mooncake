@@ -1,6 +1,9 @@
 package apply
 
-import "github.com/alehatsman/mooncake/internal/events"
+import (
+	"github.com/alehatsman/mooncake/internal/events"
+	"github.com/alehatsman/mooncake/internal/executor"
+)
 
 // Config carries the typed inputs needed to apply a plan against the
 // local machine. Each field maps to a CLI flag on `mooncake apply`,
@@ -100,4 +103,13 @@ type Config struct {
 	// path that wants to attach to an existing publisher and clean up
 	// on its own will run into this otherwise.
 	ExtraSubscribers []events.Subscriber
+
+	// Policy, if non-nil, is the per-run permissions-as-contract gate
+	// (#11) the executor enforces at preflight — an action allow/deny
+	// list, a network switch, and a risk cap. A step that exceeds it
+	// fails the run before its side effect. nil = enforce nothing. This
+	// is how MCP/agentd/SDK callers gate an agent run without the CLI;
+	// it lowers straight into executor.StartConfig.Policy. See
+	// internal/executor/policy.go.
+	Policy *executor.Policy
 }
