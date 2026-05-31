@@ -4,18 +4,33 @@ version: '1'
 # workflows in this repo. Run with: `mooncake task <name>`.
 # Bare `mooncake task` lists every task with its description.
 #
-# Templates use Pongo2 syntax ({{ VAR }}). Day-to-day targets live
-# here; the heavier multi-step gates (CI fast / full) live in
-# scripts/ci/ so this file stays scannable.
+# The generic Go quality gate (build/test/lint/vuln/scan/ai-lint/arch-snapshot/
+# dupl + the fast/full CI cores) comes from the shared **go-quality** module
+# (alehatsman/go-quality), so it stays in lockstep with dex + moongit. Each of
+# those tasks is a thin wrapper over a `goq/*` component.
+#
+# Kept LOCAL because they're mooncake-unique (no module equivalent, or
+# deliberately not generic): the docs-* (gomarkdoc/mkdocs) + schema-* pipeline,
+# the project-specific budget-status (handler-LOC + Step-field caps on top of
+# gocyclo/god-files), escalation-lint (spec-72), fmt (gofmt -s writer), install
+# (mcake alias + agentd restart), test-race/test-cover, lint-new/lint-fix,
+# install-tools/check-tools, pilot-evals, release. The composite ci / ci-fast
+# gates run the goq core and then mooncake's extra stages.
+#
+# PREREQ: go-quality is hosted on the local moongit over plain http, so the
+# module fetch needs the host trusted once per shell:
+#   export MOONCAKE_MODULE_INSECURE=127.0.0.1:8080
+# (first run clones to ~/.cache/mooncake/modules/...; later runs hit cache.)
 #
 # Conventions:
 #   - Tasks that need the built binary call `out/mooncake` directly.
-#     If the build is stale, run `mooncake task build` first.
-#   - Non-trivial shell logic moves to scripts/. Keep this file at
-#     "what" level, scripts at "how" level.
+#   - Non-trivial shell logic moves to scripts/. Keep this file at "what" level.
 
 vars:
   BIN: out/mooncake
+
+modules:
+  goq: "127.0.0.1:8080/alehatsman/go-quality@v0.1.1"
 
 tasks:
 
@@ -23,8 +38,13 @@ tasks:
   build:
     desc: Build the mooncake binary into out/mooncake
     steps:
-      - shell: { cmd: "go build -v -o {{ BIN }} ./cmd" }
+      - name: build
+        use: goq/build
+        props:
+          cmd_path: ./cmd
+          bin: '{{ BIN }}'
 
+  # Kept local: mcake alias + PATH check + agentd restart are mooncake-specific.
   install:
     desc: Build and install mooncake to ~/.local/bin; create `mcake` alias; restart agentd if active
     steps:
@@ -68,13 +88,16 @@ tasks:
   test:
     desc: Run go test ./...
     steps:
-      - shell: { cmd: "go test ./..." }
+      - name: test
+        use: goq/test
 
+  # Kept local: go-quality has no race component (race is a mooncake-local variant).
   test-race:
     desc: Run go test -race ./... (slower; not in default ci)
     steps:
       - shell: { cmd: "go test -race ./..." }
 
+  # Kept local: coverage report is mooncake-specific.
   test-cover:
     desc: Run tests with HTML coverage report at testing-output/coverage.html
     steps:
@@ -87,18 +110,23 @@ tasks:
   lint:
     desc: golangci-lint (includes gosec via .golangci.yml)
     steps:
-      - shell: { cmd: "golangci-lint run ./..." }
+      - name: lint
+        use: goq/lint
 
+  # Kept local: --new-from-rev variant for refactor-friendly review.
   lint-new:
     desc: golangci-lint on lines changed since HEAD~1 (refactor-friendly)
     steps:
       - shell: { cmd: "golangci-lint run --new-from-rev=HEAD~1 ./..." }
 
+  # Kept local: --fix variant (auto-fixer).
   lint-fix:
     desc: Auto-fix what golangci-lint can fix (misspell, unconvert, staticcheck QF/S, revive)
     steps:
       - shell: { cmd: "golangci-lint run --fix ./..." }
 
+  # Kept local: this is the formatter (gofmt -s -w); goq/fmt is the check used
+  # inside the ci-fast gate.
   fmt:
     desc: Format Go sources with gofmt -s
     steps:
@@ -109,20 +137,18 @@ tasks:
   vuln:
     desc: govulncheck
     steps:
-      - shell: { cmd: "govulncheck ./..." }
+      - name: vuln
+        use: goq/vuln
 
   scan:
     desc: Security + vulnerability scan (lint + vuln)
     steps:
-      - shell: { cmd: "golangci-lint run ./..." }
-      - shell: { cmd: "govulncheck ./..." }
+      - name: scan
+        use: goq/scan
 
   # ── Docs / schema ────────────────────────────────────────────────────
-  # Docs are fully generated. Source of truth = code (action metadata,
-  # CLI command tree, package godocs) + a tiny curated set of READMEs
-  # under internal/*/README.md. Output tree lives at dist/docs/ (gitignored).
-  # MkDocs reads dist/docs/ via mkdocs.yml; the nav is derived from
-  # dist/docs/SUMMARY.md by the mkdocs-literate-nav plugin.
+  # Kept local: fully mooncake-specific (gomarkdoc + the generated dist/docs
+  # tree + MkDocs site + JSON/TS schema). Source of truth = code.
 
   docs-tools-install:
     desc: Install gomarkdoc + mkdocs python deps used by docs-generate / docs-build
@@ -179,35 +205,46 @@ tasks:
   arch-snapshot:
     desc: Regenerate docs-working/ARCH_SNAPSHOT.md (gitignored; local read-only)
     steps:
-      - shell: { cmd: "bash ./scripts/arch-snapshot.sh" }
+      - name: arch-snapshot
+        use: goq/arch-snapshot
 
+  # Kept local: mooncake's budget adds project-specific caps (handler LOC,
+  # config.Step universal-field count) on top of the generic gocyclo/god-files.
   budget-status:
     desc: Show current state of the three CLAUDE.md soft caps
     steps:
       - shell: { cmd: "bash ./scripts/budget-status.sh" }
 
   dupl:
-    desc: Code-duplication report (production only; override threshold with T=N in scripts/dupl-report.sh)
+    desc: Code-duplication report (production only; override threshold with the goq dupl `threshold` prop)
     steps:
-      - shell: { cmd: "bash ./scripts/dupl-report.sh" }
+      - name: dupl
+        use: goq/dupl
 
   # ── AI-smell sweep / escalation lint ─────────────────────────────────
   ai-lint:
     desc: AI-smell sweep on staged Go files (stub panics, agent TODOs, prompt artifacts)
     steps:
-      - shell: { cmd: "bash ./scripts/ai-lint.sh" }
+      - name: ai-lint
+        use: goq/ai-lint
 
   ai-lint-all:
     desc: AI-smell sweep on every tracked Go file
     steps:
-      - shell: { cmd: "bash ./scripts/ai-lint.sh --all" }
+      - name: ai-lint-all
+        use: goq/ai-lint
+        props:
+          args: "--all"
 
+  # Kept local: spec-72 escalation lint is mooncake-specific.
   escalation-lint:
     desc: "spec-72 §G1: report direct security.BecomeRunner/PrivilegedRunner constructs outside the allowlist"
     steps:
       - shell: { cmd: "bash ./scripts/escalation-lint.sh" }
 
   # ── Tools ────────────────────────────────────────────────────────────
+  # Kept local: mooncake keeps install-tools/check-tools separate (goq/tools
+  # combines them); the scripts mirror the module's canonical set.
   install-tools:
     desc: Install every static-analysis tool the project depends on
     steps:
@@ -243,16 +280,57 @@ tasks:
       - shell: { cmd: "bash ./scripts/release.sh" }
 
   # ── CI gates ─────────────────────────────────────────────────────────
-  # The phase-by-phase gate logic lives in scripts/ci/ so this file
-  # stays a one-liner per task. See those scripts for the per-phase
-  # output and `set -e` flow.
+  # Composite: the goq/* core (shared with dex + moongit) followed by
+  # mooncake's unique stages. First failure stops the pipeline.
 
   ci-fast:
-    desc: "Pre-commit gate: vet + gofmt (staged) + ai-lint (staged) + budget + docs-regen (gated)"
+    desc: "Pre-commit gate: goq fast core (vet + gofmt + ai-lint + budget) + gated docs/schema regen"
     steps:
-      - shell: { cmd: "bash ./scripts/ci/fast.sh" }
+      - name: "goq fast core"
+        use: goq/ci-fast
+      - name: "docs/schema regen (gated)"
+        shell: { cmd: "BIN={{ BIN }} bash ./scripts/docs-regen-staged.sh" }
+      - log: { msg: "✓ Fast checks green — full 'mooncake task ci' gate runs on push." }
 
   ci:
-    desc: "Pre-push gate: build + test + lint + scan + docs/schema + arch + budget + dupl + escalation-lint"
+    desc: "Pre-push gate: build + test + lint + vuln + docs/schema + mkdocs + arch + budget + dupl + escalation-lint"
     steps:
-      - shell: { cmd: "bash ./scripts/ci/full.sh" }
+      - name: "[1/10] build"
+        use: goq/build
+        props:
+          cmd_path: ./cmd
+          bin: '{{ BIN }}'
+      - name: "[2/10] test"
+        use: goq/test
+      - name: "[3/10] lint"
+        use: goq/lint
+      - name: "[4/10] vuln"
+        use: goq/vuln
+      - name: "[5/10] regen docs + schema, then verify clean"
+        shell:
+          cmd: |
+            rm -rf dist/docs && mkdir -p dist/docs
+            {{ BIN }} docs generate --section all-into-dir --output dist/docs                           >/dev/null
+            {{ BIN }} schema generate --format json       --output internal/config/schema.json --strict >/dev/null
+            {{ BIN }} schema generate --format typescript --output internal/config/schema.d             >/dev/null
+            {{ BIN }} schema generate --format typescript --output mooncake.d.ts                         >/dev/null
+            BIN={{ BIN }} bash ./scripts/docs-check.sh
+            BIN={{ BIN }} bash ./scripts/schema-check.sh
+      - name: "[6/10] mkdocs build --strict (skipped when pipenv/mkdocs absent)"
+        shell:
+          cmd: |
+            if command -v pipenv >/dev/null 2>&1 && pipenv run mkdocs --version >/dev/null 2>&1; then
+              DISABLE_MKDOCS_2_WARNING=true pipenv run mkdocs build --strict --quiet
+              echo "  ✓ mkdocs site built"
+            else
+              echo "  ⚠ pipenv/mkdocs not on PATH — skipping (run 'mooncake task docs-tools-install' to enable)"
+            fi
+      - name: "[7/10] arch-snapshot"
+        use: goq/arch-snapshot
+      - name: "[8/10] soft-cap budget (mooncake caps)"
+        shell: { cmd: "bash ./scripts/budget-status.sh | sed 's/^/  /'" }
+      - name: "[9/10] dupl (production-code duplication report)"
+        use: goq/dupl
+      - name: "[10/10] escalation-lint (spec-72 §G1)"
+        shell: { cmd: "bash ./scripts/escalation-lint.sh --fail" }
+      - log: { msg: "✓ All checks green — safe to push." }
