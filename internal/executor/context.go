@@ -355,7 +355,17 @@ func (ec *ExecutionContext) Logger() logger.Logger {
 
 // Variables returns all variables merged into a flat map for template/expression engines.
 func (ec *ExecutionContext) Variables() map[string]interface{} {
-	return ec.Scope.ToMap()
+	m := ec.Scope.ToMap()
+	// Overlay component_dir per step: the dir of the file/component that
+	// declares the running step (ec.CurrentDir; the module-cache dir for a
+	// `use:`d component). Plan-time rendering resolves this for action
+	// fields, but execute-time renders (when/creates/unless and path
+	// expansion) read it from here. invocation_dir is a global constant
+	// carried in the User scope from the plan's InitialVars.
+	if ec.CurrentDir != "" {
+		m["component_dir"] = ec.CurrentDir
+	}
+	return m
 }
 
 // MergeUserVars merges the provided key-value pairs into the user variable scope.

@@ -65,6 +65,27 @@ Mooncake automatically collects system information:
 - `ip_addresses` - Array of IP addresses
 - `ip_addresses_string` - Comma-separated IP addresses
 
+### Built-in Directory Variables
+
+Two directory variables are always in scope, mainly useful when authoring
+reusable components/modules:
+
+- `invocation_dir` - the working directory mooncake was launched from (the
+  project under management). This is also where `shell:`/`cmd:` steps run,
+  so it's the dir a shared gate operates on. Constant for the whole run.
+- `component_dir` - the directory of the file (or `use:`d component) that
+  *declares* the current step. For a module fetched from a registry this is
+  its cache dir. Lets a component reference its OWN bundled assets and run
+  them against the consumer's code, e.g.:
+
+  ```yaml
+  - shell:
+      cmd: "bash {{ component_dir }}/scripts/lint.sh"
+  ```
+
+  The script path resolves to the component, but the command still runs in
+  `invocation_dir`.
+
 ### Variable Substitution
 
 Variables work everywhere:

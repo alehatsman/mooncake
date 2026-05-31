@@ -57,10 +57,20 @@ var pongo2Builtins = map[string]bool{
 }
 
 // freeNames are names that are always considered defined at plan
-// time regardless of initial_vars (loop vars, env-var access).
+// time regardless of initial_vars (loop vars, env-var access, and the
+// built-in directory vars).
+//
+// component_dir / invocation_dir: component_dir is overlaid per step at
+// render time (it's the declaring file/component's dir, not a global
+// initial var) and invocation_dir is the process cwd. Action fields
+// resolve them at plan time, but execute-time-only fields like `when:`
+// preserve `{{ component_dir }}` into the plan, so the strict pass must
+// treat both as defined to avoid false positives.
 var freeNames = map[string]bool{
-	"item": true,
-	"env":  true,
+	"item":           true,
+	"env":            true,
+	"component_dir":  true,
+	"invocation_dir": true,
 }
 
 // CheckPlanStrict scans the expanded plan for unresolved root

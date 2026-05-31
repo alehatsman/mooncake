@@ -2,6 +2,7 @@ package plan
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"reflect"
 	"runtime"
@@ -108,6 +109,28 @@ type ExpansionContext struct {
 	// entries. Untagged steps still run on a tag filter; unnamed steps
 	// are dropped on a name filter (see utils.MatchesNames).
 	Names []string
+}
+
+// renderVars returns ctx.Variables overlaid with the per-step
+// component_dir — the dir of the file or component that declares the
+// step (ctx.CurrentDir; the module-cache dir for a `use:`d component).
+// Lets a shared component reference its OWN bundled assets, e.g.
+// `bash {{ component_dir }}/scripts/ai-lint.sh`. invocation_dir is a
+// global constant and is already present in Variables.
+//
+// The overlay is a shallow copy: sibling ExpansionContexts deliberately
+// share one Variables map (so a vars.load in an include propagates), so
+// mutating it in place would leak one file's component_dir into another.
+func (ctx *ExpansionContext) renderVars() map[string]interface{} {
+	if ctx.CurrentDir == "" {
+		return ctx.Variables
+	}
+	out := make(map[string]interface{}, len(ctx.Variables)+1)
+	for k, v := range ctx.Variables {
+		out[k] = v
+	}
+	out["component_dir"] = ctx.CurrentDir
+	return out
 }
 
 // PlannerConfig holds configuration for building a plan
@@ -220,6 +243,16 @@ func (p *Planner) BuildPlan(cfg PlannerConfig) (*Plan, error) {
 	systemFacts := facts.Collect()
 	for k, v := range systemFacts.ToMap() {
 		variables[k] = v
+	}
+
+	// Inject invocation_dir: the process cwd where mooncake was launched
+	// (the project under management). This is the dir shell:/cmd: steps run
+	// in, so a shared component can name it explicitly. Constant for the
+	// whole run; sourced from the cwd (not the config dir) to match where
+	// shell commands actually execute. Best-effort — a cwd lookup failure
+	// just omits the key rather than failing the plan.
+	if wd, wdErr := os.Getwd(); wdErr == nil {
+		variables["invocation_dir"] = wd
 	}
 
 	// Update plan's InitialVars to include system facts
@@ -570,8 +603,9 @@ func (p *Planner) expandInclude(step config.Step, ctx *ExpansionContext, plan *P
 // apply time where the final values are known. Defaults are still applied so
 // the component's downstream steps see complete props.
 func (p *Planner) tryExpandUse(step config.Step, ctx *ExpansionContext, plan *Plan, stepIndex int) (bool, error) {
+	renderVars := ctx.renderVars()
 	render := func(s string) (string, error) {
-		return p.template.RenderPreserving(s, ctx.Variables)
+		return p.template.RenderPreserving(s, renderVars)
 	}
 
 	rendered, err := render(step.Use)
@@ -951,7 +985,7 @@ func (p *Planner) compilePlanStep(step config.Step, ctx *ExpansionContext, loopC
 
 	// Render step name
 	if step.Name != "" {
-		rendered, err := p.template.Render(step.Name, ctx.Variables)
+		rendered, err := p.template.Render(step.Name, ctx.renderVars())
 		if err != nil {
 			return config.Step{}, fmt.Errorf("failed to render step name: %w", err)
 		}
@@ -1001,8 +1035,9 @@ func (p *Planner) compilePlanStep(step config.Step, ctx *ExpansionContext, loopC
 // preserved as {{ expr }} in plan output rather than silently replaced with "".
 // All 28 action structs are covered automatically via walkAndRender.
 func (p *Planner) renderActionTemplates(step *config.Step, ctx *ExpansionContext) error {
+	renderVars := ctx.renderVars()
 	render := func(s string) (string, error) {
-		return p.template.RenderPreserving(s, ctx.Variables)
+		return p.template.RenderPreserving(s, renderVars)
 	}
 
 	// spec-67: `use:` is a string action; `props:` is its sibling map (not an
