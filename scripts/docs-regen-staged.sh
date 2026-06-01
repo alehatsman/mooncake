@@ -14,7 +14,7 @@ BIN="${BIN:-out/mooncake}"
 
 cd "$(git rev-parse --show-toplevel)"
 
-echo "docs regen (gated on action/config/docgen + documented-API-package changes)"
+echo "docs regen (gated on action/config/docgen + documented-API-package + CLI-surface changes)"
 # The pathspecs below MUST cover every package in docgen.DefaultAPIPackages
 # (internal/docgen/api.go) — each renders to dist/docs/api/<slug>.md, so a .go
 # change there drifts the committed docs. They also cover the action cards,
@@ -22,12 +22,24 @@ echo "docs regen (gated on action/config/docgen + documented-API-package changes
 # coverage is enforced by TestDocsRegenGate_CoversAPIPackages
 # (internal/docgen/api_test.go) so this list can't silently fall behind.
 #
+# 'cmd/*.go' gates the entire CLI-doc surface. dist/docs/cli/*.md is generated
+# by walking the live urfave/cli command tree (Generator.writeCLITree,
+# internal/docgen/cli.go), whose flags/commands/help text are defined across
+# the whole cmd/ tree (cmd/kernel, cmd/fleet, …) — not just the docs/schema
+# commands. So any flag/command edit anywhere under cmd/ can drift the CLI
+# pages; gating the whole tree is the only stable way to track that.
+# TestDocsRegenGate_CoversCLISurface (internal/docgen/cli_test.go) enforces
+# that this pathspec keeps covering every Go file under cmd/.
+#
 # NOTE: single-star '<pkg>/*.go' is deliberate, not '<pkg>/**/*.go'. In a git
 # pathspec (no :(glob) magic) '*' matches '/', so '<pkg>/*.go' matches both
-# top-level and nested files. The trailing '/' in '**/*.go' forces a
-# subdirectory, which silently MISSED every top-level file (e.g. actions
-# handler.go/registry.go, and all of the flat docgen/schemagen packages —
-# matching zero files). Keep the single star.
+# top-level and nested files (e.g. 'cmd/*.go' matches cmd/mooncake.go AND
+# cmd/kernel/agent.go). The trailing '/' in '**/*.go' forces a subdirectory,
+# which silently MISSED every top-level file (e.g. actions handler.go/registry.go,
+# and all of the flat docgen/schemagen packages — matching zero files). The
+# old 'cmd/docs.go'/'cmd/schema.go' specs matched zero files for a second
+# reason: those commands live at cmd/docs/docs.go and cmd/schema/schema.go.
+# Keep the single star.
 gated=$(git diff --cached --name-only --diff-filter=ACMR \
   -- 'internal/actions/*.go' \
      'internal/config/*.go' \
@@ -41,7 +53,7 @@ gated=$(git diff --cached --name-only --diff-filter=ACMR \
      'internal/plan/*.go' \
      'internal/presets/*.go' \
      'internal/schemagen/*.go' \
-     'cmd/docs.go' 'cmd/schema.go' 2>/dev/null || true)
+     'cmd/*.go' 2>/dev/null || true)
 
 if [ -z "$gated" ]; then
   echo "  (no documented-package / generator Go files staged — skipping)"
