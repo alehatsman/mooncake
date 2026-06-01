@@ -11,6 +11,25 @@ type Client interface {
 	GeneratePlan(ctx context.Context, systemPrompt, userPrompt, model string) (string, error)
 }
 
+// StreamingClient is the optional streaming extension to Client (#76,
+// Phase 2). Providers that can stream the planner's output token-by-token
+// implement it; the agent loop type-asserts for it and falls back to
+// GeneratePlan (emitting one synthetic delta with the full text) when a
+// provider doesn't (design §4.2 alt). Keeping it a separate interface — not
+// a method on Client — means the buffered HTTP providers and test stubs
+// don't have to grow boilerplate they'd never exercise.
+//
+// onDelta receives coalesced chunks as they arrive; kind is "text" or
+// "thinking". The provider coalesces tokens before each call so consumers
+// aren't flooded one-event-per-token. The returned string is the final,
+// complete plan text — identical to GeneratePlan's contract — so the loop's
+// downstream sanitize/validate path is unchanged. Providers stay
+// transport-only: the loop owns the delta→events.Event translation, so
+// nothing here imports internal/events.
+type StreamingClient interface {
+	GeneratePlanStream(ctx context.Context, systemPrompt, userPrompt, model string, onDelta func(text, kind string)) (string, error)
+}
+
 // ClientOptions carries the explicit caller selection (CLI flags
 // today, `agent.yml` later) into the provider-selection chain.
 type ClientOptions struct {

@@ -158,27 +158,35 @@ func RunLoop(opts RunOptions) (*LoopResult, error) {
 			return nil, fmt.Errorf("failed to build prompt: %w", err)
 		}
 
-		// #74: emit a plan.generating "started" bracket before the
-		// buffered planner call so a --output-format json consumer has a
-		// real start event for the plan phase instead of dead air until
-		// plan.loaded (moongit#133). No-op in text mode.
-		emitLoopEvent(opts.OutputFormat, events.Event{
-			Type:      events.EventPlanGenerating,
-			Timestamp: time.Now(),
-			Data: events.PlanGeneratingData{
-				Iteration: iterNum,
-				Provider:  opts.Provider,
-				Model:     opts.Model,
-			},
-		})
+		// #74/#76: a plan-phase publisher live for the whole planner call.
+		// It emits the plan.generating "started" bracket and then streams
+		// planner.delta chunks as the LLM generates, so a --output-format
+		// json consumer sees live content instead of dead air until
+		// plan.loaded (moongit#133). Scoped to the plan phase and Closed
+		// before sanitize/apply so it never races applyPlanIteration's own
+		// publisher on stdout (cf. MT-53 events-drop-on-close). No-op-ish in
+		// text mode for the bracket; deltas do render live there.
+		planPub := events.NewPublisher()
+		planPub.Subscribe(logger.NewConsoleSubscriber(logger.InfoLevel, consoleLogFormat(opts.OutputFormat), false))
 
 		// F040(a): bound a single generation with a generous deadline.
 		// The Claude client no longer carries a 60s overall timeout;
 		// ctx is the budget. Per-iteration cancel keeps a stuck call
 		// from blocking the rest of the agent loop.
 		genCtx, cancelGen := context.WithTimeout(context.Background(), planGenTimeout)
-		rawPlan, err := client.GeneratePlan(genCtx, systemPrompt, userPrompt, opts.Model)
+		rawPlan, err := streamPlan(genCtx, client, planPub, iterNum, opts, systemPrompt, userPrompt)
 		cancelGen()
+		// Close flushes the bracket + every delta to stdout and joins the
+		// publisher goroutine BEFORE applyPlanIteration's publisher can
+		// start writing — keeping the two phases' stdout strictly ordered.
+		planPub.Close()
+		if opts.OutputFormat != OutputFormatJSON {
+			// Terminate the live-streamed (un-newlined) planner output with a
+			// newline so the following step markers / confirm prompt don't
+			// glue onto the last delta. Must NOT run in JSON mode — a raw byte
+			// on stdout would corrupt the NDJSON event stream.
+			_, _ = fmt.Fprintln(os.Stdout)
+		}
 		if err != nil {
 			return terminate(iterNum, "", "generation_failed", err.Error(), StopFailed, err)
 		}
@@ -334,6 +342,55 @@ func RunLoop(opts RunOptions) (*LoopResult, error) {
 		StopReason: StopMaxReached,
 		FinalLog:   finalLog,
 	}, nil
+}
+
+// streamPlan runs the planner call for one iteration, emitting the
+// plan.generating "started" bracket and (when the provider implements
+// llm.StreamingClient) live planner.delta events through pub, and returns the
+// final plan text (#76). Providers without streaming fall back to the
+// buffered GeneratePlan and get one synthetic planner.delta carrying the full
+// text, so the event contract is uniform across providers. pub is owned by
+// the caller, which Closes it once this returns. The loop owns the
+// delta→events.Event translation here so providers stay transport-only.
+func streamPlan(ctx context.Context, client llm.Client, pub events.Publisher, iterNum int, opts RunOptions, systemPrompt, userPrompt string) (string, error) {
+	pub.Publish(events.Event{
+		Type:      events.EventPlanGenerating,
+		Timestamp: time.Now(),
+		Data: events.PlanGeneratingData{
+			Iteration: iterNum,
+			Provider:  opts.Provider,
+			Model:     opts.Model,
+		},
+	})
+
+	onDelta := func(text, kind string) {
+		if text == "" {
+			return
+		}
+		pub.Publish(events.Event{
+			Type:      events.EventPlannerDelta,
+			Timestamp: time.Now(),
+			Data: events.PlannerDeltaData{
+				Iteration: iterNum,
+				Text:      text,
+				Kind:      kind,
+			},
+		})
+	}
+
+	if sc, ok := client.(llm.StreamingClient); ok {
+		return sc.GeneratePlanStream(ctx, systemPrompt, userPrompt, opts.Model, onDelta)
+	}
+
+	// Buffered fallback: one synthetic delta with the full text once the
+	// call returns, so a non-streaming provider still rides the planner.delta
+	// contract (a consumer keying on it sees the plan, just not live).
+	full, err := client.GeneratePlan(ctx, systemPrompt, userPrompt, opts.Model)
+	if err != nil {
+		return "", err
+	}
+	onDelta(full, "text")
+	return full, nil
 }
 
 // concludeIteration persists this iteration's log (status + error), appends it

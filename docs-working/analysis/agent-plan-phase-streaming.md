@@ -1,8 +1,19 @@
 # Streaming planner progress during agent's plan phase (#69)
 
-**Status:** exploration / design — no code committed. Feasibility + event-schema
-options + recommended phasing for killing the silent gap between turn-start and
-`plan.loaded` in `mooncake agent run --output-format json`.
+**Status:** Phase 1 (#74) and Phase 2 (#76) shipped. Phase 1 added the
+`plan.generating` bracket + `plan.loaded` step list; Phase 2 added token-level
+`planner.delta` streaming on the `anthropic-cli` provider (Option B). The
+sections below are the original exploration / design that informed both.
+
+Phase 2 notes: implemented as the optional `llm.StreamingClient` interface
+(design §4.2 alt) rather than a method on `Client`, so the buffered HTTP
+providers and test stubs stay untouched; the loop type-asserts and falls back
+to `GeneratePlan` + one synthetic delta. The CLI streams via
+`--output-format stream-json --verbose --include-partial-messages`, coalesces
+deltas (80-byte threshold + content-block-stop flush), and falls back to the
+buffered call on envelope drift. The plan-phase publisher is scoped to the
+plan phase and Closed before `applyPlanIteration`'s publisher opens, so the
+two never race on stdout (sidesteps the MT-53 concern in §7).
 
 Filed against moongit#133 (client-side "Planning…" spinner-over-a-void stopgap).
 

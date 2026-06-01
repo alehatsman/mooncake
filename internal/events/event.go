@@ -28,8 +28,17 @@ const (
 	// "finished" bracket. Emitted only on the LLM-driven loop path; the
 	// single-shot --plan path has no planner call.
 	EventPlanGenerating Type = "plan.generating"
-	EventPlanLoaded     Type = "plan.loaded"
-	EventRunCompleted   Type = "run.completed"
+	// EventPlannerDelta streams the planner's output as it is generated
+	// (#76, Phase 2). The agent RunLoop emits these between plan.generating
+	// and plan.loaded when the LLM provider supports token streaming
+	// (anthropic-cli via --output-format stream-json), forwarding coalesced
+	// text/thinking chunks so a consumer sees live content during generation
+	// instead of only the start/stop bracket. Providers without streaming
+	// emit a single planner.delta carrying the full text. Ignored by existing
+	// consumers; opt-in for new ones. Data is PlannerDeltaData.
+	EventPlannerDelta Type = "planner.delta"
+	EventPlanLoaded   Type = "plan.loaded"
+	EventRunCompleted Type = "run.completed"
 	// EventAgentCompleted is the terminal event a `agent run
 	// --output-format json` stream emits after the run loop finishes,
 	// replacing the human-readable text summary. Its Data is a
@@ -157,6 +166,21 @@ type PlanGeneratingData struct {
 	Iteration int    `json:"iteration"`
 	Provider  string `json:"provider,omitempty"`
 	Model     string `json:"model,omitempty"`
+}
+
+// PlannerDeltaData contains data for planner.delta events — a coalesced
+// chunk of the planner's output as it is generated (#76, Phase 2). Iteration
+// ties the delta to its loop iteration (matching PlanGeneratingData). Text is
+// the chunk; the provider coalesces tokens before emitting so consumers aren't
+// flooded one-event-per-token. Kind distinguishes the model's "thinking"
+// reasoning from the "text" answer so a consumer can render them differently
+// (or drop thinking). Deltas are advisory for live display only — the final
+// plan string still rides GeneratePlan's return value, so a dropped or
+// truncated delta never affects the executed plan.
+type PlannerDeltaData struct {
+	Iteration int    `json:"iteration"`
+	Text      string `json:"text"`
+	Kind      string `json:"kind"` // "text" or "thinking"
 }
 
 // PlanLoadedData contains data for plan.loaded events

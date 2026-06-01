@@ -113,6 +113,16 @@ func (c *ConsoleSubscriber) renderText(event events.Event) {
 			c.renderPackageManaged(data)
 		}
 
+	case events.EventPlannerDelta:
+		// #76: stream the planner's output live in text mode — the human
+		// payoff of Phase 2 (unlike plan.generating, which stays a no-op
+		// here). Printed raw and un-newlined so coalesced chunks flow as a
+		// continuous block; thinking is dimmed to set it apart from the plan.
+		if data, ok := event.Data.(events.PlannerDeltaData); ok {
+			c.renderPlannerDelta(data)
+		}
+		return
+
 	case events.EventStepStdout, events.EventStepStderr:
 		// Two independent gates: the explicit streamOutput opt-in (used
 		// by `mooncake task` so dev-loop shell steps stream by default)
@@ -174,6 +184,22 @@ func (c *ConsoleSubscriber) renderStepCompleted(data events.StepCompletedData) {
 	}
 
 	fmt.Printf("%s%s %s%s\n", indent, icon, data.Name, timing)
+}
+
+// renderPlannerDelta prints one coalesced chunk of the planner's output as
+// it streams (#76). No newline: chunks are partial and meant to flow as a
+// continuous block, mirroring an interactive `claude` session. Thinking is
+// dimmed so it reads as the model's reasoning, distinct from the plan text.
+func (c *ConsoleSubscriber) renderPlannerDelta(data events.PlannerDeltaData) {
+	text := data.Text
+	if c.redactor != nil {
+		text = c.redactor.Redact(text)
+	}
+	if data.Kind == "thinking" {
+		fmt.Print(color.New(color.Faint).Sprint(text))
+		return
+	}
+	fmt.Print(text)
 }
 
 // renderStepOutput prints one line of captured stdout/stderr from a shell
