@@ -87,6 +87,11 @@ func AgentCommand() *cli.Command {
 						Value: "text",
 						Usage: "Output format: text (human-readable, default) or json (NDJSON event stream, one events.Event per line, terminated by a agent.completed event).",
 					},
+					&cli.DurationFlag{
+						Name:    "llm-timeout",
+						EnvVars: []string{"MOONCAKE_AGENT_LLM_TIMEOUT"},
+						Usage:   "Per-iteration LLM plan-generation budget (e.g. 5m, 20m). 0 = built-in default (5m). Raise for thinking-heavy plans that would otherwise be SIGKILLed mid-stream (#80).",
+					},
 				},
 				Action: agentRunAction,
 			},
@@ -135,6 +140,7 @@ func agentRunAction(c *cli.Context) error {
 		Style:         style,
 		Policy:        buildAgentPolicy(c),
 		OutputFormat:  outputFormat,
+		LLMTimeout:    c.Duration("llm-timeout"),
 	}
 
 	if planPath == "" && !useStdin {
