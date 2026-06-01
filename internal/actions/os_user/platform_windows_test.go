@@ -3,6 +3,7 @@
 package os_user //nolint:revive // package name follows action convention
 
 import (
+	"context"
 	"strings"
 	"testing"
 )
@@ -44,7 +45,7 @@ func TestQuotePS_EscapesEmbeddedSingleQuote(t *testing.T) {
 // Administrator shell — Get-LocalGroupMember requires elevation
 // on some Windows SKUs and the CI environment may not provide it.
 func TestListUserLocalGroups_HandlesAbsentUser(t *testing.T) {
-	groups, err := listUserLocalGroups("mooncake-nonexistent-user-test")
+	groups, err := listUserLocalGroups(context.Background(), "mooncake-nonexistent-user-test")
 	if err != nil {
 		// PowerShell unavailable / not elevated / network domain
 		// dispatch — all are valid skip conditions for a unit

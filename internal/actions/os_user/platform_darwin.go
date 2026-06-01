@@ -203,7 +203,7 @@ func modifyUserDarwin(ctx context.Context, runner *security.Privileged, current 
 	}
 
 	if len(d.groups) > 0 {
-		if err := applyGroupsDarwin(runner, d.name, current.groups, d.groups, d.appendGroups); err != nil {
+		if err := applyGroupsDarwin(ctx, runner, d.name, current.groups, d.groups, d.appendGroups); err != nil {
 			return err
 		}
 	}
@@ -215,7 +215,7 @@ func removeUserDarwin(ctx context.Context, runner *security.Privileged, d desire
 	// Read home dir before the record is gone, in case we need to remove it.
 	var home string
 	if d.removeHome {
-		home, _ = dsclField(d.name, "NFSHomeDirectory")
+		home, _ = dsclField(ctx, d.name, "NFSHomeDirectory")
 	}
 
 	if err := dscl.Run(ctx, runner, "-delete", "/Users/"+d.name); err != nil {
@@ -233,7 +233,7 @@ func removeUserDarwin(ctx context.Context, runner *security.Privileged, d desire
 
 // applyGroupsDarwin reconciles supplementary group membership.
 // When appendGroups is false, groups not in desired are removed first.
-func applyGroupsDarwin(runner *security.Privileged, username string, currentGroups, desiredGroups []string, appendGroups bool) error {
+func applyGroupsDarwin(ctx context.Context, runner *security.Privileged, username string, currentGroups, desiredGroups []string, appendGroups bool) error {
 	have := stringSet(currentGroups)
 	want := stringSet(desiredGroups)
 

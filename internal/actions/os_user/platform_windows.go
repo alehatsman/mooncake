@@ -95,7 +95,7 @@ func lookupUserViaPowerShell(ctx context.Context, name string) (*userState, erro
 		// uid / gid / shell stay zero: Windows has no analog.
 	}
 
-	groups, err := listUserLocalGroups(name)
+	groups, err := listUserLocalGroups(ctx, name)
 	if err != nil {
 		return nil, fmt.Errorf("list local groups for %s: %w", name, err)
 	}
@@ -115,7 +115,7 @@ func lookupUserViaPowerShell(ctx context.Context, name string) (*userState, erro
 // and "MACHINE\user" shapes by suffix-matching the bare username.
 // Domain accounts aren't supported by `os.user` (local accounts
 // only); this matcher is correct for that scope.
-func listUserLocalGroups(name string) ([]string, error) {
+func listUserLocalGroups(ctx context.Context, name string) ([]string, error) {
 	// Group names can contain spaces ("Hyper-V Administrators",
 	// "Backup Operators") so we join with a vertical bar that's
 	// not valid in a Windows local-group name. Avoids needing
@@ -162,16 +162,16 @@ func listUserLocalGroups(name string) ([]string, error) {
 func applyPlanWindows(ctx context.Context, _ *security.Privileged, plan computedPlan, current *userState, d desired) error {
 	switch plan.operation {
 	case "create":
-		return createUserWindows(d)
+		return createUserWindows(ctx, d)
 	case "modify":
-		return modifyUserWindows(current, d)
+		return modifyUserWindows(ctx, current, d)
 	case "remove":
-		return removeUserWindows(d)
+		return removeUserWindows(ctx, d)
 	}
 	return nil
 }
 
-func createUserWindows(d desired) error {
+func createUserWindows(ctx context.Context, d desired) error {
 	args := []string{
 		"-Name", quotePS(d.name),
 		"-NoPassword",
@@ -187,13 +187,13 @@ func createUserWindows(d desired) error {
 	if err := runPowerShell(ctx, script); err != nil {
 		return fmt.Errorf("New-LocalUser %s: %w", d.name, err)
 	}
-	if err := applyGroupsWindows(d.name, nil, d.groups, d.appendGroups); err != nil {
+	if err := applyGroupsWindows(ctx, d.name, nil, d.groups, d.appendGroups); err != nil {
 		return err
 	}
 	return nil
 }
 
-func modifyUserWindows(current *userState, d desired) error {
+func modifyUserWindows(ctx context.Context, current *userState, d desired) error {
 	setArgs := []string{"-Name", quotePS(d.name)}
 	changed := false
 	if d.comment != "" && d.comment != current.comment {
@@ -215,14 +215,14 @@ func modifyUserWindows(current *userState, d desired) error {
 		}
 	}
 	if len(d.groups) > 0 {
-		if err := applyGroupsWindows(d.name, current.groups, d.groups, d.appendGroups); err != nil {
+		if err := applyGroupsWindows(ctx, d.name, current.groups, d.groups, d.appendGroups); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func removeUserWindows(d desired) error {
+func removeUserWindows(ctx context.Context, d desired) error {
 	script := fmt.Sprintf("Remove-LocalUser -Name %s", quotePS(d.name))
 	if err := runPowerShell(ctx, script); err != nil {
 		return fmt.Errorf("Remove-LocalUser %s: %w", d.name, err)
@@ -249,7 +249,7 @@ func removeUserWindows(d desired) error {
 // drop groups not in desired first, then add the missing ones.
 // "BUILTIN\xxx" group names are passed through verbatim — PS
 // accepts both qualified and bare local-group names.
-func applyGroupsWindows(username string, currentGroups, desiredGroups []string, appendGroups bool) error {
+func applyGroupsWindows(ctx context.Context, username string, currentGroups, desiredGroups []string, appendGroups bool) error {
 	have := stringSet(currentGroups)
 	want := stringSet(desiredGroups)
 
