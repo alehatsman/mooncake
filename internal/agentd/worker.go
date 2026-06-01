@@ -200,6 +200,7 @@ func (w *Worker) executeRun(runID string) {
 		Names:            run.Names,
 		OutputFormat:     "quiet",
 		ExtraSubscribers: []events.Subscriber{sink},
+		Policy:           run.Policy,
 	}).Run(w.runCtx)
 
 	// R2.1c: persist result.json so the controller can fetch it via
