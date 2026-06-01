@@ -75,10 +75,50 @@ func ComputePlanHash(planBytes []byte) string {
 	return hex.EncodeToString(hash[:])
 }
 
+// diffAgainstWorktree runs `git diff --cached HEAD <args...>` in repoRoot
+// against a throwaway index that has every working-tree change staged
+// (read-tree HEAD + add -A). Unlike a plain `git diff HEAD`, this counts
+// untracked (new) files too — `git add -A` stages them, so they show up in
+// the diff against HEAD (#72). The real index is never touched: GIT_INDEX_FILE
+// points at a temp file we delete on return.
+func diffAgainstWorktree(repoRoot string, diffArgs ...string) ([]byte, error) {
+	idx, err := os.CreateTemp("", "mooncake-pilot-index-*")
+	if err != nil {
+		return nil, fmt.Errorf("create scratch index: %w", err)
+	}
+	idxPath := idx.Name()
+	_ = idx.Close()
+	defer func() { _ = os.Remove(idxPath) }()
+
+	run := func(args ...string) ([]byte, error) {
+		cmd := exec.Command("git", args...)
+		cmd.Dir = repoRoot
+		cmd.Env = append(os.Environ(), "GIT_INDEX_FILE="+idxPath)
+		return cmd.Output()
+	}
+
+	// Seed the scratch index with HEAD's tree, then stage every working-tree
+	// change (tracked edits, deletions, AND untracked additions). The
+	// subsequent `diff --cached HEAD` then reports the full set.
+	if _, err := run("read-tree", "HEAD"); err != nil {
+		return nil, fmt.Errorf("read-tree HEAD into scratch index: %w", err)
+	}
+	if _, err := run("add", "-A"); err != nil {
+		return nil, fmt.Errorf("stage worktree into scratch index: %w", err)
+	}
+	// Exclude pilot's own bookkeeping from the diff. Staging untracked files
+	// (above) would otherwise surface the run's transient temp plan
+	// (.mooncake-plan-*.yml, deleted right after collection) and the
+	// .mooncake/ iteration logs — pilot's internal state, not the work the
+	// plan did. The leading "." is the required positive pathspec that the
+	// :(exclude) magic subtracts from.
+	args := append([]string{"diff", "--cached", "HEAD"}, diffArgs...)
+	args = append(args, "--", ".", ":(glob,exclude).mooncake/**", ":(glob,exclude).mooncake-plan-*.yml")
+	return run(args...)
+}
+
 func CollectChangedFiles(repoRoot string) ([]string, error) {
-	cmd := exec.Command("git", "diff", "--name-only", "HEAD")
-	cmd.Dir = repoRoot
-	out, err := cmd.Output()
+	out, err := diffAgainstWorktree(repoRoot, "--name-only")
 	if err != nil {
 		return nil, fmt.Errorf("failed to get changed files: %w", err)
 	}
@@ -97,9 +137,7 @@ func CollectChangedFiles(repoRoot string) ([]string, error) {
 }
 
 func CollectDiffStat(repoRoot string) (DiffStat, error) {
-	cmd := exec.Command("git", "diff", "--numstat", "HEAD")
-	cmd.Dir = repoRoot
-	out, err := cmd.Output()
+	out, err := diffAgainstWorktree(repoRoot, "--numstat")
 	if err != nil {
 		return DiffStat{}, fmt.Errorf("failed to get diff stat: %w", err)
 	}
