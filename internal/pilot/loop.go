@@ -177,7 +177,7 @@ func RunLoop(opts RunOptions) (*LoopResult, error) {
 			}
 		}
 
-		outcome, err := applyPlanIteration(wrappedBytes, opts.RepoRoot, log, gate, opts.Policy)
+		outcome, err := applyPlanIteration(wrappedBytes, opts.RepoRoot, log, gate, opts.Policy, opts.OutputFormat)
 		if err != nil {
 			return nil, err
 		}
@@ -425,7 +425,7 @@ type planGate func() (ConfirmResult, error)
 // gate is the plan-confirm gate callback. Pass nil to skip the gate
 // (--auto-apply path). When gate returns an edited plan, the tempfile
 // is rewritten with the edited bytes before executor.Start runs.
-func applyPlanIteration(wrappedBytes []byte, repoRoot string, log logger.Logger, gate planGate, policy *executor.Policy) (iterationOutcome, error) {
+func applyPlanIteration(wrappedBytes []byte, repoRoot string, log logger.Logger, gate planGate, policy *executor.Policy, outputFormat string) (iterationOutcome, error) {
 	var out iterationOutcome
 	tmpFile, err := createPlanTempFile(repoRoot)
 	if err != nil {
@@ -483,11 +483,14 @@ func applyPlanIteration(wrappedBytes []byte, repoRoot string, log logger.Logger,
 	// void and the operator sees nothing between "applying…" and the
 	// next prompt — making goal-reached-but-loop-doesn't-stop look like
 	// a silent hang.
-	publisher.Subscribe(logger.NewConsoleSubscriber(logger.InfoLevel, "text", true))
+	// outputFormat threads the run's --output-format through: "json"
+	// flips this to the NDJSON event stream, and (below) silences the
+	// capture's terminal printout so it can't corrupt that stream.
+	publisher.Subscribe(logger.NewConsoleSubscriber(logger.InfoLevel, consoleLogFormat(outputFormat), true))
 	// Part 2 — capture the last cmd/shell step's stdout so the next
 	// iteration's prompt can feed it back to the model (the loop-
 	// termination half of this work — see output_capture.go).
-	capture := newStdoutCapture(os.Stdout)
+	capture := newStdoutCapture(captureWriter(outputFormat))
 	publisher.Subscribe(capture)
 	out.ExecErr = executor.Start(context.Background(), executor.StartConfig{
 		ConfigFilePath: tmpFile.Name(),

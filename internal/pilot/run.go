@@ -112,7 +112,7 @@ func Run(opts RunOptions) (*IterationLog, error) {
 	// applyPlanIteration so `mooncake pilot run --plan x.yml` and
 	// `mooncake pilot loop` give the operator the same "I can see what
 	// the plan actually did" signal — matching `mooncake task`.
-	publisher.Subscribe(logger.NewConsoleSubscriber(logger.InfoLevel, "text", true))
+	publisher.Subscribe(logger.NewConsoleSubscriber(logger.InfoLevel, consoleLogFormat(opts.OutputFormat), true))
 	// Also print cmd-action buffered stdout (the cmd handler doesn't
 	// emit per-line step.stdout events, so the ConsoleSubscriber alone
 	// would leave the operator staring at "▶ cmd / ~ cmd" markers
@@ -120,7 +120,9 @@ func Run(opts RunOptions) (*IterationLog, error) {
 	// "buffered cmd stdout" rationale. The single-shot path doesn't
 	// chain into a next iteration, so we don't read capture.Last() —
 	// the subscriber is here purely for the operator-visible printout.
-	publisher.Subscribe(newStdoutCapture(os.Stdout))
+	// In JSON mode captureWriter returns nil so this printout can't
+	// corrupt the NDJSON event stream.
+	publisher.Subscribe(newStdoutCapture(captureWriter(opts.OutputFormat)))
 
 	// F016: agent.Run doesn't currently carry a context; the agent loop
 	// is invoked from CLI and CLI-level signal handling tears down the

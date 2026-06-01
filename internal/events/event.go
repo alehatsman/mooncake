@@ -22,6 +22,13 @@ const (
 	EventRunStarted   Type = "run.started"
 	EventPlanLoaded   Type = "plan.loaded"
 	EventRunCompleted Type = "run.completed"
+	// EventPilotCompleted is the terminal event a `pilot run
+	// --output-format json` stream emits after the run loop finishes,
+	// replacing the human-readable text summary. Its Data is a
+	// pilot.PilotCompletedData. Unlike the events above it isn't part of
+	// the executor's per-step lifecycle — pilot emits it directly at the
+	// cmd layer so a programmatic consumer can key on it to finalize.
+	EventPilotCompleted Type = "pilot.completed"
 )
 
 // Event types for step lifecycle

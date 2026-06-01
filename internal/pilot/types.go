@@ -46,6 +46,12 @@ type RunOptions struct {
 	// Style selects the planning style (spec-67 §12.3). Zero value is
 	// StylePlan (the historical default).
 	Style Style
+	// OutputFormat selects how the run streams to stdout. "" / "text" is
+	// the human-readable rendering; "json" emits the same NDJSON event
+	// stream `apply --output-format json` does (one events.Event per
+	// line), capped by a terminal pilot.completed event. Used by
+	// programmatic consumers (e.g. moongit spawns pilot in a container).
+	OutputFormat string
 	// Policy is the per-run permissions-as-contract gate (#11) applied
 	// to every plan the loop executes. nil = enforce nothing. This is
 	// how an unattended agent run (moongit spawning a containerized
@@ -53,6 +59,25 @@ type RunOptions struct {
 	// ["shell","cmd"]} lets the model propose a shell step but the
 	// executor refuses it before any side effect. See executor.Policy.
 	Policy *executor.Policy
+}
+
+// Output format values for RunOptions.OutputFormat. Mirrors the
+// text/json split apply uses (internal/apply/runner.go).
+const (
+	OutputFormatText = "text"
+	OutputFormatJSON = "json"
+)
+
+// PilotCompletedData is the Data of the terminal events.EventPilotCompleted
+// event emitted in JSON mode. It carries the same fields the text summary
+// (printPilotSummary + the "Pilot completed" lines) prints, so a
+// programmatic consumer gets the run outcome without parsing prose.
+type PilotCompletedData struct {
+	Iterations   int      `json:"iterations"`
+	StopReason   string   `json:"stop_reason"`
+	Status       string   `json:"status"`
+	DiffStat     DiffStat `json:"diff_stat"`
+	ChangedFiles []string `json:"changed_files"`
 }
 
 type PlanInput struct {
