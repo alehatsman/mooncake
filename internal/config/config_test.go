@@ -1,6 +1,7 @@
 package config
 
 import (
+	"encoding/json"
 	"os"
 	"testing"
 
@@ -516,6 +517,82 @@ func TestShellAction_UnmarshalYAML(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestAssert_ScalarShorthand covers the #65 forgiving-decode paths: the
+// anthropic-cli planner emits `assert: <path>` and `assert: { file: <path> }`
+// with a bare string where a mapping is expected. Both forms must decode to a
+// file-exists assertion rather than failing the whole plan.
+func TestAssert_ScalarShorthand(t *testing.T) {
+	t.Run("assert scalar (yaml)", func(t *testing.T) {
+		var a Assert
+		if err := yaml.Unmarshal([]byte(`NOTES.md`), &a); err != nil {
+			t.Fatalf("yaml unmarshal error = %v", err)
+		}
+		if a.File == nil || a.File.Path != "NOTES.md" {
+			t.Fatalf("got %+v, want File.Path=NOTES.md", a)
+		}
+		if a.File.Exists != nil {
+			t.Errorf("Exists = %v, want nil (defaults to exists check)", *a.File.Exists)
+		}
+	})
+
+	t.Run("assert scalar (json)", func(t *testing.T) {
+		var a Assert
+		if err := json.Unmarshal([]byte(`"NOTES.md"`), &a); err != nil {
+			t.Fatalf("json unmarshal error = %v", err)
+		}
+		if a.File == nil || a.File.Path != "NOTES.md" {
+			t.Fatalf("got %+v, want File.Path=NOTES.md", a)
+		}
+	})
+
+	t.Run("assert.file scalar (yaml)", func(t *testing.T) {
+		var a Assert
+		if err := yaml.Unmarshal([]byte(`file: SHELLPROOF.txt`), &a); err != nil {
+			t.Fatalf("yaml unmarshal error = %v", err)
+		}
+		if a.File == nil || a.File.Path != "SHELLPROOF.txt" {
+			t.Fatalf("got %+v, want File.Path=SHELLPROOF.txt", a)
+		}
+	})
+
+	t.Run("assert.file scalar (json)", func(t *testing.T) {
+		var a Assert
+		if err := json.Unmarshal([]byte(`{"file":"SHELLPROOF.txt"}`), &a); err != nil {
+			t.Fatalf("json unmarshal error = %v", err)
+		}
+		if a.File == nil || a.File.Path != "SHELLPROOF.txt" {
+			t.Fatalf("got %+v, want File.Path=SHELLPROOF.txt", a)
+		}
+	})
+
+	t.Run("structured mapping still works (yaml)", func(t *testing.T) {
+		var a Assert
+		input := `file: {path: NOTES.md, contains: "hello"}`
+		if err := yaml.Unmarshal([]byte(input), &a); err != nil {
+			t.Fatalf("yaml unmarshal error = %v", err)
+		}
+		if a.File == nil || a.File.Path != "NOTES.md" {
+			t.Fatalf("got %+v, want File.Path=NOTES.md", a)
+		}
+		if a.File.Contains == nil || *a.File.Contains != "hello" {
+			t.Errorf("Contains = %v, want hello", a.File.Contains)
+		}
+	})
+
+	t.Run("command mapping unaffected (yaml)", func(t *testing.T) {
+		var a Assert
+		if err := yaml.Unmarshal([]byte(`command: {cmd: "test -f x"}`), &a); err != nil {
+			t.Fatalf("yaml unmarshal error = %v", err)
+		}
+		if a.File != nil {
+			t.Errorf("File should be nil, got %+v", a.File)
+		}
+		if a.Command == nil || a.Command.Cmd != "test -f x" {
+			t.Fatalf("got %+v, want Command.Cmd=test -f x", a)
+		}
+	})
 }
 
 func TestStep_UseAndProps_UnmarshalYAML(t *testing.T) {
