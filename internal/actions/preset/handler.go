@@ -140,15 +140,19 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 			return nil, fmt.Errorf("failed to expand component '%s': %w", name, err)
 		}
 	case config.ComponentRefRemote:
-		expandedSteps, parametersNamespace, presetBaseDir, err = resolveAndExpand(ec, name, props)
+		// Inline remote refs carry no alias binding, so no default props.
+		expandedSteps, parametersNamespace, presetBaseDir, err = resolveAndExpand(ec, name, props, nil)
 		if err != nil {
 			return nil, err
 		}
 	default:
 		// Alias hit when the bare name appears in the playbook's modules: block.
 		// Otherwise fall through to the legacy preset search-path loader.
-		if _, isAlias := ec.Svc.Modules[firstSegment(name)]; isAlias && ec.Svc.Modules != nil {
-			expandedSteps, parametersNamespace, presetBaseDir, err = resolveAndExpand(ec, name, props)
+		if binding, isAlias := ec.Svc.Modules[firstSegment(name)]; isAlias && ec.Svc.Modules != nil {
+			// #52/#57: the alias binding may carry default props; they're
+			// applied (filtered to the component's declared params) inside
+			// resolveAndExpand once the component is loaded.
+			expandedSteps, parametersNamespace, presetBaseDir, err = resolveAndExpand(ec, name, props, binding.Props)
 			if err != nil {
 				return nil, err
 			}
@@ -264,7 +268,13 @@ var resolverFor = func(ec *executor.ExecutionContext) *modules.Resolver {
 
 // resolveAndExpand resolves a remote or alias `use:` reference, then expands
 // the component file. Shared by the remote and alias branches of Run.
-func resolveAndExpand(ec *executor.ExecutionContext, name string, props map[string]interface{}) ([]config.Step, map[string]interface{}, string, error) {
+//
+// defaultProps are the alias binding's module-level default props (#52), or
+// nil for inline-remote refs. They are merged under the caller's per-call
+// props once the component is loaded, FILTERED to the params the component
+// actually declares (#57) — so one binding can serve exports with different
+// prop schemas without "unknown parameter" failures.
+func resolveAndExpand(ec *executor.ExecutionContext, name string, props, defaultProps map[string]interface{}) ([]config.Step, map[string]interface{}, string, error) {
 	resolver := resolverFor(ec)
 	bgCtx := ec.Svc.Ctx
 	if bgCtx == nil {
@@ -274,7 +284,78 @@ func resolveAndExpand(ec *executor.ExecutionContext, name string, props map[stri
 	if err != nil {
 		return nil, nil, "", fmt.Errorf("resolve module %q: %w", name, err)
 	}
-	return presets.ExpandPresetFromPath(name, props, resolved.ComponentPath)
+	def, err := presets.LoadPresetFromPath(resolved.ComponentPath)
+	if err != nil {
+		return nil, nil, "", fmt.Errorf("resolve module %q: %w", name, err)
+	}
+	render := func(s string) (string, error) { return ec.Template().Render(s, ec.Variables()) }
+	merged, err := mergeModuleDefaults(props, defaultProps, def.Parameters, render)
+	if err != nil {
+		return nil, nil, "", fmt.Errorf("module %q: %w", name, err)
+	}
+	return presets.ExpandLoadedDefinition(name, merged, def)
+}
+
+// mergeModuleDefaults layers a module binding's default props (#52) underneath
+// the caller's per-call props, filtered to the params the resolved component
+// declares (#57). A default for a param the component doesn't define is
+// silently skipped — that's what lets one alias binding carry, say, a go_tags
+// default that only some exports accept. Default values are template-rendered
+// (so `{{ GO_TAGS }}` resolves); per-call props always win and are never
+// re-rendered here (they were rendered at plan time).
+func mergeModuleDefaults(caller, defaults map[string]interface{}, declared map[string]config.PresetParameter, render func(string) (string, error)) (map[string]interface{}, error) {
+	if len(defaults) == 0 {
+		return caller, nil
+	}
+	out := make(map[string]interface{}, len(caller)+len(defaults))
+	for k, v := range defaults {
+		if _, isDeclared := declared[k]; !isDeclared {
+			continue // filter: component doesn't accept this prop
+		}
+		if _, set := caller[k]; set {
+			continue // per-call prop wins; don't bother rendering the default
+		}
+		rendered, err := renderPropValue(v, render)
+		if err != nil {
+			return nil, fmt.Errorf("render default prop %q: %w", k, err)
+		}
+		out[k] = rendered
+	}
+	for k, v := range caller {
+		out[k] = v
+	}
+	return out, nil
+}
+
+// renderPropValue renders a default prop value: strings go through the
+// template engine, maps/slices recurse, other scalars pass through.
+func renderPropValue(v interface{}, render func(string) (string, error)) (interface{}, error) {
+	switch x := v.(type) {
+	case string:
+		return render(x)
+	case map[string]interface{}:
+		out := make(map[string]interface{}, len(x))
+		for k, vv := range x {
+			r, err := renderPropValue(vv, render)
+			if err != nil {
+				return nil, err
+			}
+			out[k] = r
+		}
+		return out, nil
+	case []interface{}:
+		out := make([]interface{}, len(x))
+		for i, vv := range x {
+			r, err := renderPropValue(vv, render)
+			if err != nil {
+				return nil, err
+			}
+			out[i] = r
+		}
+		return out, nil
+	default:
+		return v, nil
+	}
 }
 
 // firstSegment returns the portion of s before the first '/' (or all of s).
