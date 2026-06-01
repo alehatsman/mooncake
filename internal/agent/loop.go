@@ -90,18 +90,34 @@ func statusSeverity(status string) int {
 // "success" and mask the earlier failure — exactly the case where a consumer
 // keying on agent.completed.status (moongit #110) rendered green over
 // visibly-failed work. Ties keep the earliest occurrence.
+//
+// #79: a `no_progress` stop is benign convergence ("already done") once an
+// earlier iteration succeeded — the loop's natural idempotent signal, not a
+// failure. The only path that injects a `no_progress`-status iteration is the
+// identical-replan terminate (loop.go's `terminate(..., StopNoProgress)`),
+// reachable only after a prior iteration ran; if that prior iteration
+// succeeded, the run completed the work and must read `success`. Real failures
+// (severity >= 2) outrank `no_progress`, so the #64 failure-masking guard is
+// untouched: only a no_progress-after-success is demoted.
 func (r *LoopResult) TerminalStatus() string {
 	worst := ""
 	worstRank := -1
+	madeProgress := false
 	for i := range r.Iterations {
 		s := r.Iterations[i].Status
 		if s == "" {
 			continue
 		}
+		if s == "success" || s == "step_done" {
+			madeProgress = true
+		}
 		if rank := statusSeverity(s); rank > worstRank {
 			worstRank = rank
 			worst = s
 		}
+	}
+	if worst == "no_progress" && madeProgress {
+		return "success"
 	}
 	if worst == "" && r.FinalLog != nil {
 		return r.FinalLog.Status

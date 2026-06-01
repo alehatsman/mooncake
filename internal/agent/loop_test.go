@@ -146,6 +146,30 @@ func TestTerminalStatus(t *testing.T) {
 			res:  &LoopResult{FinalLog: &IterationLog{Status: "success"}},
 			want: "success",
 		},
+		{
+			// #79: an earlier success then a no_progress convergence stop is
+			// benign "already done", not a failure.
+			name: "success then no_progress reads success",
+			res:  mk("success", "no_progress"),
+			want: "success",
+		},
+		{
+			name: "step_done then no_progress reads success",
+			res:  mk("step_done", "no_progress"),
+			want: "success",
+		},
+		{
+			// A real failure still outranks no_progress — #64 protection holds.
+			name: "failure then no_progress keeps failure",
+			res:  mk("validation_failed", "no_progress"),
+			want: "validation_failed",
+		},
+		{
+			// No success ever recorded: a lone no_progress stays no_progress.
+			name: "no_progress without prior success stays no_progress",
+			res:  mk("no_progress"),
+			want: "no_progress",
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
