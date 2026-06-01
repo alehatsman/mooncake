@@ -373,13 +373,14 @@ func (g *Generator) generateRunConfigDefinition() *Definition {
 			},
 			"modules": {
 				Type:        "object",
-				Description: "Map of alias name → module reference (host/owner/repo[/subpath]@version). Consumed by `use:`",
+				Description: "Map of alias name → module binding, consumed by `use:`. Each value is either a bare reference string (host/owner/repo[/subpath]@version) or an object {source, props} whose props are applied as defaults to every `use:` of that alias.",
 				Properties:  map[string]*Property{},
 				AdditionalProps: func() *bool {
-					// modules values are strings; the runtime decodes
-					// them as map[string]string. additionalProperties:
-					// true is the closest JSON-schema shape since the
-					// keys are user-chosen alias names.
+					// Values are string-or-object (#52); the runtime
+					// decodes them as map[string]ModuleBinding.
+					// additionalProperties: true is the closest
+					// JSON-schema shape since the keys are user-chosen
+					// alias names and the value accepts both forms.
 					t := true
 					return &t
 				}(),
@@ -393,9 +394,9 @@ func (g *Generator) generateRunConfigDefinition() *Definition {
 			},
 			"tasks": {
 				Type:            "object",
-				Description:     "Named tasks invoked via `mooncake task <name>`. Each task is a labeled group of steps with optional task-scoped vars.",
+				Description:     "Named tasks invoked via `mooncake task <name>`. Each value is either a full object (steps + optional task-scoped vars + desc) or a `use:` reference string shorthand (`lint: goq/lint`) that expands to a single-step task.",
 				Properties:      map[string]*Property{},
-				AdditionalProps: &trueVal, // map keys are user-chosen task names; values match #/definitions/task (validated via additionalProperties pattern in a follow-up)
+				AdditionalProps: &trueVal, // map keys are user-chosen task names; values are object-or-string (validated via additionalProperties pattern in a follow-up)
 			},
 		},
 		AnyOf: []*SchemaRef{

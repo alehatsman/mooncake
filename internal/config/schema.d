@@ -933,8 +933,10 @@ export interface RepoTreeAction {
  */
 export interface RunConfigAction {
   /**
-   * Map of alias name → module reference
-   * (host/owner/repo[/subpath]@version). Consumed by `use:`
+   * Map of alias name → module binding, consumed by `use:`. Each value
+   * is either a bare reference string (host/owner/repo[/subpath]@version)
+   * or an object {source, props} whose props are applied as defaults to
+   * every `use:` of that alias.
    */
   modules?: Record<string, any>;
   /**
@@ -942,8 +944,10 @@ export interface RunConfigAction {
    */
   steps?: StepAction[];
   /**
-   * Named tasks invoked via `mooncake task <name>`. Each task is a labeled
-   * group of steps with optional task-scoped vars.
+   * Named tasks invoked via `mooncake task <name>`. Each value is either a
+   * full object (steps + optional task-scoped vars + desc) or a `use:`
+   * reference string shorthand (`lint: goq/lint`) that expands to a
+   * single-step task.
    */
   tasks?: Record<string, any>;
   /**
