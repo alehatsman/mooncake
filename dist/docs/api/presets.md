@@ -31,7 +31,7 @@ Implemented as a package\-level variable so tests can stub discovery to a hermet
 var PresetSearchPaths = defaultPresetSearchPaths
 ```
 
-## func ExpandLoadedDefinition
+## func [ExpandLoadedDefinition](<https://github.com/alehatsman/mooncake/blob/main/internal/presets/expander.go#L45>)
 
 ```go
 func ExpandLoadedDefinition(name string, props map[string]interface{}, definition *config.PresetDefinition) ([]config.Step, map[string]interface{}, string, error)
@@ -39,7 +39,7 @@ func ExpandLoadedDefinition(name string, props map[string]interface{}, definitio
 
 ExpandLoadedDefinition expands an already\-loaded component definition. Callers that need the loaded definition before expansion — the alias branch of the preset handler, which merges module\-level default props filtered to the component's declared params \(\#57\) — load via LoadPresetFromPath, adjust props, then call this instead of ExpandPresetFromPath \(which would re\-load\).
 
-## func ExpandPreset
+## func [ExpandPreset](<https://github.com/alehatsman/mooncake/blob/main/internal/presets/expander.go#L13>)
 
 ```go
 func ExpandPreset(name string, props map[string]interface{}) ([]config.Step, map[string]interface{}, string, error)
@@ -47,7 +47,7 @@ func ExpandPreset(name string, props map[string]interface{}) ([]config.Step, map
 
 ExpandPreset expands a preset invocation into its constituent steps. It loads the preset definition, validates parameters, and returns the expanded steps with the 'parameters' namespace injected into the execution context, along with the preset's base directory for relative path resolution.
 
-## func ExpandPresetFromPath
+## func [ExpandPresetFromPath](<https://github.com/alehatsman/mooncake/blob/main/internal/presets/expander.go#L29>)
 
 ```go
 func ExpandPresetFromPath(name string, props map[string]interface{}, absPath string) ([]config.Step, map[string]interface{}, string, error)
@@ -55,7 +55,7 @@ func ExpandPresetFromPath(name string, props map[string]interface{}, absPath str
 
 ExpandPresetFromPath is the spec\-67 entry point for \`use: ./foo.yml\` style invocations. The caller has already resolved the path to an absolute location; this function loads the definition, validates props, and returns the expanded steps along with the namespace and base directory.
 
-## func LoadPreset
+## func [LoadPreset](<https://github.com/alehatsman/mooncake/blob/main/internal/presets/loader.go#L53>)
 
 ```go
 func LoadPreset(name string) (*config.PresetDefinition, error)
@@ -63,7 +63,7 @@ func LoadPreset(name string) (*config.PresetDefinition, error)
 
 LoadPreset loads a preset definition by name. It searches for presets in two formats: 1. Flat: \<name\>.yml \(e.g., presets/ollama.yml\) 2. Directory: \<name\>/preset.yml \(e.g., presets/ollama/preset.yml\) Directory structure takes precedence if both exist. Returns the loaded PresetDefinition or an error if not found or invalid.
 
-## func LoadPresetFromPath
+## func [LoadPresetFromPath](<https://github.com/alehatsman/mooncake/blob/main/internal/presets/loader.go#L157>)
 
 ```go
 func LoadPresetFromPath(path string) (*config.PresetDefinition, error)
@@ -73,7 +73,7 @@ LoadPresetFromPath loads a component/preset definition from an explicit filesyst
 
 If the file omits \`name:\`, the filename stem is used so downstream code that expects a non\-empty Name still works.
 
-## func ValidateParameters
+## func [ValidateParameters](<https://github.com/alehatsman/mooncake/blob/main/internal/presets/validator.go#L20>)
 
 ```go
 func ValidateParameters(definition *config.PresetDefinition, userParams map[string]interface{}) (map[string]interface{}, error)
@@ -81,7 +81,7 @@ func ValidateParameters(definition *config.PresetDefinition, userParams map[stri
 
 ValidateParameters validates user\-provided parameters against preset parameter definitions. It checks required parameters, validates types, checks enum constraints, and applies defaults. Returns a validated parameter map ready for use in template expansion.
 
-## type PresetInfo
+## type [PresetInfo](<https://github.com/alehatsman/mooncake/blob/main/internal/presets/loader.go#L186-L192>)
 
 PresetInfo contains summary information about a discovered preset.
 
@@ -95,7 +95,7 @@ type PresetInfo struct {
 }
 ```
 
-### func DiscoverAllPresets
+### func [DiscoverAllPresets](<https://github.com/alehatsman/mooncake/blob/main/internal/presets/loader.go#L196>)
 
 ```go
 func DiscoverAllPresets() ([]PresetInfo, error)
