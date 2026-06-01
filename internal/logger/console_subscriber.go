@@ -28,7 +28,14 @@ type ConsoleSubscriber struct {
 	redactor     interface {
 		Redact(string) string
 	}
-	mu sync.Mutex
+	// pendingFileBytes carries the after-write size from the most recent
+	// file.create/update event so the next step.completed row can append
+	// a "(N bytes)" summary (#20). File actions report their size via a
+	// separate FileOperationData event, not in the step result envelope,
+	// so the subscriber correlates the two: reset on step.started, set on
+	// the file event, consumed on step.completed. 0 = nothing pending.
+	pendingFileBytes int64
+	mu               sync.Mutex
 }
 
 // NewConsoleSubscriber creates a new console subscriber.
@@ -79,9 +86,21 @@ func (c *ConsoleSubscriber) renderJSON(event events.Event) {
 func (c *ConsoleSubscriber) renderText(event events.Event) {
 	switch event.Type {
 	case events.EventStepStarted:
+		// #20: a fresh step starts with no file-size summary pending; a
+		// prior file step's size must not leak onto this row.
+		c.pendingFileBytes = 0
 		if data, ok := event.Data.(events.StepStartedData); ok {
 			c.renderStepStarted(data)
 		}
+
+	case events.EventFileCreated, events.EventFileUpdated:
+		// #20: stash the after-write size so renderStepCompleted can append
+		// a byte summary. No output of its own. Gate on SizeBytes > 0 so
+		// touch / empty writes don't render a noisy "(0 B)".
+		if data, ok := event.Data.(events.FileOperationData); ok && data.SizeBytes > 0 {
+			c.pendingFileBytes = data.SizeBytes
+		}
+		return
 
 	case events.EventStepCompleted:
 		if data, ok := event.Data.(events.StepCompletedData); ok {
@@ -154,7 +173,7 @@ func (c *ConsoleSubscriber) renderStepStarted(data events.StepStartedData) {
 	// Calculate indentation: base level + directory depth
 	indent := strings.Repeat("  ", data.Level+data.Depth)
 	icon := color.CyanString("▶")
-	fmt.Printf("%s%s %s\n", indent, icon, data.Name)
+	fmt.Printf("%s%s %s%s\n", indent, icon, stepIDTag(data.StepID, data.Name), data.Name)
 }
 
 // renderStepCompleted renders a step.completed event
@@ -173,17 +192,47 @@ func (c *ConsoleSubscriber) renderStepCompleted(data events.StepCompletedData) {
 		icon = color.GreenString("✓")
 	}
 
-	timing := ""
-	if data.DurationMs >= 2000 {
-		secs := data.DurationMs / 1000
-		if secs < 60 {
-			timing = fmt.Sprintf(" [%ds]", secs)
-		} else {
-			timing = fmt.Sprintf(" [%dm%02ds]", secs/60, secs%60)
-		}
+	// #20: byte summary for file actions, from the file event that fired
+	// just before this completion. Consume it so it can't leak onto a
+	// later step.
+	sizeText := ""
+	if c.pendingFileBytes > 0 {
+		sizeText = color.New(color.Faint).Sprintf(" (%s)", formatBytes(c.pendingFileBytes))
+		c.pendingFileBytes = 0
 	}
 
-	fmt.Printf("%s%s %s%s\n", indent, icon, data.Name, timing)
+	// #20: per-step duration is always shown now (was gated at >=2s). A
+	// 0-byte "changed" write or a suspiciously instant step stands out.
+	timing := color.New(color.Faint).Sprintf(" %s", formatDuration(data.DurationMs))
+
+	fmt.Printf("%s%s %s%s%s%s\n", indent, icon, stepIDTag(data.StepID, data.Name), data.Name, sizeText, timing)
+}
+
+// stepIDTag renders a step's stable ID as a dim reference token (e.g.
+// "step-3 " or a user-supplied id) so operators can cross-reference a row
+// with history / artifacts (#20). Returns "" for directory header rows and
+// when no ID is present, keeping those rows clean.
+func stepIDTag(id, name string) string {
+	if id == "" || strings.HasSuffix(name, "/") {
+		return ""
+	}
+	return color.New(color.Faint).Sprint(id) + " "
+}
+
+// formatBytes renders a byte count as a compact human-readable size
+// (e.g. "12 B", "3.4 KB"). Used for the file-action summary on
+// step.completed rows (#20).
+func formatBytes(n int64) string {
+	const unit = 1024
+	if n < unit {
+		return fmt.Sprintf("%d B", n)
+	}
+	div, exp := int64(unit), 0
+	for x := n / unit; x >= unit; x /= unit {
+		div *= unit
+		exp++
+	}
+	return fmt.Sprintf("%.1f %cB", float64(n)/float64(div), "KMGTPE"[exp])
 }
 
 // renderPlannerDelta prints one coalesced chunk of the planner's output as
@@ -222,7 +271,8 @@ func (c *ConsoleSubscriber) renderStepOutput(data events.StepOutputData, et even
 func (c *ConsoleSubscriber) renderStepFailed(data events.StepFailedData) {
 	indent := strings.Repeat("  ", data.Level+data.Depth)
 	icon := color.RedString("✗")
-	fmt.Printf("%s%s %s\n", indent, icon, data.Name)
+	timing := color.New(color.Faint).Sprintf(" %s", formatDuration(data.DurationMs))
+	fmt.Printf("%s%s %s%s%s\n", indent, icon, stepIDTag(data.StepID, data.Name), data.Name, timing)
 
 	// Show error message indented
 	errorIndent := indent + "  "
@@ -253,7 +303,7 @@ func (c *ConsoleSubscriber) renderStepSkipped(data events.StepSkippedData) {
 	if data.Reason != "" {
 		reasonText = color.New(color.Faint).Sprintf(" [%s]", data.Reason)
 	}
-	fmt.Printf("%s%s %s%s\n", indent, icon, color.New(color.Faint).Sprint(data.Name), reasonText)
+	fmt.Printf("%s%s %s%s%s\n", indent, icon, stepIDTag(data.StepID, data.Name), color.New(color.Faint).Sprint(data.Name), reasonText)
 }
 
 // renderRunCompleted renders a run.completed event as a single compact recap line.
@@ -324,7 +374,7 @@ func (c *ConsoleSubscriber) renderStepChecked(data events.StepCheckedData) {
 		icon = color.GreenString("✓")
 	}
 
-	fmt.Printf("%s%s %s%s\n", indent, icon, data.Name, reasonText)
+	fmt.Printf("%s%s %s%s%s\n", indent, icon, stepIDTag(data.StepID, data.Name), data.Name, reasonText)
 }
 
 // renderPackageManaged renders a package.managed event as a compact summary line.

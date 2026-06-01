@@ -533,6 +533,113 @@ func TestConsoleSubscriber_OnEvent_Text_OutputEvents(t *testing.T) {
 	}
 }
 
+// TestConsoleSubscriber_StepIDRendered covers #20: every step row carries
+// its stable ID as a cross-reference token, while directory header rows
+// stay clean.
+func TestConsoleSubscriber_StepIDRendered(t *testing.T) {
+	sub := NewConsoleSubscriber(1, "text", false)
+
+	tests := []struct {
+		name   string
+		event  events.Event
+		wantID string
+		absent bool // ID must NOT appear (directory header)
+	}{
+		{
+			name: "started row",
+			event: events.Event{Type: events.EventStepStarted, Data: events.StepStartedData{
+				StepID: "step-7", Name: "Install nginx"}},
+			wantID: "step-7",
+		},
+		{
+			name: "completed row",
+			event: events.Event{Type: events.EventStepCompleted, Data: events.StepCompletedData{
+				StepID: "install-nginx", Name: "Install nginx", DurationMs: 5}},
+			wantID: "install-nginx",
+		},
+		{
+			name: "failed row",
+			event: events.Event{Type: events.EventStepFailed, Data: events.StepFailedData{
+				StepID: "step-9", Name: "boom", ErrorMessage: "nope"}},
+			wantID: "step-9",
+		},
+		{
+			name: "skipped row",
+			event: events.Event{Type: events.EventStepSkipped, Data: events.StepSkippedData{
+				StepID: "step-3", Name: "config.yml", Reason: "when false"}},
+			wantID: "step-3",
+		},
+		{
+			name: "directory header has no id",
+			event: events.Event{Type: events.EventStepSkipped, Data: events.StepSkippedData{
+				StepID: "step-4", Name: "templates/after/"}},
+			wantID: "step-4",
+			absent: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.event.Timestamp = time.Now()
+			output := captureStdout(func() { sub.OnEvent(tt.event) })
+			got := strings.Contains(output, tt.wantID)
+			if tt.absent && got {
+				t.Errorf("directory header should not show ID %q\nGot: %s", tt.wantID, output)
+			}
+			if !tt.absent && !got {
+				t.Errorf("output missing step ID %q\nGot: %s", tt.wantID, output)
+			}
+		})
+	}
+}
+
+// TestConsoleSubscriber_DurationAlwaysShown covers #20: per-step duration is
+// rendered even for fast steps (previously gated at >= 2s).
+func TestConsoleSubscriber_DurationAlwaysShown(t *testing.T) {
+	sub := NewConsoleSubscriber(1, "text", false)
+	event := events.Event{
+		Type:      events.EventStepCompleted,
+		Timestamp: time.Now(),
+		Data:      events.StepCompletedData{StepID: "step-1", Name: "fast step", DurationMs: 3},
+	}
+	output := captureStdout(func() { sub.OnEvent(event) })
+	if !strings.Contains(output, "3ms") {
+		t.Errorf("output missing per-step duration\nGot: %s", output)
+	}
+}
+
+// TestConsoleSubscriber_FileByteSummary covers #20: a file create/update
+// event's after-write size is appended to the following step.completed row,
+// reset on the next step.started so it can't leak onto a later step.
+func TestConsoleSubscriber_FileByteSummary(t *testing.T) {
+	sub := NewConsoleSubscriber(1, "text", false)
+
+	// File event stashes size; completed row appends it.
+	out := captureStdout(func() {
+		sub.OnEvent(events.Event{Type: events.EventFileCreated, Timestamp: time.Now(),
+			Data: events.FileOperationData{Path: "/tmp/marker.txt", SizeBytes: 12, Changed: true}})
+		sub.OnEvent(events.Event{Type: events.EventStepCompleted, Timestamp: time.Now(),
+			Data: events.StepCompletedData{StepID: "step-1", Name: "write marker", Changed: true, DurationMs: 1}})
+	})
+	if !strings.Contains(out, "12 B") {
+		t.Errorf("expected byte summary on file step\nGot: %s", out)
+	}
+
+	// A fresh step.started resets the pending size: the next completed row
+	// (a non-file step) must not inherit it.
+	out = captureStdout(func() {
+		sub.OnEvent(events.Event{Type: events.EventFileCreated, Timestamp: time.Now(),
+			Data: events.FileOperationData{Path: "/tmp/a", SizeBytes: 99, Changed: true}})
+		sub.OnEvent(events.Event{Type: events.EventStepStarted, Timestamp: time.Now(),
+			Data: events.StepStartedData{StepID: "step-2", Name: "echo hi"}})
+		sub.OnEvent(events.Event{Type: events.EventStepCompleted, Timestamp: time.Now(),
+			Data: events.StepCompletedData{StepID: "step-2", Name: "echo hi", DurationMs: 1}})
+	})
+	if strings.Contains(out, "99 B") {
+		t.Errorf("byte summary leaked onto a later step\nGot: %s", out)
+	}
+}
+
 func TestConsoleSubscriber_OnEvent_Text_UnknownEvent(t *testing.T) {
 	sub := NewConsoleSubscriber(1, "text", false)
 
