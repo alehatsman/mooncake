@@ -439,6 +439,90 @@ func TestRunLoop_DistinctFailures_DoNotShortCircuit(t *testing.T) {
 	}
 }
 
+// TestRunLoop_StyleStep_NoChangeStall is the #77 regression: a step-style
+// planner that keeps proposing no-op (zero-mutation) steps never sends the
+// empty-plan done signal, so without a guard it burns every iteration. The
+// plans differ textually (different log message each time) so they hash
+// differently — defeating the byte-identical planHash no_progress check — yet
+// none changes anything. One no-op is tolerated; we stop on the 2nd in a row.
+// MaxIterations is 5; we expect to stop after exactly 2.
+func TestRunLoop_StyleStep_NoChangeStall(t *testing.T) {
+	repo := t.TempDir()
+	initGitRepo(t, repo)
+
+	// Single-step plans (step-style contract), each a `log` directive that
+	// runs successfully but mutates nothing. Differing messages → differing
+	// hashes. A 3rd+ plan proves we'd keep going if the guard didn't fire.
+	stub := &stubLLMClient{plans: []string{
+		`[{"name":"note-a","log":"no-op a"}]`,
+		`[{"name":"note-b","log":"no-op b"}]`,
+		`[{"name":"note-c","log":"no-op c"}]`,
+		`[{"name":"note-d","log":"no-op d"}]`,
+		`[{"name":"note-e","log":"no-op e"}]`,
+	}}
+	cleanup := withStubClient(t, stub)
+	defer cleanup()
+
+	result, err := RunLoop(RunOptions{
+		Goal:          "spin forever",
+		RepoRoot:      repo,
+		MaxIterations: 5,
+		AutoApply:     true,
+		Style:         StyleStep,
+	})
+	if err != nil {
+		t.Fatalf("RunLoop: %v", err)
+	}
+	if stub.calls != maxNoChangeStreak {
+		t.Errorf("LLM calls = %d, want %d (stop on the 2nd consecutive no-op, not all 5)", stub.calls, maxNoChangeStreak)
+	}
+	if result.StopReason != StopNoProgress {
+		t.Errorf("StopReason = %q, want %q", result.StopReason, StopNoProgress)
+	}
+	// The iterations themselves succeeded; only the stop reason flags the
+	// stall (mirrors the #71 pattern — status reflects the iteration).
+	if got := result.TerminalStatus(); got != "success" {
+		t.Errorf("TerminalStatus = %q, want success (no-op steps ran fine)", got)
+	}
+}
+
+// TestRunLoop_StyleStep_ProgressResetsStall guards the inverse: an iteration
+// that actually changes something resets the no-change streak, so an
+// occasional no-op between real work does not trip the #77 guard.
+func TestRunLoop_StyleStep_ProgressResetsStall(t *testing.T) {
+	repo := t.TempDir()
+	initGitRepo(t, repo)
+
+	// no-op, then a real mutation (file.write), then a no-op, then done.
+	// The streak never reaches 2 in a row, so the guard stays quiet and the
+	// empty plan terminates the run normally.
+	stub := &stubLLMClient{plans: []string{
+		`[{"name":"note","log":"thinking"}]`,
+		`[{"name":"write","file.write":{"path":"out.txt","content":"hi"}}]`,
+		`[{"name":"note2","log":"thinking again"}]`,
+		"[]\n",
+	}}
+	cleanup := withStubClient(t, stub)
+	defer cleanup()
+
+	result, err := RunLoop(RunOptions{
+		Goal:          "do real work with pauses",
+		RepoRoot:      repo,
+		MaxIterations: 6,
+		AutoApply:     true,
+		Style:         StyleStep,
+	})
+	if err != nil {
+		t.Fatalf("RunLoop: %v", err)
+	}
+	if result.StopReason != StopStepDone {
+		t.Errorf("StopReason = %q, want %q (a real change between no-ops resets the streak)", result.StopReason, StopStepDone)
+	}
+	if stub.calls != 4 {
+		t.Errorf("LLM calls = %d, want 4 (ran to the empty-plan terminator)", stub.calls)
+	}
+}
+
 // TestCreatePlanTempFile_AnchoredOnRepoRoot — agent-tmpfile-cwd. The
 // executor resolves plan-relative paths against the config file's
 // directory; before the fix, agent wrote that file to os.CreateTemp("",

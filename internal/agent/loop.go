@@ -20,6 +20,14 @@ import (
 
 const defaultMaxIterations = 5
 
+// maxNoChangeStreak bounds how many consecutive step-style iterations may
+// apply zero mutations before the loop stops with StopNoProgress (#77). A
+// single no-op is allowed — the model may legitimately propose a diagnostic
+// step and continue — so the guard trips on the 2nd in a row, where the
+// planner is clearly not advancing. Complements the byte-identical planHash
+// guard: this catches cosmetically-different but effect-free re-plans.
+const maxNoChangeStreak = 2
+
 // planGenTimeout bounds a single LLM plan-generation call. The
 // previous shape relied on http.Client.Timeout=60s which silently
 // truncated thinking-model runs (F040). Five minutes is generous —
@@ -121,6 +129,11 @@ func RunLoop(opts RunOptions) (*LoopResult, error) {
 	// stops early instead of re-running the whole plan to rediscover the
 	// same error (observed: 10 identical failures exhausting max_iterations).
 	var lastFailureFingerprint string
+	// noChangeStreak counts consecutive step-style iterations that succeeded
+	// but applied zero mutations (#77). It trips maxNoChangeStreak to stop a
+	// planner that keeps emitting no-op plans; any iteration that changes
+	// something resets it.
+	var noChangeStreak int
 
 	// terminate writes a failure-log entry, appends it to the run's
 	// iteration list, and returns the stop result. Collapses the
@@ -328,11 +341,12 @@ func RunLoop(opts RunOptions) (*LoopResult, error) {
 			iterLog.Artifacts = append(iterLog.Artifacts, planPath)
 		}
 
-		terminal, summary, fingerprint := concludeIteration(opts, iterLog, &iterations, outcome, planHash, lastFailureFingerprint, log)
+		terminal, summary, fingerprint, streak := concludeIteration(opts, iterLog, &iterations, outcome, planHash, lastFailureFingerprint, noChangeStreak, log)
 		if terminal != nil {
 			return terminal, nil
 		}
 		lastFailureFingerprint = fingerprint
+		noChangeStreak = streak
 		lastIteration = summary
 	}
 
@@ -395,20 +409,22 @@ func streamPlan(ctx context.Context, client llm.Client, pub events.Publisher, it
 
 // concludeIteration persists this iteration's log (status + error), appends it
 // to *iterations, and decides the loop's next move. It returns a non-nil
-// terminal *LoopResult when the loop should stop now — either a #71 repeated-
-// failure short-circuit (the same step failed the same way as last time, so
-// the planner isn't adapting) or a plan-style success that changed nothing —
-// otherwise the summary to feed into the next prompt plus the failure
-// fingerprint to carry forward (empty on success). Extracted from RunLoop to
-// keep its cyclomatic complexity under cap.
+// terminal *LoopResult when the loop should stop now — a #71 repeated-failure
+// short-circuit (the same step failed the same way as last time, so the
+// planner isn't adapting), a plan-style success that changed nothing, or a
+// step-style no-change stall (#77) — otherwise the summary to feed into the
+// next prompt plus the failure fingerprint and the updated no-change streak to
+// carry forward. Extracted from RunLoop to keep its cyclomatic complexity
+// under cap.
 func concludeIteration(
 	opts RunOptions,
 	iterLog *IterationLog,
 	iterations *[]IterationLog,
 	outcome iterationOutcome,
 	planHash, lastFingerprint string,
+	noChangeStreak int,
 	log logger.Logger,
-) (terminal *LoopResult, summary *IterationSummary, fingerprint string) {
+) (terminal *LoopResult, summary *IterationSummary, fingerprint string, newStreak int) {
 	if outcome.ExecErr != nil {
 		iterLog.Status = "execution_failed"
 		iterLog.ExecutionError = outcome.ExecErr.Error()
@@ -423,7 +439,7 @@ func concludeIteration(
 		if fingerprint != "" && fingerprint == lastFingerprint {
 			log.Errorf("agent: step %q failed identically twice (exit %d); stopping — planner is not adapting to the failure",
 				outcome.FailedStep.Name, outcome.FailedStep.ExitCode)
-			return &LoopResult{Iterations: *iterations, StopReason: StopNoProgress, FinalLog: iterLog}, nil, fingerprint
+			return &LoopResult{Iterations: *iterations, StopReason: StopNoProgress, FinalLog: iterLog}, nil, fingerprint, 0
 		}
 		summary = &IterationSummary{
 			Iteration:      iterLog.Iteration,
@@ -435,7 +451,9 @@ func concludeIteration(
 			StepSummaries:  outcome.StepSummaries,
 			FailedStep:     outcome.FailedStep,
 		}
-		return nil, summary, fingerprint
+		// A failed iteration isn't a successful no-op; reset the no-change
+		// streak so the #77 guard only counts consecutive clean no-ops.
+		return nil, summary, fingerprint, 0
 	}
 
 	// Success clears the repeated-failure tracker (fingerprint ""): a later
@@ -444,12 +462,32 @@ func concludeIteration(
 	_, _ = WriteIterationLog(opts.RepoRoot, iterLog)
 	*iterations = append(*iterations, *iterLog)
 
+	// A mutation resets the no-change streak; a clean no-op advances it.
+	newStreak = noChangeStreak + 1
+	if outcome.ChangedSteps > 0 {
+		newStreak = 0
+	}
+
 	// Under --style step the goal-reached signal is an empty plan (handled
 	// upstream); a no-op step is not a stop condition — the model may
 	// legitimately propose a diagnostic step and continue. Only plan-style
 	// treats "no files changed" as "we're done".
 	if len(outcome.ChangedFiles) == 0 && opts.Style != StyleStep {
-		return &LoopResult{Iterations: *iterations, StopReason: StopSuccess, FinalLog: iterLog}, nil, ""
+		return &LoopResult{Iterations: *iterations, StopReason: StopSuccess, FinalLog: iterLog}, nil, "", newStreak
+	}
+
+	// #77: a step-style planner that keeps proposing no-op steps never sends
+	// the empty-plan done signal and would otherwise burn every iteration.
+	// One no-op is tolerated above; maxNoChangeStreak consecutive means the
+	// planner isn't advancing — stop with StopNoProgress. iterLog keeps its
+	// real "success" status (the steps ran fine); StopReason explains the
+	// early stop, mirroring the #71 repeated-failure pattern. The byte-
+	// identical planHash guard (in RunLoop) only catches verbatim re-plans;
+	// this catches cosmetically-different but effect-free ones.
+	if opts.Style == StyleStep && newStreak >= maxNoChangeStreak {
+		log.Errorf("agent: %d consecutive iterations changed nothing; stopping — planner is not making progress (no empty plan to signal done)",
+			newStreak)
+		return &LoopResult{Iterations: *iterations, StopReason: StopNoProgress, FinalLog: iterLog}, nil, "", newStreak
 	}
 	summary = &IterationSummary{
 		Iteration:      iterLog.Iteration,
@@ -459,7 +497,7 @@ func concludeIteration(
 		LastStepStdout: outcome.LastStepStdout,
 		StepSummaries:  outcome.StepSummaries,
 	}
-	return nil, summary, ""
+	return nil, summary, "", newStreak
 }
 
 // createPlanTempFile creates the temp plan file the executor reads
@@ -568,6 +606,11 @@ type iterationOutcome struct {
 	// caller forwards it into the next prompt so the planner sees what
 	// broke (#71). nil on success or when no step.failed was observed.
 	FailedStep *FailedStepInfo
+	// ChangedSteps is how many steps reported a mutation this iteration.
+	// The step-style stall guard (#77) keys on zero vs non-zero, not the
+	// cumulative ChangedFiles diff (which counts pre-existing runner-
+	// injected files and so never reads zero in an agent container).
+	ChangedSteps int
 }
 
 // planGate is the callback applyPlanIteration invokes between
@@ -664,6 +707,7 @@ func applyPlanIteration(wrappedBytes []byte, repoRoot string, log logger.Logger,
 	out.LastStepStdout = capture.Last()
 	out.StepSummaries = capture.Summaries()
 	out.FailedStep = capture.FailedStep()
+	out.ChangedSteps = capture.ChangedCount()
 
 	out.ChangedFiles, _ = CollectChangedFiles(repoRoot)
 	out.DiffStat, _ = CollectDiffStat(repoRoot)

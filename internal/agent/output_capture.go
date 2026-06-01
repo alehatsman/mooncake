@@ -94,6 +94,13 @@ type stdoutCapture struct {
 	// the planner sees what broke and adapts instead of re-proposing the
 	// same failing step (#71).
 	failedStep *FailedStepInfo
+	// changedSteps counts step.completed events that reported a mutation
+	// (Changed=true) this iteration. The loop's step-style stall guard
+	// (#77) keys on this: a zero count means the plan applied no changes,
+	// the per-iteration signal CollectChangedFiles can't give (it's the
+	// cumulative git diff, polluted by runner-injected files like
+	// .moongit-agent-mcp.json).
+	changedSteps int
 }
 
 // startedInfo holds the bits of StepStartedData a step.completed
@@ -176,6 +183,15 @@ func (c *stdoutCapture) FailedStep() *FailedStepInfo {
 	return c.failedStep
 }
 
+// ChangedCount returns how many steps reported a mutation this iteration.
+// Read after publisher.Close() like the other accessors. Zero means the
+// plan applied no changes (#77).
+func (c *stdoutCapture) ChangedCount() int {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.changedSteps
+}
+
 // handleCompleted is the step.completed branch of OnEvent. Split out so
 // the OnEvent dispatcher stays under gocyclo budget — the completion
 // path does three things at once (stdout capture, terminal print,
@@ -190,6 +206,15 @@ func (c *stdoutCapture) handleCompleted(data events.StepCompletedData) {
 	delete(c.startedByStep, data.StepID)
 	delete(c.stdoutByStep, data.StepID)
 	c.mu.Unlock()
+
+	// Tally mutations for the step-style stall guard (#77). The transaction
+	// wrapper reports Changed too when a child changed, so this over-counts a
+	// real-work iteration — harmless, the guard only checks zero vs non-zero.
+	if data.Changed {
+		c.mu.Lock()
+		c.changedSteps++
+		c.mu.Unlock()
+	}
 
 	// Every completed step contributes a one-line summary (regardless
 	// of action) so non-cmd/shell actions surface in the next prompt
