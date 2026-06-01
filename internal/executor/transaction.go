@@ -24,6 +24,7 @@ package executor
 // import) and the handler-dispatch path for Reverse().
 
 import (
+	"errors"
 	"fmt"
 	"time"
 
@@ -32,6 +33,14 @@ import (
 	"github.com/alehatsman/mooncake/internal/control"
 	"github.com/alehatsman/mooncake/internal/events"
 )
+
+// errHandlerIrreversible signals that a completed body step can't be
+// reversed because its handler implements no Reverser (shell / cmd and
+// other inherently-irreversible actions). The rollback loop treats this
+// as a quiet skip — NOT a rollback failure — and keeps reversing the
+// rest of the LIFO walk. Distinct from an error returned by Reverse()
+// itself, which still halts the walk and trips a partial rollback.
+var errHandlerIrreversible = errors.New("handler does not implement Reverser")
 
 // txn returns (or lazily creates) the TxnState for a given parent ID.
 // All transaction bookkeeping flows through this so the map is never
@@ -122,7 +131,7 @@ func (ec *ExecutionContext) handleTxnBodyFailure(failedStep config.Step) error {
 	// LIFO reverse walk. Stop at the first Reverse failure but keep
 	// RolledBack=true so on_rollback still fires for visibility.
 	var firstErr error
-	var reversedCount int
+	var reversedCount, skippedCount int
 	var failedReverseStepID, failedReverseStepName string
 	for i := len(completed) - 1; i >= 0; i-- {
 		entry := completed[i]
@@ -131,6 +140,22 @@ func (ec *ExecutionContext) handleTxnBodyFailure(failedStep config.Step) error {
 		ec.Svc.Logger.Infof("↺ Reverse: %s", entry.Step.Name)
 		reverseStart := time.Now()
 		if err := ec.runReverse(entry.Step, entry.Result); err != nil {
+			// #66: an inherently-irreversible handler (no Reverser) is a
+			// quiet skip, not a rollback failure — nothing was ever going
+			// to be undone, so the system state isn't indeterminate. Emit
+			// a structured reverse.skipped event and keep walking the rest
+			// of the completed steps.
+			if errors.Is(err, errHandlerIrreversible) {
+				ec.EmitEvent(events.EventTransactionStepReverseSkipped, events.TransactionStepReverseSkippedData{
+					TxnParentID: failedStep.TxnParent,
+					StepID:      entry.Step.ID,
+					Name:        entry.Step.Name,
+					Action:      entry.Step.DetermineActionType(),
+					Reason:      "irreversible",
+				})
+				skippedCount++
+				continue
+			}
 			t.PartialRollback = true
 			failedReverseStepID = entry.Step.ID
 			failedReverseStepName = entry.Step.Name
@@ -188,6 +213,7 @@ func (ec *ExecutionContext) handleTxnBodyFailure(failedStep config.Step) error {
 		ec.EmitEvent(events.EventTransactionRollbackComplete, events.TransactionRollbackCompleteData{
 			TxnParentID:   failedStep.TxnParent,
 			ReversedSteps: reversedCount,
+			SkippedSteps:  skippedCount,
 		})
 	} else {
 		ec.EmitEvent(events.EventTransactionRollbackFailed, events.TransactionRollbackFailedData{
@@ -216,10 +242,12 @@ func (ec *ExecutionContext) runReverse(step config.Step, result *Result) error {
 	}
 	reverser, ok := handler.(actions.Reverser)
 	if !ok {
-		// Planner's reversibility check should have caught this, but
-		// guard defensively — allow_irreversible can let irreversibles
-		// into the plan.
-		return fmt.Errorf("reverse %s: handler does not implement Reverser", step.Name)
+		// Inherently-irreversible handler (shell / cmd, …). This is not a
+		// rollback failure — there was never anything to undo — so signal
+		// it distinctly. The caller emits a reverse.skipped event and
+		// continues the LIFO walk instead of halting with a prose error
+		// (#66). allow_irreversible can legitimately let these into a plan.
+		return fmt.Errorf("reverse %s: %w", step.Name, errHandlerIrreversible)
 	}
 
 	inverse, err := reverser.Reverse(ec, &step, result)

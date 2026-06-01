@@ -402,3 +402,119 @@ steps:
 		}
 	}
 }
+
+// TestTransaction_IrreversibleHandlerSkipsQuietly (#66): an inherently-
+// irreversible body step (shell, allowed in via allow_irreversible) must
+// be skipped quietly during rollback — a transaction.step_reverse_skipped
+// event, NOT a rollback failure — while the reversible steps around it are
+// still undone. Before the fix the no-Reverser case set firstErr, halted
+// the LIFO walk (so the reversible file.write never got reverted), and
+// fired transaction.rollback_failed with a prose error.
+func TestTransaction_IrreversibleHandlerSkipsQuietly(t *testing.T) {
+	dir := t.TempDir()
+	reversible := filepath.Join(dir, "reversible")
+	failing := "/dev/null/cannot-write-here"
+
+	// LIFO order on failure: shell (step 1) ran, then file.write
+	// (step 2) ran, then file.write to the bad path (step 3) failed.
+	// Rollback walks step 2 (reverse: delete reversible) then step 1
+	// (shell: irreversible → skip).
+	yaml := `version: "1.0"
+steps:
+  - name: deploy
+    allow_irreversible: true
+    transaction:
+      - shell: { cmd: "echo side-effect" }
+      - file.write: { path: ` + reversible + `, content: keep }
+      - file.write: { path: ` + failing + `, content: boom }
+`
+	configPath := filepath.Join(t.TempDir(), "config.yml")
+	if err := os.WriteFile(configPath, []byte(yaml), 0o644); err != nil {
+		t.Fatalf("write config: %v", err)
+	}
+
+	var seen []events.Type
+	var reversed []events.TransactionStepReversedData
+	var skipped []events.TransactionStepReverseSkippedData
+	var completeData *events.TransactionRollbackCompleteData
+	var failedData *events.TransactionRollbackFailedData
+	publisher := events.NewSyncPublisher()
+	publisher.Subscribe(&capturingSubscriber{
+		onEvent: func(e events.Event) {
+			switch e.Type {
+			case events.EventTransactionStepReversed,
+				events.EventTransactionStepReverseSkipped,
+				events.EventTransactionRollbackComplete,
+				events.EventTransactionRollbackFailed:
+				seen = append(seen, e.Type)
+			}
+			switch d := e.Data.(type) {
+			case events.TransactionStepReversedData:
+				reversed = append(reversed, d)
+			case events.TransactionStepReverseSkippedData:
+				skipped = append(skipped, d)
+			case events.TransactionRollbackCompleteData:
+				completeData = &d
+			case events.TransactionRollbackFailedData:
+				failedData = &d
+			}
+		},
+	})
+
+	err := executor.Start(context.Background(), executor.StartConfig{
+		ConfigFilePath: configPath,
+	}, logger.NewTestLogger(), publisher)
+	if err == nil {
+		t.Fatal("expected apply to fail on the third step")
+	}
+
+	// The irreversible shell step produced exactly one reverse.skipped.
+	if len(skipped) != 1 {
+		t.Fatalf("step_reverse_skipped count = %d, want 1 (got %+v)", len(skipped), skipped)
+	}
+	if skipped[0].Action != "shell" {
+		t.Errorf("skipped.Action = %q, want shell", skipped[0].Action)
+	}
+	if skipped[0].Reason != "irreversible" {
+		t.Errorf("skipped.Reason = %q, want irreversible", skipped[0].Reason)
+	}
+
+	// The reversible file.write was still undone despite the irreversible
+	// step earlier in the walk (the walk did NOT halt).
+	if len(reversed) != 1 || reversed[0].Action != "file.write" {
+		t.Fatalf("step_reversed = %+v, want exactly one file.write", reversed)
+	}
+	if _, statErr := os.Stat(reversible); !os.IsNotExist(statErr) {
+		t.Errorf("expected %s to be REVERTED (not exist); stat err = %v", reversible, statErr)
+	}
+
+	// Terminal event is rollback_complete (skips aren't failures), with
+	// the skipped count surfaced.
+	if failedData != nil {
+		t.Errorf("rollback_failed fired unexpectedly: %+v", failedData)
+	}
+	if completeData == nil {
+		t.Fatal("transaction.rollback_complete was never emitted")
+	}
+	if completeData.ReversedSteps != 1 {
+		t.Errorf("rollback_complete.ReversedSteps = %d, want 1", completeData.ReversedSteps)
+	}
+	if completeData.SkippedSteps != 1 {
+		t.Errorf("rollback_complete.SkippedSteps = %d, want 1", completeData.SkippedSteps)
+	}
+
+	// Sequence: reversed (file) → reverse_skipped (shell) → complete.
+	wantSeq := []events.Type{
+		events.EventTransactionStepReversed,
+		events.EventTransactionStepReverseSkipped,
+		events.EventTransactionRollbackComplete,
+	}
+	if len(seen) != len(wantSeq) {
+		t.Fatalf("event sequence = %v, want %v", seen, wantSeq)
+	}
+	for i, want := range wantSeq {
+		if seen[i] != want {
+			t.Errorf("event[%d] = %s, want %s", i, seen[i], want)
+		}
+	}
+}
