@@ -63,6 +63,32 @@ func synthesizeStepName(step config.Step) string {
 	return truncateLabel(at + sep(at, body) + body)
 }
 
+// planStepNames flattens a plan's steps into a display-name list for the
+// plan.loaded event (#74), so a consumer can render the whole plan up
+// front. Transaction wrappers are descended into rather than listed
+// themselves: the pilot loop wraps every plan in one synthetic
+// transaction (WrapInTransaction), so a top-level-only list would surface
+// just that wrapper instead of the real steps. Names reuse the same
+// static label logic the per-step events use (Name, else
+// synthesizeStepName), so a UI sees consistent labels before and during
+// execution. Unnamed/unrecognized steps that synthesize to "" are still
+// listed (as "") to keep the slice index-aligned with the plan order.
+func planStepNames(steps []config.Step) []string {
+	names := make([]string, 0, len(steps))
+	for i := range steps {
+		if len(steps[i].Transaction) > 0 {
+			names = append(names, planStepNames(steps[i].Transaction)...)
+			continue
+		}
+		name := steps[i].Name
+		if name == "" {
+			name = synthesizeStepName(steps[i])
+		}
+		names = append(names, name)
+	}
+	return names
+}
+
 // sep picks the separator between the action type and the label
 // body. Verbose actions whose body looks like prose (shell:
 // "echo hi", log: "hello world") get a colon; identity actions

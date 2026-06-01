@@ -158,6 +158,20 @@ func RunLoop(opts RunOptions) (*LoopResult, error) {
 			return nil, fmt.Errorf("failed to build prompt: %w", err)
 		}
 
+		// #74: emit a plan.generating "started" bracket before the
+		// buffered planner call so a --output-format json consumer has a
+		// real start event for the plan phase instead of dead air until
+		// plan.loaded (moongit#133). No-op in text mode.
+		emitLoopEvent(opts.OutputFormat, events.Event{
+			Type:      events.EventPlanGenerating,
+			Timestamp: time.Now(),
+			Data: events.PlanGeneratingData{
+				Iteration: iterNum,
+				Provider:  opts.Provider,
+				Model:     opts.Model,
+			},
+		})
+
 		// F040(a): bound a single generation with a generous deadline.
 		// The Claude client no longer carries a 60s overall timeout;
 		// ctx is the budget. Per-iteration cancel keeps a stuck call

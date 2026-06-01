@@ -1379,6 +1379,7 @@ func executePlanWithCapture(ctx context.Context, p *plan.Plan, sudoPass string, 
 			RootFile:   p.RootFile,
 			TotalSteps: len(p.Steps),
 			Tags:       p.Tags,
+			Steps:      planStepNames(p.Steps),
 		},
 	})
 

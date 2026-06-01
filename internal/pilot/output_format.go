@@ -4,6 +4,7 @@ import (
 	"io"
 	"os"
 
+	"github.com/alehatsman/mooncake/internal/events"
 	"github.com/alehatsman/mooncake/internal/logger"
 )
 
@@ -45,4 +46,24 @@ func executorLogger(outputFormat string) logger.Logger {
 		return logger.NewDiscardLogger()
 	}
 	return logger.NewLogger(logger.ErrorLevel)
+}
+
+// emitLoopEvent publishes a single pilot-loop lifecycle event (e.g.
+// plan.generating, #74) to the same sink the executor's ConsoleSubscriber
+// writes to: an NDJSON line on stdout under --output-format json, and
+// nothing in text mode — renderText has no case for these types, so
+// they're a no-op there by design (the bracket exists for the structured
+// stream; the human already watches the planning latency live).
+//
+// A short-lived synchronous publisher keeps this fully isolated from the
+// per-iteration execution publisher's close/flush lifecycle (cf. the
+// MT-53 events-drop-on-close note): the plan phase and the apply phase
+// never overlap, so there's no interleaving on stdout. SyncPublisher
+// delivers before returning, so the event lands before the buffered
+// GeneratePlan call blocks.
+func emitLoopEvent(outputFormat string, evt events.Event) {
+	pub := events.NewSyncPublisher()
+	pub.Subscribe(logger.NewConsoleSubscriber(logger.InfoLevel, consoleLogFormat(outputFormat), false))
+	pub.Publish(evt)
+	pub.Close()
 }
