@@ -13,7 +13,7 @@ import (
 // TestHandleRunPlan_PolicyDeniesShell proves the MCP run_plan tool
 // honors the #11 permissions-as-contract gate: a `policy` argument that
 // denies shell makes the run refuse a shell step before its side
-// effect. This is the MCP-driven equivalent of the executor/pilot
+// effect. This is the MCP-driven equivalent of the executor/agent
 // guarantee — the path a Claude-via-MCP agent takes.
 func TestHandleRunPlan_PolicyDeniesShell(t *testing.T) {
 	dir := t.TempDir()

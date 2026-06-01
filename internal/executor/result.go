@@ -268,11 +268,11 @@ func (r *Result) Status() string {
 // target, error, stdout, stderr, rc, status, duration_ms, reason)
 // live at the top level.
 //
-// "reason" is included so step.completed consumers (notably the pilot
+// "reason" is included so step.completed consumers (notably the agent
 // loop's stdoutCapture, which builds per-step summaries fed back to the
 // LLM) can see the handler's own one-liner without reaching into the
 // executor.Result struct. Handlers that leave Reason empty get an empty
-// string here — pilot's summarizer falls back to action+status.
+// string here — agent's summarizer falls back to action+status.
 func (r *Result) ToMap() map[string]interface{} {
 	m := map[string]interface{}{
 		"stdout":      r.Stdout,

@@ -2,7 +2,7 @@ package executor
 
 // #74 (Option C): plan.loaded carries a flattened step-name list so a
 // consumer can render the whole plan up front. planStepNames must descend
-// into transaction wrappers (the pilot loop wraps every plan in one) and
+// into transaction wrappers (the agent loop wraps every plan in one) and
 // reuse the same Name/synthesizeStepName labelling the per-step events use.
 
 import (
@@ -14,7 +14,7 @@ import (
 func TestPlanStepNames_FlattensTransactionWrapper(t *testing.T) {
 	steps := []config.Step{
 		{
-			Name: "mooncake pilot transaction", // synthetic wrapper — must be dropped
+			Name: "mooncake agent transaction", // synthetic wrapper — must be dropped
 			Transaction: []config.Step{
 				{Name: "first"},
 				{Name: "second"},

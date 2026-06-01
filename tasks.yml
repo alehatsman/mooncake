@@ -14,7 +14,7 @@ version: '1'
 # the project-specific budget-status (handler-LOC + Step-field caps on top of
 # gocyclo/god-files), escalation-lint (spec-72), fmt (gofmt -s writer), install
 # (mcake alias + agentd restart), test-race/test-cover, lint-new/lint-fix,
-# install-tools/check-tools, pilot-evals, release. The composite ci / ci-fast
+# install-tools/check-tools, agent-evals, release. The composite ci / ci-fast
 # gates run the goq core and then mooncake's extra stages.
 #
 # PREREQ: go-quality is hosted on the local moongit over plain http, so the
@@ -229,23 +229,23 @@ tasks:
     steps:
       - shell: { cmd: "bash ./scripts/check-tools.sh" }
 
-  # ── Pilot evals (LLM-cost gated) ─────────────────────────────────────
-  pilot-evals:
-    desc: Run mooncake pilot evals (requires MOONCAKE_PILOT_EVAL=1; costs API tokens)
+  # ── Agent evals (LLM-cost gated) ─────────────────────────────────────
+  agent-evals:
+    desc: Run mooncake agent evals (requires MOONCAKE_AGENT_EVAL=1; costs API tokens)
     steps:
       - shell:
           cmd: |
-            if [ "$MOONCAKE_PILOT_EVAL" != "1" ]; then
-              echo "mooncake task pilot-evals: refusing to run — set MOONCAKE_PILOT_EVAL=1 to opt in." >&2
-              echo "                           use 'mooncake task pilot-evals-dry' for a no-cost shape check." >&2
+            if [ "$MOONCAKE_AGENT_EVAL" != "1" ]; then
+              echo "mooncake task agent-evals: refusing to run — set MOONCAKE_AGENT_EVAL=1 to opt in." >&2
+              echo "                           use 'mooncake task agent-evals-dry' for a no-cost shape check." >&2
               exit 2
             fi
-            go run ./testing-next/pilot-evals/
+            go run ./testing-next/agent-evals/
 
-  pilot-evals-dry:
-    desc: Validate pilot-eval harness without an LLM call
+  agent-evals-dry:
+    desc: Validate agent-eval harness without an LLM call
     steps:
-      - shell: { cmd: "go run ./testing-next/pilot-evals/ -dry-run" }
+      - shell: { cmd: "go run ./testing-next/agent-evals/ -dry-run" }
 
   # ── Release ──────────────────────────────────────────────────────────
   release:

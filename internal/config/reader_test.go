@@ -738,7 +738,7 @@ steps:
 }
 
 // config-json-input: config files may be authored as JSON. Compact JSON costs
-// fewer tokens for pilot-emitted configs and avoids YAML indentation mistakes.
+// fewer tokens for agent-emitted configs and avoids YAML indentation mistakes.
 // Detection is content-sniffed (first non-whitespace byte), not extension-based.
 func TestReadConfigWithValidation_JSONArrayInput(t *testing.T) {
 	tmpFile := createTempYAML(t, `[{"name":"hi","shell":{"cmd":"echo hi"}}]`)

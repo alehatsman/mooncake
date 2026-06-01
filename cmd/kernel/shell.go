@@ -1,5 +1,5 @@
 // Package kernel implements the mooncake "kernel" CLI verbs: apply,
-// plan, facts, explain, metrics, validate, actions, pilot. Each verb
+// plan, facts, explain, metrics, validate, actions, agent. Each verb
 // gets its own file (apply.go, plan.go, …) with its constructor and
 // action; this file hosts the helpers + constants every verb leans on
 // (recordOp for ops.jsonl, resolveLocalOverlays for spec-51 by-host

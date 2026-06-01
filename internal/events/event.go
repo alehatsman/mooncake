@@ -20,9 +20,9 @@ type Type string
 // Event types for run lifecycle
 const (
 	EventRunStarted Type = "run.started"
-	// EventPlanGenerating is the "started" bracket for pilot's plan phase
-	// (#74). The pilot RunLoop emits it immediately before the buffered LLM
-	// GeneratePlan call, so a `pilot run --output-format json` consumer has
+	// EventPlanGenerating is the "started" bracket for agent's plan phase
+	// (#74). The agent RunLoop emits it immediately before the buffered LLM
+	// GeneratePlan call, so a `agent run --output-format json` consumer has
 	// a real start event instead of dead air until plan.loaded — which it
 	// otherwise reads as a hang (moongit#133). plan.loaded is the matching
 	// "finished" bracket. Emitted only on the LLM-driven loop path; the
@@ -30,13 +30,13 @@ const (
 	EventPlanGenerating Type = "plan.generating"
 	EventPlanLoaded     Type = "plan.loaded"
 	EventRunCompleted   Type = "run.completed"
-	// EventPilotCompleted is the terminal event a `pilot run
+	// EventAgentCompleted is the terminal event a `agent run
 	// --output-format json` stream emits after the run loop finishes,
 	// replacing the human-readable text summary. Its Data is a
-	// pilot.PilotCompletedData. Unlike the events above it isn't part of
-	// the executor's per-step lifecycle — pilot emits it directly at the
+	// agent.AgentCompletedData. Unlike the events above it isn't part of
+	// the executor's per-step lifecycle — agent emits it directly at the
 	// cmd layer so a programmatic consumer can key on it to finalize.
-	EventPilotCompleted Type = "pilot.completed"
+	EventAgentCompleted Type = "agent.completed"
 )
 
 // Event types for step lifecycle
@@ -150,7 +150,7 @@ type RunStartedData struct {
 }
 
 // PlanGeneratingData contains data for plan.generating events — the
-// "started" bracket for the pilot plan phase (#74). Carries the loop
+// "started" bracket for the agent plan phase (#74). Carries the loop
 // iteration and the provider/model doing the generation so a consumer can
 // label the planning phase while the buffered LLM call is in flight.
 type PlanGeneratingData struct {
@@ -167,7 +167,7 @@ type PlanLoadedData struct {
 	// Steps lists the plan's step display-names so a consumer can render
 	// the whole plan up front instead of discovering steps as they execute
 	// (#74). Transaction wrappers are flattened to their children — the
-	// pilot loop wraps every plan in a single transaction, so a top-level
+	// agent loop wraps every plan in a single transaction, so a top-level
 	// list would otherwise surface only the synthetic wrapper. Additive and
 	// optional; existing readers of total_steps are unaffected.
 	Steps []string `json:"steps,omitempty"`

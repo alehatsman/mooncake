@@ -65,7 +65,7 @@ func createApp() *cli.App {
 			kernelcmd.MetricsCommand(),
 			kernelcmd.ActionsCommand(),
 			agentdcmd.RunsCommand(),
-			kernelcmd.PilotCommand(),
+			kernelcmd.AgentCommand(),
 			kernelcmd.ValidateCommand(),
 		},
 	}

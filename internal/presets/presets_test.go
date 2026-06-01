@@ -843,7 +843,7 @@ steps:
 
 // config-json-input: preset files may be authored as JSON too. The loader
 // sniffs the content (not the extension) so a JSON document with .yml suffix
-// still works — pilots that write to the conventional path don't have to
+// still works — agents that write to the conventional path don't have to
 // rename anything.
 func TestLoadPresetFromPath_JSONContent(t *testing.T) {
 	tmpDir := t.TempDir()

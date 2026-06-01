@@ -987,7 +987,7 @@ Policy is a per\-run allow/deny contract enforced at executor preflight, before 
 
 Scope is deliberately a flat struct — action allow/deny lists, a network switch, and a risk cap. It is NOT an expression language: docs\-working/vision/non\_goals.md forbids an expressive policy DSL \(the OPA/Rego sprawl trap\). The richer \`deny: agent.touches\(...\)\` framing belongs to the agent\-safety spec, not here.
 
-A nil \*Policy \(and the zero value\) enforces nothing: every step is allowed. Callers opt in by populating fields, so every existing run path — CLI apply, fleet, the pilot loop, tests — is unchanged when no policy is set.
+A nil \*Policy \(and the zero value\) enforces nothing: every step is allowed. Callers opt in by populating fields, so every existing run path — CLI apply, fleet, the agent loop, tests — is unchanged when no policy is set.
 
 Gating draws only on the spec\-22 ABI a handler already declares \(PermissionSet and Cost.Risk — see internal/actions/handler\_abi.go\), so no handler needs to change for a run to be policy\-gated.
 
@@ -1377,7 +1377,7 @@ ToMap converts Result to a map for use in template variables.
 
 Proposal\-01 envelope: action\-specific payload stays NESTED under \`data\` rather than being flattened into the top\-level map. So \`register: r\` \+ \`\{\{ r.data.cores \}\}\` is the access path for typed fields; cross\-cutting envelope keys \(changed, failed, operation, target, error, stdout, stderr, rc, status, duration\_ms, reason\) live at the top level.
 
-"reason" is included so step.completed consumers \(notably the pilot loop's stdoutCapture, which builds per\-step summaries fed back to the LLM\) can see the handler's own one\-liner without reaching into the executor.Result struct. Handlers that leave Reason empty get an empty string here — pilot's summarizer falls back to action\+status.
+"reason" is included so step.completed consumers \(notably the agent loop's stdoutCapture, which builds per\-step summaries fed back to the LLM\) can see the handler's own one\-liner without reaching into the executor.Result struct. Handlers that leave Reason empty get an empty string here — agent's summarizer falls back to action\+status.
 
 ### func \(\*Result\) [ToRegisteredResult](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/result.go#L338>)
 

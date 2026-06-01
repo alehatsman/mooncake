@@ -226,7 +226,7 @@ func errContainsAll(err error, needles ...string) bool {
 
 func bytesContains(s, n string) bool { return len(n) == 0 || bytes.Contains([]byte(s), []byte(n)) }
 
-// config-json-input: `mooncake step` accepts JSON as well as YAML. Pilots
+// config-json-input: `mooncake step` accepts JSON as well as YAML. Agents
 // emit compact JSON to save tokens; strict-mode (MT-83) still applies.
 func TestStepStrictDecode_AcceptsJSONInput(t *testing.T) {
 	raw := `{"shell":{"cmd":"echo hi"}}`

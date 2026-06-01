@@ -112,7 +112,7 @@ WASM plugins, IDE extensions, lighthouse-user case studies.
 The strategic trick: **the same engine** serves three audiences. Each wedge
 funds the next.
 
-### 4.1 Solo developer — "Dotfiles & dev box on autopilot"
+### 4.1 Solo developer — "Dotfiles & dev box on autoagent"
 
 The friendliest entry point. Already most of the way there.
 
@@ -423,7 +423,7 @@ These are real forks. Worth deciding intentionally rather than drifting.
 - ✅ Personal fleet (peer-to-peer) — `mooncake fleet apply/status/logs/bootstrap` across N peers without a hub
 - ⏳ Enterprise hub MVP: inventory, run history, audit export, approvals, Slack — zero specs yet; deferred until a paying user asks
 - ⏳ WASM plugin SDK for custom actions — spec-31 not started; in-tree Go plugin model still works for the first year
-- ⏳ First commercial pilots — gated on Phase A lighthouse users + a hub need surfacing
+- ⏳ First commercial agents — gated on Phase A lighthouse users + a hub need surfacing
 
 ### Phase C — Enterprise polish + ecosystem (12–18mo)
 - RBAC, SSO, compliance packs.

@@ -1,6 +1,6 @@
 // Package step implements the `mooncake step` CLI — execute a
 // single inline step (one action invocation, no plan) and return
-// a JSON result. The MCP server and the pilot agent loop drive
+// a JSON result. The MCP server and the agent agent loop drive
 // this verb to invoke handlers without going through plan/apply.
 package step
 

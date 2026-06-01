@@ -49,7 +49,7 @@ func SavePlanToFile(p *Plan, filePath string) (err error) {
 	// F056: 0o600 perms (was bare os.Create → 0644 under typical
 	// umask). Plans carry secret refs + full playbook structure;
 	// on a multi-user host the contents leak. F037 family —
-	// pilot.RunLoop's saved plans were already fixed; this path
+	// agent.RunLoop's saved plans were already fixed; this path
 	// was missed.
 	//
 	// Atomic write (write to <path>.tmp, then rename): a failure

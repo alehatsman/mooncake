@@ -32,7 +32,7 @@ const defaultPolicyRisk = 5
 //
 // A nil *Policy (and the zero value) enforces nothing: every step is
 // allowed. Callers opt in by populating fields, so every existing run
-// path — CLI apply, fleet, the pilot loop, tests — is unchanged when no
+// path — CLI apply, fleet, the agent loop, tests — is unchanged when no
 // policy is set.
 //
 // Gating draws only on the spec-22 ABI a handler already declares

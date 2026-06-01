@@ -63,7 +63,7 @@ developers.
 Mooncake serves three audiences with one engine. Each scenario below is
 the success bar for that audience.
 
-### 1. Solo developer — dotfiles + dev box on autopilot
+### 1. Solo developer — dotfiles + dev box on autoagent
 
 Pick up a fresh laptop / VM / WSL / Mac. Run one command. End up with:
 dotfiles + dev tools + packages + services + drift detection + audit

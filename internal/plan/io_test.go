@@ -387,7 +387,7 @@ func TestSaveAndLoadRoundTrip(t *testing.T) {
 // (every package, service, sysctl, ssh_key targeted on the host);
 // on a multi-user host or a packaged-product worker that other
 // services can read(2), 0o644 leaks recon to anyone with shell
-// access. F037 closed this for pilot saved plans; F056 closes it
+// access. F037 closed this for agent saved plans; F056 closes it
 // for the SavePlanToFile path.
 func TestF056_SavePlanToFile_Perms0o600(t *testing.T) {
 	tmpDir := t.TempDir()

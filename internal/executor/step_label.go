@@ -66,7 +66,7 @@ func synthesizeStepName(step config.Step) string {
 // planStepNames flattens a plan's steps into a display-name list for the
 // plan.loaded event (#74), so a consumer can render the whole plan up
 // front. Transaction wrappers are descended into rather than listed
-// themselves: the pilot loop wraps every plan in one synthetic
+// themselves: the agent loop wraps every plan in one synthetic
 // transaction (WrapInTransaction), so a top-level-only list would surface
 // just that wrapper instead of the real steps. Names reuse the same
 // static label logic the per-step events use (Name, else
