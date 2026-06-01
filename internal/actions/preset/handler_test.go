@@ -464,17 +464,3 @@ func stringContains(s, substr string) bool {
 
 // DryRun tests removed - they require complex planner context setup
 // that's beyond the scope of unit tests
-
-func TestDisplayPresetHelp(t *testing.T) {
-	cleanup := setupTestPresets(t)
-	defer cleanup()
-
-	ec := mockExecutionContext(nil)
-
-	// Call displayPresetHelp - this tests the 0% coverage function
-	// It's a package-level function, not a method
-	displayPresetHelp(ec, "test-preset", "./presets")
-
-	// If we get here without panic, the function works
-	t.Log("displayPresetHelp() executed successfully")
-}

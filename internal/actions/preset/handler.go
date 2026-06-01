@@ -5,7 +5,6 @@ package preset
 import (
 	"context"
 	"fmt"
-	"os"
 	"path/filepath"
 
 	"github.com/alehatsman/mooncake/internal/actions"
@@ -68,25 +67,6 @@ func (h *Handler) Metadata() actions.ActionMetadata {
 		RequiresSudo:       false,      // Depends on constituent steps
 		ImplementsCheck:    false,      // Meta-action, delegates to steps
 	}
-}
-
-// displayPresetHelp reads and displays the preset's README file if it exists.
-// This provides compact, actionable help after successful installation.
-func displayPresetHelp(ec *executor.ExecutionContext, _, baseDir string) {
-	if baseDir == "" {
-		return
-	}
-
-	// Try to read README.md from preset directory
-	readmePath := fmt.Sprintf("%s/README.md", baseDir)
-	data, err := os.ReadFile(readmePath) // #nosec G304 -- baseDir comes from trusted preset loader
-	if err != nil {
-		// README not found or unreadable - skip silently
-		return
-	}
-
-	// Display README content via logger
-	ec.Svc.Logger.Infof("\n%s", string(data))
 }
 
 // Validate validates the preset action configuration.
@@ -237,16 +217,6 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 	})
 
 	ec.Svc.Logger.Infof("Preset '%s' completed: changed=%v", name, anyChanged)
-
-	// Display README if preset has state=present and execution succeeded
-	if props != nil {
-		if state, ok := props["state"].(string); ok && state == "present" {
-			displayPresetHelp(ec, name, presetBaseDir)
-		}
-	} else {
-		// Default state is "present" if not specified
-		displayPresetHelp(ec, name, presetBaseDir)
-	}
 
 	return result, nil
 }
