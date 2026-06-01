@@ -63,6 +63,68 @@ func TestCheckPlanStrict_AcceptsItemAndEnv(t *testing.T) {
 	}
 }
 
+func TestCheckPlanStrict_AcceptsComponentProps(t *testing.T) {
+	// A step expanded from a `use:`d component (ComponentProps != nil) may
+	// reference props.*/parameters.* in execute-time fields; the strict pass
+	// must not flag those roots (#49).
+	plan := &Plan{
+		Steps: []config.Step{
+			{
+				Name:           "component step",
+				ComponentProps: map[string]interface{}{"dir": "/srv"},
+				Cwd:            "{{ props.dir }}",
+				When:           "parameters.enabled",
+				Shell:          &config.ShellAction{Cmd: "echo {{ props.dir }}"},
+			},
+		},
+	}
+	if refs := CheckPlanStrict(plan); len(refs) != 0 {
+		t.Errorf("expected no refs for component props, got %+v", refs)
+	}
+}
+
+func TestCheckPlanStrict_FlagsPropsOnNonComponentStep(t *testing.T) {
+	// props is only free for steps carrying ComponentProps. A bare
+	// `{{ props.x }}` in an ordinary step is a typo and must still be flagged.
+	plan := &Plan{
+		Steps: []config.Step{
+			{
+				Name:  "not a component",
+				Cwd:   "{{ props.dir }}",
+				Shell: &config.ShellAction{Cmd: "pwd"},
+			},
+		},
+	}
+	refs := CheckPlanStrict(plan)
+	if len(refs) != 1 || refs[0].Root != "props" {
+		t.Fatalf("expected props flagged on non-component step, got %+v", refs)
+	}
+}
+
+func TestCheckPlanStrict_ComponentPropsScopedPerStep(t *testing.T) {
+	// props freedom must not leak from a component step to a later
+	// non-component step that references props.
+	plan := &Plan{
+		Steps: []config.Step{
+			{
+				Name:           "component step",
+				ComponentProps: map[string]interface{}{"dir": "/srv"},
+				Cwd:            "{{ props.dir }}",
+				Shell:          &config.ShellAction{Cmd: "pwd"},
+			},
+			{
+				Name:  "later plain step",
+				Cwd:   "{{ props.dir }}",
+				Shell: &config.ShellAction{Cmd: "pwd"},
+			},
+		},
+	}
+	refs := CheckPlanStrict(plan)
+	if len(refs) != 1 || refs[0].StepName != "later plain step" {
+		t.Fatalf("expected props flagged only on later plain step, got %+v", refs)
+	}
+}
+
 func TestCheckPlanStrict_AcceptsPriorRegister(t *testing.T) {
 	plan := &Plan{
 		Steps: []config.Step{

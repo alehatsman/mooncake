@@ -1029,6 +1029,12 @@ func ExecuteSteps(steps []config.Step, ec *ExecutionContext) error {
 			ec.Scope.Loop = nil
 		}
 
+		// If step came from a `use:`d component (from planner), restore its
+		// prop namespace so execute-time fields (when/cwd/creates/unless)
+		// can reference props.*/parameters.* (#49). nil clears it for steps
+		// outside any component, mirroring the loop-context reset above.
+		ec.Scope.Props = step.ComponentProps
+
 		if err := ExecuteStep(step, ec); err != nil {
 			// spec-30: when the failing step is part of a transaction,
 			// look ahead in the plan for same-transaction on_rollback

@@ -254,7 +254,7 @@ DispatchStepAction executes the appropriate handler based on step type. All acti
 
 INTERNAL: This function is exported for testing purposes only and is not part of the public API. It may change or be removed in future versions without notice.
 
-## func [ExecutePlan](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/executor.go#L1314>)
+## func [ExecutePlan](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/executor.go#L1320>)
 
 ```go
 func ExecutePlan(ctx context.Context, p *plan.Plan, sudoPass string, mode actions.Mode, log logger.Logger, publisher events.Publisher) error
@@ -266,7 +266,7 @@ Callers that need the typed \*KernelResult substrate \(R1.1b\) should use Execut
 
 ctx is checked between steps — see Start for the cancellation contract.
 
-## func [ExecutePlanWithCapture](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/executor.go#L1330>)
+## func [ExecutePlanWithCapture](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/executor.go#L1336>)
 
 ```go
 func ExecutePlanWithCapture(ctx context.Context, p *plan.Plan, sudoPass string, mode actions.Mode, log logger.Logger, publisher events.Publisher, capture *RunCapture) error
@@ -320,7 +320,7 @@ Panics on duplicate registration — silent overwrite would let a later handler 
 
 Called from each handler package's init\(\) alongside actions.Register. The wire round\-trip is the contract this registry implements: see Result.MarshalJSON / UnmarshalJSON \(spec R2.1c phase 2\).
 
-## func [Start](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/executor.go#L1158>)
+## func [Start](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/executor.go#L1164>)
 
 ```go
 func Start(ctx context.Context, startConfig StartConfig, log logger.Logger, publisher events.Publisher) error
@@ -1522,7 +1522,7 @@ func (e *SetupError) Error() string
 func (e *SetupError) Unwrap() error
 ```
 
-## type [StartConfig](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/executor.go#L1108-L1147>)
+## type [StartConfig](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/executor.go#L1114-L1153>)
 
 StartConfig contains configuration for starting a mooncake execution.
 
@@ -1623,7 +1623,7 @@ type TxnCompletedChild struct {
 }
 ```
 
-## type [VariableScope](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/scope.go#L31-L74>)
+## type [VariableScope](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/scope.go#L31-L83>)
 
 VariableScope holds all variables available to a step, each in its native type. ToMap\(\) merges them at the template/expression engine boundary.
 
@@ -1638,6 +1638,15 @@ type VariableScope struct {
 
     // Loop holds the current loop iteration state, or nil outside a loop.
     Loop *LoopContext
+
+    // Props holds the component props/parameters in scope for the running
+    // step, or nil outside a `use:`d component. The planner expands a local
+    // `use:` at plan time and drops its prop namespace once expansion
+    // finishes, so fields rendered at EXECUTE time (when/cwd/creates/unless)
+    // would otherwise lose `props.*` / `parameters.*`. The executor restores
+    // this per step from Step.ComponentProps, mirroring how Loop is restored
+    // from Step.LoopContext (#49).
+    Props map[string]interface{}
 
     // Results holds registered results keyed by step.As name.
     Results map[string]RegisteredResult
@@ -1674,7 +1683,7 @@ type VariableScope struct {
 }
 ```
 
-### func [NewVariableScope](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/scope.go#L77>)
+### func [NewVariableScope](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/scope.go#L86>)
 
 ```go
 func NewVariableScope() *VariableScope
@@ -1682,7 +1691,7 @@ func NewVariableScope() *VariableScope
 
 NewVariableScope returns an empty scope ready for use.
 
-### func \(\*VariableScope\) [Clone](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/scope.go#L234>)
+### func \(\*VariableScope\) [Clone](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/scope.go#L251>)
 
 ```go
 func (s *VariableScope) Clone() *VariableScope
@@ -1690,7 +1699,7 @@ func (s *VariableScope) Clone() *VariableScope
 
 Clone deep\-copies User and Results; shares Facts and Metrics pointers \(read\-only after init\). Loop is intentionally NOT copied — it is per\-step state.
 
-### func \(\*VariableScope\) [ToMap](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/scope.go#L90>)
+### func \(\*VariableScope\) [ToMap](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/scope.go#L99>)
 
 ```go
 func (s *VariableScope) ToMap() map[string]interface{}

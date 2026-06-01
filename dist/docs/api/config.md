@@ -314,7 +314,7 @@ var TasksSearchPaths = []string{
 }
 ```
 
-## func [ActionFieldIndices](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2301>)
+## func [ActionFieldIndices](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2311>)
 
 ```go
 func ActionFieldIndices() []int
@@ -875,7 +875,7 @@ type FirewallRule struct {
 }
 ```
 
-## type [ForEachField](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2145-L2151>)
+## type [ForEachField](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2155-L2161>)
 
 ForEachField holds the value of a Step's \`for\_each\` keyword. It supports two YAML forms:
 
@@ -899,7 +899,7 @@ type ForEachField struct {
 }
 ```
 
-### func \(ForEachField\) [MarshalJSON](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2178>)
+### func \(ForEachField\) [MarshalJSON](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2188>)
 
 ```go
 func (f ForEachField) MarshalJSON() ([]byte, error)
@@ -907,7 +907,7 @@ func (f ForEachField) MarshalJSON() ([]byte, error)
 
 MarshalJSON ensures Validate's json.Marshal → unmarshal → schema\-check round\-trip emits the scalar/sequence form rather than a struct shape.
 
-### func \(ForEachField\) [MarshalYAML](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2169>)
+### func \(ForEachField\) [MarshalYAML](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2179>)
 
 ```go
 func (f ForEachField) MarshalYAML() (interface{}, error)
@@ -915,7 +915,7 @@ func (f ForEachField) MarshalYAML() (interface{}, error)
 
 MarshalYAML emits whichever form is populated \(scalar or sequence\).
 
-### func \(\*ForEachField\) [UnmarshalJSON](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2186>)
+### func \(\*ForEachField\) [UnmarshalJSON](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2196>)
 
 ```go
 func (f *ForEachField) UnmarshalJSON(data []byte) error
@@ -923,7 +923,7 @@ func (f *ForEachField) UnmarshalJSON(data []byte) error
 
 UnmarshalJSON parses either a scalar \(string\) or sequence \(array\) form.
 
-### func \(\*ForEachField\) [UnmarshalYAML](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2154>)
+### func \(\*ForEachField\) [UnmarshalYAML](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2164>)
 
 ```go
 func (f *ForEachField) UnmarshalYAML(unmarshal func(interface{}) error) error
@@ -1251,7 +1251,7 @@ func (lm *LocationMap) Set(path string, line, column int)
 
 Set stores a position for a given JSON pointer path
 
-## type [LoopContext](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2274-L2282>)
+## type [LoopContext](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2284-L2292>)
 
 LoopContext captures loop iteration metadata
 
@@ -1449,7 +1449,7 @@ type ObserveService struct {
 }
 ```
 
-## type [Origin](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2266-L2271>)
+## type [Origin](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2276-L2281>)
 
 Origin tracks source location and include chain for plan traceability
 
@@ -1933,7 +1933,7 @@ type RepoTree struct {
 }
 ```
 
-## type [RetryPolicy](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2211-L2217>)
+## type [RetryPolicy](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2221-L2227>)
 
 RetryPolicy controls per\-step retry behavior \(spec\-21\). Replaces the legacy flat Retries \+ RetryDelay fields with a single structured block; future\-compat for backoff strategies.
 
@@ -2113,7 +2113,7 @@ func (s *ShellAction) UnmarshalYAML(unmarshal func(interface{}) error) error
 
 UnmarshalYAML implements custom YAML unmarshaling to support both string and object forms. Supports: shell: "command" AND shell: \{ cmd: "command", interpreter: "bash", ... \}
 
-## type [Step](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1880-L2131>)
+## type [Step](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1880-L2141>)
 
 Step represents a single configuration step that can perform various actions.
 
@@ -2322,6 +2322,16 @@ type Step struct {
     LoopContext    *LoopContext `yaml:"loop_context,omitempty" json:"loop_context,omitempty"`
     SourceLocation *Position    `yaml:"-" json:"-"` // Source location from YAML parsing (set by Reader)
 
+    // ComponentProps carries the validated props/parameters namespace of the
+    // `use:`d component this step was expanded from (#49). The planner injects
+    // props only for the duration of plan-time expansion (tryExpandUse), so
+    // fields rendered at EXECUTE time (when/cwd/creates/unless) would lose
+    // `props.*`/`parameters.*` without this. The executor restores it into
+    // Scope.Props per step, mirroring LoopContext → Scope.Loop. Populated
+    // during plan expansion; nil for steps outside a component. Serialized to
+    // json so saved plans (`plan -o`, then `apply <plan>`) round-trip.
+    ComponentProps map[string]interface{} `yaml:"component_props,omitempty" json:"component_props,omitempty"`
+
     // TriggeredBy carries the ID of the parent step when this Step was
     // expanded from an on_change child. Populated during plan expansion;
     // empty for top-level steps. Used by the executor to gate execution
@@ -2376,7 +2386,7 @@ type Step struct {
 }
 ```
 
-### func \(\*Step\) [Clone](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2416>)
+### func \(\*Step\) [Clone](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2426>)
 
 ```go
 func (s *Step) Clone() *Step
@@ -2384,7 +2394,7 @@ func (s *Step) Clone() *Step
 
 Clone creates a shallow copy of the step.
 
-### func \(\*Step\) [DetermineActionType](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2331>)
+### func \(\*Step\) [DetermineActionType](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2341>)
 
 ```go
 func (s *Step) DetermineActionType() string
@@ -2392,7 +2402,7 @@ func (s *Step) DetermineActionType() string
 
 DetermineActionType returns the action type for this step based on which action field is populated. Returned strings are the modern dot\-namespaced YAML keys \(spec\-21\).
 
-### func \(\*Step\) [RetryAttempts](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2221>)
+### func \(\*Step\) [RetryAttempts](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2231>)
 
 ```go
 func (s *Step) RetryAttempts() int
@@ -2400,7 +2410,7 @@ func (s *Step) RetryAttempts() int
 
 RetryAttempts returns the configured retry\-attempt count, or 0 if no retry policy is set. Helper for the post\-spec\-21 Retry struct.
 
-### func \(\*Step\) [RetryBackoffStrategy](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2242>)
+### func \(\*Step\) [RetryBackoffStrategy](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2252>)
 
 ```go
 func (s *Step) RetryBackoffStrategy() string
@@ -2408,7 +2418,7 @@ func (s *Step) RetryBackoffStrategy() string
 
 RetryBackoffStrategy returns the configured backoff strategy, or "fixed" \(the default\) when unset. The Retry.Backoff field was declared in the schema but never read — \`linear\` and \`exponential\` were silently ignored and every retry slept for the bare delay, defeating the point of backoff for external\-API integrations.
 
-### func \(\*Step\) [RetryDelayDuration](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2230>)
+### func \(\*Step\) [RetryDelayDuration](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2240>)
 
 ```go
 func (s *Step) RetryDelayDuration() string
@@ -2416,7 +2426,7 @@ func (s *Step) RetryDelayDuration() string
 
 RetryDelayDuration returns the configured retry delay string, or "" if no retry policy is set. Helper for the post\-spec\-21 Retry struct.
 
-### func \(\*Step\) [ShouldBecome](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2255>)
+### func \(\*Step\) [ShouldBecome](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2265>)
 
 ```go
 func (s *Step) ShouldBecome() bool
@@ -2424,7 +2434,7 @@ func (s *Step) ShouldBecome() bool
 
 ShouldBecome reports whether the step requests privilege escalation. True iff AsUser is non\-empty \(spec\-21 collapsed become/become\_user\) AND the current process is not already running as the target user. When the current euid is 0 and AsUser targets root \("root" or "0"\), no escalation is needed — short\-circuits sudo invocation so presets work in minimal containers \(ubuntu:24.04, alpine:3.21\) that don't ship sudo.
 
-### func \(\*Step\) [Validate](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2361>)
+### func \(\*Step\) [Validate](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2371>)
 
 ```go
 func (s *Step) Validate() error
@@ -2432,7 +2442,7 @@ func (s *Step) Validate() error
 
 Validate checks that the step configuration is valid.
 
-### func \(\*Step\) [ValidateHasAction](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2353>)
+### func \(\*Step\) [ValidateHasAction](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2363>)
 
 ```go
 func (s *Step) ValidateHasAction() error
@@ -2440,7 +2450,7 @@ func (s *Step) ValidateHasAction() error
 
 ValidateHasAction checks that the step has at least one action defined.
 
-### func \(\*Step\) [ValidateOneAction](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2345>)
+### func \(\*Step\) [ValidateOneAction](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2355>)
 
 ```go
 func (s *Step) ValidateOneAction() error

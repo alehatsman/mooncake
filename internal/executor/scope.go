@@ -39,6 +39,15 @@ type VariableScope struct {
 	// Loop holds the current loop iteration state, or nil outside a loop.
 	Loop *LoopContext
 
+	// Props holds the component props/parameters in scope for the running
+	// step, or nil outside a `use:`d component. The planner expands a local
+	// `use:` at plan time and drops its prop namespace once expansion
+	// finishes, so fields rendered at EXECUTE time (when/cwd/creates/unless)
+	// would otherwise lose `props.*` / `parameters.*`. The executor restores
+	// this per step from Step.ComponentProps, mirroring how Loop is restored
+	// from Step.LoopContext (#49).
+	Props map[string]interface{}
+
 	// Results holds registered results keyed by step.As name.
 	Results map[string]RegisteredResult
 
@@ -116,6 +125,14 @@ func (s *VariableScope) ToMap() map[string]interface{} {
 	}
 	for k, r := range s.Results {
 		m[k] = r.ToMap()
+	}
+	// Component props sit above User so a `use:`d component always sees its
+	// own props.*/parameters.* at execute time, even if the consumer file
+	// happens to carry a user var of the same name. Both keys alias the same
+	// map (matches the planner's plan-time injection at tryExpandUse).
+	if s.Props != nil {
+		m["props"] = s.Props
+		m["parameters"] = s.Props
 	}
 	if s.Loop != nil {
 		m["item"] = s.Loop.Item
@@ -245,9 +262,13 @@ func (s *VariableScope) Clone() *VariableScope {
 		newOrigins[k] = v
 	}
 	return &VariableScope{
-		User:          newUser,
-		Facts:         s.Facts,
-		Loop:          nil,
+		User:  newUser,
+		Facts: s.Facts,
+		Loop:  nil,
+		// Props is read-only during execution (component prop namespace);
+		// share by reference like Facts/Env. The per-step execute loop
+		// resets it from Step.ComponentProps each iteration anyway.
+		Props:         s.Props,
 		Results:       newResults,
 		ResultOrigins: newOrigins,
 		Metrics:       s.Metrics,
