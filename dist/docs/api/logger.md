@@ -460,7 +460,7 @@ func (l *ConsoleLogger) WithPadLevel(padLevel int) Logger
 
 WithPadLevel creates a new logger with the specified padding level.
 
-## type [ConsoleSubscriber](<https://github.com/alehatsman/mooncake/blob/main/internal/logger/console_subscriber.go#L15-L32>)
+## type [ConsoleSubscriber](<https://github.com/alehatsman/mooncake/blob/main/internal/logger/console_subscriber.go#L15-L39>)
 
 ConsoleSubscriber implements event\-based console logging
 
@@ -470,7 +470,7 @@ type ConsoleSubscriber struct {
 }
 ```
 
-### func [NewConsoleSubscriber](<https://github.com/alehatsman/mooncake/blob/main/internal/logger/console_subscriber.go#L38>)
+### func [NewConsoleSubscriber](<https://github.com/alehatsman/mooncake/blob/main/internal/logger/console_subscriber.go#L45>)
 
 ```go
 func NewConsoleSubscriber(logLevel int, logFormat string, streamOutput bool) *ConsoleSubscriber
@@ -478,7 +478,7 @@ func NewConsoleSubscriber(logLevel int, logFormat string, streamOutput bool) *Co
 
 NewConsoleSubscriber creates a new console subscriber. streamOutput=false matches the historical \`mooncake apply\` UX \(step\-start/end markers only at info; shell stdout/stderr only at debug\). \`mooncake task\` constructs with streamOutput=true.
 
-### func \(\*ConsoleSubscriber\) [Close](<https://github.com/alehatsman/mooncake/blob/main/internal/logger/console_subscriber.go#L67>)
+### func \(\*ConsoleSubscriber\) [Close](<https://github.com/alehatsman/mooncake/blob/main/internal/logger/console_subscriber.go#L74>)
 
 ```go
 func (c *ConsoleSubscriber) Close()
@@ -486,7 +486,7 @@ func (c *ConsoleSubscriber) Close()
 
 Close implements the Subscriber interface
 
-### func \(\*ConsoleSubscriber\) [OnEvent](<https://github.com/alehatsman/mooncake/blob/main/internal/logger/console_subscriber.go#L54>)
+### func \(\*ConsoleSubscriber\) [OnEvent](<https://github.com/alehatsman/mooncake/blob/main/internal/logger/console_subscriber.go#L61>)
 
 ```go
 func (c *ConsoleSubscriber) OnEvent(event events.Event)
@@ -494,7 +494,7 @@ func (c *ConsoleSubscriber) OnEvent(event events.Event)
 
 OnEvent handles incoming events
 
-### func \(\*ConsoleSubscriber\) [SetRedactor](<https://github.com/alehatsman/mooncake/blob/main/internal/logger/console_subscriber.go#L47>)
+### func \(\*ConsoleSubscriber\) [SetRedactor](<https://github.com/alehatsman/mooncake/blob/main/internal/logger/console_subscriber.go#L54>)
 
 ```go
 func (c *ConsoleSubscriber) SetRedactor(r interface{ Redact(string) string })
