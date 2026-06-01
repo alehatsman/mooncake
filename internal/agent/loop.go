@@ -28,13 +28,23 @@ const defaultMaxIterations = 5
 // guard: this catches cosmetically-different but effect-free re-plans.
 const maxNoChangeStreak = 2
 
-// planGenTimeout bounds a single LLM plan-generation call. The
-// previous shape relied on http.Client.Timeout=60s which silently
-// truncated thinking-model runs (F040). Five minutes is generous —
-// real generations finish in 5-90s — and lets long-context agent
-// runs complete without a fixed-window cutoff. Operators who need a
-// different budget can fork the value if/when --llm-timeout lands.
-const planGenTimeout = 5 * time.Minute
+// defaultPlanGenTimeout bounds a single LLM plan-generation call when
+// the run doesn't override it. The previous shape relied on
+// http.Client.Timeout=60s which silently truncated thinking-model runs
+// (F040). Five minutes covers typical generations (5-90s) with headroom,
+// but a thinking-heavy plan can run past it and get SIGKILLed mid-stream
+// (#80) — so RunOptions.LLMTimeout lets an operator raise or lower the
+// budget via `mooncake agent run --llm-timeout` / MOONCAKE_AGENT_LLM_TIMEOUT.
+const defaultPlanGenTimeout = 5 * time.Minute
+
+// planGenTimeout resolves the per-iteration LLM budget for this run: the
+// explicit LLMTimeout override when positive, else the built-in default.
+func (opts RunOptions) planGenTimeout() time.Duration {
+	if opts.LLMTimeout > 0 {
+		return opts.LLMTimeout
+	}
+	return defaultPlanGenTimeout
+}
 
 // newClient is the package-level LLM-client factory so tests can swap
 // in a stub. Mirrors the editorRunner pattern in confirm.go.
@@ -185,8 +195,9 @@ func RunLoop(opts RunOptions) (*LoopResult, error) {
 		// F040(a): bound a single generation with a generous deadline.
 		// The Claude client no longer carries a 60s overall timeout;
 		// ctx is the budget. Per-iteration cancel keeps a stuck call
-		// from blocking the rest of the agent loop.
-		genCtx, cancelGen := context.WithTimeout(context.Background(), planGenTimeout)
+		// from blocking the rest of the agent loop. The budget is the
+		// run's LLMTimeout override, or the built-in default (#80).
+		genCtx, cancelGen := context.WithTimeout(context.Background(), opts.planGenTimeout())
 		rawPlan, err := streamPlan(genCtx, client, planPub, iterNum, opts, systemPrompt, userPrompt)
 		cancelGen()
 		// Close flushes the bracket + every delta to stdout and joins the

@@ -2,6 +2,7 @@ package agent
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/alehatsman/mooncake/internal/executor"
 )
@@ -63,6 +64,12 @@ type RunOptions struct {
 	// ["shell","cmd"]} lets the model propose a shell step but the
 	// executor refuses it before any side effect. See executor.Policy.
 	Policy *executor.Policy
+	// LLMTimeout bounds a single plan-generation call (one claude/LLM
+	// invocation per iteration). Zero falls back to defaultPlanGenTimeout.
+	// A thinking-heavy plan can run past the historical 5m wall; this lets
+	// an operator (or a moongit-spawned run aligning to its own per-turn
+	// budget) raise or lower the cutoff. See loop.go and #80.
+	LLMTimeout time.Duration
 }
 
 // Output format values for RunOptions.OutputFormat. Mirrors the
