@@ -685,6 +685,18 @@ func handleStepError(step config.Step, ec *ExecutionContext, stepErr error, step
 	if errors.As(stepErr, &cmdErr) {
 		failedData.ExitCode = cmdErr.ExitCode
 	}
+	// shell/cmd surface the real process exit code on the Result (Rc),
+	// but it does not reach here via stepErr: applyResultOverrides and
+	// runWithRetry replace the handler's error before handleStepError
+	// sees it, so a handler-side *CommandError would be lost. The Result
+	// survives that path, so fall back to its non-zero Rc when the typed
+	// error did not carry a code. Rc==0 (a non-process action, or
+	// failed_when firing on a clean exit) keeps the -1 "N/A" sentinel —
+	// issue #21 requires we not fabricate an exit code for a command
+	// that exited 0.
+	if failedData.ExitCode == -1 && ec.CurrentResult != nil && ec.CurrentResult.Rc != 0 {
+		failedData.ExitCode = ec.CurrentResult.Rc
+	}
 	if ec.CurrentResult != nil {
 		// stdout/stderr on the failure event flow into the stderr JSON
 		// blob (NewStderrErrorSubscriber) AND the runlog StepEntry, so
