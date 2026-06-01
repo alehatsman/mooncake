@@ -87,6 +87,11 @@ type Planner struct {
 	// `vars: { TOKEN: !secret env:FOO }` flows the sentinel marker
 	// through to subsequent template renders.
 	redactor *security.Redactor
+	// modules is the playbook's `modules:` alias map, captured in
+	// BuildPlan. Read by renderActionTemplates to merge module-level
+	// default props (#52) into every `use: <alias>` step at the same
+	// phase per-call props are rendered.
+	modules map[string]config.ModuleBinding
 }
 
 // IncludeFrame tracks a frame in the include stack for cycle detection and origin tracking
@@ -227,6 +232,9 @@ func (p *Planner) BuildPlan(cfg PlannerConfig) (*Plan, error) {
 	if err != nil {
 		return nil, err
 	}
+	// #52: capture the alias→binding map so renderActionTemplates can merge
+	// module-level default props into `use: <alias>` steps.
+	p.modules = runConfig.Modules
 
 	// Task selection: when TaskName is set, swap the top-level Steps
 	// for the named task's Steps and layer the task's Vars between
@@ -1086,6 +1094,14 @@ func (p *Planner) renderActionTemplates(step *config.Step, ctx *ExpansionContext
 		if err := renderPropsValue(step.Props, render); err != nil {
 			return fmt.Errorf("step %q: %w", step.Name, err)
 		}
+		// #52: layer module-level default props underneath the per-call
+		// props. Rendered with the same vars so a default like
+		// `go_tags: "{{ GO_TAGS }}"` resolves at this same phase.
+		merged, err := p.mergeModuleDefaultProps(step.Use, step.Props, render)
+		if err != nil {
+			return fmt.Errorf("step %q: %w", step.Name, err)
+		}
+		step.Props = merged
 		return nil
 	}
 
@@ -1119,6 +1135,38 @@ func (p *Planner) renderActionTemplates(step *config.Step, ctx *ExpansionContext
 		break
 	}
 	return nil
+}
+
+// mergeModuleDefaultProps applies a module binding's default props (#52)
+// underneath the caller's per-call props for a `use: <alias>[/export]` step.
+// Precedence, highest first: per-call props > module default props (and the
+// component's own prop defaults fill any remaining gaps later, at validation).
+//
+// The defaults are deep-cloned and template-rendered with `render` so a
+// default like `go_tags: "{{ GO_TAGS }}"` resolves here, never mutating the
+// parsed config. Returns callerProps unchanged when the use ref is not a known
+// alias or the alias declares no default props.
+func (p *Planner) mergeModuleDefaultProps(use string, callerProps map[string]interface{}, render func(string) (string, error)) (map[string]interface{}, error) {
+	alias := use
+	if i := strings.IndexByte(use, '/'); i >= 0 {
+		alias = use[:i]
+	}
+	binding, ok := p.modules[alias]
+	if !ok || len(binding.Props) == 0 {
+		return callerProps, nil
+	}
+	defaults, _ := clonePropsValue(binding.Props).(map[string]interface{})
+	if defaults == nil {
+		defaults = map[string]interface{}{}
+	}
+	if err := renderPropsValue(defaults, render); err != nil {
+		return nil, fmt.Errorf("render module default props for alias %q: %w", alias, err)
+	}
+	// Per-call props win key-by-key.
+	for k, v := range callerProps {
+		defaults[k] = v
+	}
+	return defaults, nil
 }
 
 // clonePropsValue returns a deep copy of a props value (map/slice/scalar).

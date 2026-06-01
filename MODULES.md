@@ -19,6 +19,8 @@ distributed and versioned.
 # mooncake.yml
 modules:
   postgres: github.com/mooncake-modules/postgres@v1.3.0
+  # or, with default props applied to every `use: <alias>` (see below):
+  # postgres: { source: github.com/mooncake-modules/postgres@v1.3.0, props: { tls: true } }
 
 steps:
   # Remote module via alias (default export)
@@ -157,6 +159,60 @@ use: postgres
 
 The cache is content-immutable at `(host, owner, repo, version)`. A second
 run with the same version is a pure cache hit — no clone, no network.
+
+---
+
+## Reducing boilerplate: default props + task shorthand
+
+Two sugars cut the ceremony when a repo wires the same module export into many
+tasks.
+
+### Module-level default props
+
+A `modules:` entry can be an object with `props:` instead of a bare string.
+Those props are applied as **defaults** to every `use:` of that alias, so an
+invariant value (a `dir:`, a `go_tags:`) is declared once, not at every call
+site:
+
+```yaml
+modules:
+  goq:
+    source: "127.0.0.1:8080/owner/go-quality@v0.1.1"
+    props:
+      go_tags: "{{ GO_TAGS }}"   # templated like any per-call prop
+  tq:
+    source: "127.0.0.1:8080/owner/ts-quality@v0.1.0"
+    props: { dir: web }
+
+steps:
+  - use: tq/lint            # runs with dir=web, no props: needed
+  - use: tq/lint            # a per-call prop wins over the default:
+    props: { dir: other }   #   → dir=other
+```
+
+Precedence, highest first: **per-call `props:` > module default props >
+the component's own prop defaults**. The bare-string form
+(`goq: ".../@v0.1.1"`) still works and carries no defaults.
+
+### Task shorthand: a string task value is a `use:` reference
+
+A task value may be a `use:` reference string instead of a full
+`{ steps: [...] }` map. It expands to a single-step task:
+
+```yaml
+tasks:
+  ui-lint: tq/lint          # == { steps: [{ use: tq/lint }] }
+  ui-build: tq/build
+  lint: goq/lint
+```
+
+When a shorthand task has no `desc:`, `mooncake task` shows the referenced
+**component's own `description:`** (for a local component) — so the listing
+never drifts from the component. For a module alias it shows a `→ <ref>` hint
+rather than resolving the module (a listing stays offline). Need extra props?
+Use the full map form: `ai-lint-all: { steps: [{ use: goq/ai-lint, props: { all: true } }] }`.
+
+Combined with module default props, the one-liner is a complete working task.
 
 ---
 

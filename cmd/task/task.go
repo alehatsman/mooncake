@@ -22,6 +22,7 @@ import (
 	"github.com/alehatsman/mooncake/internal/executor"
 	"github.com/alehatsman/mooncake/internal/logger"
 	"github.com/alehatsman/mooncake/internal/plan"
+	"github.com/alehatsman/mooncake/internal/presets"
 	"github.com/alehatsman/mooncake/internal/security"
 	"github.com/urfave/cli/v2"
 )
@@ -208,17 +209,54 @@ func listTasksAction(c *cli.Context) error {
 	sort.Strings(names)
 
 	fmt.Fprintf(os.Stdout, "Tasks defined in %s:\n\n", configPath)
+	configDir := filepath.Dir(configPath)
 	tw := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
 	for _, name := range names {
-		desc := parsed.Tasks[name].Desc
-		if desc == "" {
-			desc = "(no description)"
-		}
-		fmt.Fprintf(tw, "  %s\t%s\n", name, desc)
+		fmt.Fprintf(tw, "  %s\t%s\n", name, taskListDescription(parsed.Tasks[name], configDir))
 	}
 	_ = tw.Flush()
 	fmt.Fprintln(os.Stdout, "\nRun a task with:  mooncake task <name>")
 	return nil
+}
+
+// taskListDescription returns the description shown for a task in the
+// `mooncake task` listing. Precedence:
+//  1. An explicit `desc:` always wins.
+//  2. For a string-shorthand task (#53) — a single `use:` step and no desc —
+//     fall back to the referenced component's own `description:` when the ref
+//     is a LOCAL path (loaded cheaply, offline). Kills desc drift for in-repo
+//     components.
+//  3. For an alias/remote use-ref, show "→ <ref>" rather than resolving the
+//     module: a listing must stay fast and offline, and resolving an alias
+//     could trigger a network clone on a cache miss.
+//  4. Otherwise "(no description)".
+func taskListDescription(t config.Task, configDir string) string {
+	if t.Desc != "" {
+		return t.Desc
+	}
+	ref, ok := singleUseRef(t)
+	if !ok {
+		return "(no description)"
+	}
+	if config.ComponentRefKindOf(ref) == config.ComponentRefLocalPath {
+		absPath := ref
+		if !filepath.IsAbs(absPath) {
+			absPath = filepath.Join(configDir, ref)
+		}
+		if def, err := presets.LoadPresetFromPath(absPath); err == nil && def.Description != "" {
+			return def.Description
+		}
+	}
+	return "→ " + ref
+}
+
+// singleUseRef reports whether the task is the #53 string shorthand — exactly
+// one step that is a `use:` reference — and returns that reference.
+func singleUseRef(t config.Task) (string, bool) {
+	if len(t.Steps) != 1 || t.Steps[0].Use == "" {
+		return "", false
+	}
+	return t.Steps[0].Use, true
 }
 
 // runTaskAction is the run / preview dispatcher for `mooncake task <name>`.

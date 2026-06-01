@@ -248,11 +248,17 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 }
 
 // resolverFor builds a Resolver wired to the run's Modules map. Overridable
-// for tests so they can inject a Fetcher with a fixture CloneURL.
+// for tests so they can inject a Fetcher with a fixture CloneURL. The resolver
+// only needs alias→source, so module-level default props (#52) are dropped
+// here and merged separately at the call site.
 var resolverFor = func(ec *executor.ExecutionContext) *modules.Resolver {
+	sources := make(map[string]string, len(ec.Svc.Modules))
+	for alias, binding := range ec.Svc.Modules {
+		sources[alias] = binding.Source
+	}
 	return &modules.Resolver{
 		Fetcher: &modules.Fetcher{},
-		Modules: ec.Svc.Modules,
+		Modules: sources,
 	}
 }
 
