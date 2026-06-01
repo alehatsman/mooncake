@@ -19,8 +19,14 @@ version: '1'
 #
 # PREREQ: go-quality is hosted on the local moongit over plain http, so the
 # module fetch needs the host trusted once per shell:
-#   export MOONCAKE_MODULE_INSECURE=127.0.0.1:8080
+#   export MOONCAKE_MODULE_INSECURE=host.docker.internal:8080
 # (first run clones to ~/.cache/mooncake/modules/...; later runs hit cache.)
+#
+# The source uses host.docker.internal (not 127.0.0.1) so the SAME tasks.yml
+# resolves from both the host — where host.docker.internal maps to this box —
+# and inside a moongit CI container, where 127.0.0.1 would mean "the container
+# itself" (see mgitci.yml; the runner adds --add-host host.docker.internal:
+# host-gateway). Mirrors moongit + dex.
 #
 # Conventions:
 #   - Tasks that need the built binary call `out/mooncake` directly.
@@ -30,7 +36,7 @@ vars:
   BIN: out/mooncake
 
 modules:
-  goq: "127.0.0.1:8080/alehatsman/go-quality@v0.1.1"
+  goq: "host.docker.internal:8080/alehatsman/go-quality@v0.1.1"
 
 tasks:
 

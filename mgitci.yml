@@ -1,0 +1,29 @@
+# mooncake CI — runs the pre-push gate (`mooncake task ci`) on every push.
+#
+# Schema (moongit internal/ci/ci.go): version "1"; `on.push.branches` gates
+# which refs trigger a run; `jobs` is a DAG wired by `needs`. Each job runs in a
+# throwaway container off `image:`, and moongitd execs every step as
+# `mooncake step '<yaml>'` inside it — so the image MUST carry `mooncake` + git
+# on PATH (plus whatever the steps shell out to). See ci/Dockerfile for the
+# image this job uses (mooncake-ci:latest = moongit-ci-dev + gomarkdoc).
+#
+# `mooncake task ci` is the same 11-step gate the local pre-push hook runs:
+# build + cross-build + test + lint + vuln + docs/schema regen-and-verify +
+# mkdocs + arch-snapshot + budget + dupl + escalation-lint. Its go tooling
+# (golangci-lint/govulncheck/gocyclo/dupl) comes from the shared go-quality
+# module, fetched from this moongit over plain http; MOONCAKE_MODULE_INSECURE
+# marks the host trusted for that fetch, and tasks.yml pins the module at
+# host.docker.internal:8080 so it resolves from inside the container (127.0.0.1
+# there would mean the container itself).
+version: "1"
+on:
+  push:
+    branches: [main, "feat/*"]
+jobs:
+  quality:
+    image: mooncake-ci:latest
+    steps:
+      - shell:
+          cmd: mooncake task ci
+        env:
+          MOONCAKE_MODULE_INSECURE: host.docker.internal:8080
