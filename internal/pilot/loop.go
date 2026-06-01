@@ -93,6 +93,7 @@ func RunLoop(opts RunOptions) (*LoopResult, error) {
 			Snapshot:      snapJSON,
 			LastIteration: lastIteration,
 			Style:         opts.Style,
+			Policy:        opts.Policy,
 		})
 		if err != nil {
 			return nil, fmt.Errorf("failed to build prompt: %w", err)

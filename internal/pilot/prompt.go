@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+
+	"github.com/alehatsman/mooncake/internal/executor"
 )
 
 const promptPreamble = `You are a Mooncake agent planner. Generate ONLY a valid Mooncake configuration.
@@ -33,7 +35,13 @@ const promptConstraints = `CONSTRAINTS:
 // vocabulary is generated from internal/config/schema.json so new
 // actions surface without editing this file (spec-67 §12.2). The
 // style fragment is the only per-style difference (spec-67 §12.3).
-func buildSystemPrompt(style Style) (string, error) {
+//
+// policy, when non-nil and non-zero, injects the PERMISSIONS CONTRACT
+// block (#11) right after the action vocabulary, so the model reads the
+// full action list and then the constraint on which subset it may use.
+// A nil/zero policy keeps the prompt byte-identical to the pre-policy
+// shape.
+func buildSystemPrompt(style Style, policy *executor.Policy) (string, error) {
 	chunk, err := BuildSchemaChunk()
 	if err != nil {
 		return "", fmt.Errorf("build schema chunk: %w", err)
@@ -43,6 +51,10 @@ func buildSystemPrompt(style Style) (string, error) {
 	b.WriteString("\n\n")
 	b.WriteString(chunk)
 	b.WriteString("\n")
+	if contract := renderPolicyContract(policy); contract != "" {
+		b.WriteString(contract)
+		b.WriteString("\n\n")
+	}
 	b.WriteString(promptBestPractices)
 	b.WriteString("\n\n")
 	b.WriteString(promptConstraints)
@@ -52,7 +64,7 @@ func buildSystemPrompt(style Style) (string, error) {
 }
 
 func BuildPrompt(input PlanInput) (string, string, error) {
-	systemPrompt, err := buildSystemPrompt(input.Style)
+	systemPrompt, err := buildSystemPrompt(input.Style, input.Policy)
 	if err != nil {
 		return "", "", err
 	}

@@ -12,7 +12,7 @@ import (
 // the TASK STYLE block is the plan-style one. Prompt drift surfaces
 // in PR diff because the assertions stay narrow on the style fragment.
 func TestBuildSystemPrompt_StylePlan_Snapshot(t *testing.T) {
-	got, err := buildSystemPrompt(StylePlan)
+	got, err := buildSystemPrompt(StylePlan, nil)
 	if err != nil {
 		t.Fatalf("buildSystemPrompt: %v", err)
 	}
@@ -39,7 +39,7 @@ func TestBuildSystemPrompt_StylePlan_Snapshot(t *testing.T) {
 // Plan §8 decision 3: the step prompt omits the `assert:` hint, so
 // we also pin that absence.
 func TestBuildSystemPrompt_StyleStep_Snapshot(t *testing.T) {
-	got, err := buildSystemPrompt(StyleStep)
+	got, err := buildSystemPrompt(StyleStep, nil)
 	if err != nil {
 		t.Fatalf("buildSystemPrompt: %v", err)
 	}
@@ -175,7 +175,7 @@ func TestBuildPrompt_LastStepStdout_OmittedWhenEmpty(t *testing.T) {
 // Without this hint, even with the captured-stdout block in the user
 // message, smaller models tend to re-propose the same diagnostic step.
 func TestBuildSystemPrompt_StyleStep_LastStdoutHint(t *testing.T) {
-	got, err := buildSystemPrompt(StyleStep)
+	got, err := buildSystemPrompt(StyleStep, nil)
 	if err != nil {
 		t.Fatalf("buildSystemPrompt: %v", err)
 	}
@@ -247,7 +247,7 @@ func TestBuildPrompt_StepSummaries_OmittedWhenEmpty(t *testing.T) {
 // iteration stdout isn't part of its mental model and the hint must
 // stay out of promptStylePlan (avoid prompt-drift between styles).
 func TestBuildSystemPrompt_StylePlan_NoLastStdoutHint(t *testing.T) {
-	got, err := buildSystemPrompt(StylePlan)
+	got, err := buildSystemPrompt(StylePlan, nil)
 	if err != nil {
 		t.Fatalf("buildSystemPrompt: %v", err)
 	}

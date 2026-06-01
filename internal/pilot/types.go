@@ -87,6 +87,13 @@ type PlanInput struct {
 	// Style picks the trailing TASK STYLE block in the system prompt
 	// (spec-67 §12.3). Zero value is StylePlan.
 	Style Style
+	// Policy is the run's permissions-as-contract gate (#11). When set,
+	// BuildPrompt renders a PERMISSIONS CONTRACT block so the planner
+	// proposes plans within the same contract the executor enforces at
+	// preflight. nil = no contract block (unrestricted run) — the loop's
+	// opts.Policy forwarded so the contract is visible, not just enforced
+	// after the fact.
+	Policy *executor.Policy
 }
 
 type IterationSummary struct {
