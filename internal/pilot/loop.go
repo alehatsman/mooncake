@@ -199,7 +199,7 @@ func RunLoop(opts RunOptions) (*LoopResult, error) {
 			return terminate(iterNum, planHash, "wrap_failed", err.Error(), StopFailed, err)
 		}
 
-		log := logger.NewLogger(logger.ErrorLevel)
+		log := executorLogger(opts.OutputFormat)
 
 		// Set up the plan-confirm gate (spec-67 §10). nil gate means
 		// "skip gate; behave like before" — the --auto-apply path. TTY

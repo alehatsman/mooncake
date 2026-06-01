@@ -26,6 +26,20 @@ const (
 	outputFormatQuiet = "quiet"
 )
 
+// internalLogger picks the executor's human-prose logger for the run.
+// Only text (and TUI, which falls through to text here) owns stdout for
+// human output; every machine/minimal format (json, agent, quiet) has a
+// stdout contract its own subscriber controls, so the executor's prose
+// logger must be a no-op there to keep stdout uncontaminated (#63).
+func internalLogger(outputFormat string, level int) logger.Logger {
+	switch outputFormat {
+	case outputFormatJSON, outputFormatAgent, outputFormatQuiet:
+		return logger.NewDiscardLogger()
+	default:
+		return logger.NewLogger(level)
+	}
+}
+
 // Runner is the kernel's local-apply entry point. Construct with
 // NewRunner for the config-path apply, or NewRunnerFromPlan for the
 // saved-plan apply (R1.1c). Both call Run(ctx) and return the same
@@ -169,8 +183,16 @@ func (r *Runner) Run(ctx context.Context) (*KernelResult, error) {
 		}
 	}
 
-	// Minimal logger for internal use (errors, etc.)
-	internalLog := logger.NewLogger(level)
+	// Minimal logger for internal use (errors, etc.). Under a
+	// machine-readable output format (json/agent/quiet) this MUST NOT be a
+	// ConsoleLogger: the executor logs step errors through it via
+	// ec.Svc.Logger.Errorf, and ConsoleLogger writes to stdout (fatih/color
+	// → color.Output), which injects bare prose lines like "command failed
+	// with exit code 1" into the NDJSON event stream (#63). The structured
+	// failure is already carried by the step.failed event (error_message)
+	// and by NewStderrErrorSubscriber on stderr, so dropping the human prose
+	// loses nothing a machine consumer relies on.
+	internalLog := internalLogger(r.cfg.OutputFormat, level)
 
 	// F020: signal handling lives in the CLI caller (cmd/mooncake.go
 	// wraps ctx with signal.NotifyContext). The kernel does not call

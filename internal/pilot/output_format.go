@@ -3,6 +3,8 @@ package pilot
 import (
 	"io"
 	"os"
+
+	"github.com/alehatsman/mooncake/internal/logger"
 )
 
 // consoleLogFormat maps a pilot RunOptions.OutputFormat onto the
@@ -29,4 +31,18 @@ func captureWriter(outputFormat string) io.Writer {
 		return nil
 	}
 	return os.Stdout
+}
+
+// executorLogger picks the logger handed to executor.Start for a pilot
+// iteration's apply. In JSON mode it MUST be a no-op logger: the executor
+// logs step failures (and rollback errors) through ec.Svc.Logger.Errorf,
+// and a ConsoleLogger writes that prose to stdout (fatih/color), injecting
+// bare non-JSON lines like "command failed with exit code 1" into the NDJSON
+// event stream (#63). The structured failure already rides the step.failed
+// event, so the prose is redundant for a machine consumer.
+func executorLogger(outputFormat string) logger.Logger {
+	if outputFormat == OutputFormatJSON {
+		return logger.NewDiscardLogger()
+	}
+	return logger.NewLogger(logger.ErrorLevel)
 }

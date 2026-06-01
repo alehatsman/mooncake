@@ -3,6 +3,8 @@ package pilot
 import (
 	"os"
 	"testing"
+
+	"github.com/alehatsman/mooncake/internal/logger"
 )
 
 func TestConsoleLogFormat(t *testing.T) {
@@ -28,5 +30,20 @@ func TestCaptureWriter(t *testing.T) {
 	}
 	if w := captureWriter(""); w != os.Stdout {
 		t.Errorf("captureWriter(\"\") = %v, want os.Stdout", w)
+	}
+}
+
+func TestExecutorLogger(t *testing.T) {
+	// JSON mode must hand the executor a no-op logger so step-failure prose
+	// (logged via ec.Svc.Logger.Errorf) never lands on the NDJSON stdout
+	// stream (#63).
+	if _, ok := executorLogger(OutputFormatJSON).(*logger.DiscardLogger); !ok {
+		t.Errorf("executorLogger(json) = %T, want *logger.DiscardLogger", executorLogger(OutputFormatJSON))
+	}
+	// Text mode keeps a real console logger so the operator still sees errors.
+	for _, in := range []string{OutputFormatText, ""} {
+		if _, isDiscard := executorLogger(in).(*logger.DiscardLogger); isDiscard {
+			t.Errorf("executorLogger(%q) = DiscardLogger, want a console logger", in)
+		}
 	}
 }
