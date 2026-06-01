@@ -126,10 +126,11 @@ const (
 // compound-parent step.started semantics that don't exist yet —
 // deferred until the executor exposes per-compound-parent lifecycle.
 const (
-	EventTransactionRollbackBegin    Type = "transaction.rollback_begin"
-	EventTransactionStepReversed     Type = "transaction.step_reversed"
-	EventTransactionRollbackComplete Type = "transaction.rollback_complete"
-	EventTransactionRollbackFailed   Type = "transaction.rollback_failed"
+	EventTransactionRollbackBegin      Type = "transaction.rollback_begin"
+	EventTransactionStepReversed       Type = "transaction.step_reversed"
+	EventTransactionStepReverseSkipped Type = "transaction.step_reverse_skipped"
+	EventTransactionRollbackComplete   Type = "transaction.rollback_complete"
+	EventTransactionRollbackFailed     Type = "transaction.rollback_failed"
 )
 
 // RunStartedData contains data for run.started events
@@ -511,12 +512,32 @@ type TransactionStepReversedData struct {
 	DurationMs int64 `json:"duration_ms"`
 }
 
-// TransactionRollbackCompleteData fires at the end of a fully-
-// successful rollback (every previously-completed body child got
-// reversed cleanly).
+// TransactionStepReverseSkippedData fires when a completed body step
+// can't be reversed because its handler is inherently irreversible (no
+// Reverser — e.g. shell / cmd). Unlike a Reverse() that erred mid-undo,
+// this is NOT a rollback failure: the step's effect simply remains and
+// the LIFO walk continues reversing the rest. Identifies the ORIGINAL
+// body step, matching TransactionStepReversedData.
+type TransactionStepReverseSkippedData struct {
+	TxnParentID string `json:"txn_parent_id"`
+	StepID      string `json:"step_id"`
+	Name        string `json:"name,omitempty"`
+	// Action is the original step's action type (e.g. "shell").
+	Action string `json:"action,omitempty"`
+	// Reason is a short machine-stable explanation; today always
+	// "irreversible" (handler implements no Reverser).
+	Reason string `json:"reason,omitempty"`
+}
+
+// TransactionRollbackCompleteData fires at the end of a rollback where
+// no Reverse() erred — every previously-completed body child was either
+// reversed cleanly or quietly skipped as irreversible.
 type TransactionRollbackCompleteData struct {
 	TxnParentID   string `json:"txn_parent_id"`
 	ReversedSteps int    `json:"reversed_steps"`
+	// SkippedSteps counts body children skipped because their handler is
+	// irreversible (no Reverser). Zero for a fully-reversed rollback.
+	SkippedSteps int `json:"skipped_steps,omitempty"`
 }
 
 // TransactionRollbackFailedData fires when at least one Reverse()
