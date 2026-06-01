@@ -20,7 +20,9 @@ func TestBuildSchemaChunk_RealSchema(t *testing.T) {
 	}
 
 	// Top-level structure: preamble + ACTIONS section + UNIVERSAL section.
-	mustContain(t, chunk, "A Mooncake config is a YAML array of steps.")
+	// Format-neutral wording (proposal-08 #13): the chunk describes
+	// structure only — the preamble owns the wire format (compact JSON).
+	mustContain(t, chunk, "A Mooncake config is an array of steps.")
 	mustContain(t, chunk, "ACTIONS (grouped by category):")
 	mustContain(t, chunk, "UNIVERSAL STEP FIELDS:")
 

@@ -15,7 +15,7 @@ import (
 //
 // Layout:
 //
-//	A Mooncake config is a YAML array of steps. ...
+//	A Mooncake config is an array of steps. ...
 //
 //	ACTIONS (grouped by category):
 //	  [category]
@@ -178,7 +178,12 @@ func jsonTypeString(t any) string {
 func renderChunk(actions []actionEntry, universals []universalEntry) string {
 	var b strings.Builder
 
-	b.WriteString("A Mooncake config is a YAML array of steps. Each step has:\n")
+	// Format-neutral: the preamble dictates the wire format (compact
+	// JSON, proposal-08 #13). This chunk describes structure only, so it
+	// must not name a serialization — a stray "YAML" here contradicts the
+	// "Output ONLY a compact JSON array" instruction and is exactly the
+	// mixed signal that trips up smaller local models.
+	b.WriteString("A Mooncake config is an array of steps. Each step has:\n")
 	b.WriteString("- Optional 'name' field (string)\n")
 	b.WriteString("- Exactly ONE action from the ACTIONS list below\n")
 	b.WriteString("- Optional universal modifiers from UNIVERSAL STEP FIELDS\n\n")
