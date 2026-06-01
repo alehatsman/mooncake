@@ -44,25 +44,28 @@ type Policy struct {
 	// allowlist (any action is permitted unless denied below). Entries
 	// are action types as config.Step.DetermineActionType reports them —
 	// e.g. "shell", "file.write", "pkg".
-	AllowedActions []string
+	//
+	// The json tags make Policy wire-ready: agentd's POST /v1/runs and
+	// the MCP run_plan `policy` arg both deserialize straight into it.
+	AllowedActions []string `json:"allowed_actions,omitempty"`
 
 	// DeniedActions is a denylist applied after the allowlist; an action
 	// type listed here is always denied (denylist wins over allowlist).
 	// This is the primary lever for unattended agent runs:
 	// DeniedActions ["shell", "cmd"] removes the arbitrary-command escape
 	// hatch while leaving the typed actions usable.
-	DeniedActions []string
+	DeniedActions []string `json:"denied_actions,omitempty"`
 
 	// DenyNetwork rejects any step whose declared PermissionSet has
 	// Network: true (package installs, downloads, http.request, remote
 	// git clone). Handlers that declare no PermissionSet are treated as
 	// Network:false and pass — gate those by action name if needed.
-	DenyNetwork bool
+	DenyNetwork bool `json:"deny_network,omitempty"`
 
 	// MaxRisk, when > 0, caps the Cost.Risk band (1..10) a step may
 	// carry; a step whose estimated risk exceeds it is denied. Handlers
 	// without a Coster default to defaultPolicyRisk. 0 = no cap.
-	MaxRisk int
+	MaxRisk int `json:"max_risk,omitempty"`
 }
 
 // IsZero reports whether the policy enforces nothing. A nil *Policy is

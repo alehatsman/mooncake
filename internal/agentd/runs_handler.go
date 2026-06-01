@@ -11,6 +11,8 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+
+	"github.com/alehatsman/mooncake/internal/executor"
 )
 
 type submitRequest struct {
@@ -26,6 +28,11 @@ type submitRequest struct {
 	Names   []string `json:"names,omitempty"`
 	Goal    string   `json:"goal,omitempty"`
 	BaseDir string   `json:"base_dir,omitempty"`
+	// Policy is the optional per-run permissions-as-contract gate (#11).
+	// nil = enforce nothing. Lets a controller (moongit spawning an
+	// unattended agent) gate a daemon-driven run the same way the CLI
+	// `--deny-action` flags and the MCP run_plan `policy` arg do.
+	Policy *executor.Policy `json:"policy,omitempty"`
 }
 
 type submitResponse struct {
@@ -112,6 +119,7 @@ func (s *Server) submitRunHandler(w http.ResponseWriter, r *http.Request) {
 		Names:     req.Names,
 		Goal:      req.Goal,
 		BaseDir:   baseDir,
+		Policy:    req.Policy,
 	})
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "store_create_failed", err.Error())

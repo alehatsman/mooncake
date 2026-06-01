@@ -13,6 +13,8 @@ import (
 	"time"
 
 	"github.com/oklog/ulid/v2"
+
+	"github.com/alehatsman/mooncake/internal/executor"
 )
 
 type RunStatus string
@@ -33,15 +35,18 @@ type Run struct {
 	Tags      []string `json:"tags,omitempty"`
 	// Names is the spec-50 step-name filter; AND'd with Tags by the
 	// planner. Empty = no filter active.
-	Names      []string   `json:"names,omitempty"`
-	Goal       string     `json:"goal,omitempty"`
-	BaseDir    string     `json:"base_dir"`
-	Status     RunStatus  `json:"status"`
-	QueuedAt   time.Time  `json:"queued_at"`
-	StartedAt  *time.Time `json:"started_at,omitempty"`
-	FinishedAt *time.Time `json:"finished_at,omitempty"`
-	Error      string     `json:"error,omitempty"`
-	DaemonPID  int        `json:"daemon_pid"`
+	Names   []string `json:"names,omitempty"`
+	Goal    string   `json:"goal,omitempty"`
+	BaseDir string   `json:"base_dir"`
+	// Policy is the optional per-run permissions-as-contract gate (#11),
+	// persisted with the run so the worker enforces it at apply time.
+	Policy     *executor.Policy `json:"policy,omitempty"`
+	Status     RunStatus        `json:"status"`
+	QueuedAt   time.Time        `json:"queued_at"`
+	StartedAt  *time.Time       `json:"started_at,omitempty"`
+	FinishedAt *time.Time       `json:"finished_at,omitempty"`
+	Error      string           `json:"error,omitempty"`
+	DaemonPID  int              `json:"daemon_pid"`
 }
 
 // IsTerminal reports whether the run has reached a final state.
@@ -61,6 +66,7 @@ type SubmitReq struct {
 	Names     []string
 	Goal      string
 	BaseDir   string
+	Policy    *executor.Policy
 }
 
 // ListFilter scopes Store.List output.
@@ -159,6 +165,7 @@ func (s *Store) Create(req SubmitReq) (*Run, error) {
 		Names:     req.Names,
 		Goal:      req.Goal,
 		BaseDir:   req.BaseDir,
+		Policy:    req.Policy,
 		Status:    StatusQueued,
 		QueuedAt:  time.Now().UTC(),
 		DaemonPID: os.Getpid(),
