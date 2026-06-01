@@ -38,6 +38,59 @@ type LoopResult struct {
 	FinalLog   *IterationLog
 }
 
+// statusSeverity ranks an iteration status by how bad its outcome is.
+// Higher is worse. The two terminal-good states ("success", "step_done")
+// share rank 0; every other status is a non-success of escalating severity,
+// with execution_failed the worst (a step actually ran and failed, possibly
+// with a failed rollback on top — see #35). Unknown statuses are treated as
+// a mid-grade failure so a future status string never silently reads green.
+func statusSeverity(status string) int {
+	switch status {
+	case "success", "step_done":
+		return 0
+	case "no_progress":
+		return 1
+	case "user_rejected", "aborted":
+		return 2
+	case "step_contract_violation":
+		return 3
+	case "generation_failed", "sanitization_failed", "wrap_failed":
+		return 4
+	case "validation_failed":
+		return 5
+	case "execution_failed":
+		return 6
+	default:
+		return 4
+	}
+}
+
+// TerminalStatus returns the worst outcome across every iteration of the
+// run, not just the last one (#64). The loop continues past a failed
+// iteration (execution_failed / validation_failed / user_rejected), so a
+// later no-op or success iteration would otherwise reset FinalLog.Status to
+// "success" and mask the earlier failure — exactly the case where a consumer
+// keying on pilot.completed.status (moongit #110) rendered green over
+// visibly-failed work. Ties keep the earliest occurrence.
+func (r *LoopResult) TerminalStatus() string {
+	worst := ""
+	worstRank := -1
+	for i := range r.Iterations {
+		s := r.Iterations[i].Status
+		if s == "" {
+			continue
+		}
+		if rank := statusSeverity(s); rank > worstRank {
+			worstRank = rank
+			worst = s
+		}
+	}
+	if worst == "" && r.FinalLog != nil {
+		return r.FinalLog.Status
+	}
+	return worst
+}
+
 func RunLoop(opts RunOptions) (*LoopResult, error) {
 	if opts.MaxIterations <= 0 {
 		opts.MaxIterations = defaultMaxIterations
