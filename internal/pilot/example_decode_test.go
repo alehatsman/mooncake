@@ -43,3 +43,40 @@ func TestPromptExamples_DecodeAuto(t *testing.T) {
 		})
 	}
 }
+
+// TestPlannerAssertShorthand_DecodeAuto reproduces the #65 dominant failure
+// mode: the anthropic-cli planner emits an assert step whose value (or whose
+// `file` value) is a bare path string. Before the forgiving-decode fix this
+// failed the whole plan with "cannot unmarshal !!str into config.AssertFile".
+func TestPlannerAssertShorthand_DecodeAuto(t *testing.T) {
+	cases := []struct {
+		name string
+		body string
+	}{
+		{
+			name: "assert.file bare string (reported shape)",
+			body: `[{"name":"verify","assert":{"file":"NOTES.md"}}]`,
+		},
+		{
+			name: "assert bare string",
+			body: `[{"name":"verify","assert":"SHELLPROOF.txt"}]`,
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			var steps []config.Step
+			if err := config.DecodeAuto([]byte(tc.body), &steps); err != nil {
+				t.Fatalf("DecodeAuto(%q): %v", tc.body, err)
+			}
+			if len(steps) != 1 {
+				t.Fatalf("expected 1 step, got %d", len(steps))
+			}
+			if steps[0].Assert == nil || steps[0].Assert.File == nil {
+				t.Fatalf("assert.file not decoded; full step: %+v", steps[0])
+			}
+			if steps[0].Assert.File.Path == "" {
+				t.Errorf("assert.file.path empty; full step: %+v", steps[0])
+			}
+		})
+	}
+}

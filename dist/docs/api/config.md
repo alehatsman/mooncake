@@ -147,8 +147,12 @@ Config structures are designed to be read\-only after parsing. The executor clon
 - [type ArtifactCapture](<#type-artifactcapture>)
 - [type ArtifactValidate](<#type-artifactvalidate>)
 - [type Assert](<#type-assert>)
+  - [func (a *Assert) UnmarshalJSON(data []byte) error](<#func-assert-unmarshaljson>)
+  - [func (a *Assert) UnmarshalYAML(unmarshal func(interface{}) error) error](<#func-assert-unmarshalyaml>)
 - [type AssertCommand](<#type-assertcommand>)
 - [type AssertFile](<#type-assertfile>)
+  - [func (f *AssertFile) UnmarshalJSON(data []byte) error](<#func-assertfile-unmarshaljson>)
+  - [func (f *AssertFile) UnmarshalYAML(unmarshal func(interface{}) error) error](<#func-assertfile-unmarshalyaml>)
 - [type AssertFileSHA256](<#type-assertfilesha256>)
 - [type AssertGitClean](<#type-assertgitclean>)
 - [type AssertGitDiff](<#type-assertgitdiff>)
@@ -493,6 +497,22 @@ type Assert struct {
 }
 ```
 
+### func \(\*Assert\) UnmarshalJSON
+
+```go
+func (a *Assert) UnmarshalJSON(data []byte) error
+```
+
+UnmarshalJSON mirrors UnmarshalYAML for JSON plan artifacts: a bare JSON string is the file\-exists shorthand, an object is the structured form.
+
+### func \(\*Assert\) UnmarshalYAML
+
+```go
+func (a *Assert) UnmarshalYAML(unmarshal func(interface{}) error) error
+```
+
+UnmarshalYAML accepts the scalar shorthand \`assert: \<path\>\` \(a bare path string ⇒ file\-exists check\) in addition to the structured mapping form. The anthropic\-cli planner frequently emits the scalar form \(\#65\); without this the whole plan fails to decode before any step runs.
+
 ## type AssertCommand
 
 AssertCommand verifies a command exits with the expected code.
@@ -519,6 +539,22 @@ type AssertFile struct {
     Group    *string `yaml:"group" json:"group,omitempty"`       // Expected group (groupname or GID)
 }
 ```
+
+### func \(\*AssertFile\) UnmarshalJSON
+
+```go
+func (f *AssertFile) UnmarshalJSON(data []byte) error
+```
+
+UnmarshalJSON mirrors UnmarshalYAML for JSON plan artifacts: a bare JSON string is the path shorthand, an object is the structured form.
+
+### func \(\*AssertFile\) UnmarshalYAML
+
+```go
+func (f *AssertFile) UnmarshalYAML(unmarshal func(interface{}) error) error
+```
+
+UnmarshalYAML accepts the scalar shorthand \`file: \<path\>\` \(a bare path string ⇒ existence check\) in addition to the structured mapping form. The anthropic\-cli planner frequently emits \`assert: \{ file: \<path\> \}\` \(\#65\), which otherwise fails to decode a \!\!str into config.AssertFile.
 
 ## type AssertFileSHA256
 

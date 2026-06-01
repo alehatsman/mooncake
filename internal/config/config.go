@@ -1017,6 +1017,42 @@ type Assert struct {
 	GitDiff    *AssertGitDiff    `yaml:"git_diff" json:"git_diff,omitempty"`       // Git diff assertion
 }
 
+// UnmarshalYAML accepts the scalar shorthand `assert: <path>` (a bare path
+// string ⇒ file-exists check) in addition to the structured mapping form.
+// The anthropic-cli planner frequently emits the scalar form (#65); without
+// this the whole plan fails to decode before any step runs.
+func (a *Assert) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	var path string
+	if err := unmarshal(&path); err == nil {
+		a.File = &AssertFile{Path: path}
+		return nil
+	}
+	type rawAssert Assert
+	var raw rawAssert
+	if err := unmarshal(&raw); err != nil {
+		return err
+	}
+	*a = Assert(raw)
+	return nil
+}
+
+// UnmarshalJSON mirrors UnmarshalYAML for JSON plan artifacts: a bare JSON
+// string is the file-exists shorthand, an object is the structured form.
+func (a *Assert) UnmarshalJSON(data []byte) error {
+	var path string
+	if err := json.Unmarshal(data, &path); err == nil {
+		a.File = &AssertFile{Path: path}
+		return nil
+	}
+	type rawAssert Assert
+	var raw rawAssert
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	*a = Assert(raw)
+	return nil
+}
+
 // AssertCommand verifies a command exits with the expected code.
 type AssertCommand struct {
 	Cmd      string `yaml:"cmd" json:"cmd"`                       // Command to execute (required)
@@ -1032,6 +1068,42 @@ type AssertFile struct {
 	Mode     *string `yaml:"mode" json:"mode,omitempty"`         // Expected file permissions (e.g., "0644")
 	Owner    *string `yaml:"owner" json:"owner,omitempty"`       // Expected owner (username or UID)
 	Group    *string `yaml:"group" json:"group,omitempty"`       // Expected group (groupname or GID)
+}
+
+// UnmarshalYAML accepts the scalar shorthand `file: <path>` (a bare path
+// string ⇒ existence check) in addition to the structured mapping form. The
+// anthropic-cli planner frequently emits `assert: { file: <path> }` (#65),
+// which otherwise fails to decode a !!str into config.AssertFile.
+func (f *AssertFile) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	var path string
+	if err := unmarshal(&path); err == nil {
+		*f = AssertFile{Path: path}
+		return nil
+	}
+	type rawAssertFile AssertFile
+	var raw rawAssertFile
+	if err := unmarshal(&raw); err != nil {
+		return err
+	}
+	*f = AssertFile(raw)
+	return nil
+}
+
+// UnmarshalJSON mirrors UnmarshalYAML for JSON plan artifacts: a bare JSON
+// string is the path shorthand, an object is the structured form.
+func (f *AssertFile) UnmarshalJSON(data []byte) error {
+	var path string
+	if err := json.Unmarshal(data, &path); err == nil {
+		*f = AssertFile{Path: path}
+		return nil
+	}
+	type rawAssertFile AssertFile
+	var raw rawAssertFile
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	*f = AssertFile(raw)
+	return nil
 }
 
 // AssertHTTP verifies HTTP response status, headers, or body content.
