@@ -393,6 +393,71 @@ steps:
 	if _, leaked := ctx.Variables["parameters"]; leaked {
 		t.Error("ctx.Variables[parameters] leaked outside the use: scope")
 	}
+	// #49: the emitted step must carry the component's props so the executor
+	// can restore them into scope for execute-time fields (when/cwd).
+	if plan.Steps[0].ComponentProps == nil {
+		t.Fatal("emitted step ComponentProps = nil, want the component's props")
+	}
+	if got := plan.Steps[0].ComponentProps["variant"]; got != "monokai_dark" {
+		t.Errorf("ComponentProps[variant] = %v, want monokai_dark", got)
+	}
+}
+
+// TestTryExpandUse_NestedPropsInnermostWins verifies that when a component
+// (outer) uses another component (inner), each emitted step carries the
+// props of the component that actually declared it — the outer expansion
+// must not overwrite the inner steps' props (#49).
+func TestTryExpandUse_NestedPropsInnermostWins(t *testing.T) {
+	tmp := t.TempDir()
+	writeComponent(t, tmp, "inner.yml", `
+props:
+  tag:
+    type: string
+    default: inner-default
+steps:
+  - name: inner step
+    log: "{{ props.tag }}"
+`)
+	writeComponent(t, tmp, "outer.yml", `
+props:
+  tag:
+    type: string
+    default: outer-default
+steps:
+  - name: outer step
+    log: "{{ props.tag }}"
+  - use: ./inner.yml
+    props:
+      tag: inner-set
+`)
+
+	planner, err := NewPlanner()
+	if err != nil {
+		t.Fatalf("NewPlanner: %v", err)
+	}
+	step := config.Step{
+		Use:   "./outer.yml",
+		Props: map[string]interface{}{"tag": "outer-set"},
+	}
+	ctx := &ExpansionContext{Variables: map[string]interface{}{}, CurrentDir: tmp}
+	plan := &Plan{}
+
+	if _, err := planner.tryExpandUse(step, ctx, plan, 0); err != nil {
+		t.Fatalf("tryExpandUse: %v", err)
+	}
+	if len(plan.Steps) != 2 {
+		t.Fatalf("plan.Steps len = %d, want 2: %+v", len(plan.Steps), plan.Steps)
+	}
+	byName := map[string]map[string]interface{}{}
+	for _, s := range plan.Steps {
+		byName[s.Name] = s.ComponentProps
+	}
+	if got := byName["outer step"]["tag"]; got != "outer-set" {
+		t.Errorf("outer step ComponentProps[tag] = %v, want outer-set", got)
+	}
+	if got := byName["inner step"]["tag"]; got != "inner-set" {
+		t.Errorf("inner step ComponentProps[tag] = %v, want inner-set (innermost wins)", got)
+	}
 }
 
 // TestTryExpandUse_UnresolvedTemplateDefers: a use: path that still contains

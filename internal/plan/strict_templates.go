@@ -111,6 +111,32 @@ func CheckPlanStrict(p *Plan) []UnresolvedRef {
 			}
 			continue
 		}
+		// Steps expanded from a `use:`d component carry that component's
+		// prop namespace, restored into scope at execute time (#49). Their
+		// execute-time-only fields (when/cwd/creates/unless) preserve
+		// `{{ props.* }}` / `{{ parameters.* }}` into the plan, so treat
+		// both roots as defined for this step only — mirrors the
+		// component_dir / invocation_dir freeNames rationale above. Scoped
+		// per step (not added to freeNames) so a stray `{{ props.x }}` in a
+		// non-component step is still flagged.
+		if step.ComponentProps != nil {
+			addedProps := !known["props"]
+			addedParams := !known["parameters"]
+			known["props"] = true
+			known["parameters"] = true
+			seen := make(map[string]bool)
+			collectStepRefs(step, known, seen, &out)
+			if addedProps {
+				delete(known, "props")
+			}
+			if addedParams {
+				delete(known, "parameters")
+			}
+			if step.As != "" {
+				known[step.As] = true
+			}
+			continue
+		}
 		seen := make(map[string]bool)
 		collectStepRefs(step, known, seen, &out)
 		// Register this step's `as:` name AFTER scanning so a step

@@ -8,6 +8,23 @@ import (
 	"sort"
 )
 
+// gomarkdoc embeds godoc source links (`## func [Name](<url>/blob/<branch>/
+// <file>#L<n>)`) derived from the local git checkout. Left to auto-detect,
+// that base depends on the environment: a feature-branch worktree, or a
+// checkout whose `origin` isn't the github remote (e.g. a `moongit` mirror),
+// makes gomarkdoc emit link-less output — a ~990-line spurious diff that
+// breaks docs-check and, via the pre-commit auto-regen, silently regresses
+// the committed docs. Pin the repository identity explicitly so the api/*.md
+// output is byte-identical regardless of branch/remote. These match the go
+// module path and the repo's default branch.
+const (
+	apiRepoURL           = "https://github.com/alehatsman/mooncake"
+	apiRepoDefaultBranch = "main"
+	// apiRepoPath is the path from the repo root to the dir gomarkdoc runs
+	// from. writeAPIReference runs from the module root, so this is "/".
+	apiRepoPath = "/"
+)
+
 // DefaultAPIPackages is the curated list of Go packages whose godoc is
 // rendered as dist/docs/api/<slug>.md via gomarkdoc. The list is chosen
 // for *consumer-facing* surface: SDK-grade packages, the action/handler
@@ -58,7 +75,7 @@ func (g *Generator) writeAPIReference(outDir string) ([]string, error) {
 		// inserts its own DO-NOT-EDIT marker we keep, which is also
 		// stripped by scripts/docs-check.sh just like our own footers).
 		// #nosec G204 -- argv is built from our curated package list, no user input
-		cmd := exec.Command("gomarkdoc", "-o", out, "./"+pkg)
+		cmd := exec.Command("gomarkdoc", gomarkdocArgs(pkg, out)...)
 		if combined, err := cmd.CombinedOutput(); err != nil {
 			return nil, fmt.Errorf("gomarkdoc ./%s: %w\n%s", pkg, err, combined)
 		}
@@ -66,6 +83,18 @@ func (g *Generator) writeAPIReference(outDir string) ([]string, error) {
 	}
 	sort.Strings(written)
 	return written, nil
+}
+
+// gomarkdocArgs builds the gomarkdoc argv for one package. The
+// --repository.* overrides pin the source-link base (see the const block)
+// so api/*.md is byte-identical regardless of the local branch/remote.
+func gomarkdocArgs(pkg, out string) []string {
+	return []string{
+		"--repository.url", apiRepoURL,
+		"--repository.default-branch", apiRepoDefaultBranch,
+		"--repository.path", apiRepoPath,
+		"-o", out, "./" + pkg,
+	}
 }
 
 // apiSlug converts a package path into a flat filename slug.

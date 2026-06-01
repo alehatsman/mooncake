@@ -2077,6 +2077,16 @@ type Step struct {
 	LoopContext    *LoopContext `yaml:"loop_context,omitempty" json:"loop_context,omitempty"`
 	SourceLocation *Position    `yaml:"-" json:"-"` // Source location from YAML parsing (set by Reader)
 
+	// ComponentProps carries the validated props/parameters namespace of the
+	// `use:`d component this step was expanded from (#49). The planner injects
+	// props only for the duration of plan-time expansion (tryExpandUse), so
+	// fields rendered at EXECUTE time (when/cwd/creates/unless) would lose
+	// `props.*`/`parameters.*` without this. The executor restores it into
+	// Scope.Props per step, mirroring LoopContext → Scope.Loop. Populated
+	// during plan expansion; nil for steps outside a component. Serialized to
+	// json so saved plans (`plan -o`, then `apply <plan>`) round-trip.
+	ComponentProps map[string]interface{} `yaml:"component_props,omitempty" json:"component_props,omitempty"`
+
 	// TriggeredBy carries the ID of the parent step when this Step was
 	// expanded from an on_change child. Populated during plan expansion;
 	// empty for top-level steps. Used by the executor to gate execution
@@ -2514,6 +2524,7 @@ func (s *Step) Clone() *Step {
 		Origin:            s.Origin,
 		Skipped:           s.Skipped,
 		LoopContext:       s.LoopContext,
+		ComponentProps:    s.ComponentProps,
 		TriggeredBy:       s.TriggeredBy,
 	}
 }

@@ -729,14 +729,30 @@ func (p *Planner) tryExpandUse(step config.Step, ctx *ExpansionContext, plan *Pl
 		}
 	}
 
-	// When-propagation mirrors expandInclude: expand first, then AND the
-	// parent's `when:` into each emitted child. Doing it post-expansion
-	// lets the component's own `vars.load` always fire at plan time.
-	if step.When != "" {
-		before := len(plan.Steps)
-		if err := p.expandSteps(steps, childCtx, plan, stepIndex); err != nil {
-			return false, err
+	before := len(plan.Steps)
+	if err := p.expandSteps(steps, childCtx, plan, stepIndex); err != nil {
+		return false, err
+	}
+
+	// Stamp this component's props onto every step it emitted so the
+	// executor can restore them into scope at apply time (#49). Fields
+	// rendered at plan time (cmd strings, paths) already captured props via
+	// ctx.Variables above; fields deferred to execute time (when/cwd/
+	// creates/unless) read Scope.Props instead. Guard on nil so a nested
+	// `use:` keeps its own (innermost) props — those child steps were
+	// already stamped by the inner tryExpandUse during expandSteps.
+	if len(paramsNamespace) > 0 {
+		for i := before; i < len(plan.Steps); i++ {
+			if plan.Steps[i].ComponentProps == nil {
+				plan.Steps[i].ComponentProps = paramsNamespace
+			}
 		}
+	}
+
+	// When-propagation mirrors expandInclude: AND the parent's `when:` into
+	// each emitted child. Done post-expansion so the component's own
+	// `vars.load` always fires at plan time.
+	if step.When != "" {
 		for i := before; i < len(plan.Steps); i++ {
 			if plan.Steps[i].When != "" {
 				plan.Steps[i].When = "(" + step.When + ") && (" + plan.Steps[i].When + ")"
@@ -744,11 +760,6 @@ func (p *Planner) tryExpandUse(step config.Step, ctx *ExpansionContext, plan *Pl
 				plan.Steps[i].When = step.When
 			}
 		}
-		return true, nil
-	}
-
-	if err := p.expandSteps(steps, childCtx, plan, stepIndex); err != nil {
-		return false, err
 	}
 	return true, nil
 }
