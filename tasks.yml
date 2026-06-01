@@ -85,11 +85,9 @@ tasks:
       - log: { msg: "cleaned" }
 
   # ── Test ─────────────────────────────────────────────────────────────
-  test:
-    desc: Run go test ./...
-    steps:
-      - name: test
-        use: goq/test
+  # Pure single-use goq wrappers collapse to the `use:` shorthand; `mooncake
+  # task` lists each go-quality component's own description (no drift).
+  test: goq/test
 
   # Kept local: go-quality has no race component (race is a mooncake-local variant).
   test-race:
@@ -107,11 +105,7 @@ tasks:
       - log: { msg: "coverage report: testing-output/coverage.html" }
 
   # ── Lint / format ────────────────────────────────────────────────────
-  lint:
-    desc: golangci-lint (includes gosec via .golangci.yml)
-    steps:
-      - name: lint
-        use: goq/lint
+  lint: goq/lint
 
   # Kept local: --new-from-rev variant for refactor-friendly review.
   lint-new:
@@ -134,17 +128,9 @@ tasks:
       - log: { msg: "code formatted" }
 
   # ── Security / vuln ──────────────────────────────────────────────────
-  vuln:
-    desc: govulncheck
-    steps:
-      - name: vuln
-        use: goq/vuln
+  vuln: goq/vuln
 
-  scan:
-    desc: Security + vulnerability scan (lint + vuln)
-    steps:
-      - name: scan
-        use: goq/scan
+  scan: goq/scan
 
   # ── Docs / schema ────────────────────────────────────────────────────
   # Kept local: fully mooncake-specific (gomarkdoc + the generated dist/docs
@@ -202,11 +188,7 @@ tasks:
       - shell: { cmd: "BIN={{ BIN }} bash ./scripts/schema-check.sh" }
 
   # ── Architecture / analysis ──────────────────────────────────────────
-  arch-snapshot:
-    desc: Regenerate docs-working/ARCH_SNAPSHOT.md (gitignored; local read-only)
-    steps:
-      - name: arch-snapshot
-        use: goq/arch-snapshot
+  arch-snapshot: goq/arch-snapshot
 
   # Kept local: mooncake's budget adds project-specific caps (handler LOC,
   # config.Step universal-field count) on top of the generic gocyclo/god-files.
@@ -215,18 +197,10 @@ tasks:
     steps:
       - shell: { cmd: "bash ./scripts/budget-status.sh" }
 
-  dupl:
-    desc: Code-duplication report (production only; override threshold with the goq dupl `threshold` prop)
-    steps:
-      - name: dupl
-        use: goq/dupl
+  dupl: goq/dupl
 
   # ── AI-smell sweep / escalation lint ─────────────────────────────────
-  ai-lint:
-    desc: AI-smell sweep on staged Go files (stub panics, agent TODOs, prompt artifacts)
-    steps:
-      - name: ai-lint
-        use: goq/ai-lint
+  ai-lint: goq/ai-lint
 
   ai-lint-all:
     desc: AI-smell sweep on every tracked Go file
