@@ -1367,17 +1367,19 @@ func executePlanWithCapture(ctx context.Context, p *plan.Plan, sudoPass string, 
 			RootFile:   p.RootFile,
 			Tags:       p.Tags,
 			DryRun:     mode == actions.ModePlan,
-			TotalSteps: len(p.Steps),
+			TotalSteps: executableStepCount(p.Steps),
 		},
 	})
 
-	// Emit plan.loaded event
+	// Emit plan.loaded event. TotalSteps and Steps both count executable
+	// leaves only (structural compound markers excluded) so they agree
+	// with each other and with run.completed / the step stream (#78).
 	publisher.Publish(events.Event{
 		Type:      events.EventPlanLoaded,
 		Timestamp: time.Now(),
 		Data: events.PlanLoadedData{
 			RootFile:   p.RootFile,
-			TotalSteps: len(p.Steps),
+			TotalSteps: executableStepCount(p.Steps),
 			Tags:       p.Tags,
 			Steps:      planStepNames(p.Steps),
 		},
@@ -1498,7 +1500,7 @@ func executePlanWithCapture(ctx context.Context, p *plan.Plan, sudoPass string, 
 		Type:      events.EventRunCompleted,
 		Timestamp: time.Now(),
 		Data: events.RunCompletedData{
-			TotalSteps:     len(steps),
+			TotalSteps:     executableStepCount(steps),
 			SuccessSteps:   statsExecuted,
 			OkSteps:        statsOK,
 			FailedSteps:    statsFailed,

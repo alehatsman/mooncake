@@ -190,9 +190,11 @@ type PlanLoadedData struct {
 	Tags       []string `json:"tags,omitempty"`
 	// Steps lists the plan's step display-names so a consumer can render
 	// the whole plan up front instead of discovering steps as they execute
-	// (#74). Transaction wrappers are flattened to their children — the
-	// agent loop wraps every plan in a single transaction, so a top-level
-	// list would otherwise surface only the synthetic wrapper. Additive and
+	// (#74). Lists only the executable leaf steps: structural compound
+	// markers (the transaction/try wrappers, including the synthetic one
+	// the agent loop wraps every plan in) are excluded, since their
+	// children expand as the leaves listed here and only the leaves run.
+	// len(Steps) == total_steps by construction (#78). Additive and
 	// optional; existing readers of total_steps are unaffected.
 	Steps []string `json:"steps,omitempty"`
 }

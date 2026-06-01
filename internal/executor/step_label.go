@@ -63,21 +63,41 @@ func synthesizeStepName(step config.Step) string {
 	return truncateLabel(at + sep(at, body) + body)
 }
 
-// planStepNames flattens a plan's steps into a display-name list for the
-// plan.loaded event (#74), so a consumer can render the whole plan up
-// front. Transaction wrappers are descended into rather than listed
-// themselves: the agent loop wraps every plan in one synthetic
-// transaction (WrapInTransaction), so a top-level-only list would surface
-// just that wrapper instead of the real steps. Names reuse the same
-// static label logic the per-step events use (Name, else
+// isCompoundMarker reports whether step is a structural compound wrapper
+// the executor short-circuits as a no-op (ExecuteStep returns early for
+// transaction- and try-parents — see executor.go). The planner expands a
+// compound's children/branches as sibling plan steps that carry the real
+// actions, so in a compiled plan the wrapper sits alongside its leaves.
+// Only the leaves dispatch, emit step.started/step.completed, and land in
+// the run recap's stat buckets — so the marker must not be counted or
+// named as a step (#78). A marker is identified the same way the executor
+// identifies it: the compound field is set AND the step is the parent (its
+// own Txn/Try role is empty, i.e. it isn't itself an expanded child).
+func isCompoundMarker(step config.Step) bool {
+	if len(step.Transaction) > 0 && step.TxnRole == "" {
+		return true
+	}
+	if len(step.Try) > 0 && step.TryRole == "" {
+		return true
+	}
+	return false
+}
+
+// planStepNames returns the display-name list for the plan.loaded event
+// (#74), so a consumer can render the whole plan up front. It is called on
+// the compiled plan, where a compound's children already appear as expanded
+// sibling steps — so structural markers (isCompoundMarker) are skipped
+// rather than descended into. Descending would list a transaction's
+// children twice (once via the parent, once as the expanded siblings) and
+// inflate the count past the leaves that actually execute (#78). Names
+// reuse the same static label logic the per-step events use (Name, else
 // synthesizeStepName), so a UI sees consistent labels before and during
-// execution. Unnamed/unrecognized steps that synthesize to "" are still
-// listed (as "") to keep the slice index-aligned with the plan order.
+// execution. Unnamed/unrecognized leaf steps that synthesize to "" are
+// still listed (as "") to keep the slice aligned with the executed leaves.
 func planStepNames(steps []config.Step) []string {
 	names := make([]string, 0, len(steps))
 	for i := range steps {
-		if len(steps[i].Transaction) > 0 {
-			names = append(names, planStepNames(steps[i].Transaction)...)
+		if isCompoundMarker(steps[i]) {
 			continue
 		}
 		name := steps[i].Name
@@ -87,6 +107,21 @@ func planStepNames(steps []config.Step) []string {
 		names = append(names, name)
 	}
 	return names
+}
+
+// executableStepCount returns the number of plan steps that will dispatch
+// as leaves — every step except the structural compound markers. This is
+// the canonical total the run advertises: plan.loaded, run.started, and
+// run.completed all use it so the count matches the steps that emit
+// step.started/step.completed and the recap's stat buckets sum to it (#78).
+func executableStepCount(steps []config.Step) int {
+	n := 0
+	for i := range steps {
+		if !isCompoundMarker(steps[i]) {
+			n++
+		}
+	}
+	return n
 }
 
 // sep picks the separator between the action type and the label
