@@ -79,6 +79,66 @@ func TestEvaluate_Success(t *testing.T) {
 	}
 }
 
+// TestEvaluate_CapitalizedBoolLiterals covers issue #67: pongo2 renders Go
+// booleans as the capitalized identifiers True/False, so a templated
+// `when: "{{ flag }}"` reaches the evaluator as the bare token "True". The
+// evaluator must treat True/False as boolean constants rather than undefined
+// identifiers (which would evaluate to nil and silently skip the step).
+func TestEvaluate_CapitalizedBoolLiterals(t *testing.T) {
+	evaluator := NewExprEvaluator()
+
+	tests := []struct {
+		name       string
+		expression string
+		variables  map[string]interface{}
+		want       interface{}
+	}{
+		{
+			name:       "bare True (templated true)",
+			expression: "True",
+			variables:  nil,
+			want:       true,
+		},
+		{
+			name:       "bare False (templated false)",
+			expression: "False",
+			variables:  map[string]interface{}{},
+			want:       false,
+		},
+		{
+			name:       "compound expression with True",
+			expression: "True and x == 5",
+			variables:  map[string]interface{}{"x": 5},
+			want:       true,
+		},
+		{
+			name:       "negated False",
+			expression: "not False",
+			variables:  nil,
+			want:       true,
+		},
+		{
+			name:       "user-defined True wins over injected default",
+			expression: "True",
+			variables:  map[string]interface{}{"True": false},
+			want:       false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := evaluator.Evaluate(tt.expression, tt.variables)
+			if err != nil {
+				t.Errorf("Evaluate() error = %v", err)
+				return
+			}
+			if result != tt.want {
+				t.Errorf("Evaluate() = %v, want %v", result, tt.want)
+			}
+		})
+	}
+}
+
 func TestEvaluate_CompileError(t *testing.T) {
 	evaluator := NewExprEvaluator()
 

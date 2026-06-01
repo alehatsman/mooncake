@@ -34,6 +34,30 @@ func (e *ExprEvaluator) Evaluate(expression string, variables map[string]interfa
 		variables = make(map[string]interface{})
 	}
 
+	// Pongo2 renders Go booleans as the capitalized identifiers True/False
+	// (e.g. `when: "{{ flag }}"` with flag=true renders to the string
+	// "True"). expr-lang only knows the lowercase true/false literals, so
+	// after the render step those tokens are undefined identifiers that
+	// evaluate to nil -> the step is silently skipped regardless of the
+	// flag's value (issue #67). Bind True/False as boolean constants so the
+	// rendered expression evaluates correctly. Each is injected only when
+	// the caller hasn't already defined it, so user variables still win.
+	_, hasTrue := variables["True"]
+	_, hasFalse := variables["False"]
+	if !hasTrue || !hasFalse {
+		merged := make(map[string]interface{}, len(variables)+2)
+		for k, v := range variables {
+			merged[k] = v
+		}
+		if !hasTrue {
+			merged["True"] = true
+		}
+		if !hasFalse {
+			merged["False"] = false
+		}
+		variables = merged
+	}
+
 	// Build compilation options
 	opts := []expr.Option{
 		expr.Env(variables),
