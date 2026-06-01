@@ -13,8 +13,9 @@
 #
 #   pre-push → mooncake task ci
 #     Full gate: build + test + lint + scan + docs/schema regen +
-#     arch-snapshot + budget + dupl + escalation-lint. Slow (~1-2 min),
-#     runs once per push.
+#     arch-snapshot + budget + dupl + escalation-lint. Slow (~1-2 min).
+#     A SHA+TTL stamp dedupes the gate across a single `git push` that fans
+#     out to multiple remote URLs (git runs pre-push once per push URL).
 #
 # Bypass: `git commit --no-verify` or `git push --no-verify`. Use sparingly —
 # both hooks exist because the issues they catch are easier to fix at commit
@@ -76,6 +77,25 @@ if ! command -v mooncake >/dev/null 2>&1; then
   exit 1
 fi
 
+# Dedupe across a single `git push` that targets multiple remote URLs. Git runs
+# pre-push ONCE PER PUSH URL, so a dual-push remote (e.g. origin → github +
+# moongit) would otherwise run the full ~1-2min gate N times for one push.
+# Stamp the gated HEAD sha on success; if the stamp matches the current HEAD and
+# is within the TTL, the sibling URL's invocation skips the redundant re-run. A
+# new commit (or a re-push after the TTL) changes the key and re-gates.
+STAMP="$(git rev-parse --git-path mooncake-prepush-pass)"
+HEAD_SHA="$(git rev-parse HEAD)"
+TTL=120
+now="$(date +%s)"
+if [ -f "$STAMP" ]; then
+  read -r stamped_sha stamped_ts _ < "$STAMP" || true
+  case "$stamped_ts" in ''|*[!0-9]*) stamped_ts=0 ;; esac
+  if [ "$stamped_sha" = "$HEAD_SHA" ] && [ "$((now - stamped_ts))" -lt "$TTL" ]; then
+    echo "pre-push: gate already passed for ${HEAD_SHA:0:12} $((now - stamped_ts))s ago — skipping re-run (multi-URL push dedupe)."
+    exit 0
+  fi
+fi
+
 echo "pre-push: running 'mooncake task ci' (build + test + lint + scan + docs/schema + arch + budget + dupl)..."
 if ! mooncake task ci; then
   echo "" >&2
@@ -83,6 +103,9 @@ if ! mooncake task ci; then
   echo "          or 'git push --no-verify' to bypass (not recommended)." >&2
   exit 1
 fi
+
+# Record success so sibling push-URLs in this same `git push` skip the re-run.
+printf '%s %s\n' "$HEAD_SHA" "$now" > "$STAMP"
 HOOK_EOF
 chmod +x "$HOOKS_DIR/pre-push"
 echo "  ✓ pre-push → mooncake task ci"
