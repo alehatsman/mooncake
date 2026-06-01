@@ -30,6 +30,7 @@ Package events provides the event system for Mooncake execution lifecycle. Event
 - [type PermissionsChangedData](<#type-permissionschangeddata>)
 - [type PlanGeneratingData](<#type-plangeneratingdata>)
 - [type PlanLoadedData](<#type-planloadeddata>)
+- [type PlannerDeltaData](<#type-plannerdeltadata>)
 - [type PresetData](<#type-presetdata>)
 - [type PrintData](<#type-printdata>)
 - [type Publisher](<#type-publisher>)
@@ -62,7 +63,7 @@ Package events provides the event system for Mooncake execution lifecycle. Event
 - [type VarsSetData](<#type-varssetdata>)
 
 
-## type [ArchiveExtractedData](<https://github.com/alehatsman/mooncake/blob/main/internal/events/event.go#L402-L412>)
+## type [ArchiveExtractedData](<https://github.com/alehatsman/mooncake/blob/main/internal/events/event.go#L426-L436>)
 
 ArchiveExtractedData contains data for archive.extracted events
 
@@ -80,7 +81,7 @@ type ArchiveExtractedData struct {
 }
 ```
 
-## type [ArtifactCaptureData](<https://github.com/alehatsman/mooncake/blob/main/internal/events/event.go#L442-L448>)
+## type [ArtifactCaptureData](<https://github.com/alehatsman/mooncake/blob/main/internal/events/event.go#L466-L472>)
 
 ArtifactCaptureData contains data for artifact\_capture events
 
@@ -94,7 +95,7 @@ type ArtifactCaptureData struct {
 }
 ```
 
-## type [AssertionData](<https://github.com/alehatsman/mooncake/blob/main/internal/events/event.go#L425-L431>)
+## type [AssertionData](<https://github.com/alehatsman/mooncake/blob/main/internal/events/event.go#L449-L455>)
 
 AssertionData contains data for assert.passed and assert.failed events
 
@@ -170,7 +171,7 @@ type Event struct {
 }
 ```
 
-## type [FileCopiedData](<https://github.com/alehatsman/mooncake/blob/main/internal/events/event.go#L342-L349>)
+## type [FileCopiedData](<https://github.com/alehatsman/mooncake/blob/main/internal/events/event.go#L366-L373>)
 
 FileCopiedData contains data for file.copied events
 
@@ -185,7 +186,7 @@ type FileCopiedData struct {
 }
 ```
 
-## type [FileDownloadedData](<https://github.com/alehatsman/mooncake/blob/main/internal/events/event.go#L352-L359>)
+## type [FileDownloadedData](<https://github.com/alehatsman/mooncake/blob/main/internal/events/event.go#L376-L383>)
 
 FileDownloadedData contains data for file.downloaded events
 
@@ -200,7 +201,7 @@ type FileDownloadedData struct {
 }
 ```
 
-## type [FileOperationData](<https://github.com/alehatsman/mooncake/blob/main/internal/events/event.go#L297-L313>)
+## type [FileOperationData](<https://github.com/alehatsman/mooncake/blob/main/internal/events/event.go#L321-L337>)
 
 FileOperationData contains data for file operation events
 
@@ -224,7 +225,7 @@ type FileOperationData struct {
 }
 ```
 
-## type [FileRemovedData](<https://github.com/alehatsman/mooncake/blob/main/internal/events/event.go#L316-L321>)
+## type [FileRemovedData](<https://github.com/alehatsman/mooncake/blob/main/internal/events/event.go#L340-L345>)
 
 FileRemovedData contains data for file/directory removal events
 
@@ -237,7 +238,7 @@ type FileRemovedData struct {
 }
 ```
 
-## type [HTTPRequestedData](<https://github.com/alehatsman/mooncake/blob/main/internal/events/event.go#L368-L375>)
+## type [HTTPRequestedData](<https://github.com/alehatsman/mooncake/blob/main/internal/events/event.go#L392-L399>)
 
 HTTPRequestedData carries event payload for http.requested. proposal\-16 keeps this deliberately minimal: scheme/host/path \(no query string\), method, status, duration. The request and response bodies live in the registered fact, not in the audit event — bodies may contain secrets, PII, or large payloads that don't belong in the event stream. Auth headers and other sensitive headers are already redacted before the event is emitted.
 
@@ -252,7 +253,7 @@ type HTTPRequestedData struct {
 }
 ```
 
-## type [LinkCreatedData](<https://github.com/alehatsman/mooncake/blob/main/internal/events/event.go#L324-L329>)
+## type [LinkCreatedData](<https://github.com/alehatsman/mooncake/blob/main/internal/events/event.go#L348-L353>)
 
 LinkCreatedData contains data for link creation events
 
@@ -265,7 +266,7 @@ type LinkCreatedData struct {
 }
 ```
 
-## type [PackageManagedData](<https://github.com/alehatsman/mooncake/blob/main/internal/events/event.go#L469-L474>)
+## type [PackageManagedData](<https://github.com/alehatsman/mooncake/blob/main/internal/events/event.go#L493-L498>)
 
 PackageManagedData contains data for package.managed events
 
@@ -278,7 +279,7 @@ type PackageManagedData struct {
 }
 ```
 
-## type [PermissionsChangedData](<https://github.com/alehatsman/mooncake/blob/main/internal/events/event.go#L332-L339>)
+## type [PermissionsChangedData](<https://github.com/alehatsman/mooncake/blob/main/internal/events/event.go#L356-L363>)
 
 PermissionsChangedData contains data for permissions.changed events
 
@@ -293,7 +294,7 @@ type PermissionsChangedData struct {
 }
 ```
 
-## type [PlanGeneratingData](<https://github.com/alehatsman/mooncake/blob/main/internal/events/event.go#L156-L160>)
+## type [PlanGeneratingData](<https://github.com/alehatsman/mooncake/blob/main/internal/events/event.go#L165-L169>)
 
 PlanGeneratingData contains data for plan.generating events — the "started" bracket for the agent plan phase \(\#74\). Carries the loop iteration and the provider/model doing the generation so a consumer can label the planning phase while the buffered LLM call is in flight.
 
@@ -305,7 +306,7 @@ type PlanGeneratingData struct {
 }
 ```
 
-## type [PlanLoadedData](<https://github.com/alehatsman/mooncake/blob/main/internal/events/event.go#L163-L174>)
+## type [PlanLoadedData](<https://github.com/alehatsman/mooncake/blob/main/internal/events/event.go#L187-L198>)
 
 PlanLoadedData contains data for plan.loaded events
 
@@ -324,7 +325,19 @@ type PlanLoadedData struct {
 }
 ```
 
-## type [PresetData](<https://github.com/alehatsman/mooncake/blob/main/internal/events/event.go#L434-L439>)
+## type [PlannerDeltaData](<https://github.com/alehatsman/mooncake/blob/main/internal/events/event.go#L180-L184>)
+
+PlannerDeltaData contains data for planner.delta events — a coalesced chunk of the planner's output as it is generated \(\#76, Phase 2\). Iteration ties the delta to its loop iteration \(matching PlanGeneratingData\). Text is the chunk; the provider coalesces tokens before emitting so consumers aren't flooded one\-event\-per\-token. Kind distinguishes the model's "thinking" reasoning from the "text" answer so a consumer can render them differently \(or drop thinking\). Deltas are advisory for live display only — the final plan string still rides GeneratePlan's return value, so a dropped or truncated delta never affects the executed plan.
+
+```go
+type PlannerDeltaData struct {
+    Iteration int    `json:"iteration"`
+    Text      string `json:"text"`
+    Kind      string `json:"kind"` // "text" or "thinking"
+}
+```
+
+## type [PresetData](<https://github.com/alehatsman/mooncake/blob/main/internal/events/event.go#L458-L463>)
 
 PresetData contains data for preset events
 
@@ -337,7 +350,7 @@ type PresetData struct {
 }
 ```
 
-## type [PrintData](<https://github.com/alehatsman/mooncake/blob/main/internal/events/event.go#L461-L466>)
+## type [PrintData](<https://github.com/alehatsman/mooncake/blob/main/internal/events/event.go#L485-L490>)
 
 PrintData contains data for print.message events.
 
@@ -384,7 +397,7 @@ func NewSyncPublisher() Publisher
 
 NewSyncPublisher creates a new synchronous event publisher for testing.
 
-## type [RunCompletedData](<https://github.com/alehatsman/mooncake/blob/main/internal/events/event.go#L177-L210>)
+## type [RunCompletedData](<https://github.com/alehatsman/mooncake/blob/main/internal/events/event.go#L201-L234>)
 
 RunCompletedData contains data for run.completed events
 
@@ -425,7 +438,7 @@ type RunCompletedData struct {
 }
 ```
 
-## type [RunStartedData](<https://github.com/alehatsman/mooncake/blob/main/internal/events/event.go#L145-L150>)
+## type [RunStartedData](<https://github.com/alehatsman/mooncake/blob/main/internal/events/event.go#L154-L159>)
 
 RunStartedData contains data for run.started events
 
@@ -438,7 +451,7 @@ type RunStartedData struct {
 }
 ```
 
-## type [ServiceManagementData](<https://github.com/alehatsman/mooncake/blob/main/internal/events/event.go#L415-L422>)
+## type [ServiceManagementData](<https://github.com/alehatsman/mooncake/blob/main/internal/events/event.go#L439-L446>)
 
 ServiceManagementData contains data for service.managed events
 
@@ -453,7 +466,7 @@ type ServiceManagementData struct {
 }
 ```
 
-## type [StepCheckedData](<https://github.com/alehatsman/mooncake/blob/main/internal/events/event.go#L477-L502>)
+## type [StepCheckedData](<https://github.com/alehatsman/mooncake/blob/main/internal/events/event.go#L501-L526>)
 
 StepCheckedData contains data for step.checked events \(check mode\)
 
@@ -486,7 +499,7 @@ type StepCheckedData struct {
 }
 ```
 
-## type [StepCompletedData](<https://github.com/alehatsman/mooncake/blob/main/internal/events/event.go#L237-L253>)
+## type [StepCompletedData](<https://github.com/alehatsman/mooncake/blob/main/internal/events/event.go#L261-L277>)
 
 StepCompletedData contains data for step.completed events
 
@@ -510,7 +523,7 @@ type StepCompletedData struct {
 }
 ```
 
-## type [StepFailedData](<https://github.com/alehatsman/mooncake/blob/main/internal/events/event.go#L274-L286>)
+## type [StepFailedData](<https://github.com/alehatsman/mooncake/blob/main/internal/events/event.go#L298-L310>)
 
 StepFailedData contains data for step.failed events
 
@@ -530,7 +543,7 @@ type StepFailedData struct {
 }
 ```
 
-## type [StepOutputData](<https://github.com/alehatsman/mooncake/blob/main/internal/events/event.go#L289-L294>)
+## type [StepOutputData](<https://github.com/alehatsman/mooncake/blob/main/internal/events/event.go#L313-L318>)
 
 StepOutputData contains data for step.stdout/stderr events
 
@@ -543,7 +556,7 @@ type StepOutputData struct {
 }
 ```
 
-## type [StepSkippedData](<https://github.com/alehatsman/mooncake/blob/main/internal/events/event.go#L256-L271>)
+## type [StepSkippedData](<https://github.com/alehatsman/mooncake/blob/main/internal/events/event.go#L280-L295>)
 
 StepSkippedData contains data for step.skipped events
 
@@ -566,7 +579,7 @@ type StepSkippedData struct {
 }
 ```
 
-## type [StepStartedData](<https://github.com/alehatsman/mooncake/blob/main/internal/events/event.go#L213-L234>)
+## type [StepStartedData](<https://github.com/alehatsman/mooncake/blob/main/internal/events/event.go#L237-L258>)
 
 StepStartedData contains data for step.started events
 
@@ -656,7 +669,7 @@ func (p *SyncPublisher) Unsubscribe(id int)
 
 Unsubscribe removes a subscriber.
 
-## type [TemplateRenderData](<https://github.com/alehatsman/mooncake/blob/main/internal/events/event.go#L378-L384>)
+## type [TemplateRenderData](<https://github.com/alehatsman/mooncake/blob/main/internal/events/event.go#L402-L408>)
 
 TemplateRenderData contains data for template.rendered events
 
@@ -670,7 +683,7 @@ type TemplateRenderData struct {
 }
 ```
 
-## type [TransactionRollbackBeginData](<https://github.com/alehatsman/mooncake/blob/main/internal/events/event.go#L509-L519>)
+## type [TransactionRollbackBeginData](<https://github.com/alehatsman/mooncake/blob/main/internal/events/event.go#L533-L543>)
 
 TransactionRollbackBeginData fires once at the start of a transaction's LIFO rollback walk — i.e. the first time a body child fails. Carries the failed step's identity \+ the originating error so machine\-readable consumers \(runlog, agent telemetry\) can trace which body step triggered the unwind.
 
@@ -688,7 +701,7 @@ type TransactionRollbackBeginData struct {
 }
 ```
 
-## type [TransactionRollbackCompleteData](<https://github.com/alehatsman/mooncake/blob/main/internal/events/event.go#L560-L566>)
+## type [TransactionRollbackCompleteData](<https://github.com/alehatsman/mooncake/blob/main/internal/events/event.go#L584-L590>)
 
 TransactionRollbackCompleteData fires at the end of a rollback where no Reverse\(\) erred — every previously\-completed body child was either reversed cleanly or quietly skipped as irreversible.
 
@@ -702,7 +715,7 @@ type TransactionRollbackCompleteData struct {
 }
 ```
 
-## type [TransactionRollbackFailedData](<https://github.com/alehatsman/mooncake/blob/main/internal/events/event.go#L574-L580>)
+## type [TransactionRollbackFailedData](<https://github.com/alehatsman/mooncake/blob/main/internal/events/event.go#L598-L604>)
 
 TransactionRollbackFailedData fires when at least one Reverse\(\) failed during the LIFO walk. ReversedSteps counts the inverses that ran successfully BEFORE the first failure — i.e. the steps that ARE rolled back. The system state past that step is indeterminate; the spec\-30 "ROLLBACK INCOMPLETE — manual intervention required" UX is built from this event.
 
@@ -716,7 +729,7 @@ type TransactionRollbackFailedData struct {
 }
 ```
 
-## type [TransactionStepReverseSkippedData](<https://github.com/alehatsman/mooncake/blob/main/internal/events/event.go#L546-L555>)
+## type [TransactionStepReverseSkippedData](<https://github.com/alehatsman/mooncake/blob/main/internal/events/event.go#L570-L579>)
 
 TransactionStepReverseSkippedData fires when a completed body step can't be reversed because its handler is inherently irreversible \(no Reverser — e.g. shell / cmd\). Unlike a Reverse\(\) that erred mid\-undo, this is NOT a rollback failure: the step's effect simply remains and the LIFO walk continues reversing the rest. Identifies the ORIGINAL body step, matching TransactionStepReversedData.
 
@@ -733,7 +746,7 @@ type TransactionStepReverseSkippedData struct {
 }
 ```
 
-## type [TransactionStepReversedData](<https://github.com/alehatsman/mooncake/blob/main/internal/events/event.go#L526-L538>)
+## type [TransactionStepReversedData](<https://github.com/alehatsman/mooncake/blob/main/internal/events/event.go#L550-L562>)
 
 TransactionStepReversedData fires after each successful inverse step dispatch during rollback. Identifies the ORIGINAL body step \(the one whose effect just got undone\), not the inverse step — readers of \`mooncake history\` care which user\-authored step was reverted, not which synthesized inverse handler ran.
 
@@ -774,8 +787,17 @@ const (
     // "finished" bracket. Emitted only on the LLM-driven loop path; the
     // single-shot --plan path has no planner call.
     EventPlanGenerating Type = "plan.generating"
-    EventPlanLoaded     Type = "plan.loaded"
-    EventRunCompleted   Type = "run.completed"
+    // EventPlannerDelta streams the planner's output as it is generated
+    // (#76, Phase 2). The agent RunLoop emits these between plan.generating
+    // and plan.loaded when the LLM provider supports token streaming
+    // (anthropic-cli via --output-format stream-json), forwarding coalesced
+    // text/thinking chunks so a consumer sees live content during generation
+    // instead of only the start/stop bracket. Providers without streaming
+    // emit a single planner.delta carrying the full text. Ignored by existing
+    // consumers; opt-in for new ones. Data is PlannerDeltaData.
+    EventPlannerDelta Type = "planner.delta"
+    EventPlanLoaded   Type = "plan.loaded"
+    EventRunCompleted Type = "run.completed"
     // EventAgentCompleted is the terminal event a `agent run
     // --output-format json` stream emits after the run loop finishes,
     // replacing the human-readable text summary. Its Data is a
@@ -916,7 +938,7 @@ const (
 )
 ```
 
-## type [VarsLoadedData](<https://github.com/alehatsman/mooncake/blob/main/internal/events/event.go#L394-L399>)
+## type [VarsLoadedData](<https://github.com/alehatsman/mooncake/blob/main/internal/events/event.go#L418-L423>)
 
 VarsLoadedData contains data for variables.loaded events
 
@@ -929,7 +951,7 @@ type VarsLoadedData struct {
 }
 ```
 
-## type [VarsSetData](<https://github.com/alehatsman/mooncake/blob/main/internal/events/event.go#L387-L391>)
+## type [VarsSetData](<https://github.com/alehatsman/mooncake/blob/main/internal/events/event.go#L411-L415>)
 
 VarsSetData contains data for variables.set events
 
