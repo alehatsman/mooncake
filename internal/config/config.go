@@ -147,10 +147,12 @@ type RunConfig struct {
 	// Vars defines global variables available to all steps
 	Vars map[string]interface{} `yaml:"vars" json:"vars,omitempty"`
 
-	// Modules maps alias names to module references of the form
-	// "<host>/<owner>/<repo>[/<subpath>]@<version>". Populated by `mooncake mod add`
-	// and consumed by the resolver when a step's `use:` field names an alias.
-	Modules map[string]string `yaml:"modules" json:"modules,omitempty"`
+	// Modules maps alias names to module bindings. Each value is either a
+	// bare source string ("<host>/<owner>/<repo>[/<subpath>]@<version>") or a
+	// {source, props} object whose props are applied as defaults to every
+	// `use:` of that alias. Populated by `mooncake mod add` and consumed by
+	// the resolver when a step's `use:` field names an alias.
+	Modules map[string]ModuleBinding `yaml:"modules" json:"modules,omitempty"`
 
 	// Steps contains the configuration steps to execute
 	Steps []Step `yaml:"steps" json:"steps"`
@@ -160,6 +162,94 @@ type RunConfig struct {
 	// Tasks are independent of the top-level Steps list — `mooncake apply`
 	// ignores Tasks and `mooncake task` ignores Steps.
 	Tasks map[string]Task `yaml:"tasks,omitempty" json:"tasks,omitempty"`
+}
+
+// ModuleBinding is the value of a `modules:` entry. It carries the module
+// source reference plus optional default props that are merged into every
+// `use:` of that alias (lowest precedence — a per-call `props:` always wins).
+//
+// In YAML/JSON it accepts two forms:
+//
+//	tq:  "127.0.0.1:8080/owner/ts-quality@v0.1.0"        # bare source, no defaults
+//	goq: { source: ".../go-quality@v0.1.1", props: { go_tags: "{{ GO_TAGS }}" } }
+//
+// The bare-string form keeps full back-compat with the original
+// map[string]string shape. Marshalling emits the bare string when Props is
+// empty so plan artifacts and `mod add` rewrites stay byte-stable.
+type ModuleBinding struct {
+	// Source is the module reference,
+	// "<host>/<owner>/<repo>[/<subpath>]@<version>".
+	Source string `yaml:"source" json:"source"`
+
+	// Props are default prop values applied to every `use:` of this alias.
+	// Values may contain templates ({{ ... }}); they are rendered at the
+	// same phase as per-call props. Nil/empty when the binding is a bare
+	// source string.
+	Props map[string]interface{} `yaml:"props,omitempty" json:"props,omitempty"`
+}
+
+// UnmarshalYAML accepts both the bare-string form (`tq: ".../@v"`) and the
+// object form (`tq: { source: ..., props: {...} }`).
+func (m *ModuleBinding) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	var src string
+	if err := unmarshal(&src); err == nil {
+		m.Source = src
+		m.Props = nil
+		return nil
+	}
+	type rawBinding ModuleBinding
+	var raw rawBinding
+	if err := unmarshal(&raw); err != nil {
+		return err
+	}
+	if raw.Source == "" {
+		return fmt.Errorf("module binding: `source` is required when using the object form")
+	}
+	*m = ModuleBinding(raw)
+	return nil
+}
+
+// MarshalYAML emits the bare source string when there are no default props,
+// otherwise the {source, props} object. Keeps round-trips and plan output
+// stable for the common (no-defaults) case.
+func (m ModuleBinding) MarshalYAML() (interface{}, error) {
+	if len(m.Props) == 0 {
+		return m.Source, nil
+	}
+	type rawBinding ModuleBinding
+	return rawBinding(m), nil
+}
+
+// UnmarshalJSON mirrors UnmarshalYAML for plan artifacts and JSON configs:
+// a JSON string is a bare source; a JSON object is {source, props}.
+func (m *ModuleBinding) UnmarshalJSON(data []byte) error {
+	var src string
+	if err := json.Unmarshal(data, &src); err == nil {
+		m.Source = src
+		m.Props = nil
+		return nil
+	}
+	type rawBinding ModuleBinding
+	var raw rawBinding
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	if raw.Source == "" {
+		return fmt.Errorf("module binding: `source` is required when using the object form")
+	}
+	*m = ModuleBinding(raw)
+	return nil
+}
+
+// MarshalJSON emits the bare source string when there are no default props,
+// otherwise the {source, props} object. Validators and plan readers accept
+// both via the string-or-object schema.
+func (m ModuleBinding) MarshalJSON() ([]byte, error) {
+	if len(m.Props) == 0 {
+		return json.Marshal(m.Source)
+	}
+	type rawBinding ModuleBinding
+	return json.Marshal(rawBinding(m))
 }
 
 // Task is a named group of steps invoked via `mooncake task <name>`.
@@ -184,6 +274,40 @@ type Task struct {
 	Steps []Step `yaml:"steps" json:"steps"`
 }
 
+// UnmarshalYAML accepts two forms for a task (#53):
+//
+//	lint: goq/lint            # shorthand: string == { steps: [{ use: <ref> }] }
+//	build:                    # full form, unchanged
+//	  desc: ...
+//	  steps: [ ... ]
+//
+// The shorthand expands a `use:` reference string to a single-step task. Its
+// Desc is left empty so `mooncake task` can fall back to the resolved
+// component's own description (kills desc drift). Pairs with module-level
+// default props (#52): once defaults supply dir/go_tags, the one-liner is a
+// complete working task.
+func (t *Task) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	var ref string
+	if err := unmarshal(&ref); err == nil {
+		if strings.TrimSpace(ref) == "" {
+			return fmt.Errorf("task: empty string value; a string task must be a `use:` reference like `tq/lint`")
+		}
+		if strings.ContainsAny(ref, " \t\n") {
+			return fmt.Errorf("task %q: a string task value must be a single `use:` reference; "+
+				"use the full `{ steps: [...] }` form for anything else", ref)
+		}
+		t.Steps = []Step{{Use: ref}}
+		return nil
+	}
+	type rawTask Task
+	var raw rawTask
+	if err := unmarshal(&raw); err != nil {
+		return err
+	}
+	*t = Task(raw)
+	return nil
+}
+
 // ParsedConfig holds the result of parsing a configuration file.
 // It includes both the steps to execute and any global variables defined.
 type ParsedConfig struct {
@@ -194,7 +318,7 @@ type ParsedConfig struct {
 	GlobalVars map[string]interface{}
 
 	// Modules carries the parsed `modules:` alias map from the playbook.
-	Modules map[string]string
+	Modules map[string]ModuleBinding
 
 	// Version is the config schema version (e.g., "1.0")
 	Version string

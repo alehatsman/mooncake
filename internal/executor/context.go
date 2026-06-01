@@ -167,8 +167,9 @@ type RunServices struct {
 
 	// Modules is the playbook's `modules:` alias map (spec-67). Read by the
 	// `use:` action handler so alias references like `use: postgres` resolve
-	// to a cached module. Empty when the playbook declares no modules.
-	Modules map[string]string
+	// to a cached module — and so module-level default props (#52) are merged
+	// into each `use:` of an alias. Empty when the playbook declares no modules.
+	Modules map[string]config.ModuleBinding
 
 	// Policy is the per-run permissions-as-contract gate (#11). When
 	// non-nil, dispatchRunner checks every step against it before any

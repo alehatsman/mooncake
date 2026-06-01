@@ -888,9 +888,9 @@ Structured configuration with version, global variables, steps, and/or named tas
 
 | Property | Type | Required | Description |
 |----------|------|----------|-------------|
-| `modules` | object | No | Map of alias name → module reference (host/owner/repo[/subpath]@version). Consumed by `use:` |
+| `modules` | object | No | Map of alias name → module binding, consumed by `use:`. Each value is either a bare reference string (host/owner/repo[/subpath]@version) or an object {source, props} whose props are applied as defaults to every `use:` of that alias. |
 | `steps` | array | No | Configuration steps to execute |
-| `tasks` | object | No | Named tasks invoked via `mooncake task <name>`. Each task is a labeled group of steps with optional task-scoped vars. |
+| `tasks` | object | No | Named tasks invoked via `mooncake task <name>`. Each value is either a full object (steps + optional task-scoped vars + desc) or a `use:` reference string shorthand (`lint: goq/lint`) that expands to a single-step task. |
 | `vars` | object | No | Global variables available to all steps |
 | `version` | string | No | Configuration schema version (e.g., '1.0') |
 

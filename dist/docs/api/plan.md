@@ -43,7 +43,7 @@ ErrInputFileMissing is returned by HashInputFiles when one of the recorded input
 var ErrInputFileMissing = errors.New("input file missing")
 ```
 
-## func [HashInputFiles](<https://github.com/alehatsman/mooncake/blob/main/internal/plan/integrity.go#L22>)
+## func HashInputFiles
 
 ```go
 func HashInputFiles(paths []string) (string, error)
@@ -55,7 +55,7 @@ The hash mixes the file path AND content so renames are detected \(different pat
 
 Returns ErrInputFileMissing if any path is unreadable; callers should treat that as a stale\-plan condition.
 
-## func [IsStaleError](<https://github.com/alehatsman/mooncake/blob/main/internal/plan/validate.go#L34>)
+## func IsStaleError
 
 ```go
 func IsStaleError(err error) bool
@@ -63,7 +63,7 @@ func IsStaleError(err error) bool
 
 IsStaleError reports whether err is a stale\-plan rejection.
 
-## func [SavePlanToFile](<https://github.com/alehatsman/mooncake/blob/main/internal/plan/io.go#L26>)
+## func SavePlanToFile
 
 ```go
 func SavePlanToFile(p *Plan, filePath string) (err error)
@@ -73,7 +73,7 @@ SavePlanToFile saves a plan to a file in JSON or YAML format.
 
 Before writing, the marshalled bytes go through redactSecretMarkers which rewrites any in\-memory \`\\x00\_\_MOONCAKE\_SECRET\_\_:env:FOO\` sentinel back to a human\-readable \`\!secret env:FOO\` form. This is the spec\-23 §3 plan\-output redaction: the real secret value never makes it to disk \(the marker carries only the \*ref\*, never the resolved value\), but the marker itself looks like a control character so we rewrite it before serialization for readability.
 
-## func [ValidateForApply](<https://github.com/alehatsman/mooncake/blob/main/internal/plan/validate.go#L53>)
+## func ValidateForApply
 
 ```go
 func ValidateForApply(p *Plan, opts ValidateOptions) error
@@ -81,7 +81,7 @@ func ValidateForApply(p *Plan, opts ValidateOptions) error
 
 ValidateForApply is the convenience shim around ValidateForApplyWithReasons that drops the per\-check reason list. Existing callers that only care about pass/fail keep working.
 
-## type [ExpansionContext](<https://github.com/alehatsman/mooncake/blob/main/internal/plan/planner.go#L100-L119>)
+## type ExpansionContext
 
 ExpansionContext holds the context during plan expansion
 
@@ -108,7 +108,7 @@ type ExpansionContext struct {
 }
 ```
 
-## type [HostFacts](<https://github.com/alehatsman/mooncake/blob/main/internal/plan/plan.go#L82-L86>)
+## type HostFacts
 
 HostFacts captures the minimum set of facts needed to detect a stale plan being applied on the wrong host. Spec 16's stale\-plan policy compares these at apply time and refuses on mismatch unless \-\-allow\-stale is set.
 
@@ -122,7 +122,7 @@ type HostFacts struct {
 }
 ```
 
-## type [IncludeFrame](<https://github.com/alehatsman/mooncake/blob/main/internal/plan/planner.go#L93-L97>)
+## type IncludeFrame
 
 IncludeFrame tracks a frame in the include stack for cycle detection and origin tracking
 
@@ -134,7 +134,7 @@ type IncludeFrame struct {
 }
 ```
 
-## type [Plan](<https://github.com/alehatsman/mooncake/blob/main/internal/plan/plan.go#L18-L39>)
+## type Plan
 
 Plan represents a fully expanded, deterministic execution plan.
 
@@ -153,8 +153,9 @@ type Plan struct {
     InitialVars    map[string]interface{} `json:"initial_vars,omitempty" yaml:"initial_vars,omitempty"`
     Tags           []string               `json:"tags,omitempty" yaml:"tags,omitempty"`
     // Modules carries the playbook's `modules:` alias map (spec-67) so the
-    // executor can resolve `use: <alias>` references at apply time.
-    Modules map[string]string `json:"modules,omitempty" yaml:"modules,omitempty"`
+    // executor can resolve `use: <alias>` references at apply time. Each
+    // binding also carries any module-level default props (#52).
+    Modules map[string]config.ModuleBinding `json:"modules,omitempty" yaml:"modules,omitempty"`
 
     // UnresolvedTemplates lists `{{ root }}` references whose root
     // identifier is not present in initial_vars, not produced by a
@@ -165,7 +166,7 @@ type Plan struct {
 }
 ```
 
-### func [LoadPlanFromFile](<https://github.com/alehatsman/mooncake/blob/main/internal/plan/io.go#L141>)
+### func LoadPlanFromFile
 
 ```go
 func LoadPlanFromFile(filePath string) (*Plan, error)
@@ -173,7 +174,7 @@ func LoadPlanFromFile(filePath string) (*Plan, error)
 
 LoadPlanFromFile loads a plan from a JSON or YAML file
 
-## type [Planner](<https://github.com/alehatsman/mooncake/blob/main/internal/plan/planner.go#L71-L90>)
+## type Planner
 
 Planner builds deterministic execution plans from config files
 
@@ -183,7 +184,7 @@ type Planner struct {
 }
 ```
 
-### func [NewPlanner](<https://github.com/alehatsman/mooncake/blob/main/internal/plan/planner.go#L180>)
+### func NewPlanner
 
 ```go
 func NewPlanner() (*Planner, error)
@@ -191,7 +192,7 @@ func NewPlanner() (*Planner, error)
 
 NewPlanner creates a new Planner instance. Returns an error if template renderer initialization fails.
 
-### func \(\*Planner\) [BuildPlan](<https://github.com/alehatsman/mooncake/blob/main/internal/plan/planner.go#L222>)
+### func \(\*Planner\) BuildPlan
 
 ```go
 func (p *Planner) BuildPlan(cfg PlannerConfig) (*Plan, error)
@@ -199,7 +200,7 @@ func (p *Planner) BuildPlan(cfg PlannerConfig) (*Plan, error)
 
 BuildPlan generates a deterministic execution plan from a config file
 
-### func \(\*Planner\) [ExpandStepsWithContext](<https://github.com/alehatsman/mooncake/blob/main/internal/plan/planner.go#L200>)
+### func \(\*Planner\) ExpandStepsWithContext
 
 ```go
 func (p *Planner) ExpandStepsWithContext(steps []config.Step, variables map[string]interface{}, currentDir string) ([]config.Step, error)
@@ -207,7 +208,7 @@ func (p *Planner) ExpandStepsWithContext(steps []config.Step, variables map[stri
 
 ExpandStepsWithContext expands a list of steps with the given context. This is useful for expanding preset steps which may contain includes, loops, etc. Returns the expanded steps ready for execution.
 
-## type [PlannerConfig](<https://github.com/alehatsman/mooncake/blob/main/internal/plan/planner.go#L159-L176>)
+## type PlannerConfig
 
 PlannerConfig holds configuration for building a plan
 
@@ -232,7 +233,7 @@ type PlannerConfig struct {
 }
 ```
 
-## type [StaleError](<https://github.com/alehatsman/mooncake/blob/main/internal/plan/validate.go#L26-L29>)
+## type StaleError
 
 StaleError describes a stale\-plan rejection. Callers compare Reason to StaleReason constants; the human Message is suitable for direct display.
 
@@ -243,13 +244,13 @@ type StaleError struct {
 }
 ```
 
-### func \(\*StaleError\) [Error](<https://github.com/alehatsman/mooncake/blob/main/internal/plan/validate.go#L31>)
+### func \(\*StaleError\) Error
 
 ```go
 func (e *StaleError) Error() string
 ```
 
-## type [StaleReason](<https://github.com/alehatsman/mooncake/blob/main/internal/plan/validate.go#L14>)
+## type StaleReason
 
 StaleReason identifies why a plan was rejected as stale at apply time. Returned via StaleError so callers can present specific messages or honor a typed \-\-allow\-stale override.
 
@@ -266,7 +267,7 @@ const (
 )
 ```
 
-### func [ValidateForApplyWithReasons](<https://github.com/alehatsman/mooncake/blob/main/internal/plan/validate.go#L81>)
+### func ValidateForApplyWithReasons
 
 ```go
 func ValidateForApplyWithReasons(p *Plan, opts ValidateOptions) ([]StaleReason, error)
@@ -290,7 +291,7 @@ Checks \(in order\):
 
 Hash I/O errors that aren't "file missing" \(perm\-denied, EIO, …\) short\-circuit immediately and return as the raw wrap — they aren't stale\-plan conditions, they're system errors.
 
-## type [StepInspection](<https://github.com/alehatsman/mooncake/blob/main/internal/plan/plan.go#L43-L72>)
+## type StepInspection
 
 StepInspection is the result of running a handler in ModePlan against a single step. One inspection per Plan.Steps entry \(matched by StepID\).
 
@@ -327,7 +328,7 @@ type StepInspection struct {
 }
 ```
 
-## type [UnresolvedRef](<https://github.com/alehatsman/mooncake/blob/main/internal/plan/strict_templates.go#L41-L47>)
+## type UnresolvedRef
 
 UnresolvedRef describes a single \`\{\{ root \}\}\` reference whose root identifier is not in scope at the step's plan\-time position.
 
@@ -341,7 +342,7 @@ type UnresolvedRef struct {
 }
 ```
 
-### func [CheckPlanStrict](<https://github.com/alehatsman/mooncake/blob/main/internal/plan/strict_templates.go#L84>)
+### func CheckPlanStrict
 
 ```go
 func CheckPlanStrict(p *Plan) []UnresolvedRef
@@ -349,7 +350,7 @@ func CheckPlanStrict(p *Plan) []UnresolvedRef
 
 CheckPlanStrict scans the expanded plan for unresolved root identifiers. Returns a deterministic list \(steps in order, refs per step in field declaration order — and within map\-keyed fields such as \`env:\` and \`props:\`, in sorted\-key order — deduplicated by root\). The sorted\-key visit order is what makes both the slice ordering AND the field attributed to a deduplicated root stable across runs \(F059\): Go map iteration is randomized, so without it \`\-\-format json\` reorders run\-to\-run and the recorded Field wobbles.
 
-## type [ValidateOptions](<https://github.com/alehatsman/mooncake/blob/main/internal/plan/validate.go#L41-L48>)
+## type ValidateOptions
 
 ValidateOptions controls which checks ValidateForApply runs and what overrides the caller has explicitly enabled.
 
