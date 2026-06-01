@@ -1,6 +1,8 @@
 package docgen
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -42,6 +44,34 @@ func TestGomarkdocArgs_PinsRepositoryForDeterminism(t *testing.T) {
 	// override would re-enable auto-detection and reintroduce the drift.
 	if !strings.HasPrefix(apiRepoURL, "https://github.com/") {
 		t.Errorf("apiRepoURL = %q, want a github URL", apiRepoURL)
+	}
+}
+
+// TestDocsRegenGate_CoversAPIPackages guards against the two source-of-truth
+// lists drifting apart: DefaultAPIPackages (rendered to dist/docs/api/<slug>.md)
+// and the staged-file pathspecs in scripts/docs-regen-staged.sh that decide
+// whether the pre-commit gate regenerates the docs. If a package is documented
+// but not gated, a .go change there silently leaves dist/docs/api/<slug>.md
+// stale — the exact failure that motivated this test. Adding a package to
+// DefaultAPIPackages without a matching gate pathspec fails here.
+func TestDocsRegenGate_CoversAPIPackages(t *testing.T) {
+	// Test runs from internal/docgen; the script lives at the repo root.
+	script := filepath.Join("..", "..", "scripts", "docs-regen-staged.sh")
+	raw, err := os.ReadFile(script)
+	if err != nil {
+		t.Fatalf("read %s: %v", script, err)
+	}
+	gate := string(raw)
+
+	for _, pkg := range DefaultAPIPackages {
+		// The gate pathspecs are written as '<pkg>/...' (e.g. 'internal/logger/*.go'
+		// or 'internal/actions/**/*.go'), so a documented package is covered iff
+		// the script mentions a pathspec rooted at "<pkg>/".
+		if !strings.Contains(gate, pkg+"/") {
+			t.Errorf("DefaultAPIPackages entry %q has no matching pathspec in %s — "+
+				"add '%s/*.go' to the gated list, or docs/api/%s.md will go stale "+
+				"on edits to that package", pkg, script, pkg, apiSlug(pkg))
+		}
 	}
 }
 

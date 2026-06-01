@@ -14,16 +14,37 @@ BIN="${BIN:-out/mooncake}"
 
 cd "$(git rev-parse --show-toplevel)"
 
-echo "docs regen (gated on action/config/docgen changes)"
+echo "docs regen (gated on action/config/docgen + documented-API-package changes)"
+# The pathspecs below MUST cover every package in docgen.DefaultAPIPackages
+# (internal/docgen/api.go) — each renders to dist/docs/api/<slug>.md, so a .go
+# change there drifts the committed docs. They also cover the action cards,
+# schema, and the docgen/schemagen generators themselves. DefaultAPIPackages
+# coverage is enforced by TestDocsRegenGate_CoversAPIPackages
+# (internal/docgen/api_test.go) so this list can't silently fall behind.
+#
+# NOTE: single-star '<pkg>/*.go' is deliberate, not '<pkg>/**/*.go'. In a git
+# pathspec (no :(glob) magic) '*' matches '/', so '<pkg>/*.go' matches both
+# top-level and nested files. The trailing '/' in '**/*.go' forces a
+# subdirectory, which silently MISSED every top-level file (e.g. actions
+# handler.go/registry.go, and all of the flat docgen/schemagen packages —
+# matching zero files). Keep the single star.
 gated=$(git diff --cached --name-only --diff-filter=ACMR \
-  -- 'internal/actions/**/*.go' \
+  -- 'internal/actions/*.go' \
      'internal/config/*.go' \
-     'internal/docgen/**/*.go' \
-     'internal/schemagen/**/*.go' \
+     'internal/docgen/*.go' \
+     'internal/effects/*.go' \
+     'internal/events/*.go' \
+     'internal/executor/*.go' \
+     'internal/facts/*.go' \
+     'internal/logger/*.go' \
+     'internal/modules/*.go' \
+     'internal/plan/*.go' \
+     'internal/presets/*.go' \
+     'internal/schemagen/*.go' \
      'cmd/docs.go' 'cmd/schema.go' 2>/dev/null || true)
 
 if [ -z "$gated" ]; then
-  echo "  (no action/config/docgen Go files staged — skipping)"
+  echo "  (no documented-package / generator Go files staged — skipping)"
   exit 0
 fi
 
