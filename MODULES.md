@@ -194,6 +194,12 @@ Precedence, highest first: **per-call `props:` > module default props >
 the component's own prop defaults**. The bare-string form
 (`goq: ".../@v0.1.1"`) still works and carries no defaults.
 
+A default prop is applied **only to the exports that declare it** — a default
+for a prop a given component doesn't define is silently skipped, not an error.
+That's what lets one binding carry, say, a `go_tags` default that only some of
+a module's exports accept: `use: goq/lint` picks it up, `use: goq/budget-status`
+(which has no `go_tags` prop) ignores it.
+
 ### Task shorthand: a string task value is a `use:` reference
 
 A task value may be a `use:` reference string instead of a full

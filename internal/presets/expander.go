@@ -37,6 +37,18 @@ func ExpandPresetFromPath(name string, props map[string]interface{}, absPath str
 	return expandLoaded(name, props, definition)
 }
 
+// ExpandLoadedDefinition expands an already-loaded component definition.
+// Callers that need the loaded definition before expansion — the alias branch
+// of the preset handler, which merges module-level default props filtered to
+// the component's declared params (#57) — load via LoadPresetFromPath, adjust
+// props, then call this instead of ExpandPresetFromPath (which would re-load).
+func ExpandLoadedDefinition(name string, props map[string]interface{}, definition *config.PresetDefinition) ([]config.Step, map[string]interface{}, string, error) {
+	if name == "" {
+		return nil, nil, "", fmt.Errorf("component invocation has empty name")
+	}
+	return expandLoaded(name, props, definition)
+}
+
 // expandLoaded runs the shared post-load steps (validate props, inject
 // namespaces, clone steps). Extracted so ExpandPreset and ExpandPresetFromPath
 // share one implementation.

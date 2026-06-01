@@ -11,6 +11,7 @@ Package presets provides preset loading and expansion functionality.
 ## Index
 
 - [Variables](<#variables>)
+- [func ExpandLoadedDefinition(name string, props map[string]interface{}, definition *config.PresetDefinition) ([]config.Step, map[string]interface{}, string, error)](<#func-expandloadeddefinition>)
 - [func ExpandPreset(name string, props map[string]interface{}) ([]config.Step, map[string]interface{}, string, error)](<#func-expandpreset>)
 - [func ExpandPresetFromPath(name string, props map[string]interface{}, absPath string) ([]config.Step, map[string]interface{}, string, error)](<#func-expandpresetfrompath>)
 - [func LoadPreset(name string) (*config.PresetDefinition, error)](<#func-loadpreset>)
@@ -29,6 +30,14 @@ Implemented as a package\-level variable so tests can stub discovery to a hermet
 ```go
 var PresetSearchPaths = defaultPresetSearchPaths
 ```
+
+## func ExpandLoadedDefinition
+
+```go
+func ExpandLoadedDefinition(name string, props map[string]interface{}, definition *config.PresetDefinition) ([]config.Step, map[string]interface{}, string, error)
+```
+
+ExpandLoadedDefinition expands an already\-loaded component definition. Callers that need the loaded definition before expansion — the alias branch of the preset handler, which merges module\-level default props filtered to the component's declared params \(\#57\) — load via LoadPresetFromPath, adjust props, then call this instead of ExpandPresetFromPath \(which would re\-load\).
 
 ## func ExpandPreset
 
