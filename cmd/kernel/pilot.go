@@ -210,7 +210,12 @@ func emitPilotCompleted(w io.Writer, result *pilot.LoopResult) {
 		StopReason: string(result.StopReason),
 	}
 	if result.FinalLog != nil {
-		data.Status = result.FinalLog.Status
+		// Status is the worst outcome across all iterations, not just the
+		// last (#64): a later no-op/success iteration must not mask an
+		// earlier failed (or failed-rollback) one for a consumer keying on
+		// pilot.completed.status. DiffStat/ChangedFiles still reflect the
+		// final iteration's artifact.
+		data.Status = result.TerminalStatus()
 		data.DiffStat = result.FinalLog.DiffStat
 		data.ChangedFiles = result.FinalLog.ChangedFiles
 	}

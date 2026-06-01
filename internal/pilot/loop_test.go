@@ -85,6 +85,77 @@ func TestNoProgressDetection(t *testing.T) {
 	}
 }
 
+// TestTerminalStatus covers #64: the run's terminal status must be the
+// worst outcome across all iterations, so a later no-op/success iteration
+// can't mask an earlier failure for a consumer keying on the status field.
+func TestTerminalStatus(t *testing.T) {
+	mk := func(statuses ...string) *LoopResult {
+		var iters []IterationLog
+		for _, s := range statuses {
+			iters = append(iters, IterationLog{Status: s})
+		}
+		r := &LoopResult{Iterations: iters}
+		if len(iters) > 0 {
+			r.FinalLog = &iters[len(iters)-1]
+		}
+		return r
+	}
+
+	tests := []struct {
+		name string
+		res  *LoopResult
+		want string
+	}{
+		{
+			name: "failure then success no-op (the reported bug)",
+			res:  mk("execution_failed", "success"),
+			want: "execution_failed",
+		},
+		{
+			name: "all success",
+			res:  mk("success", "success"),
+			want: "success",
+		},
+		{
+			name: "validation failure masked by later success",
+			res:  mk("validation_failed", "success"),
+			want: "validation_failed",
+		},
+		{
+			name: "execution outranks validation",
+			res:  mk("validation_failed", "execution_failed", "success"),
+			want: "execution_failed",
+		},
+		{
+			name: "user rejected then success",
+			res:  mk("user_rejected", "success"),
+			want: "user_rejected",
+		},
+		{
+			name: "step_done is terminal-good",
+			res:  mk("step_done"),
+			want: "step_done",
+		},
+		{
+			name: "tie keeps earliest occurrence",
+			res:  mk("execution_failed", "execution_failed"),
+			want: "execution_failed",
+		},
+		{
+			name: "no iterations falls back to FinalLog",
+			res:  &LoopResult{FinalLog: &IterationLog{Status: "success"}},
+			want: "success",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.res.TerminalStatus(); got != tt.want {
+				t.Errorf("TerminalStatus() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestIterationNumbering(t *testing.T) {
 	tmpDir := t.TempDir()
 
