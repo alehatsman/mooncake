@@ -111,6 +111,25 @@ func BuildPrompt(input PlanInput) (string, string, error) {
 				b.WriteString(fmt.Sprintf("  %s\n", line))
 			}
 		}
+		// Surface the step that actually broke the plan — name, action, exit
+		// code, and its stderr tail. This is the most actionable feedback on
+		// a failure: without it the planner sees only the top-level error
+		// string and re-proposes the same failing step (#71). The directive
+		// tells it to FIX or REPLACE that step rather than reproduce the plan.
+		if fs := input.LastIteration.FailedStep; fs != nil {
+			b.WriteString(fmt.Sprintf("- Failed Step: %q (action: %s, exit code: %d)\n", fs.Name, fs.Action, fs.ExitCode))
+			if fs.Stderr != "" {
+				b.WriteString("  stderr (last 4 KB):\n")
+				b.WriteString("  ```\n")
+				for _, line := range strings.Split(strings.TrimRight(fs.Stderr, "\n"), "\n") {
+					b.WriteString("  ")
+					b.WriteString(line)
+					b.WriteString("\n")
+				}
+				b.WriteString("  ```\n")
+			}
+			b.WriteString("  This step FAILED. Do NOT re-propose the same step unchanged — fix it, take a different approach, or omit it.\n")
+		}
 		// Per-step outcomes for every action type — closes the
 		// non-cmd/shell signal gap. file.write / pkg.install /
 		// os.service etc. produce no stdout but still need to confirm

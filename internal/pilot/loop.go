@@ -115,6 +115,12 @@ func RunLoop(opts RunOptions) (*LoopResult, error) {
 
 	var iterations []IterationLog
 	var lastIteration *IterationSummary
+	// lastFailureFingerprint detects the planner re-proposing a step that
+	// already failed the same way (#71). When an iteration fails on a step
+	// whose fingerprint matches the previous iteration's failure, the loop
+	// stops early instead of re-running the whole plan to rediscover the
+	// same error (observed: 10 identical failures exhausting max_iterations).
+	var lastFailureFingerprint string
 
 	// terminate writes a failure-log entry, appends it to the run's
 	// iteration list, and returns the stop result. Collapses the
@@ -278,10 +284,6 @@ func RunLoop(opts RunOptions) (*LoopResult, error) {
 			planBytes = outcome.EditedPlanBytes
 		}
 
-		execErr := outcome.ExecErr
-		changedFiles := outcome.ChangedFiles
-		diffStat := outcome.DiffStat
-
 		planPath, savePlanErr := savePlan(opts.RepoRoot, iterNum, planBytes)
 		if savePlanErr != nil {
 			// Plan already executed via the tempfile path; failure to
@@ -297,56 +299,19 @@ func RunLoop(opts RunOptions) (*LoopResult, error) {
 			PlanHash:     planHash,
 			Provider:     opts.Provider,
 			Model:        opts.Model,
-			ChangedFiles: changedFiles,
-			DiffStat:     diffStat,
+			ChangedFiles: outcome.ChangedFiles,
+			DiffStat:     outcome.DiffStat,
 		}
-
 		if planPath != "" {
 			iterLog.Artifacts = append(iterLog.Artifacts, planPath)
 		}
 
-		if execErr != nil {
-			iterLog.Status = "execution_failed"
-			iterLog.ExecutionError = execErr.Error()
-			_, _ = WriteIterationLog(opts.RepoRoot, iterLog)
-			iterations = append(iterations, *iterLog)
-			lastIteration = &IterationSummary{
-				Iteration:      iterNum,
-				PlanHash:       planHash,
-				Status:         "execution_failed",
-				ChangedFiles:   changedFiles,
-				ErrorMessage:   execErr.Error(),
-				LastStepStdout: outcome.LastStepStdout,
-				StepSummaries:  outcome.StepSummaries,
-			}
-			continue
+		terminal, summary, fingerprint := concludeIteration(opts, iterLog, &iterations, outcome, planHash, lastFailureFingerprint, log)
+		if terminal != nil {
+			return terminal, nil
 		}
-
-		iterLog.Status = "success"
-		_, _ = WriteIterationLog(opts.RepoRoot, iterLog)
-		iterations = append(iterations, *iterLog)
-
-		// Under --style step the goal-reached signal is an empty plan
-		// (handled above); a no-op step is not a stop condition — the
-		// model may legitimately propose a diagnostic step (e.g. a
-		// read-only shell command) and continue iterating. Only plan-
-		// style treats "no files changed" as "we're done".
-		if len(changedFiles) == 0 && opts.Style != StyleStep {
-			return &LoopResult{
-				Iterations: iterations,
-				StopReason: StopSuccess,
-				FinalLog:   iterLog,
-			}, nil
-		}
-
-		lastIteration = &IterationSummary{
-			Iteration:      iterNum,
-			PlanHash:       planHash,
-			Status:         "success",
-			ChangedFiles:   changedFiles,
-			LastStepStdout: outcome.LastStepStdout,
-			StepSummaries:  outcome.StepSummaries,
-		}
+		lastFailureFingerprint = fingerprint
+		lastIteration = summary
 	}
 
 	finalLog := &iterations[len(iterations)-1]
@@ -355,6 +320,75 @@ func RunLoop(opts RunOptions) (*LoopResult, error) {
 		StopReason: StopMaxReached,
 		FinalLog:   finalLog,
 	}, nil
+}
+
+// concludeIteration persists this iteration's log (status + error), appends it
+// to *iterations, and decides the loop's next move. It returns a non-nil
+// terminal *LoopResult when the loop should stop now — either a #71 repeated-
+// failure short-circuit (the same step failed the same way as last time, so
+// the planner isn't adapting) or a plan-style success that changed nothing —
+// otherwise the summary to feed into the next prompt plus the failure
+// fingerprint to carry forward (empty on success). Extracted from RunLoop to
+// keep its cyclomatic complexity under cap.
+func concludeIteration(
+	opts RunOptions,
+	iterLog *IterationLog,
+	iterations *[]IterationLog,
+	outcome iterationOutcome,
+	planHash, lastFingerprint string,
+	log logger.Logger,
+) (terminal *LoopResult, summary *IterationSummary, fingerprint string) {
+	if outcome.ExecErr != nil {
+		iterLog.Status = "execution_failed"
+		iterLog.ExecutionError = outcome.ExecErr.Error()
+		_, _ = WriteIterationLog(opts.RepoRoot, iterLog)
+		*iterations = append(*iterations, *iterLog)
+
+		// #71: stop re-running the whole plan to rediscover the same
+		// failure. iterLog (with the real execution error) is already the
+		// terminal log; StopNoProgress explains *why we stopped early* while
+		// TerminalStatus still reports the failure.
+		fingerprint = outcome.FailedStep.Fingerprint()
+		if fingerprint != "" && fingerprint == lastFingerprint {
+			log.Errorf("pilot: step %q failed identically twice (exit %d); stopping — planner is not adapting to the failure",
+				outcome.FailedStep.Name, outcome.FailedStep.ExitCode)
+			return &LoopResult{Iterations: *iterations, StopReason: StopNoProgress, FinalLog: iterLog}, nil, fingerprint
+		}
+		summary = &IterationSummary{
+			Iteration:      iterLog.Iteration,
+			PlanHash:       planHash,
+			Status:         "execution_failed",
+			ChangedFiles:   outcome.ChangedFiles,
+			ErrorMessage:   outcome.ExecErr.Error(),
+			LastStepStdout: outcome.LastStepStdout,
+			StepSummaries:  outcome.StepSummaries,
+			FailedStep:     outcome.FailedStep,
+		}
+		return nil, summary, fingerprint
+	}
+
+	// Success clears the repeated-failure tracker (fingerprint ""): a later
+	// failure on the same step is a fresh problem, not a repeat.
+	iterLog.Status = "success"
+	_, _ = WriteIterationLog(opts.RepoRoot, iterLog)
+	*iterations = append(*iterations, *iterLog)
+
+	// Under --style step the goal-reached signal is an empty plan (handled
+	// upstream); a no-op step is not a stop condition — the model may
+	// legitimately propose a diagnostic step and continue. Only plan-style
+	// treats "no files changed" as "we're done".
+	if len(outcome.ChangedFiles) == 0 && opts.Style != StyleStep {
+		return &LoopResult{Iterations: *iterations, StopReason: StopSuccess, FinalLog: iterLog}, nil, ""
+	}
+	summary = &IterationSummary{
+		Iteration:      iterLog.Iteration,
+		PlanHash:       planHash,
+		Status:         "success",
+		ChangedFiles:   outcome.ChangedFiles,
+		LastStepStdout: outcome.LastStepStdout,
+		StepSummaries:  outcome.StepSummaries,
+	}
+	return nil, summary, ""
 }
 
 // createPlanTempFile creates the temp plan file the executor reads
@@ -458,6 +492,11 @@ type iterationOutcome struct {
 	// block under LAST ITERATION. Nil/empty when the plan ran nothing
 	// captureable (validation-only / pre-gate-reject iterations).
 	StepSummaries []string
+	// FailedStep is the step.failed detail (name/action/exit/stderr) when
+	// ExecErr != nil, captured from the executor's step.failed event. The
+	// caller forwards it into the next prompt so the planner sees what
+	// broke (#71). nil on success or when no step.failed was observed.
+	FailedStep *FailedStepInfo
 }
 
 // planGate is the callback applyPlanIteration invokes between
@@ -553,6 +592,7 @@ func applyPlanIteration(wrappedBytes []byte, repoRoot string, log logger.Logger,
 	publisher.Close()
 	out.LastStepStdout = capture.Last()
 	out.StepSummaries = capture.Summaries()
+	out.FailedStep = capture.FailedStep()
 
 	out.ChangedFiles, _ = CollectChangedFiles(repoRoot)
 	out.DiffStat, _ = CollectDiffStat(repoRoot)

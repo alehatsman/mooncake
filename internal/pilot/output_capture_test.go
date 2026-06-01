@@ -63,6 +63,66 @@ func emitCompletedWithStdout(c *stdoutCapture, stepID, stdout string) {
 	})
 }
 
+func emitFailed(c *stdoutCapture, name, action string, exitCode int, stderr, msg string) {
+	c.OnEvent(events.Event{
+		Type:      events.EventStepFailed,
+		Timestamp: time.Now(),
+		Data: events.StepFailedData{
+			StepID:       name,
+			Name:         name,
+			Action:       action,
+			ExitCode:     exitCode,
+			Stderr:       stderr,
+			ErrorMessage: msg,
+		},
+	})
+}
+
+// TestStdoutCapture_FailedStep confirms a step.failed event is captured into
+// FailedStep() so the loop can feed it back to the planner (#71). Without
+// this the failing step's stderr/exit code never reaches the next prompt.
+func TestStdoutCapture_FailedStep(t *testing.T) {
+	c := newStdoutCapture(nil)
+	if c.FailedStep() != nil {
+		t.Fatalf("FailedStep() = %+v before any failure, want nil", c.FailedStep())
+	}
+
+	emitFailed(c, "run migration", "shell", 7, "psql: connection refused\n", "command failed: exit status 7")
+
+	fs := c.FailedStep()
+	if fs == nil {
+		t.Fatal("FailedStep() = nil after step.failed, want populated")
+	}
+	if fs.Name != "run migration" || fs.Action != "shell" || fs.ExitCode != 7 {
+		t.Errorf("FailedStep = %+v, want name/action/exit run migration/shell/7", fs)
+	}
+	if !strings.Contains(fs.Stderr, "connection refused") {
+		t.Errorf("FailedStep.Stderr = %q, want it to carry the captured stderr", fs.Stderr)
+	}
+}
+
+// TestStdoutCapture_FailedStepStderrTruncated confirms the captured stderr is
+// re-capped to the prompt budget (the event itself carries up to 64 KiB).
+func TestStdoutCapture_FailedStepStderrTruncated(t *testing.T) {
+	c := newStdoutCapture(nil)
+	big := strings.Repeat("x", pilotStdoutTailBytes*2)
+	emitFailed(c, "s", "cmd", 1, big, "boom")
+	fs := c.FailedStep()
+	if fs == nil {
+		t.Fatal("FailedStep() = nil, want populated")
+	}
+	// truncateTail keeps maxLen tail bytes plus a "<N bytes truncated>"
+	// marker, so the result is far smaller than the 8 KiB input and carries
+	// the marker. The point is the 64 KiB event payload doesn't reach the
+	// prompt verbatim.
+	if len(fs.Stderr) >= len(big) {
+		t.Errorf("FailedStep.Stderr len = %d, want it truncated below the %d-byte input", len(fs.Stderr), len(big))
+	}
+	if !strings.Contains(fs.Stderr, "truncated") {
+		t.Errorf("FailedStep.Stderr should carry the truncation marker; got prefix %q", fs.Stderr[:40])
+	}
+}
+
 // TestStdoutCapture_LastCmdStepWins verifies that when multiple
 // cmd/shell steps complete in one plan, Last() returns the LAST
 // one's stdout — the spec semantics ("the LAST cmd/shell step's

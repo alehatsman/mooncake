@@ -365,6 +365,80 @@ func TestRunLoop_StyleStep_FeedsResultBack(t *testing.T) {
 	}
 }
 
+// TestRunLoop_RepeatedFailure_ShortCircuits is the #71 regression: when the
+// planner re-proposes a step that fails the same way, the loop must stop
+// early instead of burning every iteration. The two plans differ textually
+// (different leading no-op step name) so they hash differently — defeating
+// the existing plan-identical no_progress check — yet both fail on the same
+// "boom" step (same action + exit code), which my failure fingerprint
+// catches. MaxIterations is 5; we expect to stop after exactly 2.
+func TestRunLoop_RepeatedFailure_ShortCircuits(t *testing.T) {
+	repo := t.TempDir()
+	initGitRepo(t, repo)
+
+	plan1 := `[{"name":"prep-a","shell":"true"},{"name":"boom","shell":"exit 7"}]`
+	plan2 := `[{"name":"prep-b","shell":"true"},{"name":"boom","shell":"exit 7"}]`
+	// A third differing plan proves we'd keep going if the short-circuit
+	// failed to fire — the stub would hand it out on call 3.
+	plan3 := `[{"name":"prep-c","shell":"true"},{"name":"boom","shell":"exit 7"}]`
+	stub := &stubLLMClient{plans: []string{plan1, plan2, plan3, plan3, plan3}}
+	cleanup := withStubClient(t, stub)
+	defer cleanup()
+
+	result, err := RunLoop(RunOptions{
+		Goal:          "do the thing",
+		RepoRoot:      repo,
+		MaxIterations: 5,
+		AutoApply:     true,
+	})
+	if err != nil {
+		t.Fatalf("RunLoop: %v", err)
+	}
+	if stub.calls != 2 {
+		t.Errorf("LLM calls = %d, want 2 (stop after the 2nd identical failure, not all 5)", stub.calls)
+	}
+	if result.StopReason != StopNoProgress {
+		t.Errorf("StopReason = %q, want %q", result.StopReason, StopNoProgress)
+	}
+	if got := result.FinalLog.Status; got != "execution_failed" {
+		t.Errorf("FinalLog.Status = %q, want execution_failed (the run still failed)", got)
+	}
+}
+
+// TestRunLoop_DistinctFailures_DoNotShortCircuit guards the inverse: failing
+// on *different* steps each iteration is not a repeat, so the loop keeps
+// going (the fingerprint must distinguish distinct failures).
+func TestRunLoop_DistinctFailures_DoNotShortCircuit(t *testing.T) {
+	repo := t.TempDir()
+	initGitRepo(t, repo)
+
+	// Each plan fails on a differently-named step → distinct fingerprints →
+	// no short-circuit; the loop runs until max_iterations.
+	stub := &stubLLMClient{plans: []string{
+		`[{"name":"boom-1","shell":"exit 1"}]`,
+		`[{"name":"boom-2","shell":"exit 1"}]`,
+		`[{"name":"boom-3","shell":"exit 1"}]`,
+	}}
+	cleanup := withStubClient(t, stub)
+	defer cleanup()
+
+	result, err := RunLoop(RunOptions{
+		Goal:          "do the thing",
+		RepoRoot:      repo,
+		MaxIterations: 3,
+		AutoApply:     true,
+	})
+	if err != nil {
+		t.Fatalf("RunLoop: %v", err)
+	}
+	if stub.calls != 3 {
+		t.Errorf("LLM calls = %d, want 3 (distinct failures must not short-circuit)", stub.calls)
+	}
+	if result.StopReason != StopMaxReached {
+		t.Errorf("StopReason = %q, want %q", result.StopReason, StopMaxReached)
+	}
+}
+
 // TestCreatePlanTempFile_AnchoredOnRepoRoot — pilot-tmpfile-cwd. The
 // executor resolves plan-relative paths against the config file's
 // directory; before the fix, pilot wrote that file to os.CreateTemp("",

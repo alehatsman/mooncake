@@ -1,6 +1,10 @@
 package pilot
 
-import "github.com/alehatsman/mooncake/internal/executor"
+import (
+	"fmt"
+
+	"github.com/alehatsman/mooncake/internal/executor"
+)
 
 type Snapshot struct {
 	Branch       string   `json:"branch"`
@@ -120,6 +124,41 @@ type IterationSummary struct {
 	// Each line is independently capped (~240 B); the slice is capped
 	// at 30 entries with a trailing "... N more" sentinel.
 	StepSummaries []string
+	// FailedStep carries the step that broke this iteration's plan (the
+	// step.failed event the executor emits before rolling the transaction
+	// back). Non-nil only when Status == "execution_failed". Without it the
+	// next planning prompt sees only the top-level execErr string and the
+	// last step's *stdout* — never the failing step's stderr/exit code, so
+	// the planner can't tell *what* failed and re-proposes the same plan
+	// (#71). Rendered as a "Failed Step" block by BuildPrompt.
+	FailedStep *FailedStepInfo
+}
+
+// FailedStepInfo is the subset of events.StepFailedData the pilot feeds back
+// to the planner. Captured from the step.failed event (see output_capture.go)
+// and rendered under LAST ITERATION so the next plan can course-correct
+// instead of reproducing the failing step (#71).
+type FailedStepInfo struct {
+	Name     string
+	Action   string
+	ExitCode int
+	// Stderr is tail-truncated to the prompt budget (pilotStdoutTailBytes).
+	Stderr string
+	// Message is the executor's error string (events.StepFailedData.ErrorMessage).
+	Message string
+}
+
+// Fingerprint is the stable signature used to detect "the same step failed
+// the same way again". Deliberately excludes stderr — that often carries
+// volatile timestamps/paths/PIDs that would defeat the match — and keys on
+// the planner-chosen step name, action, and exit code, which stay constant
+// when the planner re-proposes the same failing step (#71). Empty receiver
+// returns "".
+func (f *FailedStepInfo) Fingerprint() string {
+	if f == nil {
+		return ""
+	}
+	return fmt.Sprintf("%s\x00%s\x00%d", f.Name, f.Action, f.ExitCode)
 }
 
 type StopReason string

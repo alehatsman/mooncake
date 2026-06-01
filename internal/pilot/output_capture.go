@@ -88,6 +88,12 @@ type stdoutCapture struct {
 	// after pilotStepSummariesMax was reached, so Summaries() can
 	// emit the trailing "... N more steps omitted" line exactly once.
 	stepSummariesDropped int
+	// failedStep is the LAST step.failed event seen this iteration (a
+	// transaction stops at its first failing step, so there's normally
+	// exactly one). nil until a step fails. Fed into the next prompt so
+	// the planner sees what broke and adapts instead of re-proposing the
+	// same failing step (#71).
+	failedStep *FailedStepInfo
 }
 
 // startedInfo holds the bits of StepStartedData a step.completed
@@ -142,7 +148,32 @@ func (c *stdoutCapture) OnEvent(event events.Event) {
 			return
 		}
 		c.handleCompleted(data)
+
+	case events.EventStepFailed:
+		data, ok := event.Data.(events.StepFailedData)
+		if !ok {
+			return
+		}
+		// Re-cap stderr to the prompt budget (the event carries up to
+		// 64 KiB; the next prompt only wants the actionable tail).
+		c.mu.Lock()
+		c.failedStep = &FailedStepInfo{
+			Name:     data.Name,
+			Action:   data.Action,
+			ExitCode: data.ExitCode,
+			Stderr:   truncateTail(data.Stderr, pilotStdoutTailBytes),
+			Message:  data.ErrorMessage,
+		}
+		c.mu.Unlock()
 	}
+}
+
+// FailedStep returns the last step.failed captured this iteration, or nil if
+// no step failed. Read after publisher.Close()/Flush() like Last().
+func (c *stdoutCapture) FailedStep() *FailedStepInfo {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.failedStep
 }
 
 // handleCompleted is the step.completed branch of OnEvent. Split out so

@@ -100,6 +100,58 @@ func TestSelectStyleFragment_UnknownFallsBackToPlan(t *testing.T) {
 	}
 }
 
+// TestBuildPrompt_FailedStep_Rendered confirms the failing step's name,
+// action, exit code, stderr, and the "do not re-propose" directive land in
+// the next planning prompt (#71). Without this block the planner only sees
+// the top-level error string and re-proposes the same failing step.
+func TestBuildPrompt_FailedStep_Rendered(t *testing.T) {
+	_, userPrompt, err := BuildPrompt(PlanInput{
+		Goal:     "apply db migration",
+		Snapshot: []byte(`{}`),
+		LastIteration: &IterationSummary{
+			Iteration: 1,
+			Status:    "execution_failed",
+			FailedStep: &FailedStepInfo{
+				Name:     "run migration",
+				Action:   "shell",
+				ExitCode: 7,
+				Stderr:   "psql: connection refused\n",
+				Message:  "command failed: exit status 7",
+			},
+		},
+	})
+	if err != nil {
+		t.Fatalf("BuildPrompt: %v", err)
+	}
+	for _, want := range []string{
+		`Failed Step: "run migration"`,
+		"action: shell",
+		"exit code: 7",
+		"connection refused",
+		"Do NOT re-propose the same step unchanged",
+	} {
+		if !strings.Contains(userPrompt, want) {
+			t.Errorf("user prompt missing %q; got:\n%s", want, userPrompt)
+		}
+	}
+}
+
+// TestBuildPrompt_NoFailedStep_NoBlock confirms the block is absent on a
+// successful iteration (no spurious "Failed Step" noise).
+func TestBuildPrompt_NoFailedStep_NoBlock(t *testing.T) {
+	_, userPrompt, err := BuildPrompt(PlanInput{
+		Goal:          "x",
+		Snapshot:      []byte(`{}`),
+		LastIteration: &IterationSummary{Iteration: 1, Status: "success"},
+	})
+	if err != nil {
+		t.Fatalf("BuildPrompt: %v", err)
+	}
+	if strings.Contains(userPrompt, "Failed Step") {
+		t.Errorf("user prompt should not render a Failed Step block on success; got:\n%s", userPrompt)
+	}
+}
+
 // TestBuildPrompt_LastStepStdout_Rendered confirms the user message
 // includes the captured stdout block when LastIteration.LastStepStdout
 // is populated. The block is what unblocks step-style loops: without
