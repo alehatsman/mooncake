@@ -14,6 +14,7 @@ Package modules implements the Git\-native module system from spec\-67. A module
 - [type Fetcher](<#type-fetcher>)
   - [func (f *Fetcher) CacheDir(ref Reference) (string, error)](<#func-fetcher-cachedir>)
   - [func (f *Fetcher) Fetch(ctx context.Context, ref Reference) (string, error)](<#func-fetcher-fetch>)
+  - [func (f *Fetcher) FetchCached(_ context.Context, ref Reference) (string, error)](<#func-fetcher-fetchcached>)
 - [type Index](<#type-index>)
   - [func LoadIndex(moduleRoot string) (*Index, error)](<#func-loadindex>)
   - [func (idx *Index) ResolveExport(moduleRoot, export string) (string, error)](<#func-index-resolveexport>)
@@ -27,6 +28,7 @@ Package modules implements the Git\-native module system from spec\-67. A module
 - [type Resolver](<#type-resolver>)
   - [func NewResolver(modules map[string]string) *Resolver](<#func-newresolver>)
   - [func (r *Resolver) Resolve(ctx context.Context, refStr string) (Resolved, error)](<#func-resolver-resolve>)
+  - [func (r *Resolver) ResolveCached(ctx context.Context, refStr string) (Resolved, error)](<#func-resolver-resolvecached>)
 
 
 ## func DefaultCacheRoot
@@ -81,6 +83,14 @@ func (f *Fetcher) Fetch(ctx context.Context, ref Reference) (string, error)
 ```
 
 Fetch ensures the module identified by ref is present in the cache and returns the absolute directory. A cache hit skips the clone entirely.
+
+### func \(\*Fetcher\) FetchCached
+
+```go
+func (f *Fetcher) FetchCached(_ context.Context, ref Reference) (string, error)
+```
+
+FetchCached returns the cache directory for ref only if it is already present locally; it never clones. Returns an error if the module is not cached. Used by read\-only callers \(e.g. the \`mooncake task\` listing\) that must stay offline.
 
 ## type Index
 
@@ -227,6 +237,14 @@ Resolve takes a use: reference string and returns the component file to load. Th
 ```
 
 Local paths \(./foo.yml\) are NOT handled here — the executor dispatches those directly without going through the resolver.
+
+### func \(\*Resolver\) ResolveCached
+
+```go
+func (r *Resolver) ResolveCached(ctx context.Context, refStr string) (Resolved, error)
+```
+
+ResolveCached behaves like Resolve but never clones: if the module is not already present in the local cache it returns an error instead of fetching over the network. Read\-only callers that must stay offline — the \`mooncake task\` listing, which resolves a component's description: — use this so a listing never triggers a clone.
 
 
 
