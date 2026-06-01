@@ -21,6 +21,7 @@ import (
 	"github.com/alehatsman/mooncake/internal/config"
 	"github.com/alehatsman/mooncake/internal/executor"
 	"github.com/alehatsman/mooncake/internal/logger"
+	"github.com/alehatsman/mooncake/internal/modules"
 	"github.com/alehatsman/mooncake/internal/plan"
 	"github.com/alehatsman/mooncake/internal/presets"
 	"github.com/alehatsman/mooncake/internal/security"
@@ -210,9 +211,10 @@ func listTasksAction(c *cli.Context) error {
 
 	fmt.Fprintf(os.Stdout, "Tasks defined in %s:\n\n", configPath)
 	configDir := filepath.Dir(configPath)
+	resolver := taskListResolver(parsed.Modules)
 	tw := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
 	for _, name := range names {
-		fmt.Fprintf(tw, "  %s\t%s\n", name, taskListDescription(parsed.Tasks[name], configDir))
+		fmt.Fprintf(tw, "  %s\t%s\n", name, taskListDescription(parsed.Tasks[name], configDir, resolver))
 	}
 	_ = tw.Flush()
 	fmt.Fprintln(os.Stdout, "\nRun a task with:  mooncake task <name>")
@@ -223,14 +225,15 @@ func listTasksAction(c *cli.Context) error {
 // `mooncake task` listing. Precedence:
 //  1. An explicit `desc:` always wins.
 //  2. For a string-shorthand task (#53) — a single `use:` step and no desc —
-//     fall back to the referenced component's own `description:` when the ref
-//     is a LOCAL path (loaded cheaply, offline). Kills desc drift for in-repo
-//     components.
-//  3. For an alias/remote use-ref, show "→ <ref>" rather than resolving the
-//     module: a listing must stay fast and offline, and resolving an alias
-//     could trigger a network clone on a cache miss.
+//     fall back to the referenced component's own `description:`:
+//     - a LOCAL path is loaded directly;
+//     - an alias/remote ref (#56) is resolved from the local module cache
+//     only — never cloned — so the listing stays offline and fast.
+//     Kills desc drift: the listing always mirrors the component.
+//  3. If the description can't be resolved (uncached module, load error),
+//     show "→ <ref>" so the listing still says what the task runs.
 //  4. Otherwise "(no description)".
-func taskListDescription(t config.Task, configDir string) string {
+func taskListDescription(t config.Task, configDir string, resolver *modules.Resolver) string {
 	if t.Desc != "" {
 		return t.Desc
 	}
@@ -238,16 +241,51 @@ func taskListDescription(t config.Task, configDir string) string {
 	if !ok {
 		return "(no description)"
 	}
-	if config.ComponentRefKindOf(ref) == config.ComponentRefLocalPath {
-		absPath := ref
-		if !filepath.IsAbs(absPath) {
-			absPath = filepath.Join(configDir, ref)
-		}
-		if def, err := presets.LoadPresetFromPath(absPath); err == nil && def.Description != "" {
-			return def.Description
-		}
+	if desc := resolveComponentDescription(ref, configDir, resolver); desc != "" {
+		return desc
 	}
 	return "→ " + ref
+}
+
+// resolveComponentDescription returns the `description:` of the component a
+// use-ref points at, or "" if it can't be obtained offline. Local paths load
+// directly; alias/remote refs resolve from the module cache only (no clone).
+func resolveComponentDescription(ref, configDir string, resolver *modules.Resolver) string {
+	var path string
+	if config.ComponentRefKindOf(ref) == config.ComponentRefLocalPath {
+		path = ref
+		if !filepath.IsAbs(path) {
+			path = filepath.Join(configDir, ref)
+		}
+	} else {
+		if resolver == nil {
+			return ""
+		}
+		resolved, err := resolver.ResolveCached(context.Background(), ref)
+		if err != nil {
+			return ""
+		}
+		path = resolved.ComponentPath
+	}
+	if def, err := presets.LoadPresetFromPath(path); err == nil {
+		return def.Description
+	}
+	return ""
+}
+
+// taskListResolver builds a cache-only module resolver from the playbook's
+// `modules:` block for use by the listing. Returns nil when no modules are
+// declared (local-only listing). Only the alias→source mapping is needed;
+// default props don't affect description resolution.
+func taskListResolver(mods map[string]config.ModuleBinding) *modules.Resolver {
+	if len(mods) == 0 {
+		return nil
+	}
+	sources := make(map[string]string, len(mods))
+	for alias, binding := range mods {
+		sources[alias] = binding.Source
+	}
+	return &modules.Resolver{Fetcher: &modules.Fetcher{}, Modules: sources}
 }
 
 // singleUseRef reports whether the task is the #53 string shorthand — exactly

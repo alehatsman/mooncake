@@ -40,6 +40,25 @@ type Resolved struct {
 // Local paths (./foo.yml) are NOT handled here — the executor dispatches those
 // directly without going through the resolver.
 func (r *Resolver) Resolve(ctx context.Context, refStr string) (Resolved, error) {
+	return r.resolve(ctx, refStr, r.Fetcher.Fetch)
+}
+
+// ResolveCached behaves like Resolve but never clones: if the module is not
+// already present in the local cache it returns an error instead of fetching
+// over the network. Read-only callers that must stay offline — the
+// `mooncake task` listing, which resolves a component's description: — use
+// this so a listing never triggers a clone.
+func (r *Resolver) ResolveCached(ctx context.Context, refStr string) (Resolved, error) {
+	return r.resolve(ctx, refStr, r.Fetcher.FetchCached)
+}
+
+// fetchFunc abstracts the two module-fetch strategies (Fetcher.Fetch and
+// Fetcher.FetchCached) so resolveRef is shared between Resolve/ResolveCached.
+type fetchFunc func(ctx context.Context, ref Reference) (string, error)
+
+// resolve is the shared body of Resolve/ResolveCached, parameterized by the
+// fetch strategy (clone-on-miss vs cache-only).
+func (r *Resolver) resolve(ctx context.Context, refStr string, fetch fetchFunc) (Resolved, error) {
 	if refStr == "" {
 		return Resolved{}, fmt.Errorf("empty component reference")
 	}
@@ -51,7 +70,7 @@ func (r *Resolver) Resolve(ctx context.Context, refStr string) (Resolved, error)
 		if err != nil {
 			return Resolved{}, err
 		}
-		return r.resolveRef(ctx, ref, "default")
+		return r.resolveRef(ctx, ref, "default", fetch)
 	}
 
 	// Alias form: split into (alias, export) and look up in the modules map.
@@ -67,13 +86,13 @@ func (r *Resolver) Resolve(ctx context.Context, refStr string) (Resolved, error)
 	if err != nil {
 		return Resolved{}, fmt.Errorf("modules[%q] = %q: %w", alias, refForAlias, err)
 	}
-	return r.resolveRef(ctx, ref, export)
+	return r.resolveRef(ctx, ref, export, fetch)
 }
 
 // resolveRef does the fetch + index + export lookup once we have a parsed
 // Reference and an export name.
-func (r *Resolver) resolveRef(ctx context.Context, ref Reference, export string) (Resolved, error) {
-	moduleRoot, err := r.Fetcher.Fetch(ctx, ref)
+func (r *Resolver) resolveRef(ctx context.Context, ref Reference, export string, fetch fetchFunc) (Resolved, error) {
+	moduleRoot, err := fetch(ctx, ref)
 	if err != nil {
 		return Resolved{}, err
 	}

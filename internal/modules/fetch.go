@@ -110,6 +110,21 @@ func (f *Fetcher) CacheDir(ref Reference) (string, error) {
 	return filepath.Join(root, ref.Host, ref.Owner, ref.Repo+"@"+ref.Version), nil
 }
 
+// FetchCached returns the cache directory for ref only if it is already
+// present locally; it never clones. Returns an error if the module is not
+// cached. Used by read-only callers (e.g. the `mooncake task` listing) that
+// must stay offline.
+func (f *Fetcher) FetchCached(_ context.Context, ref Reference) (string, error) {
+	dir, err := f.CacheDir(ref)
+	if err != nil {
+		return "", err
+	}
+	if info, err := os.Stat(dir); err == nil && info.IsDir() {
+		return dir, nil
+	}
+	return "", fmt.Errorf("module %s not in local cache", ref.String())
+}
+
 // Fetch ensures the module identified by ref is present in the cache and
 // returns the absolute directory. A cache hit skips the clone entirely.
 func (f *Fetcher) Fetch(ctx context.Context, ref Reference) (string, error) {

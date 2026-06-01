@@ -213,9 +213,11 @@ tasks:
 ```
 
 When a shorthand task has no `desc:`, `mooncake task` shows the referenced
-**component's own `description:`** (for a local component) — so the listing
-never drifts from the component. For a module alias it shows a `→ <ref>` hint
-rather than resolving the module (a listing stays offline). Need extra props?
+**component's own `description:`** — so the listing never drifts from the
+component. Local components are read directly; module aliases are resolved
+from the **local module cache only** (never cloned, so the listing stays
+offline). If the module isn't cached yet, the listing shows a `→ <ref>` hint
+until the next run populates the cache. Need extra props?
 Use the full map form: `ai-lint-all: { steps: [{ use: goq/ai-lint, props: { all: true } }] }`.
 
 Combined with module default props, the one-liner is a complete working task.
