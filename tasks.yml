@@ -325,3 +325,24 @@ tasks:
       - name: "[11/11] escalation-lint (spec-72 §G1)"
         shell: { cmd: "bash ./scripts/escalation-lint.sh --fail" }
       - log: { msg: "✓ All checks green — safe to push." }
+
+  # ── CI image ─────────────────────────────────────────────────────────
+  # mooncake-ci:latest is the container moongit runs `mooncake task ci` in
+  # (mgitci.yml). ci/Dockerfile derives FROM moongit-ci-dev:latest and adds
+  # gomarkdoc; build that base first in the moongit repo (`mooncake task
+  # ci-images`). Build the image locally so the runner never has to pull
+  # (pulls fail on this box — see dotfiles#8). Run on a fresh box and whenever
+  # the base image or ci/Dockerfile changes.
+  ci-image:
+    desc: "Build the mooncake CI container image (mooncake-ci:latest) the runner needs"
+    steps:
+      - shell:
+          cmd: |
+            set -eu
+            docker image inspect moongit-ci-dev:latest >/dev/null 2>&1 || {
+              echo "moongit-ci-dev:latest missing — build it first in the moongit repo: 'mooncake task ci-images'" >&2
+              exit 1
+            }
+      - cmd:
+          argv: ["docker", "build", "-t", "mooncake-ci:latest", "ci/"]
+      - log: { msg: "built mooncake-ci:latest" }
