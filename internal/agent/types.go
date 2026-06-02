@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -70,6 +71,17 @@ type RunOptions struct {
 	// an operator (or a moongit-spawned run aligning to its own per-turn
 	// budget) raise or lower the cutoff. See loop.go and #80.
 	LLMTimeout time.Duration
+	// Approver, when non-nil, replaces the built-in stdin confirm gate
+	// (#102). RunLoop calls it once per generated plan, before execution,
+	// with the run ctx and the plan bytes, and runs the plan iff it returns
+	// OutcomeApply (optionally carrying edited bytes). This is the seam an
+	// external driver (moongit) plugs into to approve over its own channel
+	// instead of a TTY; #103 layers the stdin control protocol on top. The
+	// ctx lets the approver block on an out-of-band decision and unblock on
+	// cancellation. Ignored under AutoApply (no gate at all); nil keeps the
+	// interactive stdin gate. Honored by RunLoop only — the single-shot
+	// Run path keeps its own stdin gate.
+	Approver func(ctx context.Context, planBytes []byte) (ConfirmResult, error)
 }
 
 // Output format values for RunOptions.OutputFormat. Mirrors the

@@ -136,6 +136,42 @@ func finalLog(iterations []IterationLog) *IterationLog {
 	return &iterations[len(iterations)-1]
 }
 
+// resolveGate builds the plan-confirm gate for one iteration (spec-67 §10).
+//
+// Precedence: under --auto-apply there is no gate (nil); an injected
+// RunOptions.Approver replaces the built-in gate (#102 — moongit drives
+// approval over its own channel); otherwise the built-in stdin gate runs.
+// The built-in path needs an interactive terminal, except a step-style run
+// whose bulk auto-approve is already engaged (ConfirmPlanStep short-circuits
+// without reading stdin). A missing TTY there returns a non-nil terminal
+// *LoopResult plus the error for RunLoop to propagate; in every other case
+// the *LoopResult is nil.
+func resolveGate(ctx context.Context, opts RunOptions, planBytes []byte, stepGate *StepGateState, iterations []IterationLog) (planGate, *LoopResult, error) {
+	if opts.AutoApply {
+		return nil, nil, nil
+	}
+	if opts.Approver != nil {
+		return func() (ConfirmResult, error) { return opts.Approver(ctx, planBytes) }, nil, nil
+	}
+	needsTTY := true
+	if opts.Style == StyleStep && (stepGate.ApprovedThread || stepGate.RemainingAutoApprovals > 0) {
+		needsTTY = false
+	}
+	if needsTTY {
+		if ttyErr := EnsureInteractive(os.Stdin); ttyErr != nil {
+			return nil, &LoopResult{Iterations: iterations, StopReason: StopFailed}, ttyErr
+		}
+	}
+	if opts.Style == StyleStep {
+		return func() (ConfirmResult, error) {
+			return ConfirmPlanStep(os.Stdin, os.Stderr, planBytes, stepGate)
+		}, nil, nil
+	}
+	return func() (ConfirmResult, error) {
+		return ConfirmPlan(os.Stdin, os.Stderr, planBytes)
+	}, nil, nil
+}
+
 func RunLoop(ctx context.Context, opts RunOptions) (*LoopResult, error) {
 	if opts.MaxIterations <= 0 {
 		opts.MaxIterations = defaultMaxIterations
@@ -271,34 +307,13 @@ func RunLoop(ctx context.Context, opts RunOptions) (*LoopResult, error) {
 
 		log := executorLogger(opts.OutputFormat)
 
-		// Set up the plan-confirm gate (spec-67 §10). nil gate means
-		// "skip gate; behave like before" — the --auto-apply path. TTY
-		// is only required when a gate is needed, so --auto-apply runs
-		// stay unaffected on non-interactive shells.
-		var gate planGate
-		if !opts.AutoApply {
-			// Step-style with an already-engaged auto-approve gate can
-			// skip the TTY check entirely — ConfirmPlanStep short-
-			// circuits without reading stdin. Plan-style and the first
-			// step call still need an interactive terminal.
-			needsTTY := true
-			if opts.Style == StyleStep && (stepGate.ApprovedThread || stepGate.RemainingAutoApprovals > 0) {
-				needsTTY = false
-			}
-			if needsTTY {
-				if ttyErr := EnsureInteractive(os.Stdin); ttyErr != nil {
-					return &LoopResult{Iterations: iterations, StopReason: StopFailed}, ttyErr
-				}
-			}
-			if opts.Style == StyleStep {
-				gate = func() (ConfirmResult, error) {
-					return ConfirmPlanStep(os.Stdin, os.Stderr, planBytes, stepGate)
-				}
-			} else {
-				gate = func() (ConfirmResult, error) {
-					return ConfirmPlan(os.Stdin, os.Stderr, planBytes)
-				}
-			}
+		// Set up the plan-confirm gate (spec-67 §10): nil under --auto-apply,
+		// an injected RunOptions.Approver when set (#102), else the built-in
+		// stdin gate. A missing TTY on the built-in path returns a terminal
+		// result the caller propagates.
+		gate, gateStop, gateErr := resolveGate(ctx, opts, planBytes, stepGate, iterations)
+		if gateErr != nil {
+			return gateStop, gateErr
 		}
 
 		outcome, err := applyPlanIteration(ctx, wrappedBytes, opts.RepoRoot, log, gate, opts.Policy, opts.OutputFormat)

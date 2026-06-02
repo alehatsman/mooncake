@@ -738,6 +738,82 @@ func TestRunLoop_PreCancelledContext_StopsImmediately(t *testing.T) {
 	}
 }
 
+// TestRunLoop_InjectedApprover_ApprovesAndExecutes covers #102: an injected
+// RunOptions.Approver replaces the stdin gate. It must be called with the
+// plan bytes, and OutcomeApply must let the plan run — all without touching
+// a TTY (stdin is never set up here).
+func TestRunLoop_InjectedApprover_ApprovesAndExecutes(t *testing.T) {
+	repo := t.TempDir()
+	initGitRepo(t, repo)
+	plan := "- file.write:\n    path: hello.txt\n    content: hi\n"
+	stub := &stubLLMClient{plans: []string{plan, "[]\n"}}
+	defer withStubClient(t, stub)()
+
+	var calls int
+	var gotPlan []byte
+	result, err := RunLoop(context.Background(), RunOptions{
+		Goal:          "approve via injected gate",
+		RepoRoot:      repo,
+		MaxIterations: 3,
+		Style:         StyleStep,
+		Approver: func(_ context.Context, planBytes []byte) (ConfirmResult, error) {
+			calls++
+			gotPlan = planBytes
+			return ConfirmResult{Outcome: OutcomeApply}, nil
+		},
+	})
+	if err != nil {
+		t.Fatalf("RunLoop: %v", err)
+	}
+	if calls != 1 {
+		t.Errorf("approver calls = %d, want 1", calls)
+	}
+	if !strings.Contains(string(gotPlan), "file.write") {
+		t.Errorf("approver got plan %q, want it to contain the file.write step", gotPlan)
+	}
+	if result.StopReason != StopStepDone {
+		t.Errorf("StopReason = %q, want %q", result.StopReason, StopStepDone)
+	}
+	if got, rerr := os.ReadFile(filepath.Join(repo, "hello.txt")); rerr != nil || string(got) != "hi" {
+		t.Errorf("hello.txt = %q (err %v), want %q — approved plan should have executed", got, rerr, "hi")
+	}
+}
+
+// TestRunLoop_InjectedApprover_RejectSkipsExecution covers #102: an injected
+// approver returning OutcomeReject must skip execution. The iteration is
+// logged user_rejected and the mutation never happens.
+func TestRunLoop_InjectedApprover_RejectSkipsExecution(t *testing.T) {
+	repo := t.TempDir()
+	initGitRepo(t, repo)
+	plan := "- file.write:\n    path: hello.txt\n    content: hi\n"
+	stub := &stubLLMClient{plans: []string{plan}}
+	defer withStubClient(t, stub)()
+
+	var calls int
+	result, err := RunLoop(context.Background(), RunOptions{
+		Goal:          "reject via injected gate",
+		RepoRoot:      repo,
+		MaxIterations: 1,
+		Style:         StyleStep,
+		Approver: func(_ context.Context, _ []byte) (ConfirmResult, error) {
+			calls++
+			return ConfirmResult{Outcome: OutcomeReject}, nil
+		},
+	})
+	if err != nil {
+		t.Fatalf("RunLoop: %v", err)
+	}
+	if calls != 1 {
+		t.Errorf("approver calls = %d, want 1", calls)
+	}
+	if result.TerminalStatus() != "user_rejected" {
+		t.Errorf("TerminalStatus = %q, want user_rejected", result.TerminalStatus())
+	}
+	if _, rerr := os.Stat(filepath.Join(repo, "hello.txt")); rerr == nil {
+		t.Error("hello.txt exists — rejected plan must not execute")
+	}
+}
+
 // TestRunLoop_CancelDuringGeneration_StopsCanceled covers #101: a stop that
 // lands while the LLM call is in flight (the common case — thinking models
 // block for minutes) is a clean StopCanceled, not a StopFailed with a
