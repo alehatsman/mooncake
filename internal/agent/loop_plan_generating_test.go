@@ -9,6 +9,7 @@ package agent
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"encoding/json"
 	"io"
 	"os"
@@ -57,7 +58,7 @@ func TestRunLoop_JSON_EmitsPlanGeneratingAndStepList(t *testing.T) {
 	defer cleanup()
 
 	out := captureStdout(t, func() {
-		_, err := RunLoop(RunOptions{
+		_, err := RunLoop(context.Background(), RunOptions{
 			Goal:          "say hello",
 			RepoRoot:      repo,
 			MaxIterations: 2,
@@ -142,7 +143,7 @@ func TestRunLoop_Text_NoPlanGeneratingNoise(t *testing.T) {
 	defer cleanup()
 
 	out := captureStdout(t, func() {
-		_, err := RunLoop(RunOptions{
+		_, err := RunLoop(context.Background(), RunOptions{
 			Goal:          "say hello",
 			RepoRoot:      repo,
 			MaxIterations: 2,

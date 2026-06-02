@@ -17,9 +17,21 @@ import (
 type stubLLMClient struct {
 	plans []string
 	calls int
+	// onCall, when non-nil, runs at the start of each GeneratePlan call
+	// (1-based call number). Lets a test cancel the run ctx mid-generation
+	// to exercise the #101 cancellation paths.
+	onCall func(call int)
 }
 
-func (s *stubLLMClient) GeneratePlan(_ context.Context, _, _, _ string) (string, error) {
+func (s *stubLLMClient) GeneratePlan(ctx context.Context, _, _, _ string) (string, error) {
+	if s.onCall != nil {
+		s.onCall(s.calls + 1)
+	}
+	// Honor a ctx cancelled by onCall (or the caller) so this stub behaves
+	// like a real provider whose call is aborted when the run stops.
+	if err := ctx.Err(); err != nil {
+		return "", err
+	}
 	if s.calls >= len(s.plans) {
 		return "", errors.New("stub exhausted")
 	}
@@ -290,7 +302,7 @@ func TestRunLoop_StyleStep_EmptyPlanReturnsStepDone(t *testing.T) {
 	cleanup := withStubClient(t, stub)
 	defer cleanup()
 
-	result, err := RunLoop(RunOptions{
+	result, err := RunLoop(context.Background(), RunOptions{
 		Goal:          "no-op",
 		RepoRoot:      repo,
 		MaxIterations: 3,
@@ -328,7 +340,7 @@ func TestRunLoop_StyleStep_MultiStepRejected(t *testing.T) {
 	cleanup := withStubClient(t, stub)
 	defer cleanup()
 
-	result, err := RunLoop(RunOptions{
+	result, err := RunLoop(context.Background(), RunOptions{
 		Goal:          "reject multi-step",
 		RepoRoot:      repo,
 		MaxIterations: 3,
@@ -371,7 +383,7 @@ func TestRunLoop_StyleStep_FeedsResultBack(t *testing.T) {
 	cleanup := withStubClient(t, stub)
 	defer cleanup()
 
-	result, err := RunLoop(RunOptions{
+	result, err := RunLoop(context.Background(), RunOptions{
 		Goal:          "feed-back",
 		RepoRoot:      repo,
 		MaxIterations: 3,
@@ -409,7 +421,7 @@ func TestRunLoop_RepeatedFailure_ShortCircuits(t *testing.T) {
 	cleanup := withStubClient(t, stub)
 	defer cleanup()
 
-	result, err := RunLoop(RunOptions{
+	result, err := RunLoop(context.Background(), RunOptions{
 		Goal:          "do the thing",
 		RepoRoot:      repo,
 		MaxIterations: 5,
@@ -446,7 +458,7 @@ func TestRunLoop_DistinctFailures_DoNotShortCircuit(t *testing.T) {
 	cleanup := withStubClient(t, stub)
 	defer cleanup()
 
-	result, err := RunLoop(RunOptions{
+	result, err := RunLoop(context.Background(), RunOptions{
 		Goal:          "do the thing",
 		RepoRoot:      repo,
 		MaxIterations: 3,
@@ -475,7 +487,7 @@ func TestRunLoop_StylePlan_NoFileChange_Repro(t *testing.T) {
 	cleanup := withStubClient(t, stub)
 	defer cleanup()
 
-	result, err := RunLoop(RunOptions{
+	result, err := RunLoop(context.Background(), RunOptions{
 		Goal:          "print hello 10 times",
 		RepoRoot:      repo,
 		MaxIterations: 3,
@@ -514,7 +526,7 @@ func TestRunLoop_StylePlan_InheritedDirtDoesNotBlockStopSuccess(t *testing.T) {
 	cleanup := withStubClient(t, stub)
 	defer cleanup()
 
-	result, err := RunLoop(RunOptions{
+	result, err := RunLoop(context.Background(), RunOptions{
 		Goal:          "print hello 10 times",
 		RepoRoot:      repo,
 		MaxIterations: 3,
@@ -556,7 +568,7 @@ func TestRunLoop_StyleStep_NoChangeStall(t *testing.T) {
 	cleanup := withStubClient(t, stub)
 	defer cleanup()
 
-	result, err := RunLoop(RunOptions{
+	result, err := RunLoop(context.Background(), RunOptions{
 		Goal:          "spin forever",
 		RepoRoot:      repo,
 		MaxIterations: 5,
@@ -598,7 +610,7 @@ func TestRunLoop_StyleStep_ProgressResetsStall(t *testing.T) {
 	cleanup := withStubClient(t, stub)
 	defer cleanup()
 
-	result, err := RunLoop(RunOptions{
+	result, err := RunLoop(context.Background(), RunOptions{
 		Goal:          "do real work with pauses",
 		RepoRoot:      repo,
 		MaxIterations: 6,
@@ -668,7 +680,7 @@ func TestRunLoop_RelativePathResolvesAgainstRepoRoot(t *testing.T) {
 	cleanup := withStubClient(t, stub)
 	defer cleanup()
 
-	_, err := RunLoop(RunOptions{
+	_, err := RunLoop(context.Background(), RunOptions{
 		Goal:          "create hello.txt with relative path",
 		RepoRoot:      repo,
 		MaxIterations: 3,
@@ -686,5 +698,73 @@ func TestRunLoop_RelativePathResolvesAgainstRepoRoot(t *testing.T) {
 	}
 	if string(got) != "hi" {
 		t.Errorf("hello.txt content = %q, want %q", string(got), "hi")
+	}
+}
+
+// TestRunLoop_PreCancelledContext_StopsImmediately covers #101: a context
+// already cancelled when RunLoop is entered stops at the top-of-loop guard
+// before any LLM call or execution, returning StopCanceled with no
+// iterations recorded.
+func TestRunLoop_PreCancelledContext_StopsImmediately(t *testing.T) {
+	repo := t.TempDir()
+	initGitRepo(t, repo)
+	stub := &stubLLMClient{plans: []string{"[]\n"}}
+	defer withStubClient(t, stub)()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel() // cancelled before the loop runs
+
+	result, err := RunLoop(ctx, RunOptions{
+		Goal:          "never runs",
+		RepoRoot:      repo,
+		MaxIterations: 3,
+		AutoApply:     true,
+		Style:         StyleStep,
+	})
+	if err != nil {
+		t.Fatalf("RunLoop returned error on cancel (want clean stop): %v", err)
+	}
+	if result.StopReason != StopCanceled {
+		t.Errorf("StopReason = %q, want %q", result.StopReason, StopCanceled)
+	}
+	if len(result.Iterations) != 0 {
+		t.Errorf("Iterations = %d, want 0 (cancelled before first iteration)", len(result.Iterations))
+	}
+	if stub.calls != 0 {
+		t.Errorf("LLM calls = %d, want 0 (cancelled before generation)", stub.calls)
+	}
+	if result.FinalLog != nil {
+		t.Errorf("FinalLog = %v, want nil (no iteration ran)", result.FinalLog)
+	}
+}
+
+// TestRunLoop_CancelDuringGeneration_StopsCanceled covers #101: a stop that
+// lands while the LLM call is in flight (the common case — thinking models
+// block for minutes) is a clean StopCanceled, not a StopFailed with a
+// returned error. The stub cancels the run ctx at the start of the first
+// generation call.
+func TestRunLoop_CancelDuringGeneration_StopsCanceled(t *testing.T) {
+	repo := t.TempDir()
+	initGitRepo(t, repo)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	stub := &stubLLMClient{
+		plans:  []string{"[]\n"},
+		onCall: func(_ int) { cancel() },
+	}
+	defer withStubClient(t, stub)()
+
+	result, err := RunLoop(ctx, RunOptions{
+		Goal:          "cancel mid-generation",
+		RepoRoot:      repo,
+		MaxIterations: 3,
+		AutoApply:     true,
+		Style:         StyleStep,
+	})
+	if err != nil {
+		t.Fatalf("RunLoop returned error on cancel (want clean stop): %v", err)
+	}
+	if result.StopReason != StopCanceled {
+		t.Errorf("StopReason = %q, want %q", result.StopReason, StopCanceled)
 	}
 }

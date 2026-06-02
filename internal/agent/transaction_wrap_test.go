@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -158,7 +159,7 @@ func TestTransactionWrap_Step3FailureRollsBackToPreState(t *testing.T) {
 		t.Fatalf("write plan: %v", err)
 	}
 
-	_, err := Run(RunOptions{
+	_, err := Run(context.Background(), RunOptions{
 		Goal:     "regression: step 3 must trigger LIFO rollback",
 		PlanPath: planPath,
 		RepoRoot: tmpDir,

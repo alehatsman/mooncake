@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/signal"
 	"path/filepath"
+	"syscall"
 	"time"
 
 	"github.com/urfave/cli/v2"
@@ -127,6 +129,15 @@ func agentRunAction(c *cli.Context) error {
 		return fmt.Errorf("failed to get working directory: %w", err)
 	}
 
+	// #101: cancel the run on Ctrl-C / SIGTERM. NotifyContext flips the
+	// ctx to cancelled on the first signal; the agent loop stops at the
+	// next safe point and rolls back any in-flight transaction. A second
+	// signal still hard-kills via Go's default disposition (NotifyContext
+	// restores it after the first). Parented on c.Context so the urfave
+	// app's own cancellation still propagates.
+	ctx, stop := signal.NotifyContext(c.Context, os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
 	opts := agent.RunOptions{
 		Goal:          goal,
 		PlanPath:      planPath,
@@ -144,7 +155,7 @@ func agentRunAction(c *cli.Context) error {
 	}
 
 	if planPath == "" && !useStdin {
-		result, loopErr := agent.RunLoop(opts)
+		result, loopErr := agent.RunLoop(ctx, opts)
 		if loopErr != nil {
 			// The loop's own NDJSON/text stream already conveyed per-step
 			// detail; the human-readable summary goes to stdout only in
@@ -180,7 +191,7 @@ func agentRunAction(c *cli.Context) error {
 
 	opts.PlanPath = planPath
 
-	log, err := agent.Run(opts)
+	log, err := agent.Run(ctx, opts)
 	if err != nil {
 		return err
 	}

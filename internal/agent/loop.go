@@ -125,7 +125,18 @@ func (r *LoopResult) TerminalStatus() string {
 	return worst
 }
 
-func RunLoop(opts RunOptions) (*LoopResult, error) {
+// finalLog returns the last recorded iteration as a LoopResult's FinalLog,
+// or nil when the loop ended before any iteration was recorded (e.g. a
+// cancellation on the very first iteration). Used by the #101 cancel paths,
+// which stop without writing a new iteration log of their own.
+func finalLog(iterations []IterationLog) *IterationLog {
+	if len(iterations) == 0 {
+		return nil
+	}
+	return &iterations[len(iterations)-1]
+}
+
+func RunLoop(ctx context.Context, opts RunOptions) (*LoopResult, error) {
 	if opts.MaxIterations <= 0 {
 		opts.MaxIterations = defaultMaxIterations
 	}
@@ -183,19 +194,23 @@ func RunLoop(opts RunOptions) (*LoopResult, error) {
 	}
 
 	for i := 1; i <= opts.MaxIterations; i++ {
+		// #101: stop cleanly between iterations on cancellation (Ctrl-C,
+		// moongit `stop`, parent timeout). No work is in flight here, so
+		// there's nothing to roll back — just return the iterations run so
+		// far. FinalLog is the last completed iteration, or nil if cancelled
+		// before any ran.
+		if ctx.Err() != nil {
+			return &LoopResult{Iterations: iterations, StopReason: StopCanceled, FinalLog: finalLog(iterations)}, nil
+		}
+
 		iterNum, err := NextIterationNumber(opts.RepoRoot)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get iteration number: %w", err)
 		}
 
-		snap, err := snapshot.Collect(opts.RepoRoot)
+		snapJSON, err := collectSnapshotJSON(opts.RepoRoot)
 		if err != nil {
-			return nil, fmt.Errorf("failed to collect snapshot: %w", err)
-		}
-
-		snapJSON, err := json.Marshal(snap)
-		if err != nil {
-			return nil, fmt.Errorf("failed to marshal snapshot: %w", err)
+			return nil, err
 		}
 
 		systemPrompt, userPrompt, err := BuildPrompt(PlanInput{
@@ -209,38 +224,13 @@ func RunLoop(opts RunOptions) (*LoopResult, error) {
 			return nil, fmt.Errorf("failed to build prompt: %w", err)
 		}
 
-		// #74/#76: a plan-phase publisher live for the whole planner call.
-		// It emits the plan.generating "started" bracket and then streams
-		// planner.delta chunks as the LLM generates, so a --output-format
-		// json consumer sees live content instead of dead air until
-		// plan.loaded (moongit#133). Scoped to the plan phase and Closed
-		// before sanitize/apply so it never races applyPlanIteration's own
-		// publisher on stdout (cf. MT-53 events-drop-on-close). No-op-ish in
-		// text mode for the bracket; deltas do render live there.
-		planPub := events.NewPublisher()
-		planPub.Subscribe(logger.NewConsoleSubscriber(logger.InfoLevel, consoleLogFormat(opts.OutputFormat), false))
-
-		// F040(a): bound a single generation with a generous deadline.
-		// The Claude client no longer carries a 60s overall timeout;
-		// ctx is the budget. Per-iteration cancel keeps a stuck call
-		// from blocking the rest of the agent loop. The budget is the
-		// run's LLMTimeout override, or the built-in default (#80).
-		genCtx, cancelGen := context.WithTimeout(context.Background(), opts.planGenTimeout())
-		rawPlan, err := streamPlan(genCtx, client, planPub, iterNum, opts, systemPrompt, userPrompt)
-		cancelGen()
-		// Close flushes the bracket + every delta to stdout and joins the
-		// publisher goroutine BEFORE applyPlanIteration's publisher can
-		// start writing — keeping the two phases' stdout strictly ordered.
-		planPub.Close()
-		if opts.OutputFormat != OutputFormatJSON {
-			// Terminate the live-streamed (un-newlined) planner output with a
-			// newline so the following step markers / confirm prompt don't
-			// glue onto the last delta. Must NOT run in JSON mode — a raw byte
-			// on stdout would corrupt the NDJSON event stream.
-			_, _ = fmt.Fprintln(os.Stdout)
+		rawPlan, stop, genErr := generatePlan(ctx, client, iterNum, iterations, opts, systemPrompt, userPrompt)
+		if stop != nil {
+			// #101: run ctx cancelled mid-generation — clean StopCanceled.
+			return stop, nil
 		}
-		if err != nil {
-			return terminate(iterNum, "", "generation_failed", err.Error(), StopFailed, err)
+		if genErr != nil {
+			return terminate(iterNum, "", "generation_failed", genErr.Error(), StopFailed, genErr)
 		}
 
 		planBytes, err := SanitizePlan(rawPlan)
@@ -311,9 +301,18 @@ func RunLoop(opts RunOptions) (*LoopResult, error) {
 			}
 		}
 
-		outcome, err := applyPlanIteration(wrappedBytes, opts.RepoRoot, log, gate, opts.Policy, opts.OutputFormat)
+		outcome, err := applyPlanIteration(ctx, wrappedBytes, opts.RepoRoot, log, gate, opts.Policy, opts.OutputFormat)
 		if err != nil {
 			return nil, err
+		}
+		// #101: a mid-apply cancellation. executor.Start returned a
+		// ctx-cancel error (now in outcome.ExecErr) after stopping between
+		// steps; for an in-step interrupt it already ran the transaction's
+		// LIFO rollback. Report StopCanceled instead of letting
+		// concludeIteration record the cancel as an execution_failed
+		// iteration — the run was stopped, not broken.
+		if ctx.Err() != nil {
+			return &LoopResult{Iterations: iterations, StopReason: StopCanceled, FinalLog: finalLog(iterations)}, nil
 		}
 		if !outcome.ValidationOK {
 			errMsg := ""
@@ -395,6 +394,56 @@ func RunLoop(opts RunOptions) (*LoopResult, error) {
 		StopReason: StopMaxReached,
 		FinalLog:   finalLog,
 	}, nil
+}
+
+// collectSnapshotJSON gathers the repo snapshot and marshals it to JSON for
+// the planner prompt. Folds the two error-returning steps into one so the
+// per-iteration body in RunLoop stays under the cyclomatic cap.
+func collectSnapshotJSON(repoRoot string) ([]byte, error) {
+	snap, err := snapshot.Collect(repoRoot)
+	if err != nil {
+		return nil, fmt.Errorf("failed to collect snapshot: %w", err)
+	}
+	snapJSON, err := json.Marshal(snap)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal snapshot: %w", err)
+	}
+	return snapJSON, nil
+}
+
+// generatePlan runs one iteration's planner call: it sets up the plan-phase
+// publisher (#74/#76 — the plan.generating bracket + live planner.delta
+// stream a json consumer renders, moongit#133), bounds the call with the
+// run's per-iteration LLM budget (#80), and returns the raw plan text.
+//
+// It returns a non-nil *LoopResult when the run ctx was cancelled
+// mid-generation (#101): a stop most often lands here, since thinking models
+// block for minutes, and that's a clean StopCanceled rather than a
+// StopFailed with a returned error. A real generation failure comes back as
+// the error. The plan-phase publisher is owned and Closed here so it never
+// races applyPlanIteration's publisher on stdout (cf. MT-53), and the
+// trailing newline (text mode only — a raw byte would corrupt the NDJSON
+// stream) keeps streamed planner output from gluing onto the next marker.
+func generatePlan(ctx context.Context, client llm.Client, iterNum int, iterations []IterationLog, opts RunOptions, systemPrompt, userPrompt string) (string, *LoopResult, error) {
+	planPub := events.NewPublisher()
+	planPub.Subscribe(logger.NewConsoleSubscriber(logger.InfoLevel, consoleLogFormat(opts.OutputFormat), false))
+
+	genCtx, cancelGen := context.WithTimeout(ctx, opts.planGenTimeout())
+	rawPlan, err := streamPlan(genCtx, client, planPub, iterNum, opts, systemPrompt, userPrompt)
+	cancelGen()
+	planPub.Close()
+	if opts.OutputFormat != OutputFormatJSON {
+		_, _ = fmt.Fprintln(os.Stdout)
+	}
+	if err != nil {
+		// Only a cancelled *run* ctx is a stop; genCtx's own per-iteration
+		// timeout is a separate deadline and stays a generation failure.
+		if ctx.Err() != nil {
+			return "", &LoopResult{Iterations: iterations, StopReason: StopCanceled, FinalLog: finalLog(iterations)}, nil
+		}
+		return "", nil, err
+	}
+	return rawPlan, nil, nil
 }
 
 // streamPlan runs the planner call for one iteration, emitting the
@@ -675,7 +724,7 @@ type planGate func() (ConfirmResult, error)
 // gate is the plan-confirm gate callback. Pass nil to skip the gate
 // (--auto-apply path). When gate returns an edited plan, the tempfile
 // is rewritten with the edited bytes before executor.Start runs.
-func applyPlanIteration(wrappedBytes []byte, repoRoot string, log logger.Logger, gate planGate, policy *executor.Policy, outputFormat string) (iterationOutcome, error) {
+func applyPlanIteration(ctx context.Context, wrappedBytes []byte, repoRoot string, log logger.Logger, gate planGate, policy *executor.Policy, outputFormat string) (iterationOutcome, error) {
 	var out iterationOutcome
 	tmpFile, err := createPlanTempFile(repoRoot)
 	if err != nil {
@@ -742,7 +791,7 @@ func applyPlanIteration(wrappedBytes []byte, repoRoot string, log logger.Logger,
 	// termination half of this work — see output_capture.go).
 	capture := newStdoutCapture(captureWriter(outputFormat))
 	publisher.Subscribe(capture)
-	out.ExecErr = executor.Start(context.Background(), executor.StartConfig{
+	out.ExecErr = executor.Start(ctx, executor.StartConfig{
 		ConfigFilePath: tmpFile.Name(),
 		Policy:         policy,
 	}, log, publisher)

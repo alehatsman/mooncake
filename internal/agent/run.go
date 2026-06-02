@@ -15,7 +15,7 @@ import (
 	"github.com/alehatsman/mooncake/internal/snapshot"
 )
 
-func Run(opts RunOptions) (*IterationLog, error) {
+func Run(ctx context.Context, opts RunOptions) (*IterationLog, error) {
 	if opts.AutoApply {
 		fmt.Fprintln(os.Stderr, AutoApplyWarning)
 	}
@@ -124,10 +124,10 @@ func Run(opts RunOptions) (*IterationLog, error) {
 	// corrupt the NDJSON event stream.
 	publisher.Subscribe(newStdoutCapture(captureWriter(opts.OutputFormat)))
 
-	// F016: agent.Run doesn't currently carry a context; the agent loop
-	// is invoked from CLI and CLI-level signal handling tears down the
-	// process. Use Background until a follow-up plumbs ctx through Run.
-	execErr := executor.Start(context.Background(), executor.StartConfig{
+	// #101: the run's context flows to the executor so a cancellation
+	// (Ctrl-C, parent timeout) stops execution between steps and, for an
+	// in-step interrupt, runs the transaction's LIFO rollback. Closes F016.
+	execErr := executor.Start(ctx, executor.StartConfig{
 		ConfigFilePath: tmpFile.Name(),
 		Policy:         opts.Policy,
 	}, log, publisher)

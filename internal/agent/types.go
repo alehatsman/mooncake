@@ -182,4 +182,11 @@ const (
 	// StopStepDone fires under --style step when the model emits an
 	// empty plan, the documented "goal reached" signal (spec-67 §12.3).
 	StopStepDone StopReason = "step_done"
+	// StopCanceled fires when the run's context is cancelled — an
+	// operator Ctrl-C, a moongit-driven `stop` control message, or a
+	// parent timeout. The loop stops at the next safe point: between
+	// iterations it returns immediately; mid-apply the executor stops
+	// between steps and (for an in-step interrupt) runs the
+	// transaction's LIFO rollback before this fires (#101).
+	StopCanceled StopReason = "canceled"
 )

@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -125,7 +126,7 @@ func TestRunIntegration(t *testing.T) {
 		AutoApply: true, // tests run non-interactively; gate refuses w/o TTY
 	}
 
-	log, err := Run(opts)
+	log, err := Run(context.Background(), opts)
 	if err != nil {
 		t.Fatalf("Run failed: %v", err)
 	}
