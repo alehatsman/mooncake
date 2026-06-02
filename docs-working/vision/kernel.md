@@ -228,14 +228,21 @@ ship.
 
 ### R4. Plugin / provider ecosystem explosion
 
-Terraform's 3000 providers is the grave. The closed action set is
-the feature that makes the kernel typed end-to-end; opening it
-breaks every property in the comparison table.
+Terraform's 3000 providers is the grave. What makes the kernel typed
+end-to-end is that **every action carries the four properties** — *not*
+that the set is small. The threat to guard against is an **untyped**
+extension boundary (downloaded `.so` / WASM / opaque RPC), which can't
+answer Diff/Reverse/Cost/Permissions and so collapses to `LLM + shell +
+hope` for those actions.
 
-Out-of-tree integrations are **separate tools that produce Mooncake
-YAML**, not plugins inside the runtime. If a need is real and
-recurring, it becomes a built-in action via the normal spec path.
-If it's one-off, it stays in `shell:`. There is no middle layer.
+The sanctioned extension is therefore the typed `Handler` ABI itself,
+in two shapes: **built-in** (recurring need, normal spec path) and
+**consumer-registered, compile-time** (a Go consumer imports Mooncake
+and registers its own typed handlers — the agent-framework path, see
+[`agent_framework.md`](./agent_framework.md)). Both *spread* the typed
+contract; neither dilutes it. A one-off stays in `shell:`. What stays
+forbidden: a runtime-loaded, versioned, untyped plugin marketplace.
+The line is *compile-time + typed*, not *no extension at all*.
 
 ---
 
@@ -292,6 +299,9 @@ What does *not* update this doc:
   model. Operational complement to this doc.
 - [`non_goals.md`](./non_goals.md) — the seven explicit refusals.
   Each one protects a column of the comparison table above.
+- [`agent_framework.md`](./agent_framework.md) — how the kernel becomes
+  a framework for building agents (compile-time typed action extension)
+  without ceasing to be the kernel. Refines R4 above.
 - [`good_lessons_from_other_tools.md`](./good_lessons_from_other_tools.md)
   — what 30 years of provisioning tooling got right.
 - [`bad_lessons_from_other_tools.md`](./bad_lessons_from_other_tools.md)

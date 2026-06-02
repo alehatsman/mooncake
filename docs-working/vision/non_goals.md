@@ -54,14 +54,35 @@ reading the docs?" If no, don't ship it.
 
 ### 2. No provider / plugin marketplace
 
-The closed action set is a feature. Out-of-tree integrations are
-*separate tools that produce Mooncake YAML*, not plugins inside the
-runtime. If a need is real and recurring, it becomes a built-in action.
-If it's one-off, it stays in `shell`. **There is no middle layer.**
+The closed action set is a feature — but "closed" means **the typing
+contract is mandatory, not that the count is fixed.** The moat is that
+every action in a plan carries the four typed properties (Diff /
+Reverse / Cost / Permissions; see [`kernel.md`](./kernel.md)), *not*
+that the set is small.
+
+So there is exactly one sanctioned way to add an action: **implement
+the typed `Handler` ABI.** Two shapes qualify:
+
+- **Built-in** — a real, recurring need lands in-tree via the normal
+  spec path.
+- **Consumer-registered, compile-time** — a consumer (e.g. moongit,
+  `openclaw`) imports Mooncake as a Go library and registers its own
+  typed handlers (`moongit.issue`, …) into the registry, compiling its
+  own agent binary. This is the *agent-framework* path
+  ([`agent_framework.md`](./agent_framework.md)). It does not dilute the
+  moat — it spreads the typed contract to the consumer's actions.
+
+Everything else stays out. **No runtime-loaded plugins** (`.so` / WASM /
+subprocess marketplace), **no versioned third-party provider
+ecosystem**, **no untyped custom action**. A one-off stays in `shell`.
+There is no untyped middle layer.
 
 > Terraform's 3000 providers, K8s operators, Jenkins plugins —
 > the ecosystem outgrows the runtime, version skew everywhere,
-> "we deprecated `aws_eip` last year" is a permanent state.
+> "we deprecated `aws_eip` last year" is a permanent state. The
+> distinction that avoids this: extension is *compile-time, in-process,
+> and typed* (the `Handler` ABI is the boundary), never a runtime,
+> downloaded, untyped plugin.
 
 ### 3. No control-plane sprawl
 
@@ -128,7 +149,7 @@ historical referent for each:
 | Never build | Because (which system died from it) |
 |---|---|
 | Manifest compilation layer | Puppet's path to complexity |
-| Plugin SDK / marketplace | Terraform provider ecosystem trap |
+| Runtime plugin marketplace (`.so`/WASM/downloaded) | Terraform provider ecosystem trap — note: *compile-time, typed* `Handler` extension is allowed (see #2 + [`agent_framework.md`](./agent_framework.md)) |
 | CRD-shaped controller architecture | Kubernetes sprawl |
 | Pure-functional system semantics | Nix usability cliff |
 | Jinja-as-programming-language | Ansible YAML decay |
@@ -166,5 +187,9 @@ invent them:
 - [`action-design-principles.md`](./action-design-principles.md)
   — the 11 design rules for new actions; a per-action restatement of
   many of these non-goals.
+- [`agent_framework.md`](./agent_framework.md) — how #2 is refined for
+  compile-time typed action extension (the agent-framework direction).
+- [`kernel.md`](./kernel.md) — the four typed properties each non-goal
+  protects.
 - [`README.md`](./README.md) — stream overview and what's actively
   drafted.
