@@ -178,6 +178,36 @@ type RunServices struct {
 	// every run path that doesn't opt in (CLI apply, fleet, tests). Set
 	// from StartConfig.Policy at run construction. See policy.go.
 	Policy *Policy
+
+	// Registry is the action registry the run resolves handlers against.
+	// nil means "use the process-wide global" — every existing caller (CLI,
+	// MCP, fleet, tests) leaves it nil and keeps the prior behavior. The
+	// agent-framework path (a consumer compiling its own binary with custom
+	// typed handlers) sets it from StartConfig.Registry so registered actions
+	// like moongit.issue resolve and execute. Read through ActionRegistry(),
+	// never directly, so the nil-fallback stays in one place.
+	Registry *actions.Registry
+}
+
+// ActionRegistry returns the registry handlers resolve against: the injected
+// RunServices.Registry, or the process-wide global when none was injected.
+// This is the single fallback point that keeps the global-default callers
+// byte-for-byte unchanged while letting the framework inject a custom registry.
+func (s *RunServices) ActionRegistry() *actions.Registry {
+	if s != nil && s.Registry != nil {
+		return s.Registry
+	}
+	return actions.GlobalRegistry()
+}
+
+// ActionRegistry resolves the run's registry from the shared services,
+// tolerating the nil-Svc execution contexts that some tests construct
+// directly (those fall through to the global, matching prior behavior).
+func (ec *ExecutionContext) ActionRegistry() *actions.Registry {
+	if ec != nil && ec.Svc != nil {
+		return ec.Svc.ActionRegistry()
+	}
+	return actions.GlobalRegistry()
 }
 
 // LoopContext holds the current loop iteration state for a step executing

@@ -130,6 +130,7 @@ func Run(ctx context.Context, opts RunOptions) (*IterationLog, error) {
 	execErr := executor.Start(ctx, executor.StartConfig{
 		ConfigFilePath: tmpFile.Name(),
 		Policy:         opts.Policy,
+		Registry:       opts.Registry,
 	}, log, publisher)
 
 	if execErr != nil {

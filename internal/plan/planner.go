@@ -35,9 +35,9 @@ func resolvePath(path, baseDir string) (string, error) {
 
 // validatePlatformSupport checks if the action is supported on the current platform.
 // Returns an error if the action is not supported.
-func validatePlatformSupport(actionType string) error {
-	// Get handler from registry
-	handler, ok := actions.Get(actionType)
+func (p *Planner) validatePlatformSupport(actionType string) error {
+	// Get handler from the planner's registry (injected or global)
+	handler, ok := p.actionRegistry().Get(actionType)
 	if !ok {
 		// Action not in registry - might be legacy action, skip validation
 		return nil
@@ -87,6 +87,24 @@ type Planner struct {
 	// `vars: { TOKEN: !secret env:FOO }` flows the sentinel marker
 	// through to subsequent template renders.
 	redactor *security.Redactor
+
+	// reg is the action registry the planner resolves handlers against
+	// for platform-support and transaction-reversibility checks. nil means
+	// "use the process-wide global" — every caller that doesn't set
+	// PlannerConfig.Registry keeps the prior behavior. Set by BuildPlan from
+	// the config. Read through actionRegistry(), never directly.
+	reg *actions.Registry
+}
+
+// actionRegistry returns the planner's injected registry, or the
+// process-wide global when none was injected. Single nil-fallback point so
+// the default callers stay unchanged while the framework can inject a
+// custom registry (so custom typed actions pass the plan-time checks).
+func (p *Planner) actionRegistry() *actions.Registry {
+	if p != nil && p.reg != nil {
+		return p.reg
+	}
+	return actions.GlobalRegistry()
 }
 
 // IncludeFrame tracks a frame in the include stack for cycle detection and origin tracking
@@ -173,6 +191,13 @@ type PlannerConfig struct {
 	// caller-supplied Variables (highest). An unknown task name is an
 	// error from BuildPlan.
 	TaskName string
+
+	// Registry, when non-nil, is the action registry the planner resolves
+	// handlers against for platform-support and transaction-reversibility
+	// checks. nil means "use the process-wide global" (every existing
+	// caller). The agent-framework path sets it so custom typed actions
+	// registered in a consumer's registry pass the plan-time checks.
+	Registry *actions.Registry
 }
 
 // NewPlanner creates a new Planner instance.
@@ -223,6 +248,8 @@ func (p *Planner) BuildPlan(cfg PlannerConfig) (*Plan, error) {
 	// Read config with validation. readRunConfig already wraps with
 	// "failed to read config:" — passing the error through avoids the
 	// doubled prefix MT-26 reported via the MCP run_plan surface.
+	p.reg = cfg.Registry
+
 	runConfig, err := p.readRunConfig(cfg.ConfigPath)
 	if err != nil {
 		return nil, err
@@ -1058,7 +1085,7 @@ func (p *Planner) compilePlanStep(step config.Step, ctx *ExpansionContext, loopC
 	step.LoopContext = loopCtx
 
 	// Validate platform support
-	if err := validatePlatformSupport(step.ActionType); err != nil {
+	if err := p.validatePlatformSupport(step.ActionType); err != nil {
 		return config.Step{}, fmt.Errorf("platform validation failed for step %q: %w", step.Name, err)
 	}
 

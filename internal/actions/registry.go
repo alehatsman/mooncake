@@ -113,8 +113,35 @@ func (r *Registry) Count() int {
 	return len(r.handlers)
 }
 
+// Clone returns a new Registry pre-populated with this registry's handlers.
+// Handlers are shared by reference (they are stateless value/pointer
+// dispatchers), so the clone is cheap. The maps are independent: registering
+// a new handler in the clone does not touch the original. This is how a
+// consumer obtains a registry seeded with the built-ins (clone the global,
+// then Register its own typed handlers) without an explicit builtin list —
+// see GlobalRegistry and the public facade package.
+func (r *Registry) Clone() *Registry {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	clone := NewRegistry()
+	for name, handler := range r.handlers {
+		clone.handlers[name] = handler
+	}
+	return clone
+}
+
 // Global registry instance used by default.
 var globalRegistry = NewRegistry()
+
+// GlobalRegistry returns the process-wide default registry that init()-time
+// Register calls populate. The executor, planner, and agent loop fall back to
+// it when no registry is injected, so existing callers (CLI, MCP, fleet) keep
+// working unchanged. Framework consumers should Clone it (to inherit the
+// built-ins) rather than mutating it.
+func GlobalRegistry() *Registry {
+	return globalRegistry
+}
 
 // Register registers a handler in the global registry.
 // This is the most common way to register handlers from init() functions.

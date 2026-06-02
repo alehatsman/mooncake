@@ -178,7 +178,9 @@ func (h *Handler) Metadata() actions.ActionMetadata {
 - [type PropertySchema](<#type-propertyschema>)
 - [type RawRunner](<#type-rawrunner>)
 - [type Registry](<#type-registry>)
+  - [func GlobalRegistry() *Registry](<#func-globalregistry>)
   - [func NewRegistry() *Registry](<#func-newregistry>)
+  - [func (r *Registry) Clone() *Registry](<#func-registry-clone>)
   - [func (r *Registry) Count() int](<#func-registry-count>)
   - [func (r *Registry) Get(actionType string) (Handler, bool)](<#func-registry-get>)
   - [func (r *Registry) Has(actionType string) bool](<#func-registry-has>)
@@ -223,7 +225,7 @@ var SystemPathPrefixes = []string{
 }
 ```
 
-## func [Count](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/registry.go#L150>)
+## func [Count](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/registry.go#L177>)
 
 ```go
 func Count() int
@@ -257,7 +259,7 @@ func GetFieldExample(actionName, fieldName string) string
 
 GetFieldExample returns an example value for a field based on schema
 
-## func [Has](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/registry.go#L145>)
+## func [Has](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/registry.go#L172>)
 
 ```go
 func Has(actionType string) bool
@@ -319,7 +321,7 @@ func (Handler) Permissions(step *config.Step) actions.PermissionSet {
 }
 ```
 
-## func [Register](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/registry.go#L128>)
+## func [Register](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/registry.go#L155>)
 
 ```go
 func Register(handler Handler)
@@ -473,7 +475,7 @@ type ActionMetadata struct {
 }
 ```
 
-### func [List](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/registry.go#L140>)
+### func [List](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/registry.go#L167>)
 
 ```go
 func List() []ActionMetadata
@@ -975,7 +977,7 @@ type Handler interface {
 }
 ```
 
-### func [Get](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/registry.go#L135>)
+### func [Get](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/registry.go#L162>)
 
 ```go
 func Get(actionType string) (Handler, bool)
@@ -1371,6 +1373,14 @@ type Registry struct {
 }
 ```
 
+### func [GlobalRegistry](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/registry.go#L142>)
+
+```go
+func GlobalRegistry() *Registry
+```
+
+GlobalRegistry returns the process\-wide default registry that init\(\)\-time Register calls populate. The executor, planner, and agent loop fall back to it when no registry is injected, so existing callers \(CLI, MCP, fleet\) keep working unchanged. Framework consumers should Clone it \(to inherit the built\-ins\) rather than mutating it.
+
 ### func [NewRegistry](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/registry.go#L42>)
 
 ```go
@@ -1378,6 +1388,14 @@ func NewRegistry() *Registry
 ```
 
 NewRegistry creates a new action registry.
+
+### func \(\*Registry\) [Clone](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/registry.go#L123>)
+
+```go
+func (r *Registry) Clone() *Registry
+```
+
+Clone returns a new Registry pre\-populated with this registry's handlers. Handlers are shared by reference \(they are stateless value/pointer dispatchers\), so the clone is cheap. The maps are independent: registering a new handler in the clone does not touch the original. This is how a consumer obtains a registry seeded with the built\-ins \(clone the global, then Register its own typed handlers\) without an explicit builtin list — see GlobalRegistry and the public facade package.
 
 ### func \(\*Registry\) [Count](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/registry.go#L109>)
 

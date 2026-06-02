@@ -32,7 +32,7 @@ func (p *Planner) expandTransaction(step config.Step, ctx *ExpansionContext, pla
 	// plan when we'll bail anyway is messy and would surface a confusing
 	// "successful with errors" state.
 	if !step.AllowIrreversible {
-		if err := checkChildrenReversible(step.Transaction); err != nil {
+		if err := checkChildrenReversible(p.actionRegistry(), step.Transaction); err != nil {
 			return fmt.Errorf("transaction %q: %w (set allow_irreversible: true to override)", step.Name, err)
 		}
 	}
@@ -94,7 +94,7 @@ func (p *Planner) expandTransaction(step config.Step, ctx *ExpansionContext, pla
 // A child whose action is unknown (no registered handler) is also
 // rejected; the schema validator should have caught it earlier but
 // the planner is the final arbiter.
-func checkChildrenReversible(children []config.Step) error {
+func checkChildrenReversible(reg *actions.Registry, children []config.Step) error {
 	for i, child := range children {
 		if len(child.Transaction) > 0 {
 			return fmt.Errorf("child %d (%s): nested transactions are not supported in v1", i, displayName(child))
@@ -103,7 +103,7 @@ func checkChildrenReversible(children []config.Step) error {
 		if actionType == "" {
 			return fmt.Errorf("child %d (%s): no action set", i, displayName(child))
 		}
-		handler, ok := actions.Get(actionType)
+		handler, ok := reg.Get(actionType)
 		if !ok {
 			return fmt.Errorf("child %d (%s): unknown action %q", i, displayName(child), actionType)
 		}

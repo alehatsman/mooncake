@@ -6,7 +6,9 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/alehatsman/mooncake/internal/actions"
 	"github.com/alehatsman/mooncake/internal/config"
+	"github.com/alehatsman/mooncake/internal/schemagen"
 )
 
 // BuildSchemaChunk renders the action vocabulary section of the system
@@ -27,6 +29,35 @@ import (
 //	  - field (type): description
 func BuildSchemaChunk() (string, error) {
 	return buildSchemaChunkFromJSON(config.SchemaJSON())
+}
+
+// BuildSchemaChunkForRegistry renders the same action-vocabulary chunk, but
+// derived from a live registry instead of the embedded schema.json. This is
+// the agent-framework path: a consumer registers custom typed handlers into
+// its registry and they surface to the planner with no schema.json edit and
+// no prompt change.
+//
+// The default registry (nil, or the process-wide global) keeps reading the
+// embedded schema.json so the standard CLI/agentd prompt stays byte-identical
+// — schema.json is the committed, generated source of truth for the built-ins
+// (see schemagen + the schema-generate task). Only a custom/cloned registry
+// takes the schemagen path, generating an in-memory schema from its live
+// handler set.
+func BuildSchemaChunkForRegistry(reg *actions.Registry) (string, error) {
+	if reg == nil || reg == actions.GlobalRegistry() {
+		return buildSchemaChunkFromJSON(config.SchemaJSON())
+	}
+
+	gen := schemagen.NewGenerator(schemagen.GeneratorOptions{Registry: reg})
+	schema, err := gen.Generate()
+	if err != nil {
+		return "", fmt.Errorf("generate schema for registry: %w", err)
+	}
+	raw, err := json.Marshal(schema)
+	if err != nil {
+		return "", fmt.Errorf("marshal registry schema: %w", err)
+	}
+	return buildSchemaChunkFromJSON(raw)
 }
 
 func buildSchemaChunkFromJSON(raw []byte) (string, error) {

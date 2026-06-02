@@ -236,7 +236,7 @@ func (ec *ExecutionContext) runReverse(step config.Step, result *Result) error {
 	if actionType == "" {
 		actionType = step.DetermineActionType()
 	}
-	handler, ok := actions.Get(actionType)
+	handler, ok := ec.ActionRegistry().Get(actionType)
 	if !ok {
 		return fmt.Errorf("reverse %s: unknown action %q", step.Name, actionType)
 	}

@@ -20,6 +20,19 @@ func NewGenerator(opts GeneratorOptions) *Generator {
 	return &Generator{opts: opts}
 }
 
+// registry returns the action registry the generator reads metadata from:
+// the injected GeneratorOptions.Registry, or the process-wide global when
+// none was set. Lets a framework consumer generate a schema from its own
+// registry (built-ins + custom typed handlers) so the agent's planner
+// vocabulary reflects registered actions; every existing caller leaves
+// Registry nil and reads the global, unchanged.
+func (g *Generator) registry() *actions.Registry {
+	if g.opts.Registry != nil {
+		return g.opts.Registry
+	}
+	return actions.GlobalRegistry()
+}
+
 // Generate creates a complete JSON Schema from the action registry.
 func (g *Generator) Generate() (*Schema, error) {
 	schema := &Schema{
@@ -48,7 +61,7 @@ func (g *Generator) Generate() (*Schema, error) {
 	schema.Definitions["task"] = g.generateTaskDefinition()
 
 	// Generate definitions for each action
-	for _, meta := range actions.List() {
+	for _, meta := range g.registry().List() {
 		def, err := g.generateActionDefinition(meta)
 		if err != nil {
 			return nil, fmt.Errorf("failed to generate definition for action %s: %w", meta.Name, err)
@@ -301,7 +314,7 @@ func (g *Generator) generateStepDefinition() (*Definition, error) {
 	}
 
 	// Get all action names for oneOf generation
-	actionMetas := actions.List()
+	actionMetas := g.registry().List()
 	var actionNames []string //nolint:prealloc // Size unknown at compile time
 
 	// Add action fields (will be populated by generateActionDefinition)

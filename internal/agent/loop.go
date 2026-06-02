@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/alehatsman/mooncake/internal/actions"
 	"github.com/alehatsman/mooncake/internal/agent/llm"
 	"github.com/alehatsman/mooncake/internal/config"
 	"github.com/alehatsman/mooncake/internal/events"
@@ -255,6 +256,7 @@ func RunLoop(ctx context.Context, opts RunOptions) (*LoopResult, error) {
 			LastIteration: lastIteration,
 			Style:         opts.Style,
 			Policy:        opts.Policy,
+			Registry:      opts.Registry,
 		})
 		if err != nil {
 			return nil, fmt.Errorf("failed to build prompt: %w", err)
@@ -316,7 +318,7 @@ func RunLoop(ctx context.Context, opts RunOptions) (*LoopResult, error) {
 			return gateStop, gateErr
 		}
 
-		outcome, err := applyPlanIteration(ctx, wrappedBytes, opts.RepoRoot, log, gate, opts.Policy, opts.OutputFormat)
+		outcome, err := applyPlanIteration(ctx, wrappedBytes, opts.RepoRoot, log, gate, opts.Policy, opts.OutputFormat, opts.Registry)
 		// #101: check cancellation BEFORE the error — a stop can surface as
 		// a ctx-cancel error from a blocking gate (#103 control "stop" while
 		// parked at plan.awaiting_approval) or as outcome.ExecErr from
@@ -740,7 +742,7 @@ type planGate func() (ConfirmResult, error)
 // gate is the plan-confirm gate callback. Pass nil to skip the gate
 // (--auto-apply path). When gate returns an edited plan, the tempfile
 // is rewritten with the edited bytes before executor.Start runs.
-func applyPlanIteration(ctx context.Context, wrappedBytes []byte, repoRoot string, log logger.Logger, gate planGate, policy *executor.Policy, outputFormat string) (iterationOutcome, error) {
+func applyPlanIteration(ctx context.Context, wrappedBytes []byte, repoRoot string, log logger.Logger, gate planGate, policy *executor.Policy, outputFormat string, registry *actions.Registry) (iterationOutcome, error) {
 	var out iterationOutcome
 	tmpFile, err := createPlanTempFile(repoRoot)
 	if err != nil {
@@ -810,6 +812,7 @@ func applyPlanIteration(ctx context.Context, wrappedBytes []byte, repoRoot strin
 	out.ExecErr = executor.Start(ctx, executor.StartConfig{
 		ConfigFilePath: tmpFile.Name(),
 		Policy:         policy,
+		Registry:       registry,
 	}, log, publisher)
 	publisher.Close()
 	out.LastStepStdout = capture.Last()

@@ -162,7 +162,7 @@ var KnownRanges = map[string]struct{ Min, Max float64 }{
 }
 ```
 
-## type [Definition](<https://github.com/alehatsman/mooncake/blob/main/internal/schemagen/types.go#L30-L55>)
+## type [Definition](<https://github.com/alehatsman/mooncake/blob/main/internal/schemagen/types.go#L32-L57>)
 
 Definition represents a schema definition \(typically for an action\).
 
@@ -213,7 +213,7 @@ func NewGenerator(opts GeneratorOptions) *Generator
 
 NewGenerator creates a new schema generator with options.
 
-### func \(\*Generator\) [Generate](<https://github.com/alehatsman/mooncake/blob/main/internal/schemagen/generator.go#L24>)
+### func \(\*Generator\) [Generate](<https://github.com/alehatsman/mooncake/blob/main/internal/schemagen/generator.go#L37>)
 
 ```go
 func (g *Generator) Generate() (*Schema, error)
@@ -221,7 +221,7 @@ func (g *Generator) Generate() (*Schema, error)
 
 Generate creates a complete JSON Schema from the action registry.
 
-### func \(\*Generator\) [GenerateOpenAPI](<https://github.com/alehatsman/mooncake/blob/main/internal/schemagen/generator.go#L780>)
+### func \(\*Generator\) [GenerateOpenAPI](<https://github.com/alehatsman/mooncake/blob/main/internal/schemagen/generator.go#L793>)
 
 ```go
 func (g *Generator) GenerateOpenAPI() (*OpenAPISpec, error)
@@ -229,7 +229,7 @@ func (g *Generator) GenerateOpenAPI() (*OpenAPISpec, error)
 
 GenerateOpenAPI generates an OpenAPI 3.0 specification.
 
-### func \(\*Generator\) [GenerateTypeScript](<https://github.com/alehatsman/mooncake/blob/main/internal/schemagen/generator.go#L794>)
+### func \(\*Generator\) [GenerateTypeScript](<https://github.com/alehatsman/mooncake/blob/main/internal/schemagen/generator.go#L807>)
 
 ```go
 func (g *Generator) GenerateTypeScript() (string, error)
@@ -237,7 +237,7 @@ func (g *Generator) GenerateTypeScript() (string, error)
 
 GenerateTypeScript generates TypeScript definitions.
 
-## type [GeneratorOptions](<https://github.com/alehatsman/mooncake/blob/main/internal/schemagen/types.go#L119-L131>)
+## type [GeneratorOptions](<https://github.com/alehatsman/mooncake/blob/main/internal/schemagen/types.go#L121-L141>)
 
 GeneratorOptions configures schema generation behavior.
 
@@ -254,10 +254,18 @@ type GeneratorOptions struct {
 
     // OutputFormat specifies the output format (json, yaml, openapi, typescript)
     OutputFormat string
+
+    // Registry, when non-nil, is the action registry whose handlers the
+    // generator reads metadata from. nil means "use the process-wide global"
+    // — every existing caller (cmd/schema, MCP discovery, cmd/kernel actions)
+    // leaves it unset and reads the global. The agent-framework path sets it
+    // so a consumer's custom typed handlers appear in the generated schema
+    // (and thus the planner's action vocabulary).
+    Registry *actions.Registry
 }
 ```
 
-## type [NotConstraint](<https://github.com/alehatsman/mooncake/blob/main/internal/schemagen/types.go#L73-L75>)
+## type [NotConstraint](<https://github.com/alehatsman/mooncake/blob/main/internal/schemagen/types.go#L75-L77>)
 
 NotConstraint represents a "not" constraint with anyOf clauses.
 
@@ -267,7 +275,7 @@ type NotConstraint struct {
 }
 ```
 
-## type [OneOfConstraint](<https://github.com/alehatsman/mooncake/blob/main/internal/schemagen/types.go#L59-L70>)
+## type [OneOfConstraint](<https://github.com/alehatsman/mooncake/blob/main/internal/schemagen/types.go#L61-L72>)
 
 OneOfConstraint represents a oneOf constraint with required and not clauses. It can also represent complete schema alternatives \(for root\-level oneOf\).
 
@@ -481,7 +489,7 @@ type OpenAPISpec struct {
 }
 ```
 
-## type [Property](<https://github.com/alehatsman/mooncake/blob/main/internal/schemagen/types.go#L78-L100>)
+## type [Property](<https://github.com/alehatsman/mooncake/blob/main/internal/schemagen/types.go#L80-L102>)
 
 Property represents a schema property \(field in an action struct\).
 
@@ -511,7 +519,7 @@ type Property struct {
 }
 ```
 
-## type [RequiredConstraint](<https://github.com/alehatsman/mooncake/blob/main/internal/schemagen/types.go#L103-L105>)
+## type [RequiredConstraint](<https://github.com/alehatsman/mooncake/blob/main/internal/schemagen/types.go#L105-L107>)
 
 RequiredConstraint represents a simple required constraint.
 
@@ -521,7 +529,7 @@ type RequiredConstraint struct {
 }
 ```
 
-## type [Schema](<https://github.com/alehatsman/mooncake/blob/main/internal/schemagen/types.go#L18-L27>)
+## type [Schema](<https://github.com/alehatsman/mooncake/blob/main/internal/schemagen/types.go#L20-L29>)
 
 Schema represents a complete JSON Schema document.
 
@@ -554,7 +562,7 @@ func (s *Schema) GenerateTypeScript() string
 
 GenerateTypeScript generates TypeScript definitions from a schema.
 
-### func \(\*Schema\) [MarshalJSON](<https://github.com/alehatsman/mooncake/blob/main/internal/schemagen/generator.go#L766>)
+### func \(\*Schema\) [MarshalJSON](<https://github.com/alehatsman/mooncake/blob/main/internal/schemagen/generator.go#L779>)
 
 ```go
 func (s *Schema) MarshalJSON() ([]byte, error)
@@ -562,7 +570,7 @@ func (s *Schema) MarshalJSON() ([]byte, error)
 
 MarshalJSON converts the schema to JSON.
 
-### func \(\*Schema\) [MarshalPrettyJSON](<https://github.com/alehatsman/mooncake/blob/main/internal/schemagen/generator.go#L773>)
+### func \(\*Schema\) [MarshalPrettyJSON](<https://github.com/alehatsman/mooncake/blob/main/internal/schemagen/generator.go#L786>)
 
 ```go
 func (s *Schema) MarshalPrettyJSON() ([]byte, error)
@@ -570,7 +578,7 @@ func (s *Schema) MarshalPrettyJSON() ([]byte, error)
 
 MarshalPrettyJSON converts the schema to pretty\-printed JSON.
 
-## type [SchemaRef](<https://github.com/alehatsman/mooncake/blob/main/internal/schemagen/types.go#L111-L116>)
+## type [SchemaRef](<https://github.com/alehatsman/mooncake/blob/main/internal/schemagen/types.go#L113-L118>)
 
 SchemaRef represents a reference to another schema definition. Also used inside anyOf/allOf branches as a lightweight "shape with just a required clause" fragment when neither $ref nor type fits — e.g. runConfig's anyOf: \[\{required: \[steps\]\}, \{required: \[tasks\]\}\].
 

@@ -81,7 +81,7 @@ func ValidateForApply(p *Plan, opts ValidateOptions) error
 
 ValidateForApply is the convenience shim around ValidateForApplyWithReasons that drops the per\-check reason list. Existing callers that only care about pass/fail keep working.
 
-## type [ExpansionContext](<https://github.com/alehatsman/mooncake/blob/main/internal/plan/planner.go#L100-L119>)
+## type [ExpansionContext](<https://github.com/alehatsman/mooncake/blob/main/internal/plan/planner.go#L118-L137>)
 
 ExpansionContext holds the context during plan expansion
 
@@ -122,7 +122,7 @@ type HostFacts struct {
 }
 ```
 
-## type [IncludeFrame](<https://github.com/alehatsman/mooncake/blob/main/internal/plan/planner.go#L93-L97>)
+## type [IncludeFrame](<https://github.com/alehatsman/mooncake/blob/main/internal/plan/planner.go#L111-L115>)
 
 IncludeFrame tracks a frame in the include stack for cycle detection and origin tracking
 
@@ -174,7 +174,7 @@ func LoadPlanFromFile(filePath string) (*Plan, error)
 
 LoadPlanFromFile loads a plan from a JSON or YAML file
 
-## type [Planner](<https://github.com/alehatsman/mooncake/blob/main/internal/plan/planner.go#L71-L90>)
+## type [Planner](<https://github.com/alehatsman/mooncake/blob/main/internal/plan/planner.go#L71-L97>)
 
 Planner builds deterministic execution plans from config files
 
@@ -184,7 +184,7 @@ type Planner struct {
 }
 ```
 
-### func [NewPlanner](<https://github.com/alehatsman/mooncake/blob/main/internal/plan/planner.go#L180>)
+### func [NewPlanner](<https://github.com/alehatsman/mooncake/blob/main/internal/plan/planner.go#L205>)
 
 ```go
 func NewPlanner() (*Planner, error)
@@ -192,7 +192,7 @@ func NewPlanner() (*Planner, error)
 
 NewPlanner creates a new Planner instance. Returns an error if template renderer initialization fails.
 
-### func \(\*Planner\) [BuildPlan](<https://github.com/alehatsman/mooncake/blob/main/internal/plan/planner.go#L222>)
+### func \(\*Planner\) [BuildPlan](<https://github.com/alehatsman/mooncake/blob/main/internal/plan/planner.go#L247>)
 
 ```go
 func (p *Planner) BuildPlan(cfg PlannerConfig) (*Plan, error)
@@ -200,7 +200,7 @@ func (p *Planner) BuildPlan(cfg PlannerConfig) (*Plan, error)
 
 BuildPlan generates a deterministic execution plan from a config file
 
-### func \(\*Planner\) [ExpandStepsWithContext](<https://github.com/alehatsman/mooncake/blob/main/internal/plan/planner.go#L200>)
+### func \(\*Planner\) [ExpandStepsWithContext](<https://github.com/alehatsman/mooncake/blob/main/internal/plan/planner.go#L225>)
 
 ```go
 func (p *Planner) ExpandStepsWithContext(steps []config.Step, variables map[string]interface{}, currentDir string) ([]config.Step, error)
@@ -208,7 +208,7 @@ func (p *Planner) ExpandStepsWithContext(steps []config.Step, variables map[stri
 
 ExpandStepsWithContext expands a list of steps with the given context. This is useful for expanding preset steps which may contain includes, loops, etc. Returns the expanded steps ready for execution.
 
-## type [PlannerConfig](<https://github.com/alehatsman/mooncake/blob/main/internal/plan/planner.go#L159-L176>)
+## type [PlannerConfig](<https://github.com/alehatsman/mooncake/blob/main/internal/plan/planner.go#L177-L201>)
 
 PlannerConfig holds configuration for building a plan
 
@@ -230,6 +230,13 @@ type PlannerConfig struct {
     // caller-supplied Variables (highest). An unknown task name is an
     // error from BuildPlan.
     TaskName string
+
+    // Registry, when non-nil, is the action registry the planner resolves
+    // handlers against for platform-support and transaction-reversibility
+    // checks. nil means "use the process-wide global" (every existing
+    // caller). The agent-framework path sets it so custom typed actions
+    // registered in a consumer's registry pass the plan-time checks.
+    Registry *actions.Registry
 }
 ```
 

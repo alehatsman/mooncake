@@ -14,6 +14,8 @@
 //	json, _ := schema.MarshalJSON()
 package schemagen
 
+import "github.com/alehatsman/mooncake/internal/actions"
+
 // Schema represents a complete JSON Schema document.
 type Schema struct {
 	SchemaURI   string                 `json:"$schema" yaml:"$schema"`
@@ -128,4 +130,12 @@ type GeneratorOptions struct {
 
 	// OutputFormat specifies the output format (json, yaml, openapi, typescript)
 	OutputFormat string
+
+	// Registry, when non-nil, is the action registry whose handlers the
+	// generator reads metadata from. nil means "use the process-wide global"
+	// — every existing caller (cmd/schema, MCP discovery, cmd/kernel actions)
+	// leaves it unset and reads the global. The agent-framework path sets it
+	// so a consumer's custom typed handlers appear in the generated schema
+	// (and thus the planner's action vocabulary).
+	Registry *actions.Registry
 }

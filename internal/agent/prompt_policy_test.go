@@ -62,7 +62,7 @@ func TestRenderPolicyContract_OnlyPopulatedLines(t *testing.T) {
 // after the action vocabulary (the model reads the full action list,
 // then the constraint on which subset it may use).
 func TestBuildSystemPrompt_PolicyContractInjected(t *testing.T) {
-	got, err := buildSystemPrompt(StylePlan, &executor.Policy{DeniedActions: []string{"shell", "cmd"}})
+	got, err := buildSystemPrompt(StylePlan, &executor.Policy{DeniedActions: []string{"shell", "cmd"}}, nil)
 	if err != nil {
 		t.Fatalf("buildSystemPrompt: %v", err)
 	}
@@ -82,7 +82,7 @@ func TestBuildSystemPrompt_PolicyContractInjected(t *testing.T) {
 // a nil policy must not emit a PERMISSIONS CONTRACT block, keeping the
 // unrestricted prompt unchanged.
 func TestBuildSystemPrompt_NoContractWithoutPolicy(t *testing.T) {
-	got, err := buildSystemPrompt(StylePlan, nil)
+	got, err := buildSystemPrompt(StylePlan, nil, nil)
 	if err != nil {
 		t.Fatalf("buildSystemPrompt: %v", err)
 	}

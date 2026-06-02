@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/alehatsman/mooncake/internal/actions"
 	"github.com/alehatsman/mooncake/internal/executor"
 )
 
@@ -82,6 +83,15 @@ type RunOptions struct {
 	// interactive stdin gate. Honored by RunLoop only — the single-shot
 	// Run path keeps its own stdin gate.
 	Approver func(ctx context.Context, planBytes []byte) (ConfirmResult, error)
+	// Registry, when non-nil, is the action registry the loop plans and
+	// executes against. nil uses the process-wide global (every CLI/agentd
+	// caller). The agent-framework path sets a custom registry (built-ins +
+	// the consumer's own typed handlers, e.g. moongit.issue) so those actions
+	// both surface in the planner's vocabulary (BuildSchemaChunk reads this
+	// registry) and resolve at execution time. Threaded into the planner and
+	// executor via executor.StartConfig.Registry. See actions.GlobalRegistry
+	// and the public facade package.
+	Registry *actions.Registry
 }
 
 // Output format values for RunOptions.OutputFormat. Mirrors the
@@ -117,6 +127,11 @@ type PlanInput struct {
 	// opts.Policy forwarded so the contract is visible, not just enforced
 	// after the fact.
 	Policy *executor.Policy
+	// Registry, when non-nil and not the global, makes BuildPrompt derive
+	// the action-vocabulary chunk from this live registry (so consumer-
+	// registered custom actions surface to the planner) instead of the
+	// embedded schema.json. nil / global keeps the byte-identical default.
+	Registry *actions.Registry
 }
 
 type IterationSummary struct {

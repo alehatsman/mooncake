@@ -176,10 +176,11 @@ func (s *VariableScope) shadowedKeys(incoming map[string]interface{}) []string {
 // iterations (same source location + both in a loop). No-op when As is "".
 // resolveCaptureInPlan is a test seam over the action registry. The default
 // reads ActionMetadata.CaptureInPlan from the handler registered for the
-// given action type. Tests in this package may swap it to drive the
-// plan-mode gate without registering a fixture action.
-var resolveCaptureInPlan = func(actionType string) bool {
-	h, ok := actions.Get(actionType)
+// given action type, resolved against the run's injected registry (or the
+// global, via ec.ActionRegistry). Tests in this package may swap it to drive
+// the plan-mode gate without registering a fixture action.
+var resolveCaptureInPlan = func(ec *ExecutionContext, actionType string) bool {
+	h, ok := ec.ActionRegistry().Get(actionType)
 	if !ok {
 		return false
 	}
@@ -195,7 +196,7 @@ func captureResult(ec *ExecutionContext, step config.Step, result RegisteredResu
 	// through to the unconditional write that predates spec-37 so they
 	// keep working without each test re-creating the full service shape.
 	if ec.Svc != nil && ec.Mode() == actions.ModePlan {
-		if !resolveCaptureInPlan(step.DetermineActionType()) {
+		if !resolveCaptureInPlan(ec, step.DetermineActionType()) {
 			return
 		}
 	}

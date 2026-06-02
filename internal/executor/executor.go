@@ -446,7 +446,7 @@ func DispatchStepAction(step config.Step, ec *ExecutionContext) error {
 	actionType := step.DetermineActionType()
 
 	// Try to get handler from registry (new system)
-	if handler, ok := actions.Get(actionType); ok {
+	if handler, ok := ec.ActionRegistry().Get(actionType); ok {
 		// Validate step configuration
 		if err := handler.Validate(&step); err != nil {
 			// Enhance error with step code context if available
@@ -770,7 +770,7 @@ func handleStepError(step config.Step, ec *ExecutionContext, stepErr error, step
 // caller falls through to the legacy DryRun path.
 func dispatchPlanMode(step config.Step, ec *ExecutionContext, stepName string) (bool, error) {
 	actionType := step.DetermineActionType()
-	handler, ok := actions.Get(actionType)
+	handler, ok := ec.ActionRegistry().Get(actionType)
 	if ok {
 		runner, isRunner := handler.(actions.Runner)
 		if !isRunner {
@@ -1186,6 +1186,15 @@ type StartConfig struct {
 	// shell-less agent run so the typed-ABI guarantees become an
 	// enforced contract rather than a convention. See policy.go.
 	Policy *Policy
+
+	// Registry, when non-nil, is the action registry this run resolves
+	// handlers against — threaded into both the planner (plan-time platform
+	// and reversibility checks) and the executor (handler dispatch). nil
+	// means "use the process-wide global", which is every existing caller
+	// (CLI, MCP, fleet). The agent-framework path sets it so a consumer's
+	// custom typed actions (e.g. moongit.issue) plan and execute. See
+	// actions.GlobalRegistry and the public facade package.
+	Registry *actions.Registry
 }
 
 // Start begins execution of a mooncake configuration with the given settings.
@@ -1281,6 +1290,7 @@ func Start(ctx context.Context, startConfig StartConfig, log logger.Logger, publ
 		Tags:       startConfig.Tags,
 		SkipTags:   startConfig.SkipTags,
 		Names:      startConfig.Names,
+		Registry:   startConfig.Registry,
 	})
 	if err != nil {
 		return &SetupError{Component: "planner", Issue: "failed to build plan", Cause: err}
@@ -1340,7 +1350,7 @@ func Start(ctx context.Context, startConfig StartConfig, log logger.Logger, publ
 	startConfig.Capture.setPlan(planData)
 
 	// Execute the plan with event publisher
-	return executePlanWithCapture(ctx, planData, sudoPassword, actions.ModeApply, log, publisher, startConfig.Capture, startConfig.Policy)
+	return executePlanWithCapture(ctx, planData, sudoPassword, actions.ModeApply, log, publisher, startConfig.Capture, startConfig.Policy, startConfig.Registry)
 }
 
 // ExecutePlan executes a pre-compiled plan.
@@ -1354,7 +1364,7 @@ func Start(ctx context.Context, startConfig StartConfig, log logger.Logger, publ
 // ctx is checked between steps — see Start for the cancellation
 // contract.
 func ExecutePlan(ctx context.Context, p *plan.Plan, sudoPass string, mode actions.Mode, log logger.Logger, publisher events.Publisher) error {
-	return executePlanWithCapture(ctx, p, sudoPass, mode, log, publisher, nil, nil)
+	return executePlanWithCapture(ctx, p, sudoPass, mode, log, publisher, nil, nil, nil)
 }
 
 // ExecutePlanWithCapture runs a pre-compiled plan and fills the
@@ -1370,13 +1380,13 @@ func ExecutePlan(ctx context.Context, p *plan.Plan, sudoPass string, mode action
 // ctx is checked between steps — see Start for the cancellation
 // contract.
 func ExecutePlanWithCapture(ctx context.Context, p *plan.Plan, sudoPass string, mode actions.Mode, log logger.Logger, publisher events.Publisher, capture *RunCapture) error {
-	return executePlanWithCapture(ctx, p, sudoPass, mode, log, publisher, capture, nil)
+	return executePlanWithCapture(ctx, p, sudoPass, mode, log, publisher, capture, nil, nil)
 }
 
 // executePlanWithCapture is the shared implementation behind
 // ExecutePlan and Start. Pass capture=nil to disable the
 // kernel-result substrate (legacy callers).
-func executePlanWithCapture(ctx context.Context, p *plan.Plan, sudoPass string, mode actions.Mode, log logger.Logger, publisher events.Publisher, capture *RunCapture, policy *Policy) error {
+func executePlanWithCapture(ctx context.Context, p *plan.Plan, sudoPass string, mode actions.Mode, log logger.Logger, publisher events.Publisher, capture *RunCapture, policy *Policy, registry *actions.Registry) error {
 	steps := p.Steps
 	variables := p.InitialVars
 
@@ -1485,6 +1495,7 @@ func executePlanWithCapture(ctx context.Context, p *plan.Plan, sudoPass string, 
 		Ctx:            ctx,
 		Modules:        p.Modules,
 		Policy:         policy,
+		Registry:       registry,
 	}
 	// R1.1b: Capture.Plan was already set by Start; for the direct
 	// ExecutePlan entry point (where capture is nil) this is a no-op.

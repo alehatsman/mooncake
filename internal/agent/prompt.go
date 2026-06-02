@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/alehatsman/mooncake/internal/actions"
 	"github.com/alehatsman/mooncake/internal/executor"
 )
 
@@ -41,8 +42,8 @@ const promptConstraints = `CONSTRAINTS:
 // full action list and then the constraint on which subset it may use.
 // A nil/zero policy keeps the prompt byte-identical to the pre-policy
 // shape.
-func buildSystemPrompt(style Style, policy *executor.Policy) (string, error) {
-	chunk, err := BuildSchemaChunk()
+func buildSystemPrompt(style Style, policy *executor.Policy, reg *actions.Registry) (string, error) {
+	chunk, err := BuildSchemaChunkForRegistry(reg)
 	if err != nil {
 		return "", fmt.Errorf("build schema chunk: %w", err)
 	}
@@ -64,7 +65,7 @@ func buildSystemPrompt(style Style, policy *executor.Policy) (string, error) {
 }
 
 func BuildPrompt(input PlanInput) (string, string, error) {
-	systemPrompt, err := buildSystemPrompt(input.Style, input.Policy)
+	systemPrompt, err := buildSystemPrompt(input.Style, input.Policy, input.Registry)
 	if err != nil {
 		return "", "", err
 	}

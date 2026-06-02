@@ -32,7 +32,7 @@ func makeRegisteredResult(marker string) RegisteredResult {
 
 // withCaptureInPlan swaps resolveCaptureInPlan for the test's lifetime so
 // tests can drive the plan-mode gate without registering fixture actions.
-func withCaptureInPlan(t *testing.T, f func(actionType string) bool) {
+func withCaptureInPlan(t *testing.T, f func(ec *ExecutionContext, actionType string) bool) {
 	t.Helper()
 	prev := resolveCaptureInPlan
 	resolveCaptureInPlan = f
@@ -104,7 +104,7 @@ func TestCaptureResult_MixedLoopThenNonLoopWarns(t *testing.T) {
 // TestCaptureResult_PlanModeDefaultSkipsBind covers spec-37 test #4.
 func TestCaptureResult_PlanModeDefaultSkipsBind(t *testing.T) {
 	ec, _ := makeECWithMode(actions.ModePlan)
-	withCaptureInPlan(t, func(string) bool { return false })
+	withCaptureInPlan(t, func(*ExecutionContext, string) bool { return false })
 
 	step := config.Step{ID: "step-0001", Name: "n", As: "x"}
 	captureResult(ec, step, makeRegisteredResult("planned"))
@@ -120,7 +120,7 @@ func TestCaptureResult_PlanModeDefaultSkipsBind(t *testing.T) {
 // TestCaptureResult_PlanModeCaptureInPlanBinds covers spec-37 test #5.
 func TestCaptureResult_PlanModeCaptureInPlanBinds(t *testing.T) {
 	ec, _ := makeECWithMode(actions.ModePlan)
-	withCaptureInPlan(t, func(string) bool { return true })
+	withCaptureInPlan(t, func(*ExecutionContext, string) bool { return true })
 
 	step := config.Step{ID: "step-0001", Name: "n", As: "x"}
 	captureResult(ec, step, makeRegisteredResult("planned"))
@@ -133,7 +133,7 @@ func TestCaptureResult_PlanModeCaptureInPlanBinds(t *testing.T) {
 // TestCaptureResult_ApplyModeAlwaysBinds covers spec-37 test #6 (regression).
 func TestCaptureResult_ApplyModeAlwaysBinds(t *testing.T) {
 	ec, _ := makeECWithMode(actions.ModeApply)
-	withCaptureInPlan(t, func(string) bool { return false })
+	withCaptureInPlan(t, func(*ExecutionContext, string) bool { return false })
 
 	step := config.Step{ID: "step-0001", Name: "n", As: "x"}
 	captureResult(ec, step, makeRegisteredResult("applied"))
@@ -147,7 +147,7 @@ func TestCaptureResult_ApplyModeAlwaysBinds(t *testing.T) {
 // A failed step's captureResult must still publish in apply mode.
 func TestCaptureResult_FailedStepBindsInApplyMode(t *testing.T) {
 	ec, _ := makeECWithMode(actions.ModeApply)
-	withCaptureInPlan(t, func(string) bool { return false })
+	withCaptureInPlan(t, func(*ExecutionContext, string) bool { return false })
 
 	step := config.Step{ID: "step-0001", Name: "n", As: "x"}
 	result := NewResult()
@@ -163,7 +163,7 @@ func TestCaptureResult_FailedStepBindsInApplyMode(t *testing.T) {
 func TestCaptureResult_FailedStepRespectsGateInPlanMode(t *testing.T) {
 	t.Run("default off skips", func(t *testing.T) {
 		ec, _ := makeECWithMode(actions.ModePlan)
-		withCaptureInPlan(t, func(string) bool { return false })
+		withCaptureInPlan(t, func(*ExecutionContext, string) bool { return false })
 
 		step := config.Step{ID: "step-0001", As: "x"}
 		result := NewResult()
@@ -175,7 +175,7 @@ func TestCaptureResult_FailedStepRespectsGateInPlanMode(t *testing.T) {
 	})
 	t.Run("opt-in binds", func(t *testing.T) {
 		ec, _ := makeECWithMode(actions.ModePlan)
-		withCaptureInPlan(t, func(string) bool { return true })
+		withCaptureInPlan(t, func(*ExecutionContext, string) bool { return true })
 
 		step := config.Step{ID: "step-0002", As: "x"}
 		result := NewResult()
