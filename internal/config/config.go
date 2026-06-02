@@ -1985,6 +1985,22 @@ type Step struct {
 	VarsLoad                  *string                    `yaml:"vars.load,omitempty"         json:"vars.load,omitempty"         action:"vars.load"`
 	Vars                      *map[string]interface{}    `yaml:"vars,omitempty"              json:"vars,omitempty"              action:"vars"`
 
+	// ── GENERIC CUSTOM-ACTION CARRIER (#111) ──────────────────────────────────
+	// Action + With dispatch a consumer-registered custom typed handler that
+	// has no dedicated typed Step field above. `action:` names the handler
+	// (it must be registered in the run's action registry — see #105 and
+	// agent_framework.md); `with:` carries its parameters, which the handler
+	// reads off step.With in Run. This is the open extension point the
+	// agent-framework registers into; the built-ins keep their typed fields.
+	//
+	// Deliberately NOT tagged `action:"..."`: the carrier is resolved by
+	// DetermineActionType's explicit fallback (after the typed-field loop),
+	// not the reflection over `action:`-tagged fields — but it still counts as
+	// the step's single action in countActions, so the one-action invariant
+	// and the transaction/try compound checks treat it uniformly.
+	Action string                 `yaml:"action,omitempty" json:"action,omitempty"`
+	With   map[string]interface{} `yaml:"with,omitempty" json:"with,omitempty"`
+
 	// Privilege escalation (spec-21: collapsed from become/become_user).
 	// Empty = current user; "root" = sudo to root; "<name>" = sudo to <name>.
 	AsUser string `yaml:"as_user,omitempty" json:"as_user,omitempty"`
@@ -2324,7 +2340,11 @@ func actionFieldSet(rv reflect.Value, i int) bool {
 	}
 }
 
-// countActions returns the number of non-nil action fields in this step.
+// countActions returns the number of action fields set on this step. It
+// counts both the typed `action:`-tagged fields and the generic custom-action
+// carrier (#111) — `action:` set is one action — so the one-action invariant
+// and the transaction/try compound checks treat the carrier uniformly with a
+// typed action (e.g. `action:` + a typed field is "more than one action").
 func (s *Step) countActions() int {
 	rv := reflect.ValueOf(s).Elem()
 	n := 0
@@ -2332,6 +2352,9 @@ func (s *Step) countActions() int {
 		if actionFieldSet(rv, i) {
 			n++
 		}
+	}
+	if s.Action != "" {
+		n++
 	}
 	return n
 }
@@ -2344,6 +2367,12 @@ func (s *Step) DetermineActionType() string {
 		if actionFieldSet(rv, i) {
 			return stepType.Field(i).Tag.Get("action")
 		}
+	}
+	// Generic custom-action carrier (#111): no typed field is set, so the
+	// action type is the name the carrier declares. Resolved against the
+	// run's registry at dispatch (executor) and plan time (planner).
+	if s.Action != "" {
+		return s.Action
 	}
 	if s.ForEach != nil || s.ForEachFile != nil {
 		return "loop"

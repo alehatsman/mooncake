@@ -303,6 +303,21 @@ func (g *Generator) generateStepDefinition() (*Definition, error) {
 			Type:        "string",
 			Description: "(plan metadata) Parent assert step ID when expanded from a heal child (proposal-11)",
 		},
+		// Generic custom-action carrier (#111). `action` names a handler
+		// registered in the run's action registry that has no dedicated
+		// typed step field (the agent-framework extension point); `with`
+		// carries its freeform parameters, which the handler reads off
+		// step.With. Counts as the step's single action (config.countActions).
+		"action": {
+			Type:        "string",
+			Description: "Name of a registered custom action handler (generic carrier; pair with with:). Built-in actions use their own typed field instead.",
+		},
+		"with": {
+			Type:            "object",
+			Properties:      map[string]*Property{},
+			AdditionalProps: &trueVal,
+			Description:     "Parameters for the custom action named by action: (generic carrier).",
+		},
 	}
 
 	for name, prop := range universalFields {
@@ -351,6 +366,14 @@ func (g *Generator) generateStepDefinition() (*Definition, error) {
 	// compound nodes, not leaf actions. All three are special-cased
 	// rather than registered as actions.
 	actionNames = append(actionNames, "import", "transaction", "try")
+
+	// #111 generic custom-action carrier: `action` is a string naming a
+	// registered handler that has no typed step field. It gets its own
+	// oneOf branch (and joins every other branch's exclusion list) so a
+	// carrier step satisfies "exactly one action" and can't be combined
+	// with a typed action. Its `with:` params are a separate optional
+	// step property (declared in universalFields).
+	actionNames = append(actionNames, "action")
 
 	// Sort action names for deterministic schema generation
 	sort.Strings(actionNames)
@@ -488,6 +511,10 @@ func (g *Generator) generateOneOfConstraints(actionNames []string) []*OneOfConst
 				},
 			}
 		case "use":
+			actionProp = &Property{Type: "string"}
+		case "action":
+			// #111 generic carrier: the action key is a string naming a
+			// registered handler; there is no #/definitions/action shape.
 			actionProp = &Property{Type: "string"}
 		case "transaction":
 			// spec-30: transaction: is a top-level compound-step shape,

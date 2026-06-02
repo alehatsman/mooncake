@@ -945,6 +945,7 @@ Execute shell commands
 
 | Property | Type | Required | Description |
 |----------|------|----------|-------------|
+| `action` | string | No | Name of a registered custom action handler (generic carrier; pair with with:). Built-in actions use their own typed field instead. |
 | `allow_irreversible` | boolean | No | Allow a transaction to include steps without Reverser support (spec-30) |
 | `artifact.capture` | any | No | Capture file changes with enhanced metadata for LLM agents |
 | `artifact.validate` | any | No | Validate artifacts against constraints (change budgets) |
@@ -1043,6 +1044,7 @@ Execute shell commands
 | `windows.firewall_rule` | any | No | Manage Windows Firewall inbound/outbound rules |
 | `windows.hyperv_firewall_rule` | any | No | Manage Windows Hyper-V Firewall rules (WSL2 mirrored networking) |
 | `windows.scheduled_task` | any | No | Manage Windows Task Scheduler entries |
+| `with` | object | No | Parameters for the custom action named by action: (generic carrier). |
 
 
 ---

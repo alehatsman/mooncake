@@ -2612,6 +2612,10 @@
     "step": {
       "type": "object",
       "properties": {
+        "action": {
+          "type": "string",
+          "description": "Name of a registered custom action handler (generic carrier; pair with with:). Built-in actions use their own typed field instead."
+        },
         "allow_irreversible": {
           "type": "boolean",
           "description": "Allow a transaction to include steps without Reverser support (spec-30)"
@@ -3049,9 +3053,363 @@
         "windows.scheduled_task": {
           "description": "Manage Windows Task Scheduler entries",
           "$ref": "#/definitions/windows.scheduled_task"
+        },
+        "with": {
+          "type": "object",
+          "description": "Parameters for the custom action named by action: (generic carrier).",
+          "additionalProperties": true
         }
       },
       "oneOf": [
+        {
+          "required": [
+            "action"
+          ],
+          "properties": {
+            "action": {
+              "type": "string"
+            }
+          },
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "artifact.capture"
+                ]
+              },
+              {
+                "required": [
+                  "artifact.validate"
+                ]
+              },
+              {
+                "required": [
+                  "assert"
+                ]
+              },
+              {
+                "required": [
+                  "cmd"
+                ]
+              },
+              {
+                "required": [
+                  "container"
+                ]
+              },
+              {
+                "required": [
+                  "container.image"
+                ]
+              },
+              {
+                "required": [
+                  "file.copy"
+                ]
+              },
+              {
+                "required": [
+                  "file.download"
+                ]
+              },
+              {
+                "required": [
+                  "file.template"
+                ]
+              },
+              {
+                "required": [
+                  "file.unarchive"
+                ]
+              },
+              {
+                "required": [
+                  "file.write"
+                ]
+              },
+              {
+                "required": [
+                  "git.checkout"
+                ]
+              },
+              {
+                "required": [
+                  "git.clone"
+                ]
+              },
+              {
+                "required": [
+                  "git.config"
+                ]
+              },
+              {
+                "required": [
+                  "http.request"
+                ]
+              },
+              {
+                "required": [
+                  "import"
+                ]
+              },
+              {
+                "required": [
+                  "log"
+                ]
+              },
+              {
+                "required": [
+                  "observe.cpu"
+                ]
+              },
+              {
+                "required": [
+                  "observe.disk"
+                ]
+              },
+              {
+                "required": [
+                  "observe.gpu"
+                ]
+              },
+              {
+                "required": [
+                  "observe.http"
+                ]
+              },
+              {
+                "required": [
+                  "observe.logs"
+                ]
+              },
+              {
+                "required": [
+                  "observe.memory"
+                ]
+              },
+              {
+                "required": [
+                  "observe.port"
+                ]
+              },
+              {
+                "required": [
+                  "observe.process"
+                ]
+              },
+              {
+                "required": [
+                  "observe.service"
+                ]
+              },
+              {
+                "required": [
+                  "os.cron"
+                ]
+              },
+              {
+                "required": [
+                  "os.firewall"
+                ]
+              },
+              {
+                "required": [
+                  "os.group"
+                ]
+              },
+              {
+                "required": [
+                  "os.mount"
+                ]
+              },
+              {
+                "required": [
+                  "os.service"
+                ]
+              },
+              {
+                "required": [
+                  "os.ssh_key"
+                ]
+              },
+              {
+                "required": [
+                  "os.sysctl"
+                ]
+              },
+              {
+                "required": [
+                  "os.systemd"
+                ]
+              },
+              {
+                "required": [
+                  "os.user"
+                ]
+              },
+              {
+                "required": [
+                  "pkg"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.hold"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.list"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.repo"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.upgrade"
+                ]
+              },
+              {
+                "required": [
+                  "read.json"
+                ]
+              },
+              {
+                "required": [
+                  "read.yaml"
+                ]
+              },
+              {
+                "required": [
+                  "repo.patch"
+                ]
+              },
+              {
+                "required": [
+                  "repo.search"
+                ]
+              },
+              {
+                "required": [
+                  "repo.tree"
+                ]
+              },
+              {
+                "required": [
+                  "shell"
+                ]
+              },
+              {
+                "required": [
+                  "text.delete_range"
+                ]
+              },
+              {
+                "required": [
+                  "text.insert"
+                ]
+              },
+              {
+                "required": [
+                  "text.line"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.ini"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.json"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.yaml"
+                ]
+              },
+              {
+                "required": [
+                  "text.replace"
+                ]
+              },
+              {
+                "required": [
+                  "tool"
+                ]
+              },
+              {
+                "required": [
+                  "transaction"
+                ]
+              },
+              {
+                "required": [
+                  "try"
+                ]
+              },
+              {
+                "required": [
+                  "use"
+                ]
+              },
+              {
+                "required": [
+                  "vars"
+                ]
+              },
+              {
+                "required": [
+                  "vars.load"
+                ]
+              },
+              {
+                "required": [
+                  "wait.command"
+                ]
+              },
+              {
+                "required": [
+                  "wait.file"
+                ]
+              },
+              {
+                "required": [
+                  "wait.http"
+                ]
+              },
+              {
+                "required": [
+                  "wait.port"
+                ]
+              },
+              {
+                "required": [
+                  "windows.firewall_rule"
+                ]
+              },
+              {
+                "required": [
+                  "windows.hyperv_firewall_rule"
+                ]
+              },
+              {
+                "required": [
+                  "windows.scheduled_task"
+                ]
+              }
+            ]
+          }
+        },
         {
           "required": [
             "artifact.capture"
@@ -3063,6 +3421,11 @@
           },
           "not": {
             "anyOf": [
+              {
+                "required": [
+                  "action"
+                ]
+              },
               {
                 "required": [
                   "artifact.validate"
@@ -3409,6 +3772,11 @@
             "anyOf": [
               {
                 "required": [
+                  "action"
+                ]
+              },
+              {
+                "required": [
                   "artifact.capture"
                 ]
               },
@@ -3751,6 +4119,11 @@
           },
           "not": {
             "anyOf": [
+              {
+                "required": [
+                  "action"
+                ]
+              },
               {
                 "required": [
                   "artifact.capture"
@@ -4097,6 +4470,11 @@
             "anyOf": [
               {
                 "required": [
+                  "action"
+                ]
+              },
+              {
+                "required": [
                   "artifact.capture"
                 ]
               },
@@ -4439,6 +4817,11 @@
           },
           "not": {
             "anyOf": [
+              {
+                "required": [
+                  "action"
+                ]
+              },
               {
                 "required": [
                   "artifact.capture"
@@ -4785,6 +5168,11 @@
             "anyOf": [
               {
                 "required": [
+                  "action"
+                ]
+              },
+              {
+                "required": [
                   "artifact.capture"
                 ]
               },
@@ -5127,6 +5515,11 @@
           },
           "not": {
             "anyOf": [
+              {
+                "required": [
+                  "action"
+                ]
+              },
               {
                 "required": [
                   "artifact.capture"
@@ -5473,6 +5866,11 @@
             "anyOf": [
               {
                 "required": [
+                  "action"
+                ]
+              },
+              {
+                "required": [
                   "artifact.capture"
                 ]
               },
@@ -5815,6 +6213,11 @@
           },
           "not": {
             "anyOf": [
+              {
+                "required": [
+                  "action"
+                ]
+              },
               {
                 "required": [
                   "artifact.capture"
@@ -6161,6 +6564,11 @@
             "anyOf": [
               {
                 "required": [
+                  "action"
+                ]
+              },
+              {
+                "required": [
                   "artifact.capture"
                 ]
               },
@@ -6503,6 +6911,11 @@
           },
           "not": {
             "anyOf": [
+              {
+                "required": [
+                  "action"
+                ]
+              },
               {
                 "required": [
                   "artifact.capture"
@@ -6849,6 +7262,11 @@
             "anyOf": [
               {
                 "required": [
+                  "action"
+                ]
+              },
+              {
+                "required": [
                   "artifact.capture"
                 ]
               },
@@ -7191,6 +7609,11 @@
           },
           "not": {
             "anyOf": [
+              {
+                "required": [
+                  "action"
+                ]
+              },
               {
                 "required": [
                   "artifact.capture"
@@ -7537,6 +7960,11 @@
             "anyOf": [
               {
                 "required": [
+                  "action"
+                ]
+              },
+              {
+                "required": [
                   "artifact.capture"
                 ]
               },
@@ -7879,6 +8307,11 @@
           },
           "not": {
             "anyOf": [
+              {
+                "required": [
+                  "action"
+                ]
+              },
               {
                 "required": [
                   "artifact.capture"
@@ -8225,6 +8658,11 @@
             "anyOf": [
               {
                 "required": [
+                  "action"
+                ]
+              },
+              {
+                "required": [
                   "artifact.capture"
                 ]
               },
@@ -8567,6 +9005,11 @@
           },
           "not": {
             "anyOf": [
+              {
+                "required": [
+                  "action"
+                ]
+              },
               {
                 "required": [
                   "artifact.capture"
@@ -8913,6 +9356,11 @@
             "anyOf": [
               {
                 "required": [
+                  "action"
+                ]
+              },
+              {
+                "required": [
                   "artifact.capture"
                 ]
               },
@@ -9255,6 +9703,11 @@
           },
           "not": {
             "anyOf": [
+              {
+                "required": [
+                  "action"
+                ]
+              },
               {
                 "required": [
                   "artifact.capture"
@@ -9601,6 +10054,11 @@
             "anyOf": [
               {
                 "required": [
+                  "action"
+                ]
+              },
+              {
+                "required": [
                   "artifact.capture"
                 ]
               },
@@ -9943,6 +10401,11 @@
           },
           "not": {
             "anyOf": [
+              {
+                "required": [
+                  "action"
+                ]
+              },
               {
                 "required": [
                   "artifact.capture"
@@ -10289,6 +10752,11 @@
             "anyOf": [
               {
                 "required": [
+                  "action"
+                ]
+              },
+              {
+                "required": [
                   "artifact.capture"
                 ]
               },
@@ -10631,6 +11099,11 @@
           },
           "not": {
             "anyOf": [
+              {
+                "required": [
+                  "action"
+                ]
+              },
               {
                 "required": [
                   "artifact.capture"
@@ -10977,6 +11450,11 @@
             "anyOf": [
               {
                 "required": [
+                  "action"
+                ]
+              },
+              {
+                "required": [
                   "artifact.capture"
                 ]
               },
@@ -11319,6 +11797,11 @@
           },
           "not": {
             "anyOf": [
+              {
+                "required": [
+                  "action"
+                ]
+              },
               {
                 "required": [
                   "artifact.capture"
@@ -11665,6 +12148,11 @@
             "anyOf": [
               {
                 "required": [
+                  "action"
+                ]
+              },
+              {
+                "required": [
                   "artifact.capture"
                 ]
               },
@@ -12007,6 +12495,11 @@
           },
           "not": {
             "anyOf": [
+              {
+                "required": [
+                  "action"
+                ]
+              },
               {
                 "required": [
                   "artifact.capture"
@@ -12353,6 +12846,11 @@
             "anyOf": [
               {
                 "required": [
+                  "action"
+                ]
+              },
+              {
+                "required": [
                   "artifact.capture"
                 ]
               },
@@ -12695,6 +13193,11 @@
           },
           "not": {
             "anyOf": [
+              {
+                "required": [
+                  "action"
+                ]
+              },
               {
                 "required": [
                   "artifact.capture"
@@ -13041,6 +13544,11 @@
             "anyOf": [
               {
                 "required": [
+                  "action"
+                ]
+              },
+              {
+                "required": [
                   "artifact.capture"
                 ]
               },
@@ -13383,6 +13891,11 @@
           },
           "not": {
             "anyOf": [
+              {
+                "required": [
+                  "action"
+                ]
+              },
               {
                 "required": [
                   "artifact.capture"
@@ -13729,6 +14242,11 @@
             "anyOf": [
               {
                 "required": [
+                  "action"
+                ]
+              },
+              {
+                "required": [
                   "artifact.capture"
                 ]
               },
@@ -14071,6 +14589,11 @@
           },
           "not": {
             "anyOf": [
+              {
+                "required": [
+                  "action"
+                ]
+              },
               {
                 "required": [
                   "artifact.capture"
@@ -14417,6 +14940,11 @@
             "anyOf": [
               {
                 "required": [
+                  "action"
+                ]
+              },
+              {
+                "required": [
                   "artifact.capture"
                 ]
               },
@@ -14759,6 +15287,11 @@
           },
           "not": {
             "anyOf": [
+              {
+                "required": [
+                  "action"
+                ]
+              },
               {
                 "required": [
                   "artifact.capture"
@@ -15105,6 +15638,11 @@
             "anyOf": [
               {
                 "required": [
+                  "action"
+                ]
+              },
+              {
+                "required": [
                   "artifact.capture"
                 ]
               },
@@ -15447,6 +15985,11 @@
           },
           "not": {
             "anyOf": [
+              {
+                "required": [
+                  "action"
+                ]
+              },
               {
                 "required": [
                   "artifact.capture"
@@ -15793,6 +16336,11 @@
             "anyOf": [
               {
                 "required": [
+                  "action"
+                ]
+              },
+              {
+                "required": [
                   "artifact.capture"
                 ]
               },
@@ -16135,6 +16683,11 @@
           },
           "not": {
             "anyOf": [
+              {
+                "required": [
+                  "action"
+                ]
+              },
               {
                 "required": [
                   "artifact.capture"
@@ -16481,6 +17034,11 @@
             "anyOf": [
               {
                 "required": [
+                  "action"
+                ]
+              },
+              {
+                "required": [
                   "artifact.capture"
                 ]
               },
@@ -16823,6 +17381,11 @@
           },
           "not": {
             "anyOf": [
+              {
+                "required": [
+                  "action"
+                ]
+              },
               {
                 "required": [
                   "artifact.capture"
@@ -17169,6 +17732,11 @@
             "anyOf": [
               {
                 "required": [
+                  "action"
+                ]
+              },
+              {
+                "required": [
                   "artifact.capture"
                 ]
               },
@@ -17511,6 +18079,11 @@
           },
           "not": {
             "anyOf": [
+              {
+                "required": [
+                  "action"
+                ]
+              },
               {
                 "required": [
                   "artifact.capture"
@@ -17857,6 +18430,11 @@
             "anyOf": [
               {
                 "required": [
+                  "action"
+                ]
+              },
+              {
+                "required": [
                   "artifact.capture"
                 ]
               },
@@ -18199,6 +18777,11 @@
           },
           "not": {
             "anyOf": [
+              {
+                "required": [
+                  "action"
+                ]
+              },
               {
                 "required": [
                   "artifact.capture"
@@ -18552,6 +19135,11 @@
             "anyOf": [
               {
                 "required": [
+                  "action"
+                ]
+              },
+              {
+                "required": [
                   "artifact.capture"
                 ]
               },
@@ -18894,6 +19482,11 @@
           },
           "not": {
             "anyOf": [
+              {
+                "required": [
+                  "action"
+                ]
+              },
               {
                 "required": [
                   "artifact.capture"
@@ -19240,6 +19833,11 @@
             "anyOf": [
               {
                 "required": [
+                  "action"
+                ]
+              },
+              {
+                "required": [
                   "artifact.capture"
                 ]
               },
@@ -19582,6 +20180,11 @@
           },
           "not": {
             "anyOf": [
+              {
+                "required": [
+                  "action"
+                ]
+              },
               {
                 "required": [
                   "artifact.capture"
@@ -19928,6 +20531,11 @@
             "anyOf": [
               {
                 "required": [
+                  "action"
+                ]
+              },
+              {
+                "required": [
                   "artifact.capture"
                 ]
               },
@@ -20270,6 +20878,11 @@
           },
           "not": {
             "anyOf": [
+              {
+                "required": [
+                  "action"
+                ]
+              },
               {
                 "required": [
                   "artifact.capture"
@@ -20616,6 +21229,11 @@
             "anyOf": [
               {
                 "required": [
+                  "action"
+                ]
+              },
+              {
+                "required": [
                   "artifact.capture"
                 ]
               },
@@ -20958,6 +21576,11 @@
           },
           "not": {
             "anyOf": [
+              {
+                "required": [
+                  "action"
+                ]
+              },
               {
                 "required": [
                   "artifact.capture"
@@ -21304,6 +21927,11 @@
             "anyOf": [
               {
                 "required": [
+                  "action"
+                ]
+              },
+              {
+                "required": [
                   "artifact.capture"
                 ]
               },
@@ -21648,6 +22276,11 @@
             "anyOf": [
               {
                 "required": [
+                  "action"
+                ]
+              },
+              {
+                "required": [
                   "artifact.capture"
                 ]
               },
@@ -21990,6 +22623,11 @@
             "anyOf": [
               {
                 "required": [
+                  "action"
+                ]
+              },
+              {
+                "required": [
                   "artifact.capture"
                 ]
               },
@@ -22330,6 +22968,11 @@
           },
           "not": {
             "anyOf": [
+              {
+                "required": [
+                  "action"
+                ]
+              },
               {
                 "required": [
                   "artifact.capture"
@@ -22676,6 +23319,11 @@
             "anyOf": [
               {
                 "required": [
+                  "action"
+                ]
+              },
+              {
+                "required": [
                   "artifact.capture"
                 ]
               },
@@ -23018,6 +23666,11 @@
           },
           "not": {
             "anyOf": [
+              {
+                "required": [
+                  "action"
+                ]
+              },
               {
                 "required": [
                   "artifact.capture"
@@ -23364,6 +24017,11 @@
             "anyOf": [
               {
                 "required": [
+                  "action"
+                ]
+              },
+              {
+                "required": [
                   "artifact.capture"
                 ]
               },
@@ -23706,6 +24364,11 @@
           },
           "not": {
             "anyOf": [
+              {
+                "required": [
+                  "action"
+                ]
+              },
               {
                 "required": [
                   "artifact.capture"
@@ -24052,6 +24715,11 @@
             "anyOf": [
               {
                 "required": [
+                  "action"
+                ]
+              },
+              {
+                "required": [
                   "artifact.capture"
                 ]
               },
@@ -24394,6 +25062,11 @@
           },
           "not": {
             "anyOf": [
+              {
+                "required": [
+                  "action"
+                ]
+              },
               {
                 "required": [
                   "artifact.capture"
@@ -24740,6 +25413,11 @@
             "anyOf": [
               {
                 "required": [
+                  "action"
+                ]
+              },
+              {
+                "required": [
                   "artifact.capture"
                 ]
               },
@@ -25082,6 +25760,11 @@
           },
           "not": {
             "anyOf": [
+              {
+                "required": [
+                  "action"
+                ]
+              },
               {
                 "required": [
                   "artifact.capture"
@@ -25428,6 +26111,11 @@
             "anyOf": [
               {
                 "required": [
+                  "action"
+                ]
+              },
+              {
+                "required": [
                   "artifact.capture"
                 ]
               },
@@ -25770,6 +26458,11 @@
           },
           "not": {
             "anyOf": [
+              {
+                "required": [
+                  "action"
+                ]
+              },
               {
                 "required": [
                   "artifact.capture"

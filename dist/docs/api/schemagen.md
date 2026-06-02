@@ -221,7 +221,7 @@ func (g *Generator) Generate() (*Schema, error)
 
 Generate creates a complete JSON Schema from the action registry.
 
-### func \(\*Generator\) [GenerateOpenAPI](<https://github.com/alehatsman/mooncake/blob/main/internal/schemagen/generator.go#L793>)
+### func \(\*Generator\) [GenerateOpenAPI](<https://github.com/alehatsman/mooncake/blob/main/internal/schemagen/generator.go#L820>)
 
 ```go
 func (g *Generator) GenerateOpenAPI() (*OpenAPISpec, error)
@@ -229,7 +229,7 @@ func (g *Generator) GenerateOpenAPI() (*OpenAPISpec, error)
 
 GenerateOpenAPI generates an OpenAPI 3.0 specification.
 
-### func \(\*Generator\) [GenerateTypeScript](<https://github.com/alehatsman/mooncake/blob/main/internal/schemagen/generator.go#L807>)
+### func \(\*Generator\) [GenerateTypeScript](<https://github.com/alehatsman/mooncake/blob/main/internal/schemagen/generator.go#L834>)
 
 ```go
 func (g *Generator) GenerateTypeScript() (string, error)
@@ -562,7 +562,7 @@ func (s *Schema) GenerateTypeScript() string
 
 GenerateTypeScript generates TypeScript definitions from a schema.
 
-### func \(\*Schema\) [MarshalJSON](<https://github.com/alehatsman/mooncake/blob/main/internal/schemagen/generator.go#L779>)
+### func \(\*Schema\) [MarshalJSON](<https://github.com/alehatsman/mooncake/blob/main/internal/schemagen/generator.go#L806>)
 
 ```go
 func (s *Schema) MarshalJSON() ([]byte, error)
@@ -570,7 +570,7 @@ func (s *Schema) MarshalJSON() ([]byte, error)
 
 MarshalJSON converts the schema to JSON.
 
-### func \(\*Schema\) [MarshalPrettyJSON](<https://github.com/alehatsman/mooncake/blob/main/internal/schemagen/generator.go#L786>)
+### func \(\*Schema\) [MarshalPrettyJSON](<https://github.com/alehatsman/mooncake/blob/main/internal/schemagen/generator.go#L813>)
 
 ```go
 func (s *Schema) MarshalPrettyJSON() ([]byte, error)
