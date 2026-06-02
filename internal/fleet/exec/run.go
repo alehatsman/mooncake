@@ -162,7 +162,13 @@ func execOne(
 	scope := scopeFor(controllerID)
 	relPath := uid + "/exec.yml"
 
-	if perr := p.Client.Put(ctx, scope, relPath, planPath, planSha); perr != nil {
+	// Put imposes no default deadline of its own, so bound the upload here.
+	// The scratch plan is a tiny synthesized one-step file, so 30s is
+	// generous; ctx cancellation (SIGINT) still applies underneath.
+	putCtx, putCancel := context.WithTimeout(ctx, 30*time.Second)
+	perr := p.Client.Put(putCtx, scope, relPath, planPath, planSha)
+	putCancel()
+	if perr != nil {
 		out.Status, out.Error = "error", oneLine(perr.Error())
 		emit(fleet.KindError, "put: "+out.Error, transport.Event{})
 		return out

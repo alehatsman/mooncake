@@ -2,6 +2,7 @@
 package pkg_upgrade
 
 import (
+	"context"
 	"runtime"
 	"testing"
 
@@ -51,12 +52,12 @@ func newStub(t *testing.T) *stub {
 	origUp := aptUpgrade
 	origAr := aptAutoremove
 	origLookPath := lookPath
-	aptUpgrade = func(_ *security.Privileged, names []string) error {
+	aptUpgrade = func(_ context.Context, _ *security.Privileged, names []string) error {
 		cp := append([]string(nil), names...)
 		s.upgradeCalls = append(s.upgradeCalls, cp)
 		return nil
 	}
-	aptAutoremove = func(_ *security.Privileged) error {
+	aptAutoremove = func(_ context.Context, _ *security.Privileged) error {
 		s.autoremoveCalls++
 		return nil
 	}
@@ -193,12 +194,12 @@ func newBrewStub(t *testing.T) *brewStub {
 	origUp := brewUpgrade
 	origAr := brewAutoremove
 	origLookPath := lookPath
-	brewUpgrade = func(_ *security.Privileged, names []string) error {
+	brewUpgrade = func(_ context.Context, _ *security.Privileged, names []string) error {
 		cp := append([]string(nil), names...)
 		s.upgradeCalls = append(s.upgradeCalls, cp)
 		return nil
 	}
-	brewAutoremove = func(_ *security.Privileged) error {
+	brewAutoremove = func(_ context.Context, _ *security.Privileged) error {
 		s.autoremoveCalls++
 		return nil
 	}
@@ -276,7 +277,7 @@ func TestAutoDetect_PrefersAptOverBrew(t *testing.T) {
 	s := newStub(t)
 	// Sentinel: brew should not be invoked.
 	origBrew := brewUpgrade
-	brewUpgrade = func(_ *security.Privileged, names []string) error {
+	brewUpgrade = func(_ context.Context, _ *security.Privileged, names []string) error {
 		t.Errorf("brew should not be invoked when apt-get is on PATH; got %v", names)
 		return nil
 	}
@@ -337,12 +338,12 @@ func newDnfStub(t *testing.T) *dnfStub {
 	origUp := dnfUpgrade
 	origAr := dnfAutoremove
 	origLookPath := lookPath
-	dnfUpgrade = func(_ *security.Privileged, names []string) error {
+	dnfUpgrade = func(_ context.Context, _ *security.Privileged, names []string) error {
 		cp := append([]string(nil), names...)
 		s.upgradeCalls = append(s.upgradeCalls, cp)
 		return nil
 	}
-	dnfAutoremove = func(_ *security.Privileged) error {
+	dnfAutoremove = func(_ context.Context, _ *security.Privileged) error {
 		s.autoremoveCalls++
 		return nil
 	}
@@ -434,7 +435,7 @@ func TestApply_YumAlias(t *testing.T) {
 func TestAutoDetect_PrefersAptOverDnf(t *testing.T) {
 	s := newStub(t)
 	origDnf := dnfUpgrade
-	dnfUpgrade = func(_ *security.Privileged, names []string) error {
+	dnfUpgrade = func(_ context.Context, _ *security.Privileged, names []string) error {
 		t.Errorf("dnf should not be invoked when apt-get is on PATH; got %v", names)
 		return nil
 	}
@@ -508,12 +509,12 @@ func newPacmanStub(t *testing.T) *pacmanStub {
 	origUp := pacmanUpgrade
 	origAr := pacmanAutoremove
 	origLookPath := lookPath
-	pacmanUpgrade = func(_ *security.Privileged, names []string) error {
+	pacmanUpgrade = func(_ context.Context, _ *security.Privileged, names []string) error {
 		cp := append([]string(nil), names...)
 		s.upgradeCalls = append(s.upgradeCalls, cp)
 		return nil
 	}
-	pacmanAutoremove = func(_ *security.Privileged) error {
+	pacmanAutoremove = func(_ context.Context, _ *security.Privileged) error {
 		s.autoremoveCalls++
 		return nil
 	}
@@ -635,7 +636,7 @@ func TestAutoDetect_PacmanWhenNoAptOrDnf(t *testing.T) {
 func TestAutoDetect_PrefersDnfOverPacman(t *testing.T) {
 	s := newDnfStub(t)
 	origPacman := pacmanUpgrade
-	pacmanUpgrade = func(_ *security.Privileged, names []string) error {
+	pacmanUpgrade = func(_ context.Context, _ *security.Privileged, names []string) error {
 		t.Errorf("pacman should not be invoked when dnf is on PATH; got %v", names)
 		return nil
 	}

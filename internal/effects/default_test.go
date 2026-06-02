@@ -185,6 +185,198 @@ func TestWriteFile_ContentDiff_PlanMode(t *testing.T) {
 	}
 }
 
+// Issue #95: WriteFile / CopyFile must create a missing parent
+// directory through the performer's own Mkdir (which honors
+// needSudoForOwnership), not a bare unprivileged os.MkdirAll. These
+// tests exercise the three branches the fix has to get right.
+
+// namedNonCurrentUser returns a username that is guaranteed to differ
+// from the test runner's current user so needSudoForOwnership() is
+// driven to true. "nobody" is POSIX-conventional; skip if we happen
+// to be running as it.
+func namedNonCurrentUser(t *testing.T) string {
+	t.Helper()
+	if currentUserName(t) == "nobody" {
+		t.Skip("test runs as 'nobody'; can't drive the cross-user escalation branch")
+	}
+	return "nobody"
+}
+
+// TestWriteFile_MissingParent_EaccesRoutesThroughPrivilegedMkdir — the
+// #95 fix: a missing parent is created with a bare os.MkdirAll first;
+// only when THAT fails (here EACCES: the parent sits under a 0500 dir we
+// can't write) AND escalation is bound (needSudoForOwnership) does parent
+// creation route through the privileged mkdir path. With no sudo password
+// configured that path errors, surfacing as a "mkdir parent" failure
+// rather than silently giving up. Contrast
+// TestWriteFile_MissingParent_WritableCreatedUnprivileged: when the
+// parent CAN be created unprivileged we do NOT escalate.
+func TestWriteFile_MissingParent_EaccesRoutesThroughPrivilegedMkdir(t *testing.T) {
+	asUser := namedNonCurrentUser(t)
+	if os.Geteuid() == 0 {
+		t.Skip("running as root: directory permissions don't restrict mkdir")
+	}
+	root := t.TempDir()
+	ro := filepath.Join(root, "ro")
+	if err := os.Mkdir(ro, 0o500); err != nil { // no write bit -> MkdirAll EACCES
+		t.Fatal(err)
+	}
+	parent := filepath.Join(ro, "missing-sub")
+	path := filepath.Join(parent, "f.txt")
+
+	p := NewPerformer(func() actions.Mode { return actions.ModeApply }, "", false, asUser)
+	got := p.WriteFile(path, []byte("hi"), 0o644, actions.PerformerOpts{})
+
+	if got.Err == nil {
+		t.Fatalf("expected error from privileged mkdir path (no sudo pass), got Performed=%v", got.Performed)
+	}
+	if !strings.Contains(got.Err.Error(), "mkdir parent") {
+		t.Errorf("error should come from the parent-mkdir step, got: %v", got.Err)
+	}
+	if _, err := os.Stat(parent); !os.IsNotExist(err) {
+		t.Errorf("parent should not have been created (sudo unavailable); stat err=%v", err)
+	}
+}
+
+// TestCopyFile_MissingParent_EaccesRoutesThroughPrivilegedMkdir — same
+// EACCES-triggered escalation routing for CopyFile's parent creation.
+func TestCopyFile_MissingParent_EaccesRoutesThroughPrivilegedMkdir(t *testing.T) {
+	asUser := namedNonCurrentUser(t)
+	if os.Geteuid() == 0 {
+		t.Skip("running as root: directory permissions don't restrict mkdir")
+	}
+	root := t.TempDir()
+	src := filepath.Join(root, "src.txt")
+	if err := os.WriteFile(src, []byte("payload"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	ro := filepath.Join(root, "ro")
+	if err := os.Mkdir(ro, 0o500); err != nil {
+		t.Fatal(err)
+	}
+	parent := filepath.Join(ro, "missing-sub")
+	dest := filepath.Join(parent, "dest.txt")
+
+	p := NewPerformer(func() actions.Mode { return actions.ModeApply }, "", false, asUser)
+	got := p.CopyFile(src, dest, 0o644, actions.PerformerOpts{})
+
+	if got.Err == nil {
+		t.Fatalf("expected error from privileged mkdir path (no sudo pass), got Performed=%v", got.Performed)
+	}
+	if !strings.Contains(got.Err.Error(), "mkdir parent") {
+		t.Errorf("error should come from the parent-mkdir step, got: %v", got.Err)
+	}
+	if _, err := os.Stat(parent); !os.IsNotExist(err) {
+		t.Errorf("parent should not have been created (sudo unavailable); stat err=%v", err)
+	}
+}
+
+// TestWriteFile_MissingParent_WritableCreatedUnprivileged — when the
+// missing parent CAN be created without escalation (writable location),
+// we don't sudo just because AsUser is bound: the parent is created
+// unprivileged and only the file write itself escalates. This is the
+// conservative #95 semantic — auto-created parents are not force-owned by
+// AsUser, and (crucially) an existing parent's mode is never re-applied,
+// which is what protects a deliberately-tightened dir like a 0700 ~/.ssh.
+func TestWriteFile_MissingParent_WritableCreatedUnprivileged(t *testing.T) {
+	asUser := namedNonCurrentUser(t)
+	root := t.TempDir()
+	parent := filepath.Join(root, "missing-sub")
+	path := filepath.Join(parent, "f.txt")
+
+	p := NewPerformer(func() actions.Mode { return actions.ModeApply }, "", false, asUser)
+	got := p.WriteFile(path, []byte("hi"), 0o644, actions.PerformerOpts{})
+
+	// Parent created unprivileged; any error comes from the sudo *write*,
+	// never from "mkdir parent".
+	if got.Err != nil && strings.Contains(got.Err.Error(), "mkdir parent") {
+		t.Errorf("parent should be created unprivileged, not via mkdir-parent escalation: %v", got.Err)
+	}
+	if info, err := os.Stat(parent); err != nil || !info.IsDir() {
+		t.Errorf("parent should have been auto-created unprivileged; stat err=%v", err)
+	}
+}
+
+// TestWriteFile_ParentExists_EscalationNoOpOnMkdir — when the parent
+// already exists, the Mkdir routing must be a no-op success even when
+// escalation is bound: an existing dir is just a chmod-candidate, and
+// Mkdir doesn't reassign ownership / re-run sudo for a dir that's
+// already present with the desired mode. So the write proceeds to the
+// (sudo) write path, NOT to a "mkdir parent" failure.
+func TestWriteFile_ParentExists_EscalationNoOpOnMkdir(t *testing.T) {
+	asUser := namedNonCurrentUser(t)
+	root := t.TempDir() // exists, 0o700 by default from t.TempDir
+	if err := os.Chmod(root, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(root, "f.txt")
+
+	p := NewPerformer(func() actions.Mode { return actions.ModeApply }, "", false, asUser)
+	got := p.WriteFile(path, []byte("hi"), 0o644, actions.PerformerOpts{})
+
+	// The parent-mkdir step must not be what fails: the dir already
+	// exists with mode 0o755, so Mkdir returns AlreadyOk and we move on
+	// to the sudo write (which then fails for lack of a sudo password).
+	if got.Err != nil && strings.Contains(got.Err.Error(), "mkdir parent") {
+		t.Errorf("parent-mkdir must be a no-op when the dir already exists, got: %v", got.Err)
+	}
+}
+
+// TestWriteFile_MissingParent_NoEscalation_UnprivilegedCreate — with
+// no AsUser bound, parent creation falls through to the unprivileged
+// path exactly as before: the missing parent is created and the file
+// is written. Guards that the fix didn't regress the common path.
+func TestWriteFile_MissingParent_NoEscalation_UnprivilegedCreate(t *testing.T) {
+	root := t.TempDir()
+	parent := filepath.Join(root, "auto", "nested")
+	path := filepath.Join(parent, "f.txt")
+
+	p := NewPerformer(func() actions.Mode { return actions.ModeApply }, "", false, "")
+	got := p.WriteFile(path, []byte("hello"), 0o644, actions.PerformerOpts{})
+	if got.Err != nil {
+		t.Fatalf("unprivileged path should succeed, got: %v", got.Err)
+	}
+	if !got.Performed {
+		t.Error("Performed should be true")
+	}
+	if info, err := os.Stat(parent); err != nil || !info.IsDir() {
+		t.Errorf("parent should have been auto-created; stat err=%v", err)
+	}
+	data, _ := os.ReadFile(path)
+	if string(data) != "hello" {
+		t.Errorf("content = %q, want %q", string(data), "hello")
+	}
+}
+
+// TestCopyFile_MissingParent_NoEscalation_UnprivilegedCreate — the
+// CopyFile counterpart: no AsUser, missing parent is auto-created and
+// the copy succeeds.
+func TestCopyFile_MissingParent_NoEscalation_UnprivilegedCreate(t *testing.T) {
+	root := t.TempDir()
+	src := filepath.Join(root, "src.txt")
+	if err := os.WriteFile(src, []byte("payload"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	parent := filepath.Join(root, "auto", "nested")
+	dest := filepath.Join(parent, "dest.txt")
+
+	p := NewPerformer(func() actions.Mode { return actions.ModeApply }, "", false, "")
+	got := p.CopyFile(src, dest, 0o644, actions.PerformerOpts{})
+	if got.Err != nil {
+		t.Fatalf("unprivileged path should succeed, got: %v", got.Err)
+	}
+	if !got.Performed {
+		t.Error("Performed should be true")
+	}
+	if info, err := os.Stat(parent); err != nil || !info.IsDir() {
+		t.Errorf("parent should have been auto-created; stat err=%v", err)
+	}
+	data, _ := os.ReadFile(dest)
+	if string(data) != "payload" {
+		t.Errorf("content = %q, want %q", string(data), "payload")
+	}
+}
+
 // ----------------------------------------------------------------------
 // Symlink
 // ----------------------------------------------------------------------

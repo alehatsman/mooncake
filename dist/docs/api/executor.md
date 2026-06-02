@@ -36,7 +36,9 @@ The executor enforces idempotency through: \- creates: Skip if path exists \- un
 
 \# Dry\-Run Mode
 
-When DryRun is true: \- No actual changes are made to the system \- Handlers log what would happen \- Template rendering still occurs \(validates syntax\) \- File existence checks are performed \(read\-only\) \- Statistics track what would have changed
+When DryRun is true: \- No mooncake\-driven changes are made to the system: action handlers do not run, they only log what they would do. \- Handlers log what would happen \- Template rendering still occurs \(validates syntax\) \- File existence checks are performed \(read\-only\) \- Statistics track what would have changed
+
+IMPORTANT — idempotency guards run in plan/dry\-run too. The \`unless:\` and \`creates:\` guards \(see checkIdempotencyConditions\) are evaluated BEFORE the ModePlan dispatch, so they execute in EVERY mode including plan/dry\-run. In particular the user\-authored \`unless:\` command IS executed via \`sh \-c \<command\>\` during plan — it is not simulated. This is intentional: a plan must report the same skip/run decisions the real run would make, and that decision depends on probing live system state. Consequently guards MUST be side\-effect\-free read probes \(e.g. \`test \-f\`, \`pgrep\`, \`kubectl get\`\), never state\-mutating commands — a mutating \`unless:\` will mutate the system during a dry\-run.
 
 \# Error Handling
 
@@ -236,7 +238,7 @@ var (
 )
 ```
 
-## func [AddGlobalVariables](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/executor.go#L153>)
+## func [AddGlobalVariables](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/executor.go#L165>)
 
 ```go
 func AddGlobalVariables(scope *VariableScope)
@@ -244,7 +246,7 @@ func AddGlobalVariables(scope *VariableScope)
 
 AddGlobalVariables populates scope.Facts, scope.Metrics, and scope.Env from the system. Facts \(capabilities, configuration\) come from facts.Collect; metrics \(live CPU/GPU/memory/load/network\) come from metrics.Collect with per\-metric TTL caching; env is a snapshot of the parent process environment exposed to templates as \`env.\*\` so users can reference \`\{\{ env.HOME \}\}\`, \`\{\{ env.MY\_API\_KEY \}\}\`, etc. Keys across facts and metrics are disjoint by contract — see metrics.disjoint\_test.go.
 
-## func [DispatchStepAction](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/executor.go#L420>)
+## func [DispatchStepAction](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/executor.go#L444>)
 
 ```go
 func DispatchStepAction(step config.Step, ec *ExecutionContext) error
@@ -254,7 +256,7 @@ DispatchStepAction executes the appropriate handler based on step type. All acti
 
 INTERNAL: This function is exported for testing purposes only and is not part of the public API. It may change or be removed in future versions without notice.
 
-## func [ExecutePlan](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/executor.go#L1332>)
+## func [ExecutePlan](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/executor.go#L1356>)
 
 ```go
 func ExecutePlan(ctx context.Context, p *plan.Plan, sudoPass string, mode actions.Mode, log logger.Logger, publisher events.Publisher) error
@@ -266,7 +268,7 @@ Callers that need the typed \*KernelResult substrate \(R1.1b\) should use Execut
 
 ctx is checked between steps — see Start for the cancellation contract.
 
-## func [ExecutePlanWithCapture](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/executor.go#L1348>)
+## func [ExecutePlanWithCapture](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/executor.go#L1372>)
 
 ```go
 func ExecutePlanWithCapture(ctx context.Context, p *plan.Plan, sudoPass string, mode actions.Mode, log logger.Logger, publisher events.Publisher, capture *RunCapture) error
@@ -278,7 +280,7 @@ This is the from\-saved\-plan analog of executor.Start with Capture set. Used by
 
 ctx is checked between steps — see Start for the cancellation contract.
 
-## func [ExecuteStep](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/executor.go#L829>)
+## func [ExecuteStep](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/executor.go#L853>)
 
 ```go
 func ExecuteStep(step config.Step, ec *ExecutionContext) error
@@ -286,7 +288,7 @@ func ExecuteStep(step config.Step, ec *ExecutionContext) error
 
 ExecuteStep executes a single configuration step within the given execution context.
 
-## func [ExecuteSteps](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/executor.go#L1001>)
+## func [ExecuteSteps](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/executor.go#L1025>)
 
 ```go
 func ExecuteSteps(steps []config.Step, ec *ExecutionContext) error
@@ -320,7 +322,7 @@ Panics on duplicate registration — silent overwrite would let a later handler 
 
 Called from each handler package's init\(\) alongside actions.Register. The wire round\-trip is the contract this registry implements: see Result.MarshalJSON / UnmarshalJSON \(spec R2.1c phase 2\).
 
-## func [Start](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/executor.go#L1176>)
+## func [Start](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/executor.go#L1200>)
 
 ```go
 func Start(ctx context.Context, startConfig StartConfig, log logger.Logger, publisher events.Publisher) error
@@ -1522,7 +1524,7 @@ func (e *SetupError) Error() string
 func (e *SetupError) Unwrap() error
 ```
 
-## type [StartConfig](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/executor.go#L1126-L1165>)
+## type [StartConfig](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/executor.go#L1150-L1189>)
 
 StartConfig contains configuration for starting a mooncake execution.
 

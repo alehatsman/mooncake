@@ -52,11 +52,23 @@
 // # Dry-Run Mode
 //
 // When DryRun is true:
-//   - No actual changes are made to the system
+//   - No mooncake-driven changes are made to the system: action handlers
+//     do not run, they only log what they would do.
 //   - Handlers log what would happen
 //   - Template rendering still occurs (validates syntax)
 //   - File existence checks are performed (read-only)
 //   - Statistics track what would have changed
+//
+// IMPORTANT — idempotency guards run in plan/dry-run too. The `unless:` and
+// `creates:` guards (see checkIdempotencyConditions) are evaluated BEFORE the
+// ModePlan dispatch, so they execute in EVERY mode including plan/dry-run.
+// In particular the user-authored `unless:` command IS executed via
+// `sh -c <command>` during plan — it is not simulated. This is intentional:
+// a plan must report the same skip/run decisions the real run would make, and
+// that decision depends on probing live system state. Consequently guards MUST
+// be side-effect-free read probes (e.g. `test -f`, `pgrep`, `kubectl get`),
+// never state-mutating commands — a mutating `unless:` will mutate the system
+// during a dry-run.
 //
 // # Error Handling
 //
@@ -206,6 +218,14 @@ func handleWhenExpression(step config.Step, ec *ExecutionContext) (bool, error) 
 	return !boolResult, nil
 }
 
+// checkIdempotencyConditions evaluates the `creates:`/`unless:` guards.
+//
+// This runs in ALL modes, including plan/dry-run, by design: it sits before
+// the ModePlan dispatch so a plan reports the same skip/run decisions the real
+// run would make. That means the `unless:` command below is executed via
+// `sh -c` even during a dry-run — guards must therefore be side-effect-free
+// read probes, not state-mutating commands. See the "Dry-Run Mode" section of
+// the package doc comment for the full contract.
 func checkIdempotencyConditions(step config.Step, ec *ExecutionContext) (bool, string, error) {
 	vars := ec.Variables()
 
@@ -261,6 +281,10 @@ func checkIdempotencyConditions(step config.Step, ec *ExecutionContext) (bool, s
 			if err != nil {
 				return false, "", &RenderError{Field: "unless command", Cause: err}
 			}
+			// NB: this shell-out runs in plan/dry-run mode too (see the
+			// checkIdempotencyConditions / package "Dry-Run Mode" doc).
+			// The `unless:` command really executes here even during a
+			// dry-run, so it MUST be a side-effect-free read probe.
 			// F055: run the guard via exec.CommandContext so Ctrl-C /
 			// context cancel aborts the subprocess instead of waiting
 			// for it to exit on its own. The guard runs BEFORE

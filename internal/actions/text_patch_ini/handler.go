@@ -24,9 +24,8 @@ import (
 )
 
 const (
-	actionName       = "text.patch.ini"
-	defaultFileMode  = 0o644
-	atomicTempSuffix = ".tmp"
+	actionName      = "text.patch.ini"
+	defaultFileMode = 0o644
 )
 
 // Handler implements text.patch.ini.
@@ -162,8 +161,18 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		}
 	}
 
-	if err := writeAtomic(path, newBytes, mode); err != nil {
-		return result, fmt.Errorf("text.patch.ini: write: %w", err)
+	// #90/#92: route the atomic write through the Performer so root-owned
+	// targets succeed under become/as_user. The Performer stages a temp
+	// via os.CreateTemp and sudo mv/chmod when escalation is needed,
+	// which also removes the predictable path+".tmp" hazard (#91).
+	// mode is passed explicitly so the file's mode is preserved. ini can
+	// create a new file; mode is 0 → default 0644 in that case.
+	writeMode := mode
+	if writeMode == 0 {
+		writeMode = defaultFileMode
+	}
+	if eff := ctx.Effects().WriteFile(path, newBytes, writeMode, actions.PerformerOpts{}); eff.Err != nil {
+		return result, fmt.Errorf("text.patch.ini: write: %w", eff.Err)
 	}
 
 	result.Changed = true
@@ -633,19 +642,3 @@ func bytesEqual(a, b []byte) bool {
 // ---------------------------------------------------------------------
 // file I/O
 // ---------------------------------------------------------------------
-
-func writeAtomic(path string, content []byte, mode os.FileMode) error {
-	tmp := path + atomicTempSuffix
-	if mode == 0 {
-		mode = defaultFileMode
-	}
-	// #nosec G306 -- mode comes from the existing file (or default 0644 for new files), matches sibling text actions.
-	if err := os.WriteFile(tmp, content, mode); err != nil {
-		return err
-	}
-	if err := os.Rename(tmp, path); err != nil {
-		_ = os.Remove(tmp)
-		return err
-	}
-	return nil
-}

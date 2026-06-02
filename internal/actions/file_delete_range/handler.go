@@ -187,26 +187,6 @@ func (h *Handler) performDeletion(content, startAnchor, endAnchor string, useReg
 	return newContent, deletedLines, nil
 }
 
-// writeAtomic writes content to file using atomic write pattern (temp file + rename).
-// mode is the permission set applied to the temp file so the rename preserves
-// the original file's mode instead of clobbering it to 0644.
-func (h *Handler) writeAtomic(path, content string, mode os.FileMode) error {
-	// Write to temp file first
-	tmpFile := path + ".tmp"
-	if err := os.WriteFile(tmpFile, []byte(content), mode); err != nil {
-		return fmt.Errorf("failed to write temp file: %w", err)
-	}
-
-	// Atomic rename
-	if err := os.Rename(tmpFile, path); err != nil {
-		// Cleanup temp file on error
-		_ = os.Remove(tmpFile)
-		return fmt.Errorf("failed to rename temp file: %w", err)
-	}
-
-	return nil
-}
-
 // Run is the Spec 16 unified entry point. Computes the post-deletion
 // content in memory; plan mode reports the prediction, execute mode
 // commits the change atomically.
@@ -298,8 +278,13 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		}
 	}
 
-	if err := h.writeAtomic(renderedPath, newContent, origMode); err != nil {
-		return result, fmt.Errorf("failed to write file: %w", err)
+	// #90/#92: route the atomic write through the Performer so root-owned
+	// targets succeed under become/as_user. The Performer stages a temp
+	// via os.CreateTemp and sudo mv/chmod when escalation is needed,
+	// which also removes the predictable path+".tmp" hazard (#91).
+	// origMode is passed explicitly so the file's mode is preserved.
+	if eff := ctx.Effects().WriteFile(renderedPath, []byte(newContent), origMode, actions.PerformerOpts{}); eff.Err != nil {
+		return result, fmt.Errorf("failed to write file: %w", eff.Err)
 	}
 
 	result.Changed = true

@@ -1,12 +1,14 @@
 package os_systemd //nolint:revive // package name follows action convention
 
 import (
+	"context"
 	"errors"
 	"fmt"
 
 	"github.com/alehatsman/mooncake/internal/actions"
 	"github.com/alehatsman/mooncake/internal/config"
 	"github.com/alehatsman/mooncake/internal/executor"
+	"github.com/alehatsman/mooncake/internal/security"
 )
 
 // OsSystemdReverseInfo is the per-step apply-time snapshot
@@ -76,7 +78,7 @@ type OsSystemdReverseInfo struct {
 // is-enabled / is-active for the unit. All four pieces are
 // best-effort: failures to read either leave the corresponding
 // "Had..." flag false.
-func captureReverseInfo(scope, name, path string) *OsSystemdReverseInfo {
+func captureReverseInfo(runCtx context.Context, runner *security.Privileged, scope, name, path string) *OsSystemdReverseInfo {
 	info := &OsSystemdReverseInfo{Name: name, Scope: scope, Path: path}
 
 	if content, exists, err := readFile(path); err == nil {
@@ -92,11 +94,11 @@ func captureReverseInfo(scope, name, path string) *OsSystemdReverseInfo {
 		// possibly pre-existing unit.
 		info.PriorReadFailed = true
 	}
-	if enabled, err := systemctlIsEnabled(scope, name); err == nil {
+	if enabled, err := systemctlIsEnabled(runCtx, runner, scope, name); err == nil {
 		info.PriorEnabled = enabled
 		info.HadPriorEnabled = true
 	}
-	if active, err := systemctlIsActive(scope, name); err == nil {
+	if active, err := systemctlIsActive(runCtx, runner, scope, name); err == nil {
 		info.PriorActive = active
 		info.HadPriorActive = true
 	}

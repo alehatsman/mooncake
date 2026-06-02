@@ -2,6 +2,7 @@
 package os_systemd
 
 import (
+	"context"
 	"errors"
 	"os"
 	"path/filepath"
@@ -14,6 +15,7 @@ import (
 	"github.com/alehatsman/mooncake/internal/executor"
 	"github.com/alehatsman/mooncake/internal/logger"
 	"github.com/alehatsman/mooncake/internal/pathutil"
+	"github.com/alehatsman/mooncake/internal/security"
 	"github.com/alehatsman/mooncake/internal/template"
 )
 
@@ -80,18 +82,18 @@ func newStub(t *testing.T) *stub {
 		return ""
 	}
 	origDR, origIE, origE, origD, origIA, origST, origSP := systemctlDaemonReload, systemctlIsEnabled, systemctlEnable, systemctlDisable, systemctlIsActive, systemctlStart, systemctlStop
-	systemctlDaemonReload = func(scope string) error {
+	systemctlDaemonReload = func(_ context.Context, _ *security.Privileged, scope string) error {
 		s.calls = append(s.calls, tag(scope)+"daemon-reload")
 		return s.reloadErr
 	}
-	systemctlIsEnabled = func(scope, name string) (bool, error) {
+	systemctlIsEnabled = func(_ context.Context, _ *security.Privileged, scope, name string) (bool, error) {
 		s.calls = append(s.calls, tag(scope)+"is-enabled "+name)
 		if err, ok := s.enableErr[name]; ok {
 			return false, err
 		}
 		return s.enabled[name], nil
 	}
-	systemctlEnable = func(scope, name string) error {
+	systemctlEnable = func(_ context.Context, _ *security.Privileged, scope, name string) error {
 		s.calls = append(s.calls, tag(scope)+"enable "+name)
 		if err, ok := s.enableActionErr[name]; ok {
 			return err
@@ -99,19 +101,19 @@ func newStub(t *testing.T) *stub {
 		s.enabled[name] = true
 		return nil
 	}
-	systemctlDisable = func(scope, name string) error {
+	systemctlDisable = func(_ context.Context, _ *security.Privileged, scope, name string) error {
 		s.calls = append(s.calls, tag(scope)+"disable "+name)
 		s.enabled[name] = false
 		return nil
 	}
-	systemctlIsActive = func(scope, name string) (bool, error) {
+	systemctlIsActive = func(_ context.Context, _ *security.Privileged, scope, name string) (bool, error) {
 		s.calls = append(s.calls, tag(scope)+"is-active "+name)
 		if err, ok := s.activeErr[name]; ok {
 			return false, err
 		}
 		return s.active[name], nil
 	}
-	systemctlStart = func(scope, name string) error {
+	systemctlStart = func(_ context.Context, _ *security.Privileged, scope, name string) error {
 		s.calls = append(s.calls, tag(scope)+"start "+name)
 		if err, ok := s.startActionErr[name]; ok {
 			return err
@@ -119,7 +121,7 @@ func newStub(t *testing.T) *stub {
 		s.active[name] = true
 		return nil
 	}
-	systemctlStop = func(scope, name string) error {
+	systemctlStop = func(_ context.Context, _ *security.Privileged, scope, name string) error {
 		s.calls = append(s.calls, tag(scope)+"stop "+name)
 		s.active[name] = false
 		return nil
@@ -573,6 +575,75 @@ func TestRender_PathOverride(t *testing.T) {
 	_ = mustRun(t, false, step)
 	if _, err := os.Stat(filepath.Join(tmp, "user.service")); err != nil {
 		t.Errorf("expected unit at custom path: %v", err)
+	}
+}
+
+// TestRun_RunnerThreadedPerInvocation asserts that the escalation
+// runner is threaded through the call chain per-Run rather than
+// stashed in package-level state (issue #94). Two Run() invocations
+// carrying DISTINCT runners (distinguished here by their AsUser
+// binding) must each see their own runner reach the systemctl hooks —
+// the second run must not observe the first run's runner. If the
+// handler regressed to a package var, the hook would see whichever
+// runner Run() assigned last, and the per-invocation assertion would
+// fail.
+func TestRun_RunnerThreadedPerInvocation(t *testing.T) {
+	if runtime.GOOS != "linux" {
+		t.Skip("Linux only")
+	}
+	_ = stubFS(t)
+	st := newStub(t)
+
+	// Capture the runner pointer the daemon-reload hook receives on
+	// each invocation. daemon-reload always fires on a create with the
+	// default reload_on_change=true, so it's a reliable observation
+	// point reached inside applyPlan -> threaded from Run().
+	var seen []*security.Privileged
+	origDR := systemctlDaemonReload
+	systemctlDaemonReload = func(_ context.Context, runner *security.Privileged, scope string) error {
+		seen = append(seen, runner)
+		return st.reloadErr
+	}
+	t.Cleanup(func() { systemctlDaemonReload = origDR })
+
+	mkStep := func(name string) *config.Step {
+		return &config.Step{OsSystemd: &config.OsSystemd{
+			Name:    name,
+			Service: map[string]interface{}{"ExecStart": "/opt/myapp/run"},
+		}}
+	}
+
+	// Two contexts with DISTINCT AsUser bindings -> ctx.Privileged()
+	// yields two distinct *security.Privileged values.
+	ctxA := newCtx(t, false)
+	ctxA.CurrentAsUser = "alice"
+	ctxB := newCtx(t, false)
+	ctxB.CurrentAsUser = "bob"
+
+	if _, err := (&Handler{}).Run(ctxA, mkStep("a.service")); err != nil {
+		t.Fatalf("Run A: %v", err)
+	}
+	if _, err := (&Handler{}).Run(ctxB, mkStep("b.service")); err != nil {
+		t.Fatalf("Run B: %v", err)
+	}
+
+	if len(seen) != 2 {
+		t.Fatalf("expected daemon-reload to observe a runner on each of 2 runs; got %d", len(seen))
+	}
+	if seen[0] == nil || seen[1] == nil {
+		t.Fatalf("runner must be threaded (non-nil) into the hook; got %v", seen)
+	}
+	// Distinct runner instances per Run — no shared package state.
+	if seen[0] == seen[1] {
+		t.Errorf("both runs shared the same runner pointer (%p) — package-level state leak", seen[0])
+	}
+	// And each run threaded ITS OWN runner, not the other's: the
+	// AsUser binding must match the invoking context.
+	if seen[0].AsUser != "alice" {
+		t.Errorf("run A saw runner AsUser=%q, want alice (cross-contamination)", seen[0].AsUser)
+	}
+	if seen[1].AsUser != "bob" {
+		t.Errorf("run B saw runner AsUser=%q, want bob (cross-contamination)", seen[1].AsUser)
 	}
 }
 

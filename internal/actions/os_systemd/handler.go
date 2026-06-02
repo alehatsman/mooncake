@@ -29,44 +29,34 @@ import (
 	"github.com/alehatsman/mooncake/internal/security"
 )
 
-// privilegedRunner + privilegedCtx are the escalation primitives used
-// by writeAtomic + runSystemctl helpers. Run() sets both from the
-// ExecutionContext before applyPlan; tests that stub the systemctl*
-// hooks bypass this entirely. Package-level state because the
-// existing systemctl* hook plumbing already lives at package scope
-// and mooncake executes actions serially.
-//
-// Spec-72 phase 2b: migrated from a directly-constructed
-// security.BecomeRunner value. The handler still needs the broader
-// Command() API in two places — writeAtomic captures sudo cp + sudo
-// chmod separately (each with its own combined-output capture so a
-// chmod failure surfaces distinctly from a cp failure), and
-// runSystemctl uses the conditional `systemctlBecome()` predicate to
-// skip sudo when mooncake is already root. PrivilegedRunner.Command
-// exposes both knobs while keeping the SudoPass+Escalation read
-// centralized at ctx.Privileged().
-var (
-	privilegedRunner *security.Privileged
-	privilegedCtx    context.Context
-)
-
 // becomeCommand is the package-internal escalation entry point used
-// by writeAtomic + runSystemctl helpers. Routes to
-// privilegedRunner.Command if Run() set it; returns a clear "not
-// initialized" error otherwise so test paths that wire the
-// systemctl* hooks but accidentally fall through to a sudo'd helper
-// fail loudly instead of nil-pointer-panicking.
-func becomeCommand(_ bool, program string, args ...string) (*exec.Cmd, error) {
+// by writeAtomic + runSystemctl helpers. The runner + context are
+// threaded explicitly from Run() (spec-69 phase-5 pattern) so the
+// package carries no per-Run mutable state and concurrent dispatch
+// can never cross-contaminate two runs. A nil runner returns a clear
+// "not initialized" error so test paths that wire the systemctl*
+// hooks but accidentally fall through to a sudo'd helper fail loudly
+// instead of nil-pointer-panicking.
+//
+// Spec-72 phase 2b: the handler needs the broader Command() API in
+// two places — writeAtomic captures sudo cp + sudo chmod separately
+// (each with its own combined-output capture so a chmod failure
+// surfaces distinctly from a cp failure), and runSystemctl uses the
+// conditional `systemctlBecome()` predicate to skip sudo when
+// mooncake is already root. PrivilegedRunner.Command exposes both
+// knobs while keeping the SudoPass+Escalation read centralized at
+// ctx.Privileged().
+func becomeCommand(runCtx context.Context, runner *security.Privileged, _ bool, program string, args ...string) (*exec.Cmd, error) {
 	// The legacy `become` arg is preserved for the per-call sites
 	// (writeAtomic always passes true, runSystemctl passes
 	// systemctlBecome()) but is now a no-op: spec-72 Layer C moved
 	// the escalation decision to step.AsUser, bound onto the
 	// primitive at dispatch. The arg is dropped from call sites in
 	// a follow-up so this function's signature can shrink.
-	if privilegedRunner == nil {
-		return nil, errors.New("os_systemd: privilegedRunner not initialized — Run() must be invoked through ExecutionContext before writeAtomic/runSystemctl")
+	if runner == nil {
+		return nil, errors.New("os_systemd: privileged runner not initialized — Run() must thread ctx.Privileged() through writeAtomic/runSystemctl")
 	}
-	return privilegedRunner.Command(privilegedCtx, program, args...)
+	return runner.Command(runCtx, program, args...)
 }
 
 const (
@@ -94,6 +84,11 @@ var systemdPaths = struct {
 // Hooks for the systemctl primitives. Tests replace these with
 // in-memory stubs. Each takes a scope ("system"|"user") so the user
 // scope path can prepend --user without touching the call sites.
+//
+// Spec-69 phase-5: every hook takes the per-Run *security.Privileged
+// runner + run-level context explicitly so the package carries no
+// mutable escalation state. Tests stub these hooks and ignore the
+// runner; the real* implementations thread it down to becomeCommand.
 var (
 	systemctlDaemonReload = realDaemonReload
 	systemctlIsEnabled    = realIsEnabled
@@ -240,23 +235,24 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		return result, fmt.Errorf("os.systemd: only Linux is supported; got %s", runtime.GOOS)
 	}
 
-	// Pick up the escalation runner + run-level context so
-	// writeAtomic + runSystemctl can escalate when mooncake is
-	// invoked as a regular user. Empty SudoPass surfaces as a clean
-	// ErrBecomeNoSudoPass at the first sudo'd call rather than a
-	// "permission denied" on /etc/systemd/system. Tests that stub
-	// the systemctl* hooks never reach this code path.
-	if ec, ok := ctx.(*executor.ExecutionContext); ok {
-		privilegedRunner = ec.Privileged()
-		privilegedCtx = ec.Svc.Ctx
-	}
+	// Spec-69 phase 5: the escalation runner + run-level context are
+	// per-Run and threaded through computePlan + applyPlan (and the
+	// systemctl*/writeAtomic helpers) instead of riding package-level
+	// state, so concurrent dispatch can never cross-contaminate two
+	// runs. writeAtomic + runSystemctl escalate via this runner when
+	// mooncake is invoked as a regular user; an empty SudoPass
+	// surfaces as a clean ErrBecomeNoSudoPass at the first sudo'd
+	// call rather than a "permission denied" on /etc/systemd/system.
+	// Tests that stub the systemctl* hooks ignore the runner.
+	runner := ctx.Privileged()
+	runCtx := ctx.Ctx()
 
 	rendered, err := renderSystemd(ctx, s)
 	if err != nil {
 		return result, err
 	}
 
-	plan, err := computePlan(rendered)
+	plan, err := computePlan(runCtx, runner, rendered)
 	if err != nil {
 		return result, err
 	}
@@ -285,9 +281,9 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 	// here to capture all three pieces, even ones the plan didn't
 	// look at (e.g. if Enabled/Started weren't pinned the plan
 	// skipped the systemctl calls).
-	result.ReverseData = captureReverseInfo(rendered.scope, rendered.name, plan.path)
+	result.ReverseData = captureReverseInfo(runCtx, runner, rendered.scope, rendered.name, plan.path)
 
-	if err := applyPlan(plan); err != nil {
+	if err := applyPlan(runCtx, runner, plan); err != nil {
 		return result, err
 	}
 
@@ -559,7 +555,7 @@ const (
 	startUnset
 )
 
-func computePlan(r renderedSystemd) (systemdPlan, error) {
+func computePlan(runCtx context.Context, runner *security.Privileged, r renderedSystemd) (systemdPlan, error) {
 	plan := systemdPlan{path: r.path, name: r.name, scope: r.scope}
 
 	current, exists, err := readFile(r.path)
@@ -580,11 +576,11 @@ func computePlan(r renderedSystemd) (systemdPlan, error) {
 		// active / enabled. Errors from systemctl (e.g. "unit not
 		// found") are treated as "not in that state" — there's nothing
 		// to act on.
-		if active, err := systemctlIsActive(r.scope, r.name); err == nil && active {
+		if active, err := systemctlIsActive(runCtx, runner, r.scope, r.name); err == nil && active {
 			plan.startOp = startUnset
 			reasons = append(reasons, "would stop "+r.name)
 		}
-		if enabled, err := systemctlIsEnabled(r.scope, r.name); err == nil && enabled {
+		if enabled, err := systemctlIsEnabled(runCtx, runner, r.scope, r.name); err == nil && enabled {
 			plan.enableOp = enableUnset
 			reasons = append(reasons, "would disable "+r.name)
 		}
@@ -615,7 +611,7 @@ func computePlan(r renderedSystemd) (systemdPlan, error) {
 	}
 
 	if r.enabled != nil {
-		isEnabled, err := systemctlIsEnabled(r.scope, r.name)
+		isEnabled, err := systemctlIsEnabled(runCtx, runner, r.scope, r.name)
 		if err == nil {
 			if *r.enabled && !isEnabled {
 				plan.enableOp = enableSet
@@ -635,7 +631,7 @@ func computePlan(r renderedSystemd) (systemdPlan, error) {
 	}
 
 	if r.started != nil {
-		isActive, err := systemctlIsActive(r.scope, r.name)
+		isActive, err := systemctlIsActive(runCtx, runner, r.scope, r.name)
 		if err == nil {
 			if *r.started && !isActive {
 				plan.startOp = startSet
@@ -680,22 +676,22 @@ func computePlan(r renderedSystemd) (systemdPlan, error) {
 	return plan, nil
 }
 
-func applyPlan(plan systemdPlan) error {
+func applyPlan(runCtx context.Context, runner *security.Privileged, plan systemdPlan) error {
 	// Order matters: stop (if absent) → write/remove file → daemon-reload
 	// → enable/disable → start. This sequence avoids the dead window where
 	// a service has been removed from disk but is still active.
 
 	if plan.operation == "delete" {
 		if plan.startOp == startUnset {
-			if active, err := systemctlIsActive(plan.scope, plan.name); err == nil && active {
-				if err := systemctlStop(plan.scope, plan.name); err != nil {
+			if active, err := systemctlIsActive(runCtx, runner, plan.scope, plan.name); err == nil && active {
+				if err := systemctlStop(runCtx, runner, plan.scope, plan.name); err != nil {
 					return fmt.Errorf("os.systemd: stop %s: %w", plan.name, err)
 				}
 			}
 		}
 		if plan.enableOp == enableUnset {
-			if enabled, err := systemctlIsEnabled(plan.scope, plan.name); err == nil && enabled {
-				if err := systemctlDisable(plan.scope, plan.name); err != nil {
+			if enabled, err := systemctlIsEnabled(runCtx, runner, plan.scope, plan.name); err == nil && enabled {
+				if err := systemctlDisable(runCtx, runner, plan.scope, plan.name); err != nil {
 					return fmt.Errorf("os.systemd: disable %s: %w", plan.name, err)
 				}
 			}
@@ -706,7 +702,7 @@ func applyPlan(plan systemdPlan) error {
 			}
 		}
 		if plan.reload {
-			if err := systemctlDaemonReload(plan.scope); err != nil {
+			if err := systemctlDaemonReload(runCtx, runner, plan.scope); err != nil {
 				return fmt.Errorf("os.systemd: daemon-reload: %w", err)
 			}
 		}
@@ -717,32 +713,32 @@ func applyPlan(plan systemdPlan) error {
 		if err := os.MkdirAll(filepath.Dir(plan.path), 0o755); err != nil {
 			return fmt.Errorf("os.systemd: mkdir %s: %w", filepath.Dir(plan.path), err)
 		}
-		if err := writeAtomic(plan.scope, plan.path, []byte(plan.wantContent), 0o644); err != nil {
+		if err := writeAtomic(runCtx, runner, plan.scope, plan.path, []byte(plan.wantContent), 0o644); err != nil {
 			return fmt.Errorf("os.systemd: write %s: %w", plan.path, err)
 		}
 	}
 	if plan.reload {
-		if err := systemctlDaemonReload(plan.scope); err != nil {
+		if err := systemctlDaemonReload(runCtx, runner, plan.scope); err != nil {
 			return fmt.Errorf("os.systemd: daemon-reload: %w", err)
 		}
 	}
 	switch plan.enableOp {
 	case enableSet:
-		if err := systemctlEnable(plan.scope, plan.name); err != nil {
+		if err := systemctlEnable(runCtx, runner, plan.scope, plan.name); err != nil {
 			return fmt.Errorf("os.systemd: enable %s: %w", plan.name, err)
 		}
 	case enableUnset:
-		if err := systemctlDisable(plan.scope, plan.name); err != nil {
+		if err := systemctlDisable(runCtx, runner, plan.scope, plan.name); err != nil {
 			return fmt.Errorf("os.systemd: disable %s: %w", plan.name, err)
 		}
 	}
 	switch plan.startOp {
 	case startSet:
-		if err := systemctlStart(plan.scope, plan.name); err != nil {
+		if err := systemctlStart(runCtx, runner, plan.scope, plan.name); err != nil {
 			return fmt.Errorf("os.systemd: start %s: %w", plan.name, err)
 		}
 	case startUnset:
-		if err := systemctlStop(plan.scope, plan.name); err != nil {
+		if err := systemctlStop(runCtx, runner, plan.scope, plan.name); err != nil {
 			return fmt.Errorf("os.systemd: stop %s: %w", plan.name, err)
 		}
 	}
@@ -760,7 +756,7 @@ func readFile(path string) (string, bool, error) {
 	return string(data), true, nil
 }
 
-func writeAtomic(scope, path string, content []byte, mode os.FileMode) error {
+func writeAtomic(runCtx context.Context, runner *security.Privileged, scope, path string, content []byte, mode os.FileMode) error {
 	// Fast path: direct write — works when mooncake itself runs as root,
 	// or the unit path happens to be user-writable (custom Path: in
 	// step config, or scope=user dir under $HOME). The sudo fallback
@@ -799,7 +795,7 @@ func writeAtomic(scope, path string, content []byte, mode os.FileMode) error {
 		return fmt.Errorf("close temp %s: %w", tmpPath, err)
 	}
 
-	cmd, err := becomeCommand(true, "cp", tmpPath, path)
+	cmd, err := becomeCommand(runCtx, runner, true, "cp", tmpPath, path)
 	if err != nil {
 		return fmt.Errorf("sudo cp setup: %w", err)
 	}
@@ -807,7 +803,7 @@ func writeAtomic(scope, path string, content []byte, mode os.FileMode) error {
 		return fmt.Errorf("sudo cp %s -> %s: %w (%s)", tmpPath, path, err, strings.TrimSpace(string(out)))
 	}
 
-	cmd, err = becomeCommand(true, "chmod", fmt.Sprintf("%o", mode), path)
+	cmd, err = becomeCommand(runCtx, runner, true, "chmod", fmt.Sprintf("%o", mode), path)
 	if err != nil {
 		return fmt.Errorf("sudo chmod setup: %w", err)
 	}
@@ -818,16 +814,16 @@ func writeAtomic(scope, path string, content []byte, mode os.FileMode) error {
 }
 
 // realDaemonReload shells out to `systemctl daemon-reload`.
-func realDaemonReload(scope string) error {
-	return runSystemctl(scope, "daemon-reload")
+func realDaemonReload(runCtx context.Context, runner *security.Privileged, scope string) error {
+	return runSystemctl(runCtx, runner, scope, "daemon-reload")
 }
 
 // realIsEnabled returns true when systemctl reports the unit enabled.
 // "static", "indirect", "alias" and "linked" are treated as enabled —
 // they ship a [Install] section equivalent. "disabled", "masked",
 // "generated", "transient", "bad" → false. Errors propagate.
-func realIsEnabled(scope, name string) (bool, error) {
-	out, err := runSystemctlOut(scope, "is-enabled", name)
+func realIsEnabled(runCtx context.Context, runner *security.Privileged, scope, name string) (bool, error) {
+	out, err := runSystemctlOut(runCtx, runner, scope, "is-enabled", name)
 	state := strings.TrimSpace(out)
 	if err != nil {
 		// systemctl is-enabled exits 1 for disabled; map that to (false, nil)
@@ -849,15 +845,19 @@ func enableFromToken(tok string) bool {
 	}
 }
 
-func realEnable(scope, name string) error  { return runSystemctl(scope, "enable", name) }
-func realDisable(scope, name string) error { return runSystemctl(scope, "disable", name) }
+func realEnable(runCtx context.Context, runner *security.Privileged, scope, name string) error {
+	return runSystemctl(runCtx, runner, scope, "enable", name)
+}
+func realDisable(runCtx context.Context, runner *security.Privileged, scope, name string) error {
+	return runSystemctl(runCtx, runner, scope, "disable", name)
+}
 
 // realIsActive returns true when the unit's ActiveState is "active".
 // "reloading" and "activating" also count as active so we don't fight
 // in-progress transitions. Exit code 3 from `is-active` means inactive
 // — that's not an error.
-func realIsActive(scope, name string) (bool, error) {
-	out, err := runSystemctlOut(scope, "is-active", name)
+func realIsActive(runCtx context.Context, runner *security.Privileged, scope, name string) (bool, error) {
+	out, err := runSystemctlOut(runCtx, runner, scope, "is-active", name)
 	state := strings.TrimSpace(out)
 	if err != nil {
 		if state != "" {
@@ -877,8 +877,12 @@ func activeFromToken(tok string) bool {
 	}
 }
 
-func realStart(scope, name string) error { return runSystemctl(scope, "start", name) }
-func realStop(scope, name string) error  { return runSystemctl(scope, "stop", name) }
+func realStart(runCtx context.Context, runner *security.Privileged, scope, name string) error {
+	return runSystemctl(runCtx, runner, scope, "start", name)
+}
+func realStop(runCtx context.Context, runner *security.Privileged, scope, name string) error {
+	return runSystemctl(runCtx, runner, scope, "stop", name)
+}
 
 // systemctlBecome decides whether systemctl calls run under sudo.
 // System scope: true when mooncake is invoked as a non-root user
@@ -909,9 +913,9 @@ func withScope(scope string, args ...string) []string {
 	return out
 }
 
-func runSystemctl(scope string, args ...string) error {
+func runSystemctl(runCtx context.Context, runner *security.Privileged, scope string, args ...string) error {
 	full := withScope(scope, args...)
-	cmd, err := becomeCommand(systemctlBecome(scope), "systemctl", full...)
+	cmd, err := becomeCommand(runCtx, runner, systemctlBecome(scope), "systemctl", full...)
 	if err != nil {
 		return fmt.Errorf("systemctl %s: %w", strings.Join(full, " "), err)
 	}
@@ -927,9 +931,9 @@ func runSystemctl(scope string, args ...string) error {
 	return nil
 }
 
-func runSystemctlOut(scope string, args ...string) (string, error) {
+func runSystemctlOut(runCtx context.Context, runner *security.Privileged, scope string, args ...string) (string, error) {
 	full := withScope(scope, args...)
-	cmd, err := becomeCommand(systemctlBecome(scope), "systemctl", full...)
+	cmd, err := becomeCommand(runCtx, runner, systemctlBecome(scope), "systemctl", full...)
 	if err != nil {
 		return "", fmt.Errorf("systemctl %s: %w", strings.Join(full, " "), err)
 	}

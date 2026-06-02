@@ -229,6 +229,13 @@ func mergeArray(dst, src *node, strategy string) (*node, bool) {
 		}
 		return src, true
 	case "append":
+		// WARNING (#98): "append" is intentionally NON-idempotent — it
+		// concatenates src onto dst unconditionally, so every run grows
+		// the array and re-running a playbook keeps appending duplicates.
+		// This is the one merge_strategy that breaks the package-level
+		// idempotency guarantee. Callers who want convergence (add the
+		// element only if it isn't already present) must use
+		// "append_unique" instead.
 		if len(src.items) == 0 {
 			return dst, false
 		}

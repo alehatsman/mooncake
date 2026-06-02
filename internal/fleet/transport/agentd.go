@@ -205,10 +205,16 @@ func (c *Client) Head(ctx context.Context, scope, relPath, sha256 string) (bool,
 // regardless of plan-dir size. Caller is responsible for ensuring the file
 // fits within the daemon's MaxSyncBytes; on overflow the daemon returns
 // 413 and we surface that as an error.
+//
+// Unlike the small JSON round trips, Put does NOT inject the 30s
+// defaultRequestTimeout: bodies run up to the daemon's MaxSyncBytes (100MiB),
+// and a near-full body needs >3.4MB/s just to beat 30s, so a fixed default
+// would abort large/slow syncs mid-stream. The budget is the caller's to own
+// (maintainer decision on #97): Put inherits the caller's ctx unchanged — an
+// existing deadline passes through, and an unbounded ctx stays unbounded.
+// Call sites size the deadline to the upload (see SyncTo / execOne /
+// observeOne).
 func (c *Client) Put(ctx context.Context, scope, relPath, srcPath, sha256 string) error {
-	ctx, cancel := withTimeout(ctx)
-	defer cancel()
-
 	f, err := os.Open(srcPath)
 	if err != nil {
 		return c.wrap("PUT /v1/files: open "+srcPath, err)

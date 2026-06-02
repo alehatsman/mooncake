@@ -47,14 +47,14 @@ const (
 // security default (matches the pre-phase-5 behaviour where the
 // package-level privRunner was zero-initialized at package load).
 var (
-	aptUpgrade       = realAptUpgrade       // func(runner, names []string) error
-	aptAutoremove    = realAptAutoremove    // func(runner) error
-	dnfUpgrade       = realDnfUpgrade       // func(runner, names []string) error
-	dnfAutoremove    = realDnfAutoremove    // func(runner) error
-	pacmanUpgrade    = realPacmanUpgrade    // func(runner, names []string) error
-	pacmanAutoremove = realPacmanAutoremove // func(runner) error
-	brewUpgrade      = realBrewUpgrade      // func(runner, names []string) error  (brew ignores runner)
-	brewAutoremove   = realBrewAutoremove   // func(runner) error                  (brew ignores runner)
+	aptUpgrade       = realAptUpgrade       // func(ctx, runner, names []string) error
+	aptAutoremove    = realAptAutoremove    // func(ctx, runner) error
+	dnfUpgrade       = realDnfUpgrade       // func(ctx, runner, names []string) error
+	dnfAutoremove    = realDnfAutoremove    // func(ctx, runner) error
+	pacmanUpgrade    = realPacmanUpgrade    // func(ctx, runner, names []string) error
+	pacmanAutoremove = realPacmanAutoremove // func(ctx, runner) error
+	brewUpgrade      = realBrewUpgrade      // func(ctx, runner, names []string) error  (brew ignores runner)
+	brewAutoremove   = realBrewAutoremove   // func(ctx, runner) error                  (brew ignores runner)
 	lookPath         = exec.LookPath        // override in tests for manager detection
 )
 
@@ -200,11 +200,11 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		return result, nil
 	}
 
-	if err := runUpgrade(runner, manager, names); err != nil {
+	if err := runUpgrade(ctx.Ctx(), runner, manager, names); err != nil {
 		return result, fmt.Errorf("pkg.upgrade: %s upgrade: %w", manager, err)
 	}
 	if p.Autoremove {
-		if err := runAutoremove(runner, manager); err != nil {
+		if err := runAutoremove(ctx.Ctx(), runner, manager); err != nil {
 			return result, fmt.Errorf("pkg.upgrade: %s autoremove: %w", manager, err)
 		}
 	}
@@ -285,35 +285,35 @@ func resolveManager(requested string) (string, error) {
 
 // runUpgrade dispatches to the per-manager upgrade hook. Keeps the
 // Run() flow manager-agnostic.
-func runUpgrade(runner *security.Privileged, manager string, names []string) error {
+func runUpgrade(ctx context.Context, runner *security.Privileged, manager string, names []string) error {
 	switch manager {
 	case managerApt:
-		return aptUpgrade(runner, names)
+		return aptUpgrade(ctx, runner, names)
 	case managerDnf:
-		return dnfUpgrade(runner, names)
+		return dnfUpgrade(ctx, runner, names)
 	case managerPacman:
-		return pacmanUpgrade(runner, names)
+		return pacmanUpgrade(ctx, runner, names)
 	case managerBrew:
-		return brewUpgrade(runner, names)
+		return brewUpgrade(ctx, runner, names)
 	}
 	return fmt.Errorf("runUpgrade: unsupported manager %q", manager)
 }
 
-func runAutoremove(runner *security.Privileged, manager string) error {
+func runAutoremove(ctx context.Context, runner *security.Privileged, manager string) error {
 	switch manager {
 	case managerApt:
-		return aptAutoremove(runner)
+		return aptAutoremove(ctx, runner)
 	case managerDnf:
-		return dnfAutoremove(runner)
+		return dnfAutoremove(ctx, runner)
 	case managerPacman:
-		return pacmanAutoremove(runner)
+		return pacmanAutoremove(ctx, runner)
 	case managerBrew:
-		return brewAutoremove(runner)
+		return brewAutoremove(ctx, runner)
 	}
 	return fmt.Errorf("runAutoremove: unsupported manager %q", manager)
 }
 
-func realAptUpgrade(runner *security.Privileged, names []string) error {
+func realAptUpgrade(ctx context.Context, runner *security.Privileged, names []string) error {
 	args := []string{"upgrade", "-y"}
 	if len(names) > 0 {
 		args = append([]string{"install", "-y", "--only-upgrade"}, names...)
@@ -325,7 +325,7 @@ func realAptUpgrade(runner *security.Privileged, names []string) error {
 	// preservation rules) is sufficient. apt-get auto-detects TTY
 	// absence under sudo and falls back to noninteractive anyway, so
 	// this is belt-and-suspenders.
-	out, err := runner.Run(context.TODO(), "apt-get", args...)
+	out, err := runner.Run(ctx, "apt-get", args...)
 	if err != nil {
 		msg := strings.TrimSpace(string(out))
 		if msg != "" {
@@ -336,8 +336,8 @@ func realAptUpgrade(runner *security.Privileged, names []string) error {
 	return nil
 }
 
-func realAptAutoremove(runner *security.Privileged) error {
-	out, err := runner.Run(context.TODO(), "apt-get", "autoremove", "-y")
+func realAptAutoremove(ctx context.Context, runner *security.Privileged) error {
+	out, err := runner.Run(ctx, "apt-get", "autoremove", "-y")
 	if err != nil {
 		msg := strings.TrimSpace(string(out))
 		if msg != "" {
@@ -358,10 +358,10 @@ func realAptAutoremove(runner *security.Privileged) error {
 // "Nothing to do" is a non-error in both dnf and yum, so the
 // no-actual-upgrade case still reports Changed=true — matches
 // caller expectations across managers.
-func realDnfUpgrade(runner *security.Privileged, names []string) error {
+func realDnfUpgrade(ctx context.Context, runner *security.Privileged, names []string) error {
 	bin := dnfBinary()
 	args := append([]string{"upgrade", "-y"}, names...)
-	out, err := runner.Run(context.TODO(), bin, args...)
+	out, err := runner.Run(ctx, bin, args...)
 	if err != nil {
 		msg := strings.TrimSpace(string(out))
 		if msg != "" {
@@ -374,8 +374,8 @@ func realDnfUpgrade(runner *security.Privileged, names []string) error {
 
 // realDnfAutoremove shells out to `dnf autoremove -y`. Available on
 // dnf since RHEL 8 + Fedora; yum (RHEL 7) supports the same verb.
-func realDnfAutoremove(runner *security.Privileged) error {
-	out, err := runner.Run(context.TODO(), dnfBinary(), "autoremove", "-y")
+func realDnfAutoremove(ctx context.Context, runner *security.Privileged) error {
+	out, err := runner.Run(ctx, dnfBinary(), "autoremove", "-y")
 	if err != nil {
 		msg := strings.TrimSpace(string(out))
 		if msg != "" {
@@ -410,12 +410,12 @@ func dnfBinary() string {
 //
 // --noconfirm is required for non-interactive operation; without it
 // pacman will prompt for confirmation and block the apply.
-func realPacmanUpgrade(runner *security.Privileged, names []string) error {
+func realPacmanUpgrade(ctx context.Context, runner *security.Privileged, names []string) error {
 	args := []string{"-Syu", "--noconfirm"}
 	if len(names) > 0 {
 		args = append([]string{"-S", "--noconfirm"}, names...)
 	}
-	out, err := runner.Run(context.TODO(), "pacman", args...)
+	out, err := runner.Run(ctx, "pacman", args...)
 	if err != nil {
 		msg := strings.TrimSpace(string(out))
 		if msg != "" {
@@ -438,10 +438,10 @@ func realPacmanUpgrade(runner *security.Privileged, names []string) error {
 // + their config files. We do it in two steps to avoid pipe semantics
 // in exec.Cmd. If -Qtdq returns nothing (no orphans), that's a
 // non-error noop — match apt/dnf's "nothing to do" behaviour.
-func realPacmanAutoremove(runner *security.Privileged) error {
+func realPacmanAutoremove(ctx context.Context, runner *security.Privileged) error {
 	// Step 1: list orphans.
 	// #nosec G204 -- fixed pacman binary, fixed args.
-	list := exec.Command("pacman", "-Qtdq")
+	list := exec.CommandContext(ctx, "pacman", "-Qtdq")
 	var listStdout, listStderr bytes.Buffer
 	list.Stdout = &listStdout
 	list.Stderr = &listStderr
@@ -464,7 +464,7 @@ func realPacmanAutoremove(runner *security.Privileged) error {
 	}
 	// Step 2: remove orphans + their unused deps + config files.
 	args := append([]string{"-Rns", "--noconfirm"}, orphans...)
-	out, err := runner.Run(context.TODO(), "pacman", args...)
+	out, err := runner.Run(ctx, "pacman", args...)
 	if err != nil {
 		msg := strings.TrimSpace(string(out))
 		if msg != "" {
@@ -481,13 +481,13 @@ func realPacmanAutoremove(runner *security.Privileged) error {
 // from the caller's perspective. The runner arg is unused — brew
 // never runs under sudo by policy — but the signature matches the
 // other drivers so dispatch stays uniform.
-func realBrewUpgrade(_ *security.Privileged, names []string) error {
+func realBrewUpgrade(ctx context.Context, _ *security.Privileged, names []string) error {
 	args := []string{"upgrade"}
 	if len(names) > 0 {
 		args = append(args, names...)
 	}
 	// #nosec G204 -- args are validated names; brew binary is fixed.
-	cmd := exec.Command("brew", args...)
+	cmd := exec.CommandContext(ctx, "brew", args...)
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
 	if err := cmd.Run(); err != nil {
@@ -505,9 +505,9 @@ func realBrewUpgrade(_ *security.Privileged, names []string) error {
 // command". The error surfaces to the operator with brew's verbatim
 // message — kernel-honest about the version constraint. Runner unused
 // (brew never sudo).
-func realBrewAutoremove(_ *security.Privileged) error {
+func realBrewAutoremove(ctx context.Context, _ *security.Privileged) error {
 	// #nosec G204 -- fixed brew binary.
-	cmd := exec.Command("brew", "autoremove")
+	cmd := exec.CommandContext(ctx, "brew", "autoremove")
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
 	if err := cmd.Run(); err != nil {

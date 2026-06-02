@@ -25,8 +25,7 @@ import (
 )
 
 const (
-	actionName       = "text.patch.yaml"
-	atomicTempSuffix = ".tmp"
+	actionName = "text.patch.yaml"
 )
 
 // Handler implements text.patch.yaml.
@@ -174,8 +173,13 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 			return result, fmt.Errorf("text.patch.yaml: backup: %w", err)
 		}
 	}
-	if err := writeAtomic(path, newBytes, mode); err != nil {
-		return result, fmt.Errorf("text.patch.yaml: write: %w", err)
+	// #90/#92: route the atomic write through the Performer so root-owned
+	// targets succeed under become/as_user. The Performer stages a temp
+	// via os.CreateTemp and sudo mv/chmod when escalation is needed,
+	// which also removes the predictable path+".tmp" hazard (#91).
+	// mode is passed explicitly so the file's mode is preserved.
+	if eff := ctx.Effects().WriteFile(path, newBytes, mode, actions.PerformerOpts{}); eff.Err != nil {
+		return result, fmt.Errorf("text.patch.yaml: write: %w", eff.Err)
 	}
 
 	result.Changed = true
@@ -319,16 +323,4 @@ func readOriginal(path string) ([]byte, bool, os.FileMode, error) {
 		return nil, false, 0, fmt.Errorf("read %s: %w", path, err)
 	}
 	return data, true, info.Mode().Perm(), nil
-}
-
-func writeAtomic(path string, content []byte, mode os.FileMode) error {
-	tmp := path + atomicTempSuffix
-	if err := os.WriteFile(tmp, content, mode); err != nil {
-		return err
-	}
-	if err := os.Rename(tmp, path); err != nil {
-		_ = os.Remove(tmp)
-		return err
-	}
-	return nil
 }

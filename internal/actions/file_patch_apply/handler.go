@@ -323,25 +323,6 @@ func (h *Handler) applyHunk(lines []string, startIdx int, hunk *Hunk, minContext
 	return true, newLines, nil
 }
 
-// writeAtomic writes content to file using atomic write pattern (temp file + rename)
-func (h *Handler) writeAtomic(path, content string) error {
-	// Write to temp file first
-	tmpFile := path + ".tmp"
-	// #nosec G306 -- 0644 permissions are intentional for user-editable config files
-	if err := os.WriteFile(tmpFile, []byte(content), 0644); err != nil {
-		return fmt.Errorf("failed to write temp file: %w", err)
-	}
-
-	// Atomic rename
-	if err := os.Rename(tmpFile, path); err != nil {
-		// Cleanup temp file on error
-		_ = os.Remove(tmpFile)
-		return fmt.Errorf("failed to rename temp file: %w", err)
-	}
-
-	return nil
-}
-
 // Run is the Spec 16 unified entry point. Applies the patch in memory
 // to predict the result; plan mode reports the prediction, execute
 // mode commits the atomic write.
@@ -405,6 +386,15 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 	if err != nil {
 		return result, fmt.Errorf("failed to read file %s: %w", renderedPath, err)
 	}
+	// Capture the original mode so the atomic write preserves it rather
+	// than clobbering the file to 0644. The pre-#90 writeAtomic hardcoded
+	// 0644; routing through the Performer (below) lets us keep the real
+	// mode and escalate for root-owned targets.
+	origInfo, err := os.Stat(renderedPath)
+	if err != nil {
+		return result, fmt.Errorf("failed to stat file %s: %w", renderedPath, err)
+	}
+	origMode := origInfo.Mode().Perm()
 
 	patch, err := h.parsePatch(patchContent)
 	if err != nil {
@@ -438,13 +428,20 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 
 	if fpa.Backup {
 		backupPath := renderedPath + ".bak"
-		if err := os.WriteFile(backupPath, originalContent, 0o600); err != nil {
-			return result, fmt.Errorf("failed to create backup: %w", err)
+		// #90/#92: route the backup write through the Performer too so a
+		// backup of a root-owned file works under become/as_user.
+		if eff := ctx.Effects().WriteFile(backupPath, originalContent, 0o600, actions.PerformerOpts{}); eff.Err != nil {
+			return result, fmt.Errorf("failed to create backup: %w", eff.Err)
 		}
 	}
 
-	if err := h.writeAtomic(renderedPath, newContent); err != nil {
-		return result, fmt.Errorf("failed to write file: %w", err)
+	// #90/#92: route the atomic write through the Performer so root-owned
+	// targets succeed under become/as_user. The Performer stages a temp
+	// via os.CreateTemp and sudo mv/chmod when escalation is needed,
+	// which also removes the predictable path+".tmp" hazard (#91).
+	// origMode is passed explicitly so the file's mode is preserved.
+	if eff := ctx.Effects().WriteFile(renderedPath, []byte(newContent), origMode, actions.PerformerOpts{}); eff.Err != nil {
+		return result, fmt.Errorf("failed to write file: %w", eff.Err)
 	}
 
 	result.Changed = true

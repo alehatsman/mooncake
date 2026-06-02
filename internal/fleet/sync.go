@@ -11,9 +11,22 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/alehatsman/mooncake/internal/fleet/transport"
 )
+
+// putDeadline returns a generous per-file upload budget. Put imposes no
+// default of its own, so callers own the budget; this sizes it to the file
+// rather than a flat cap. A 30s floor covers connect + small files, plus 1s
+// per 2 MiB (~2MB/s — a deliberately conservative LAN/WiFi floor) so a
+// near-MaxSyncBytes (100MiB) body gets ~80s of headroom instead of aborting.
+func putDeadline(size int64) time.Duration {
+	const floor = 30 * time.Second
+	const bytesPerSecond = 2 << 20 // 2 MiB/s
+	d := floor + time.Duration(size/bytesPerSecond)*time.Second
+	return d
+}
 
 // FileEntry is one file inside a plan-dir. The walker fills AbsPath, RelPath,
 // and Size; Sha256 is computed lazily by ComputeSha256 (or by SyncTo when it
@@ -157,7 +170,14 @@ func SyncTo(ctx context.Context, peer *transport.Client, entries []FileEntry, sc
 			stats.Skipped++
 			continue
 		}
-		if err := peer.Put(ctx, scope, e.RelPath, e.AbsPath, e.Sha256); err != nil {
+		// Put inherits the caller's ctx unchanged (it injects no default),
+		// so bound each upload here with a size-derived budget rather than
+		// leaving large/slow syncs unbounded. ctx's own deadline (if any)
+		// still applies — WithTimeout takes the earlier of the two.
+		putCtx, cancel := context.WithTimeout(ctx, putDeadline(e.Size))
+		err = peer.Put(putCtx, scope, e.RelPath, e.AbsPath, e.Sha256)
+		cancel()
+		if err != nil {
 			return stats, fmt.Errorf("PUT %s: %w", e.RelPath, err)
 		}
 		stats.Put++

@@ -1,8 +1,14 @@
 // Package text_patch_json implements the text.patch.json action:
 // structural edits to a JSON file via a tiny dotted + indexed path
 // subset, preserving key order, indentation, and trailing newline.
-// Idempotent: a second run with byte-identical desired state writes
-// nothing.
+//
+// Idempotent for every merge_strategy EXCEPT "append": a second run
+// with byte-identical desired state writes nothing for set, delete,
+// replace, and append_unique. The "append" strategy is intentionally
+// non-idempotent — it concatenates the source elements onto the target
+// array unconditionally, so each run grows the array (#98). Callers
+// who want convergence (add-if-missing) should use "append_unique"
+// instead.
 //
 //nolint:revive // package name follows action convention
 package text_patch_json
@@ -23,8 +29,7 @@ import (
 )
 
 const (
-	actionName       = "text.patch.json"
-	atomicTempSuffix = ".tmp"
+	actionName = "text.patch.json"
 )
 
 // Handler implements text.patch.json.
@@ -183,8 +188,13 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		}
 	}
 
-	if err := writeAtomic(path, newBytes, mode); err != nil {
-		return result, fmt.Errorf("text.patch.json: write: %w", err)
+	// #90/#92: route the atomic write through the Performer so root-owned
+	// targets succeed under become/as_user. The Performer stages a temp
+	// via os.CreateTemp and sudo mv/chmod when escalation is needed,
+	// which also removes the predictable path+".tmp" hazard (#91).
+	// mode is passed explicitly so the file's mode is preserved.
+	if eff := ctx.Effects().WriteFile(path, newBytes, mode, actions.PerformerOpts{}); eff.Err != nil {
+		return result, fmt.Errorf("text.patch.json: write: %w", eff.Err)
 	}
 
 	result.Changed = true
@@ -269,18 +279,6 @@ func readOriginal(path string) ([]byte, bool, os.FileMode, error) {
 		return nil, false, 0, fmt.Errorf("read %s: %w", path, err)
 	}
 	return data, true, info.Mode().Perm(), nil
-}
-
-func writeAtomic(path string, content []byte, mode os.FileMode) error {
-	tmp := path + atomicTempSuffix
-	if err := os.WriteFile(tmp, content, mode); err != nil {
-		return err
-	}
-	if err := os.Rename(tmp, path); err != nil {
-		_ = os.Remove(tmp)
-		return err
-	}
-	return nil
 }
 
 func bytesEqual(a, b []byte) bool {

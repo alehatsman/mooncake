@@ -246,7 +246,7 @@ func (p *defaultPerformer) Mkdir(path string, mode os.FileMode, opts actions.Per
 // WriteFile
 // ----------------------------------------------------------------------
 
-func (p *defaultPerformer) WriteFile(path string, content []byte, mode os.FileMode, _ actions.PerformerOpts) actions.Effect {
+func (p *defaultPerformer) WriteFile(path string, content []byte, mode os.FileMode, opts actions.PerformerOpts) actions.Effect {
 	e := actions.Effect{Action: actions.ActionWriteFile, Path: path}
 
 	info, err := os.Stat(path)
@@ -280,10 +280,25 @@ func (p *defaultPerformer) WriteFile(path string, content []byte, mode os.FileMo
 		return e
 	}
 
+	// Create missing parent dirs. A bare os.MkdirAll creates missing
+	// dirs at 0o755 and is a no-op (never re-chmods) when the parent
+	// already exists — preserving any deliberately-tightened mode such
+	// as a 0700 ~/.ssh. Only when that fails AND escalation is wanted
+	// (needSudoForOwnership) do we route through Mkdir, which runs
+	// `mkdir -p` under the privileged runner so a target under a
+	// root-owned tree whose subdir doesn't yet exist still works — an
+	// unprivileged MkdirAll would otherwise EACCES before the sudo mv
+	// path is ever reached (issue #95).
 	if parent := filepath.Dir(path); parent != "" {
 		if err := os.MkdirAll(parent, 0o755); err != nil {
-			e.Err = fmt.Errorf("mkdir parent %s: %w", parent, err)
-			return e
+			if !p.needSudoForOwnership() {
+				e.Err = fmt.Errorf("mkdir parent %s: %w", parent, err)
+				return e
+			}
+			if me := p.Mkdir(parent, 0o755, opts); me.Err != nil {
+				e.Err = fmt.Errorf("mkdir parent %s: %w", parent, me.Err)
+				return e
+			}
 		}
 	}
 
@@ -428,10 +443,23 @@ func (p *defaultPerformer) CopyFile(src, dest string, mode os.FileMode, opts act
 		return e
 	}
 
+	// Create missing parent dirs. A bare os.MkdirAll creates missing
+	// dirs at 0o755 and is a no-op (never re-chmods) when the parent
+	// already exists — preserving any deliberately-tightened mode. Only
+	// when that fails AND escalation is wanted (needSudoForOwnership) do
+	// we route through Mkdir, which runs `mkdir -p` under the privileged
+	// runner so a dest under a root-owned tree whose subdir doesn't yet
+	// exist still works (issue #95).
 	if parent := filepath.Dir(dest); parent != "" {
 		if err := os.MkdirAll(parent, 0o755); err != nil {
-			e.Err = fmt.Errorf("mkdir parent %s: %w", parent, err)
-			return e
+			if !p.needSudoForOwnership() {
+				e.Err = fmt.Errorf("mkdir parent %s: %w", parent, err)
+				return e
+			}
+			if me := p.Mkdir(parent, 0o755, opts); me.Err != nil {
+				e.Err = fmt.Errorf("mkdir parent %s: %w", parent, me.Err)
+				return e
+			}
 		}
 	}
 
