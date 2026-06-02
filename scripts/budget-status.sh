@@ -4,14 +4,17 @@
 # Soft caps (see CLAUDE.md §Architecture soft caps):
 #   1. Handler LOC > 1500       → split into per-OS sub-pkgs
 #   2. gocyclo > 35 (non-test)  → refactor on next touch
-#   3. Step universal fields > 40 → flag the "why does every step need this?" question
+#   3. Step universal fields > 42 → flag the "why does every step need this?" question
 #
 # Each section prints:  ✗ over cap   ⚠ within 20% of cap   ✓ clean
 set -euo pipefail
 
 CAP_HANDLER_LOC=1500
 CAP_GOCYCLO=35
-CAP_STEP_FIELDS=40
+# Re-baselined to 42 for the #111 generic action:/with: carrier — two
+# deliberate framework-extension fields, not scope creep. Kept tight (not
+# loosened with slack) so the next universal field re-triggers the question.
+CAP_STEP_FIELDS=42
 
 cd "$(git rev-parse --show-toplevel)"
 
