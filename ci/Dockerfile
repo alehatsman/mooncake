@@ -17,7 +17,21 @@
 #
 # Build (requires moongit-ci-dev:latest to exist; see moongit/ci/README.md):
 #   docker build -t mooncake-ci:latest ci/
+#
+# Go toolchain: the base (moongit-ci-dev:latest) ships go1.26.3 with
+# GOTOOLCHAIN=local, which hard-errors against go.mod's `go 1.26.4` directive
+# (bumped for the GO-2026-5037/5039 stdlib fixes that govulncheck, step 5/11,
+# enforces). The base has no curl/wget to fetch a tarball, so we overlay GOROOT
+# from the official golang:1.26.4 image. When the moongit-ci-dev base itself
+# moves to >=1.26.4, this overlay becomes a redundant no-op and can be dropped.
+FROM golang:1.26.4 AS gotoolchain
+
 FROM moongit-ci-dev:latest
+
+# Overlay go1.26.4 over the base's go1.26.3 GOROOT (see header). go-quality
+# binaries (golangci-lint/govulncheck/…) live outside GOROOT and are untouched;
+# govulncheck reads this GOROOT's stdlib version, so the fixes are picked up.
+COPY --from=gotoolchain /usr/local/go /usr/local/go
 
 ARG GOMARKDOC_VERSION=v0.4.1
 
