@@ -126,7 +126,7 @@ func expandPPA(ctx actions.Context, out *rendered_, a *config.PkgRepoApt, state 
 		return nil
 	}
 
-	fpr, keyURL, err := discoverPPAKey(context.TODO(), owner, ppa)
+	fpr, keyURL, err := discoverPPAKey(ctx.Ctx(), owner, ppa)
 	if err != nil {
 		return fmt.Errorf("pkg.repo.apt: %w", err)
 	}

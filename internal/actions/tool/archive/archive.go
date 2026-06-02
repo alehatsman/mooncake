@@ -126,6 +126,15 @@ func extractTarStream(r io.Reader, destDir string, strip int) error {
 				return err
 			}
 		case tar.TypeSymlink:
+			// Reject symlinks whose resolved target escapes destDir.
+			// safeJoin only validates the link's own location lexically;
+			// it never follows the link, so a link 'x' -> '/etc' (or
+			// '../../') followed by a 'x/passwd' regular entry would let
+			// a later write land outside destDir. Resolve the link target
+			// against its parent directory and re-check containment.
+			if err := checkSymlinkTarget(destDir, target, hdr.Linkname); err != nil {
+				return err
+			}
 			if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
 				return fmt.Errorf("mkdir parent %s: %w", target, err)
 			}
@@ -212,6 +221,27 @@ func stripPath(name string, strip int) (string, bool) {
 		return "", false
 	}
 	return parts[strip], true
+}
+
+// checkSymlinkTarget rejects a symlink whose resolved target would point
+// outside destDir. linkName is the raw symlink value (hdr.Linkname);
+// linkPath is the on-disk location of the link itself (already inside
+// destDir). Absolute targets are resolved as-is; relative targets are
+// resolved against the link's parent directory. The cleaned result must
+// stay within destDir, otherwise a later write through the link could
+// escape (path traversal).
+func checkSymlinkTarget(destDir, linkPath, linkName string) error {
+	var resolved string
+	if filepath.IsAbs(linkName) {
+		resolved = filepath.Clean(linkName)
+	} else {
+		resolved = filepath.Clean(filepath.Join(filepath.Dir(linkPath), linkName))
+	}
+	rootClean := filepath.Clean(destDir)
+	if resolved != rootClean && !strings.HasPrefix(resolved+string(os.PathSeparator), rootClean+string(os.PathSeparator)) {
+		return fmt.Errorf("archive symlink target escapes destination: %s -> %s", linkPath, linkName)
+	}
+	return nil
 }
 
 // safeJoin returns destDir/rel, rejecting any rel that would escape

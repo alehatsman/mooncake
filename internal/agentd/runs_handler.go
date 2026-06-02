@@ -245,14 +245,19 @@ func (s *Server) runEventsHandler(w http.ResponseWriter, r *http.Request) {
 	var hubCh <-chan HubMessage
 	var unsub func()
 	var snapshotSeq int64
+	// replayMax bounds JSONL replay to seq <= snapshotSeq when a live hub
+	// tail will pick up seq > snapshotSeq. With no hub (terminal run) there
+	// is nothing to tail, so replay the whole file (sentinel -1 = unbounded).
+	replayMax := int64(-1)
 	if !run.IsTerminal() {
 		if hub := s.worker.GetHub(id); hub != nil {
 			hubCh, snapshotSeq, unsub = hub.Subscribe()
 			defer unsub()
+			replayMax = snapshotSeq
 		}
 	}
 
-	if err := streamJSONL(r.Context(), w, flusher, s.store.EventsPath(id)); err != nil {
+	if err := streamJSONL(r.Context(), w, flusher, s.store.EventsPath(id), replayMax); err != nil {
 		// Best effort; client may have disconnected.
 		return
 	}
@@ -293,7 +298,11 @@ func (s *Server) runEventsHandler(w http.ResponseWriter, r *http.Request) {
 // replay" as a nil return so runEventsHandler can proceed to hub-only
 // tailing. Spec-49 caught this on Windows where the worker latency is
 // large enough to expose the race.
-func streamJSONL(ctx context.Context, w http.ResponseWriter, flusher http.Flusher, path string) error {
+// maxSeq bounds replay: lines with seq > maxSeq are skipped so the live hub
+// tail (which forwards seq > snapshotSeq) doesn't double-emit events the
+// worker appended to JSONL after Subscribe snapshotted snapshotSeq. A maxSeq
+// of -1 means unbounded (terminal run: no hub tail follows, replay all).
+func streamJSONL(ctx context.Context, w http.ResponseWriter, flusher http.Flusher, path string, maxSeq int64) error {
 	f, err := os.Open(path)
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
@@ -322,6 +331,10 @@ func streamJSONL(ctx context.Context, w http.ResponseWriter, flusher http.Flushe
 			Seq int64 `json:"seq"`
 		}
 		_ = json.Unmarshal(line, &head)
+		if maxSeq >= 0 && head.Seq > maxSeq {
+			// Already covered by the live hub tail; skip to avoid duplicates.
+			continue
+		}
 		if err := writeSSE(w, head.Seq, line); err != nil {
 			return err
 		}

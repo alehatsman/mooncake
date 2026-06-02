@@ -40,6 +40,19 @@ func TestUnifiedDiff_newFile(t *testing.T) {
 	}
 }
 
+func TestUnifiedDiff_newFileHunkHeader(t *testing.T) {
+	// Inserting into an empty 'a' side must emit a zero-length old
+	// range as "-0,0" (unified-diff convention), not the off-by-one
+	// "-1,0" that a start-clamped-to-1 header would produce.
+	result := unifiedDiff("/etc/foo", []byte{}, []byte("new content\n"))
+	if !strings.Contains(result, "@@ -0,0 +1,1 @@") {
+		t.Errorf("expected zero-length old range header '@@ -0,0 +1,1 @@', got:\n%s", result)
+	}
+	if strings.Contains(result, "-1,0") {
+		t.Errorf("off-by-one hunk header '-1,0' for empty original:\n%s", result)
+	}
+}
+
 func TestUnifiedDiff_binary(t *testing.T) {
 	result := unifiedDiff("/bin/foo", []byte("text"), []byte{0x00, 0x01, 0x02})
 	if !strings.Contains(result, "Binary files") {

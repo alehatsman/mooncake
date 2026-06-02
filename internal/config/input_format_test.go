@@ -77,6 +77,47 @@ func TestDecodeAuto_JSONIntoMap(t *testing.T) {
 	}
 }
 
+func TestDecodeAuto_JSONNumberFidelity(t *testing.T) {
+	type sample struct {
+		Mode  int     `yaml:"mode"`
+		Big   int64   `yaml:"big"`
+		Float float64 `yaml:"float"`
+	}
+	// 9007199254740993 == 2^53 + 1, not representable as float64; the old
+	// any-decode path turned it into a float64 and lost precision.
+	src := `{"mode":493,"big":9007199254740993,"float":1.5}`
+	var got sample
+	if err := DecodeAuto([]byte(src), &got); err != nil {
+		t.Fatalf("DecodeAuto JSON: %v", err)
+	}
+	if got.Mode != 493 {
+		t.Errorf("mode: got %d want 493", got.Mode)
+	}
+	if got.Big != 9007199254740993 {
+		t.Errorf("big: got %d want 9007199254740993 (lost integer precision)", got.Big)
+	}
+	if got.Float != 1.5 {
+		t.Errorf("float: got %v want 1.5", got.Float)
+	}
+}
+
+func TestDecodeAutoNode_JSONNumberStaysIntScalar(t *testing.T) {
+	// A large JSON integer must surface as a plain (unquoted) YAML int
+	// scalar in the node tree, not a quoted string or float.
+	node, err := DecodeAutoNode([]byte(`{"big":9007199254740993}`))
+	if err != nil {
+		t.Fatalf("DecodeAutoNode JSON: %v", err)
+	}
+	mapping := node.Content[0]
+	val := mapping.Content[1] // value node of the single key
+	if val.Tag != "!!int" {
+		t.Errorf("expected !!int tag, got %q (value %q)", val.Tag, val.Value)
+	}
+	if val.Value != "9007199254740993" {
+		t.Errorf("expected verbatim 9007199254740993, got %q", val.Value)
+	}
+}
+
 func TestDecodeAutoNode_YAMLPath(t *testing.T) {
 	src := "- shell: echo hi\n"
 	node, err := DecodeAutoNode([]byte(src))

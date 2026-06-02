@@ -21,6 +21,14 @@ func TestParseSSHTarget(t *testing.T) {
 		{"", "", "", 0, "empty"},
 		{"host:not-a-port", "", "", 0, "invalid port"},
 		{"user@host:0", "", "", 0, "invalid port"},
+		// IPv6 literals: bare form keeps all colons as host with no port.
+		{"::1", "", "::1", 0, ""},
+		{"user@fe80::1", "user", "fe80::1", 0, ""},
+		{"fe80::1234:5678", "", "fe80::1234:5678", 0, ""},
+		// Bracketed IPv6 with and without a port.
+		{"[::1]", "", "::1", 0, ""},
+		{"[::1]:22", "", "::1", 22, ""},
+		{"user@[fe80::1]:2222", "user", "fe80::1", 2222, ""},
 	}
 	for _, tc := range cases {
 		t.Run(tc.in, func(t *testing.T) {

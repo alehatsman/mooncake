@@ -162,8 +162,9 @@ func (h *Handler) runImpl(ctx actions.Context, step *config.Step) (actions.Resul
 
 	output.Tree = rootNode
 
-	// Write output to file if specified
-	if rt.OutputFile != "" {
+	// Write output to file if specified. Skip in plan mode: plan must not
+	// mutate the filesystem (SupportsDryRun contract).
+	if rt.OutputFile != "" && ctx.Mode() != actions.ModePlan {
 		outputPath, err := ec.Svc.PathUtil.ExpandPath(rt.OutputFile, ec.CurrentDir, ctx.Variables())
 		if err != nil {
 			return result, fmt.Errorf("failed to expand output_file path: %w", err)

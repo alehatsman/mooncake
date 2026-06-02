@@ -37,6 +37,23 @@ func TestStripMarkdownFences(t *testing.T) {
 			input:    "name: test",
 			expected: "name: test",
 		},
+		{
+			// A truncated/absent closing fence must not eat the last
+			// real content line (would silently drop a step).
+			name:     "yaml fence missing closing fence",
+			input:    "```yaml\n- shell: echo a\n- shell: echo b",
+			expected: "- shell: echo a\n- shell: echo b",
+		},
+		{
+			name:     "generic fence missing closing fence",
+			input:    "```\n- shell: echo a\n- shell: echo b",
+			expected: "- shell: echo a\n- shell: echo b",
+		},
+		{
+			name:     "multi-line fenced block with closing fence",
+			input:    "```yaml\n- shell: echo a\n- shell: echo b\n```",
+			expected: "- shell: echo a\n- shell: echo b",
+		},
 	}
 
 	for _, tt := range tests {

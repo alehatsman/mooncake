@@ -368,21 +368,17 @@ func detectDarwinUptime() int64 {
 	}
 	// Output: "{ sec = 1715000000, usec = 0 } Mon May ..."
 	s := strings.TrimSpace(string(out))
-	for _, field := range strings.Fields(s) {
-		if !strings.HasPrefix(field, "sec") {
-			continue
-		}
-		// field may be "sec" and next token is "=", then the number
-		// or the format varies; try to find the number after "sec ="
-		break
-	}
 	// Robust parse: find "sec = <N>"
 	idx := strings.Index(s, "sec = ")
 	if idx < 0 {
 		return 0
 	}
 	rest := s[idx+len("sec = "):]
-	numStr := strings.FieldsFunc(rest, func(r rune) bool { return r == ',' || r == ' ' || r == '}' })[0]
+	fields := strings.FieldsFunc(rest, func(r rune) bool { return r == ',' || r == ' ' || r == '}' })
+	if len(fields) == 0 {
+		return 0
+	}
+	numStr := fields[0]
 	var bootSec int64
 	if _, err := fmt.Sscanf(numStr, "%d", &bootSec); err != nil {
 		return 0

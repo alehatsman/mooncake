@@ -6,9 +6,81 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/alehatsman/mooncake/internal/actions"
 	"github.com/alehatsman/mooncake/internal/artifacts"
 	"github.com/alehatsman/mooncake/internal/config"
+	"github.com/alehatsman/mooncake/internal/events"
+	"github.com/alehatsman/mooncake/internal/executor"
+	"github.com/alehatsman/mooncake/internal/expression"
+	"github.com/alehatsman/mooncake/internal/logger"
+	"github.com/alehatsman/mooncake/internal/pathutil"
+	"github.com/alehatsman/mooncake/internal/template"
 )
+
+// newTestExecutionContext builds a minimal ExecutionContext in the given
+// mode for exercising the full Run path.
+func newTestExecutionContext(t *testing.T, mode actions.Mode) *executor.ExecutionContext {
+	t.Helper()
+	renderer, err := template.NewPongo2Renderer()
+	if err != nil {
+		t.Fatalf("renderer: %v", err)
+	}
+	return &executor.ExecutionContext{
+		Svc: &executor.RunServices{
+			Logger:         logger.NewConsoleLogger(logger.ErrorLevel),
+			Template:       renderer,
+			Evaluator:      expression.NewGovaluateEvaluator(),
+			PathUtil:       pathutil.NewPathExpander(renderer),
+			EventPublisher: events.NewSyncPublisher(),
+			Mode:           mode,
+		},
+		Scope:      executor.NewVariableScope(),
+		CurrentDir: ".",
+	}
+}
+
+// TestPlanModeDoesNotWriteMetadata is a regression test: artifact.validate
+// advertises SupportsDryRun, so `mooncake plan` must not rewrite the
+// on-disk artifact with Validated/ValidationPass. Previously Run wrote
+// metadata unconditionally before the plan-mode branch.
+func TestPlanModeDoesNotWriteMetadata(t *testing.T) {
+	tmpDir := t.TempDir()
+	artifactPath := filepath.Join(tmpDir, "changes.json")
+	metadata := createTestMetadata(2, 10)
+	metadata.Validated = false
+	if err := writeTestArtifact(artifactPath, metadata); err != nil {
+		t.Fatalf("write artifact: %v", err)
+	}
+
+	step := &config.Step{
+		ArtifactValidate: &config.ArtifactValidate{ArtifactFile: artifactPath},
+	}
+	h := &Handler{}
+
+	// Plan mode must not mutate the artifact.
+	if _, err := h.Run(newTestExecutionContext(t, actions.ModePlan), step); err != nil {
+		t.Fatalf("plan run: %v", err)
+	}
+	after, err := readArtifactMetadata(artifactPath)
+	if err != nil {
+		t.Fatalf("read after plan: %v", err)
+	}
+	if after.Validated {
+		t.Error("plan mode rewrote artifact metadata (Validated=true); plan must not mutate the filesystem")
+	}
+
+	// Apply mode still persists the validation result.
+	if _, err := h.Run(newTestExecutionContext(t, actions.ModeApply), step); err != nil {
+		t.Fatalf("apply run: %v", err)
+	}
+	after, err = readArtifactMetadata(artifactPath)
+	if err != nil {
+		t.Fatalf("read after apply: %v", err)
+	}
+	if !after.Validated {
+		t.Error("apply mode did not persist Validated=true")
+	}
+}
 
 func TestHandler_Metadata(t *testing.T) {
 	h := &Handler{}

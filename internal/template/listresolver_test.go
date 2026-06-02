@@ -102,6 +102,30 @@ func TestResolveList_WhitespaceScalar(t *testing.T) {
 	}
 }
 
+func TestResolveList_NumericScalarFallsBackToLiteral(t *testing.T) {
+	// Pure-number scalars must not be treated as identifiers; they should
+	// fall through to parseListLiteral as one-item scalar lists rather than
+	// erroring out of the expression evaluator (which yields a non-list).
+	cases := []struct {
+		in   string
+		want []interface{}
+	}{
+		{"123", []interface{}{"123"}},
+		{"3.14", []interface{}{"3.14"}},
+	}
+	for _, tc := range cases {
+		t.Run(tc.in, func(t *testing.T) {
+			got, err := ResolveList(tc.in, nil, expression.NewExprEvaluator())
+			if err != nil {
+				t.Fatalf("ResolveList(%q): %v", tc.in, err)
+			}
+			if !reflect.DeepEqual(got, tc.want) {
+				t.Errorf("got %v, want %v", got, tc.want)
+			}
+		})
+	}
+}
+
 func TestResolveStringList(t *testing.T) {
 	vars := map[string]interface{}{
 		"pkgs": []string{"vim", "git"},

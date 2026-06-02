@@ -380,6 +380,50 @@ func TestVerifyChecksum_SHA256Match(t *testing.T) {
 	}
 }
 
+func TestVerifyChecksum_SHA256UppercaseMatch(t *testing.T) {
+	tmpDir := t.TempDir()
+	testFile := filepath.Join(tmpDir, "verify-test.txt")
+	if err := os.WriteFile(testFile, []byte("test content"), 0644); err != nil {
+		t.Fatalf("Failed to create test file: %v", err)
+	}
+
+	expected, err := CalculateSHA256(testFile)
+	if err != nil {
+		t.Fatalf("Failed to calculate SHA256: %v", err)
+	}
+
+	// Operators frequently paste uppercase vendor-published digests.
+	// Verification must be case-insensitive.
+	match, err := VerifyChecksum(testFile, strings.ToUpper(expected))
+	if err != nil {
+		t.Fatalf("VerifyChecksum failed: %v", err)
+	}
+	if !match {
+		t.Error("VerifyChecksum should match an uppercase SHA256 digest case-insensitively")
+	}
+}
+
+func TestVerifyChecksum_MD5UppercaseMatch(t *testing.T) {
+	tmpDir := t.TempDir()
+	testFile := filepath.Join(tmpDir, "verify-test.txt")
+	if err := os.WriteFile(testFile, []byte("test content"), 0644); err != nil {
+		t.Fatalf("Failed to create test file: %v", err)
+	}
+
+	expected, err := CalculateMD5(testFile)
+	if err != nil {
+		t.Fatalf("Failed to calculate MD5: %v", err)
+	}
+
+	match, err := VerifyChecksum(testFile, strings.ToUpper(expected))
+	if err != nil {
+		t.Fatalf("VerifyChecksum failed: %v", err)
+	}
+	if !match {
+		t.Error("VerifyChecksum should match an uppercase MD5 digest case-insensitively")
+	}
+}
+
 func TestVerifyChecksum_SHA256Mismatch(t *testing.T) {
 	tmpDir := t.TempDir()
 	testFile := filepath.Join(tmpDir, "verify-test.txt")

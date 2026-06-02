@@ -93,6 +93,16 @@ func (h *Handler) Validate(step *config.Step) error {
 		return fmt.Errorf("dest is required%s", hint)
 	}
 
+	// Reject an unparseable mode here rather than silently falling back
+	// to the default 0644 at apply time — a typo like "x644" or a
+	// non-octal string would otherwise land the file with looser perms
+	// than the operator intended.
+	if downloadAction.Mode != "" {
+		if _, err := strconv.ParseUint(downloadAction.Mode, 8, 32); err != nil {
+			return fmt.Errorf("invalid mode %q: must be octal (e.g. \"0644\"): %w", downloadAction.Mode, err)
+		}
+	}
+
 	return nil
 }
 

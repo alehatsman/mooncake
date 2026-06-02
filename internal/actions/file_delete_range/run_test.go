@@ -100,6 +100,35 @@ func TestRun_NoRangeIsIdempotent(t *testing.T) {
 	}
 }
 
+// TestRun_PreservesFileMode: a delete_range in a 0600 file must keep
+// the original mode rather than clobbering it to 0644.
+func TestRun_PreservesFileMode(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "secret.txt")
+	original := "before\n<<START\nmiddle\nEND>>\nafter\n"
+	if err := os.WriteFile(path, []byte(original), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	step := &config.Step{
+		TextDeleteRange: &config.FileDeleteRange{
+			Path:        path,
+			StartAnchor: "<<START",
+			EndAnchor:   "END>>",
+			Inclusive:   true,
+		},
+	}
+	h := &Handler{}
+	if _, err := h.Run(newCtx(t, false), step); err != nil {
+		t.Fatalf("execute: %v", err)
+	}
+	info, err := os.Stat(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := info.Mode().Perm(); got != 0o600 {
+		t.Errorf("mode clobbered: want 0600, got %o", got)
+	}
+}
+
 func TestRun_ImplementsRunner(t *testing.T) {
 	var _ actions.Runner = &Handler{}
 }

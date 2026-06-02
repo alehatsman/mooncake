@@ -604,3 +604,36 @@ func TestEnhancedErrorMessages(t *testing.T) {
 		})
 	}
 }
+
+// TestIsNumberKinds exercises is_number across Go numeric kinds directly,
+// covering values (e.g. uintptr) that cannot be written as expr-lang literals.
+func TestIsNumberKinds(t *testing.T) {
+	isNumber := TypeFunctions()["is_number"].(func(...interface{}) (interface{}, error))
+	cases := []struct {
+		name string
+		val  interface{}
+		want bool
+	}{
+		{"int", 123, true},
+		{"int64", int64(1), true},
+		{"uint", uint(1), true},
+		{"uint64", uint64(1), true},
+		{"float32", float32(1.5), true},
+		{"float64", 1.5, true},
+		{"uintptr", uintptr(1), false},
+		{"string", "123", false},
+		{"bool", true, false},
+		{"nil", nil, false},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := isNumber(tc.val)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if got != tc.want {
+				t.Errorf("is_number(%#v) = %v, want %v", tc.val, got, tc.want)
+			}
+		})
+	}
+}

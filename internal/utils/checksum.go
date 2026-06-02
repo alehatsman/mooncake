@@ -9,6 +9,7 @@ import (
 	"hash"
 	"io"
 	"os"
+	"strings"
 )
 
 // CalculateSHA256 calculates the SHA256 checksum of a file.
@@ -65,5 +66,9 @@ func VerifyChecksum(path, expected string) (bool, error) {
 		return false, err
 	}
 
-	return actual == expected, nil
+	// Hex digests are case-insensitive; hex.EncodeToString emits
+	// lowercase while operators often paste uppercase vendor-published
+	// digests. Compare case-insensitively so valid uppercase digests
+	// don't spuriously fail.
+	return strings.EqualFold(actual, expected), nil
 }

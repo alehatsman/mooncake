@@ -202,12 +202,14 @@ func findProcessPs(ctx context.Context, o *config.ObserveProcess) (ProcessObserv
 			continue
 		}
 		user := cols[1]
-		// Reconstruct full argv string by finding USER's position and
-		// taking everything after it. Two-pass split would be cleaner
-		// but Go's strings package doesn't expose a typed SplitN that
-		// preserves the remainder; this is the same trick `ps` parsers
-		// use throughout the stdlib.
-		full := strings.TrimSpace(line[strings.Index(line, user)+len(user):])
+		// Reconstruct the full argv string (args column, internal
+		// spaces preserved) by skipping the first two positional
+		// columns — PID and USER — rather than searching for the user
+		// token. strings.Index(line, user) scans from the start
+		// including the PID digits, so a username that is a substring
+		// of the PID (or appears earlier) yields a wrong offset and a
+		// garbled argv.
+		full := skipColumns(line, 2)
 		argv := strings.Fields(full)
 		basename := ""
 		if len(argv) > 0 {
@@ -235,6 +237,27 @@ func findProcessPs(ctx context.Context, o *config.ObserveProcess) (ProcessObserv
 		return obs, errNoMatch
 	}
 	return obs, nil
+}
+
+// skipColumns drops the first n whitespace-delimited columns from line
+// and returns the remainder (the args column for `ps -eo pid,user,args`)
+// with leading/trailing whitespace trimmed and internal spaces intact.
+// Positional skipping avoids the substring-search hazard of locating a
+// column value (e.g. the username) that may also appear earlier in the
+// line.
+func skipColumns(line string, n int) string {
+	s := strings.TrimLeft(line, " \t")
+	for i := 0; i < n; i++ {
+		// Skip the field (non-space run).
+		j := strings.IndexAny(s, " \t")
+		if j < 0 {
+			return ""
+		}
+		s = s[j:]
+		// Skip the whitespace gap before the next field.
+		s = strings.TrimLeft(s, " \t")
+	}
+	return strings.TrimSpace(s)
 }
 
 func splitCmdline(b []byte) []string {

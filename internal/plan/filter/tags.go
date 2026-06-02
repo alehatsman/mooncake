@@ -64,8 +64,9 @@ func UnmatchedTagsError(filterTags []string, p *plan.Plan) string {
 }
 
 // collectStepTags walks the plan steps (and any nested children that
-// carry their own steps — transactions, on_change, try branches) and
-// returns every distinct tag found.
+// carry their own steps — transactions, on_change, on_rollback, try,
+// catch, finally, and heal branches) and returns every distinct tag
+// found.
 func collectStepTags(steps []config.Step) []string {
 	seen := map[string]struct{}{}
 	var walk func(ss []config.Step)
@@ -85,6 +86,15 @@ func collectStepTags(steps []config.Step) []string {
 			}
 			if len(s.Try) > 0 {
 				walk(s.Try)
+			}
+			if len(s.Catch) > 0 {
+				walk(s.Catch)
+			}
+			if len(s.Finally) > 0 {
+				walk(s.Finally)
+			}
+			if len(s.Heal) > 0 {
+				walk(s.Heal)
 			}
 		}
 	}

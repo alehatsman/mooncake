@@ -70,6 +70,21 @@ func WriteIterationLog(repoRoot string, log *IterationLog) (string, error) {
 	return path, nil
 }
 
+// scrubGitEnv returns env with all GIT_* vars removed. Needed when shelling
+// out to git from a process that may itself have been launched by a git hook —
+// in which case GIT_DIR / GIT_WORK_TREE would otherwise redirect the
+// subprocess at the parent repo regardless of cmd.Dir.
+func scrubGitEnv(env []string) []string {
+	out := make([]string, 0, len(env))
+	for _, e := range env {
+		if strings.HasPrefix(e, "GIT_") {
+			continue
+		}
+		out = append(out, e)
+	}
+	return out
+}
+
 func ComputePlanHash(planBytes []byte) string {
 	hash := sha256.Sum256(planBytes)
 	return hex.EncodeToString(hash[:])
@@ -93,7 +108,13 @@ func diffAgainstWorktree(repoRoot string, diffArgs ...string) ([]byte, error) {
 	run := func(args ...string) ([]byte, error) {
 		cmd := exec.Command("git", args...)
 		cmd.Dir = repoRoot
-		cmd.Env = append(os.Environ(), "GIT_INDEX_FILE="+idxPath)
+		// Scrub inherited GIT_* vars before pointing git at our scratch
+		// index. git honors GIT_DIR/GIT_WORK_TREE over cmd.Dir, so when
+		// the agent runs from inside a git hook (which exports them) the
+		// read-tree/add -A/diff would operate on the parent repo and
+		// `git add -A` would stage the wrong tree. Same hazard the rest
+		// of the codebase guards (snapshot.gitCleanEnv, modules.scrubGitEnv).
+		cmd.Env = append(scrubGitEnv(os.Environ()), "GIT_INDEX_FILE="+idxPath)
 		return cmd.Output()
 	}
 

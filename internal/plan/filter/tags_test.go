@@ -66,13 +66,16 @@ func TestMT19_CollectStepTags_WalksNestedSteps(t *testing.T) {
 		{Try: []config.Step{{Tags: []string{"c"}}}},
 		{OnChange: []config.Step{{Tags: []string{"d"}}}},
 		{OnRollback: []config.Step{{Tags: []string{"e"}}}},
+		{Catch: []config.Step{{Tags: []string{"f"}}}},
+		{Finally: []config.Step{{Tags: []string{"g"}}}},
+		{Heal: []config.Step{{Tags: []string{"h"}}}},
 	}
 	tags := collectStepTags(plan)
 	got := map[string]bool{}
 	for _, t := range tags {
 		got[t] = true
 	}
-	for _, want := range []string{"a", "b", "c", "d", "e"} {
+	for _, want := range []string{"a", "b", "c", "d", "e", "f", "g", "h"} {
 		if !got[want] {
 			t.Errorf("expected tag %q to be collected, got %v", want, tags)
 		}

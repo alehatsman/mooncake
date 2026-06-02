@@ -425,6 +425,31 @@ func TestPathExpander_ExpandPathEdgeCases(t *testing.T) {
 	}
 }
 
+// TestPathExpander_ExpandPathHomeUnset verifies that ~/ expansion never
+// silently roots at "/" when HOME is empty: it must resolve to a real home
+// (via os/user fallback) or return an error — but never "/test".
+func TestPathExpander_ExpandPathHomeUnset(t *testing.T) {
+	renderer, err := template.NewPongo2Renderer()
+	if err != nil {
+		t.Fatalf("Failed to create renderer: %v", err)
+	}
+	expander := NewPathExpander(renderer)
+
+	t.Setenv("HOME", "")
+
+	path, err := expander.ExpandPath("~/config", "/work", nil)
+	if err != nil {
+		// Acceptable: explicit failure rather than a "/"-rooted path.
+		return
+	}
+	if path == "/config" {
+		t.Fatalf("ExpandPath() rooted ~/config at filesystem root: got %q", path)
+	}
+	if strings.HasPrefix(path, "~") {
+		t.Fatalf("ExpandPath() left ~ unexpanded: got %q", path)
+	}
+}
+
 func TestValidatePathWithinBase_ExtremelyLongPaths(t *testing.T) {
 	// Attempt to trigger filepath.Abs or filepath.Rel errors with extremely long paths
 	// Note: These may not trigger errors on all systems

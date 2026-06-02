@@ -75,10 +75,18 @@ type Sensor struct {
 // Keys here must remain disjoint from facts.Facts.ToMap() keys — enforced
 // by internal/metrics/disjoint_test.go.
 func (m *Metrics) ToMap() map[string]interface{} {
+	// Defensively copy the slice-valued fields. m may be the
+	// package-global cached pointer (cache.go), which a concurrent
+	// Collect() can mutate in place (Spec 18 daemon mode). Embedding
+	// the live slices would hand callers an aliased view that races
+	// with that mutation; snapshot them instead.
+	perCore := append([]float64(nil), m.CPU.UsagePerCore...)
+	gpus := append([]GPUMetrics(nil), m.GPUs...)
+	temps := append([]Sensor(nil), m.Temperatures...)
 	return map[string]interface{}{
 		// CPU
 		"cpu_usage_pct":      m.CPU.UsagePct,
-		"cpu_usage_per_core": m.CPU.UsagePerCore,
+		"cpu_usage_per_core": perCore,
 
 		// Load
 		"load_avg_1m":  m.Load.Avg1m,
@@ -95,10 +103,10 @@ func (m *Metrics) ToMap() map[string]interface{} {
 		"net_tx_bps": m.Network.TxBps,
 
 		// GPU (array; per-GPU correlation via Index)
-		"gpus_metrics": m.GPUs,
+		"gpus_metrics": gpus,
 
 		// Temperatures: full sensor array + derived CPU package temp
-		"temperatures": m.Temperatures,
+		"temperatures": temps,
 		"cpu_temp_c":   m.CPUTempC,
 	}
 }

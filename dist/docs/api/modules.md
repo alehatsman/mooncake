@@ -190,7 +190,7 @@ func (r Reference) String() string
 
 String returns the canonical "\<path\>@\<version\>" form.
 
-## type [Resolved](<https://github.com/alehatsman/mooncake/blob/main/internal/modules/resolver.go#L28-L31>)
+## type [Resolved](<https://github.com/alehatsman/mooncake/blob/main/internal/modules/resolver.go#L29-L32>)
 
 Resolved is what the resolver returns: the file path to load as a component plus the module root \(needed so further imports inside the component resolve relative to the module, not the playbook\).
 
@@ -201,7 +201,7 @@ type Resolved struct {
 }
 ```
 
-## type [Resolver](<https://github.com/alehatsman/mooncake/blob/main/internal/modules/resolver.go#L14-L17>)
+## type [Resolver](<https://github.com/alehatsman/mooncake/blob/main/internal/modules/resolver.go#L15-L18>)
 
 Resolver turns a use: reference into a concrete component file path. It combines reference parsing, module fetching, and index.yml export lookup.
 
@@ -214,7 +214,7 @@ type Resolver struct {
 }
 ```
 
-### func [NewResolver](<https://github.com/alehatsman/mooncake/blob/main/internal/modules/resolver.go#L21>)
+### func [NewResolver](<https://github.com/alehatsman/mooncake/blob/main/internal/modules/resolver.go#L22>)
 
 ```go
 func NewResolver(modules map[string]string) *Resolver
@@ -222,7 +222,7 @@ func NewResolver(modules map[string]string) *Resolver
 
 NewResolver constructs a resolver with the default fetcher and the supplied alias map. Passing nil for the map disables alias resolution.
 
-### func \(\*Resolver\) [Resolve](<https://github.com/alehatsman/mooncake/blob/main/internal/modules/resolver.go#L42>)
+### func \(\*Resolver\) [Resolve](<https://github.com/alehatsman/mooncake/blob/main/internal/modules/resolver.go#L43>)
 
 ```go
 func (r *Resolver) Resolve(ctx context.Context, refStr string) (Resolved, error)
@@ -238,7 +238,7 @@ Resolve takes a use: reference string and returns the component file to load. Th
 
 Local paths \(./foo.yml\) are NOT handled here — the executor dispatches those directly without going through the resolver.
 
-### func \(\*Resolver\) [ResolveCached](<https://github.com/alehatsman/mooncake/blob/main/internal/modules/resolver.go#L51>)
+### func \(\*Resolver\) [ResolveCached](<https://github.com/alehatsman/mooncake/blob/main/internal/modules/resolver.go#L52>)
 
 ```go
 func (r *Resolver) ResolveCached(ctx context.Context, refStr string) (Resolved, error)

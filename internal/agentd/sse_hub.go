@@ -47,15 +47,18 @@ func (h *Hub) Subscribe() (ch <-chan HubMessage, lastSeq int64, unsubscribe func
 	defer h.mu.Unlock()
 
 	sub := &hubSub{ch: make(chan HubMessage, hubSubBuffer)}
-	id := h.nextSubID
-	h.nextSubID++
-	h.subscribers[id] = sub
 
 	if h.closed {
-		// Hub already closed; deliver no events.
+		// Hub already closed (subscribers map is nil); deliver no events.
+		// Must check this BEFORE touching the map, or the assignment below
+		// panics with "assignment to entry in nil map".
 		close(sub.ch)
 		return sub.ch, h.lastSeq, func() {}
 	}
+
+	id := h.nextSubID
+	h.nextSubID++
+	h.subscribers[id] = sub
 
 	return sub.ch, h.lastSeq, func() {
 		h.mu.Lock()

@@ -1150,7 +1150,7 @@ func NewTestLogger() *TestLogger
 
 NewTestLogger creates a new TestLogger for use in tests.
 
-### func \(\*TestLogger\) [Clear](<https://github.com/alehatsman/mooncake/blob/main/internal/logger/test_logger.go#L201>)
+### func \(\*TestLogger\) [Clear](<https://github.com/alehatsman/mooncake/blob/main/internal/logger/test_logger.go#L203>)
 
 ```go
 func (t *TestLogger) Clear()
@@ -1158,7 +1158,7 @@ func (t *TestLogger) Clear()
 
 Clear removes all log entries.
 
-### func \(\*TestLogger\) [Codef](<https://github.com/alehatsman/mooncake/blob/main/internal/logger/test_logger.go#L67>)
+### func \(\*TestLogger\) [Codef](<https://github.com/alehatsman/mooncake/blob/main/internal/logger/test_logger.go#L68>)
 
 ```go
 func (t *TestLogger) Codef(format string, v ...interface{})
@@ -1166,7 +1166,7 @@ func (t *TestLogger) Codef(format string, v ...interface{})
 
 Codef logs a code snippet message.
 
-### func \(\*TestLogger\) [Complete](<https://github.com/alehatsman/mooncake/blob/main/internal/logger/test_logger.go#L146>)
+### func \(\*TestLogger\) [Complete](<https://github.com/alehatsman/mooncake/blob/main/internal/logger/test_logger.go#L148>)
 
 ```go
 func (t *TestLogger) Complete(stats ExecutionStats)
@@ -1174,7 +1174,7 @@ func (t *TestLogger) Complete(stats ExecutionStats)
 
 Complete logs the execution completion summary with statistics.
 
-### func \(\*TestLogger\) [Contains](<https://github.com/alehatsman/mooncake/blob/main/internal/logger/test_logger.go#L157>)
+### func \(\*TestLogger\) [Contains](<https://github.com/alehatsman/mooncake/blob/main/internal/logger/test_logger.go#L159>)
 
 ```go
 func (t *TestLogger) Contains(substr string) bool
@@ -1182,7 +1182,7 @@ func (t *TestLogger) Contains(substr string) bool
 
 Contains checks if any log message contains the substring.
 
-### func \(\*TestLogger\) [ContainsLevel](<https://github.com/alehatsman/mooncake/blob/main/internal/logger/test_logger.go#L169>)
+### func \(\*TestLogger\) [ContainsLevel](<https://github.com/alehatsman/mooncake/blob/main/internal/logger/test_logger.go#L171>)
 
 ```go
 func (t *TestLogger) ContainsLevel(level, substr string) bool
@@ -1190,7 +1190,7 @@ func (t *TestLogger) ContainsLevel(level, substr string) bool
 
 ContainsLevel checks if any log at the specified level contains the substring.
 
-### func \(\*TestLogger\) [Count](<https://github.com/alehatsman/mooncake/blob/main/internal/logger/test_logger.go#L181>)
+### func \(\*TestLogger\) [Count](<https://github.com/alehatsman/mooncake/blob/main/internal/logger/test_logger.go#L183>)
 
 ```go
 func (t *TestLogger) Count() int
@@ -1198,7 +1198,7 @@ func (t *TestLogger) Count() int
 
 Count returns the number of log entries.
 
-### func \(\*TestLogger\) [CountLevel](<https://github.com/alehatsman/mooncake/blob/main/internal/logger/test_logger.go#L188>)
+### func \(\*TestLogger\) [CountLevel](<https://github.com/alehatsman/mooncake/blob/main/internal/logger/test_logger.go#L190>)
 
 ```go
 func (t *TestLogger) CountLevel(level string) int
@@ -1206,7 +1206,7 @@ func (t *TestLogger) CountLevel(level string) int
 
 CountLevel returns the number of log entries at the specified level.
 
-### func \(\*TestLogger\) [Debugf](<https://github.com/alehatsman/mooncake/blob/main/internal/logger/test_logger.go#L45>)
+### func \(\*TestLogger\) [Debugf](<https://github.com/alehatsman/mooncake/blob/main/internal/logger/test_logger.go#L46>)
 
 ```go
 func (t *TestLogger) Debugf(format string, v ...interface{})
@@ -1214,7 +1214,7 @@ func (t *TestLogger) Debugf(format string, v ...interface{})
 
 Debugf logs a debug message.
 
-### func \(\*TestLogger\) [Errorf](<https://github.com/alehatsman/mooncake/blob/main/internal/logger/test_logger.go#L56>)
+### func \(\*TestLogger\) [Errorf](<https://github.com/alehatsman/mooncake/blob/main/internal/logger/test_logger.go#L57>)
 
 ```go
 func (t *TestLogger) Errorf(format string, v ...interface{})
@@ -1222,7 +1222,7 @@ func (t *TestLogger) Errorf(format string, v ...interface{})
 
 Errorf logs an error message.
 
-### func \(\*TestLogger\) [GetLogs](<https://github.com/alehatsman/mooncake/blob/main/internal/logger/test_logger.go#L208>)
+### func \(\*TestLogger\) [GetLogs](<https://github.com/alehatsman/mooncake/blob/main/internal/logger/test_logger.go#L210>)
 
 ```go
 func (t *TestLogger) GetLogs() []LogEntry
@@ -1230,7 +1230,7 @@ func (t *TestLogger) GetLogs() []LogEntry
 
 GetLogs returns a copy of all log entries.
 
-### func \(\*TestLogger\) [Infof](<https://github.com/alehatsman/mooncake/blob/main/internal/logger/test_logger.go#L34>)
+### func \(\*TestLogger\) [Infof](<https://github.com/alehatsman/mooncake/blob/main/internal/logger/test_logger.go#L35>)
 
 ```go
 func (t *TestLogger) Infof(format string, v ...interface{})
@@ -1238,7 +1238,7 @@ func (t *TestLogger) Infof(format string, v ...interface{})
 
 Infof logs an informational message.
 
-### func \(\*TestLogger\) [LogStep](<https://github.com/alehatsman/mooncake/blob/main/internal/logger/test_logger.go#L138>)
+### func \(\*TestLogger\) [LogStep](<https://github.com/alehatsman/mooncake/blob/main/internal/logger/test_logger.go#L140>)
 
 ```go
 func (t *TestLogger) LogStep(info StepInfo)
@@ -1246,7 +1246,7 @@ func (t *TestLogger) LogStep(info StepInfo)
 
 LogStep logs a step execution with status.
 
-### func \(\*TestLogger\) [Mooncake](<https://github.com/alehatsman/mooncake/blob/main/internal/logger/test_logger.go#L84>)
+### func \(\*TestLogger\) [Mooncake](<https://github.com/alehatsman/mooncake/blob/main/internal/logger/test_logger.go#L85>)
 
 ```go
 func (t *TestLogger) Mooncake()
@@ -1254,7 +1254,7 @@ func (t *TestLogger) Mooncake()
 
 Mooncake displays the mooncake banner.
 
-### func \(\*TestLogger\) [SetLogLevel](<https://github.com/alehatsman/mooncake/blob/main/internal/logger/test_logger.go#L91>)
+### func \(\*TestLogger\) [SetLogLevel](<https://github.com/alehatsman/mooncake/blob/main/internal/logger/test_logger.go#L92>)
 
 ```go
 func (t *TestLogger) SetLogLevel(logLevel int)
@@ -1262,7 +1262,7 @@ func (t *TestLogger) SetLogLevel(logLevel int)
 
 SetLogLevel sets the logging level for the logger.
 
-### func \(\*TestLogger\) [SetLogLevelStr](<https://github.com/alehatsman/mooncake/blob/main/internal/logger/test_logger.go#L98>)
+### func \(\*TestLogger\) [SetLogLevelStr](<https://github.com/alehatsman/mooncake/blob/main/internal/logger/test_logger.go#L99>)
 
 ```go
 func (t *TestLogger) SetLogLevelStr(logLevel string) error
@@ -1270,7 +1270,7 @@ func (t *TestLogger) SetLogLevelStr(logLevel string) error
 
 SetLogLevelStr sets the logging level from a string value.
 
-### func \(\*TestLogger\) [SetRedactor](<https://github.com/alehatsman/mooncake/blob/main/internal/logger/test_logger.go#L113>)
+### func \(\*TestLogger\) [SetRedactor](<https://github.com/alehatsman/mooncake/blob/main/internal/logger/test_logger.go#L114>)
 
 ```go
 func (t *TestLogger) SetRedactor(redactor Redactor)
@@ -1278,7 +1278,7 @@ func (t *TestLogger) SetRedactor(redactor Redactor)
 
 SetRedactor sets the redactor for automatic sensitive data redaction.
 
-### func \(\*TestLogger\) [Textf](<https://github.com/alehatsman/mooncake/blob/main/internal/logger/test_logger.go#L77>)
+### func \(\*TestLogger\) [Textf](<https://github.com/alehatsman/mooncake/blob/main/internal/logger/test_logger.go#L78>)
 
 ```go
 func (t *TestLogger) Textf(format string, v ...interface{})
@@ -1286,7 +1286,7 @@ func (t *TestLogger) Textf(format string, v ...interface{})
 
 Textf logs a plain text message.
 
-### func \(\*TestLogger\) [WithPadLevel](<https://github.com/alehatsman/mooncake/blob/main/internal/logger/test_logger.go#L128>)
+### func \(\*TestLogger\) [WithPadLevel](<https://github.com/alehatsman/mooncake/blob/main/internal/logger/test_logger.go#L129>)
 
 ```go
 func (t *TestLogger) WithPadLevel(padLevel int) Logger

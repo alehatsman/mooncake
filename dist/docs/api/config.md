@@ -322,7 +322,7 @@ func ActionFieldIndices() []int
 
 ActionFieldIndices returns the cached action field indices for use by external packages \(e.g. the planner's renderActionTemplates\).
 
-## func [DecodeAuto](<https://github.com/alehatsman/mooncake/blob/main/internal/config/input_format.go#L31>)
+## func [DecodeAuto](<https://github.com/alehatsman/mooncake/blob/main/internal/config/input_format.go#L77>)
 
 ```go
 func DecodeAuto(data []byte, dst any) error
@@ -330,7 +330,7 @@ func DecodeAuto(data []byte, dst any) error
 
 DecodeAuto decodes data into dst. If data sniffs as JSON, it is unmarshaled into a generic any, re\-encoded as YAML, and decoded via yaml.Unmarshal so existing yaml:"..." struct tags keep working without a parallel json tag set.
 
-## func [DecodeAutoNode](<https://github.com/alehatsman/mooncake/blob/main/internal/config/input_format.go#L75>)
+## func [DecodeAutoNode](<https://github.com/alehatsman/mooncake/blob/main/internal/config/input_format.go#L113>)
 
 ```go
 func DecodeAutoNode(data []byte) (*yaml.Node, error)
@@ -338,7 +338,7 @@ func DecodeAutoNode(data []byte) (*yaml.Node, error)
 
 DecodeAutoNode decodes data into a yaml.Node tree. JSON input is round\-tripped through yaml.Marshal so the resulting node looks indistinguishable from a YAML\-sourced node — downstream code \(location map, secret\-tag substitution, strict revalidation\) works unchanged. Source line numbers for JSON inputs point into the re\-encoded YAML buffer, not the user's JSON file.
 
-## func [DecodeAutoStrict](<https://github.com/alehatsman/mooncake/blob/main/internal/config/input_format.go#L50>)
+## func [DecodeAutoStrict](<https://github.com/alehatsman/mooncake/blob/main/internal/config/input_format.go#L92>)
 
 ```go
 func DecodeAutoStrict(data []byte, dst any) error

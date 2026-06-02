@@ -450,9 +450,14 @@ func TypeFunctions() map[string]interface{} {
 			if v == nil {
 				return false, nil
 			}
-			val := reflect.ValueOf(v)
-			kind := val.Kind()
-			return kind >= reflect.Int && kind <= reflect.Float64, nil
+			switch reflect.ValueOf(v).Kind() {
+			case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
+				reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64,
+				reflect.Float32, reflect.Float64:
+				return true, nil
+			default:
+				return false, nil
+			}
 		},
 
 		// is_bool checks if value is a boolean

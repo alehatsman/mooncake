@@ -13,6 +13,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/alehatsman/mooncake/internal/actions"
 	"github.com/alehatsman/mooncake/internal/config"
 	"github.com/alehatsman/mooncake/internal/executor"
 )
@@ -123,6 +124,58 @@ func TestF033_TraversingPathRefused_StrictMode(t *testing.T) {
 	}
 	if string(got) != original {
 		t.Errorf("traversal escape succeeded in strict mode: outside file was overwritten\ngot:  %q\nwant: %q", got, original)
+	}
+}
+
+// TestF033_TraversingPathRefused_PlanMode: plan/dry-run must apply the
+// same SafeJoin guard as apply. Pre-fix the plan loop used
+// filepath.Join(baseDir, fp.Path) directly, so a traversing patch read
+// an out-of-tree file (leaking its contents into the plan prediction)
+// and reported WouldChange. After the fix the escape is counted as a
+// failed hunk and no change is predicted.
+func TestF033_TraversingPathRefused_PlanMode(t *testing.T) {
+	handler := &Handler{}
+	ctx := createTestContext(t)
+	ctx.Svc.Mode = actions.ModePlan
+
+	outsideDir := t.TempDir()
+	outsidePath := filepath.Join(outsideDir, "untouched.txt")
+	original := "ORIGINAL\n"
+	if err := os.WriteFile(outsidePath, []byte(original), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	rel, err := filepath.Rel(ctx.CurrentDir, outsidePath)
+	if err != nil {
+		t.Fatalf("rel: %v", err)
+	}
+	if !strings.HasPrefix(rel, "..") {
+		t.Skipf("test setup produced rel without traversal (%q); platform-dependent", rel)
+	}
+
+	patchset := `--- a/` + rel + `
++++ b/` + rel + `
+@@ -1 +1 @@
+-ORIGINAL
++PWNED
+`
+
+	step := &config.Step{
+		RepoPatch: &config.RepoApplyPatchset{
+			Patchset: patchset,
+		},
+	}
+
+	res, err := handler.Run(ctx, step)
+	if err != nil {
+		t.Fatalf("plan run: %v", err)
+	}
+	r, ok := res.(*executor.Result)
+	if !ok {
+		t.Fatalf("result is not *executor.Result: %T", res)
+	}
+	if r.WouldChange {
+		t.Errorf("plan mode predicted a change for a traversing patch; SafeJoin must refuse the escape (reason=%q)", r.Reason)
 	}
 }
 

@@ -51,9 +51,28 @@ func lookupUserViaGetent(ctx context.Context, name string) (*userState, error) {
 		return nil, fmt.Errorf("id -nG: %w", err)
 	}
 	allGroups := strings.Fields(strings.TrimSpace(gout))
-	if len(allGroups) > 1 {
-		state.groups = allGroups[1:]
-		sort.Strings(state.groups)
+
+	// Resolve the primary group explicitly. `id -nG` is not specified
+	// to emit the primary group first (glibc happens to, but the order
+	// isn't guaranteed), so positional stripping could drop a real
+	// supplementary group. Subtract the primary by name instead.
+	pgout, err := capture(exec.CommandContext(ctx, "id", "-gn", name))
+	if err != nil {
+		return nil, fmt.Errorf("id -gn: %w", err)
+	}
+	primary := strings.TrimSpace(pgout)
+	supplementary := make([]string, 0, len(allGroups))
+	primaryDropped := false
+	for _, g := range allGroups {
+		if !primaryDropped && g == primary {
+			primaryDropped = true
+			continue
+		}
+		supplementary = append(supplementary, g)
+	}
+	if len(supplementary) > 0 {
+		sort.Strings(supplementary)
+		state.groups = supplementary
 	}
 	return state, nil
 }

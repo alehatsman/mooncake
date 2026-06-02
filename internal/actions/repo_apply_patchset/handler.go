@@ -15,7 +15,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
@@ -638,7 +637,15 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 	totalAppliedHunks := 0
 	totalFailedHunks := 0
 	for _, fp := range filePatches {
-		target := filepath.Join(baseDir, fp.Path)
+		// Resolve inside baseDir with the same SafeJoin guard apply uses
+		// (F033). A patchset like `--- a/../../etc/passwd` must not read a
+		// file outside baseDir during plan/dry-run; record it as failed and
+		// skip, mirroring applyPatchset.
+		target, joinErr := pathutil.SafeJoin(baseDir, fp.Path)
+		if joinErr != nil {
+			totalFailedHunks += len(fp.Hunks)
+			continue
+		}
 		// #nosec G304 -- target paths come from the patchset, scoped under baseDir
 		content, rerr := os.ReadFile(target)
 		if rerr != nil {

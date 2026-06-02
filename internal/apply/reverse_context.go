@@ -35,12 +35,17 @@ func newReverseContext() *reverseContext { return &reverseContext{} }
 func (c *reverseContext) Mode() actions.Mode { return actions.ModeApply }
 
 func (c *reverseContext) Template() template.Renderer {
-	// Pongo2 renderer construction can fail; ignore — Reverse should
-	// not use the renderer. Returning nil would crash any handler
-	// that did reach for it; returning the zero-value renderer is
-	// safer.
-	r, _ := template.NewPongo2Renderer()
-	return r
+	// Pongo2 renderer construction can fail (filter registration);
+	// Reverse should not use the renderer, but returning nil would
+	// crash any handler that did reach for it. On error
+	// NewPongo2Renderer returns a nil Renderer, so fall back to a
+	// directly-constructed zero-value Pongo2Renderer (it's a stateless
+	// empty struct) to uphold the non-nil guarantee this guard exists
+	// to provide.
+	if r, err := template.NewPongo2Renderer(); err == nil && r != nil {
+		return r
+	}
+	return &template.Pongo2Renderer{}
 }
 func (c *reverseContext) Evaluator() expression.Evaluator   { return expression.NewExprEvaluator() }
 func (c *reverseContext) Logger() logger.Logger             { return logger.NewLogger(logger.InfoLevel) }

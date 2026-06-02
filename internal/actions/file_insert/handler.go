@@ -230,12 +230,13 @@ func tailEqual(result, want []string) bool {
 	return true
 }
 
-// writeAtomic writes content to file using atomic write pattern (temp file + rename)
-func (h *Handler) writeAtomic(path, content string) error {
+// writeAtomic writes content to file using atomic write pattern (temp file + rename).
+// mode is the permission set applied to the temp file so the rename preserves
+// the original file's mode instead of clobbering it to 0644.
+func (h *Handler) writeAtomic(path, content string, mode os.FileMode) error {
 	// Write to temp file first
 	tmpFile := path + ".tmp"
-	// #nosec G306 -- 0644 permissions are intentional for user-editable config files
-	if err := os.WriteFile(tmpFile, []byte(content), 0644); err != nil {
+	if err := os.WriteFile(tmpFile, []byte(content), mode); err != nil {
 		return fmt.Errorf("failed to write temp file: %w", err)
 	}
 
@@ -291,6 +292,13 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 	if err != nil {
 		return result, fmt.Errorf("failed to read file %s: %w", renderedPath, err)
 	}
+	// Capture the original mode so the atomic write preserves it rather
+	// than clobbering the file to 0644 (e.g. a 0600 secret).
+	origInfo, err := os.Stat(renderedPath)
+	if err != nil {
+		return result, fmt.Errorf("failed to stat file %s: %w", renderedPath, err)
+	}
+	origMode := origInfo.Mode().Perm()
 
 	renderedAnchor, err := ctx.Template().Render(fi.Anchor, ctx.Variables())
 	if err != nil {
@@ -334,7 +342,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		}
 	}
 
-	if err := h.writeAtomic(renderedPath, newContent); err != nil {
+	if err := h.writeAtomic(renderedPath, newContent, origMode); err != nil {
 		return result, fmt.Errorf("failed to write file: %w", err)
 	}
 

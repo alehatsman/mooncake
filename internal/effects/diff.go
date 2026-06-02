@@ -192,10 +192,15 @@ func buildHunks(edits []edit, a, b []string, context int) []string {
 				bCount++
 			}
 		}
-		if aStart == 0 {
+		// Unified-diff convention: a zero-length range is written with
+		// start 0 (e.g. "-0,0" for an insertion into an empty/whole-new
+		// 'a' side). Only clamp the start to 1 when the range is
+		// non-empty; clamping a zero-count range to 1 produces an
+		// off-by-one "@@ -1,0 ... @@" header that `patch` misapplies.
+		if aStart == 0 && aCount > 0 {
 			aStart = 1
 		}
-		if bStart == 0 {
+		if bStart == 0 && bCount > 0 {
 			bStart = 1
 		}
 

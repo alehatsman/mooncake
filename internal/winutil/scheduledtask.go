@@ -257,7 +257,7 @@ func RenderXML(t Task) (string, error) {
 	t = t.withDefaults()
 
 	var b strings.Builder
-	b.WriteString(`<?xml version="1.0" encoding="UTF-16"?>` + "\r\n")
+	b.WriteString(`<?xml version="1.0" encoding="UTF-8"?>` + "\r\n")
 	b.WriteString(`<Task version="1.4" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">` + "\r\n")
 
 	// <RegistrationInfo>

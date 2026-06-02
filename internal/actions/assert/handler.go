@@ -373,7 +373,7 @@ func (h *Handler) executeAssertHTTP(assertHTTP *config.AssertHTTP, ec *executor.
 
 	// F012: ctx-aware request via httputil so canonical UA flows and
 	// future caller-driven cancellation reaches the socket.
-	req, reqErr := httputil.NewRequest(context.Background(), method, url, bodyReader)
+	req, reqErr := httputil.NewRequest(ctxFor(ec), method, url, bodyReader)
 	if reqErr != nil {
 		return "", "", &executor.SetupError{
 			Component: "http request",

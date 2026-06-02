@@ -110,7 +110,7 @@ try {
   Log "Start-ScheduledTask failed: $_"
 }
 Log "helper done"
-`, escapePSPath(logPath), task, task, task)
+`, escapePSPath(logPath), escapePSPath(task), escapePSPath(task), escapePSPath(task))
 
 	if err := os.WriteFile(scriptPath, []byte(script), 0o600); err != nil {
 		return fmt.Errorf("write helper script %s: %w", scriptPath, err)

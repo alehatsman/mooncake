@@ -78,7 +78,10 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 
 	ctx.Logger().Infof("Waiting for TCP port %s (timeout: %s, interval: %s)", address, timeout, interval)
 
-	pollCtx, cancel := context.WithTimeout(context.Background(), timeout)
+	// Derive the poll deadline from the run-wide context so a
+	// run-wide cancellation (Ctrl-C, fleet kill, MCP shutdown) aborts
+	// the wait, not just the action's own timeout.
+	pollCtx, cancel := context.WithTimeout(ctx.Ctx(), timeout)
 	defer cancel()
 
 	start := time.Now()

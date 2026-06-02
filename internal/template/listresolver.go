@@ -56,6 +56,13 @@ func looksLikeIdentifier(s string) bool {
 	if s == "" {
 		return false
 	}
+	// Must start with a letter or underscore. This rejects pure-number
+	// scalars ("123", "3.14") and leading-dot input, so numeric strings fall
+	// through to parseListLiteral as one-item scalar lists instead of being
+	// evaluated to a non-list numeric value.
+	if first := rune(s[0]); first != '_' && !(first >= 'a' && first <= 'z') && !(first >= 'A' && first <= 'Z') {
+		return false
+	}
 	for _, r := range s {
 		if r == '.' || r == '_' || (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') ||
 			(r >= '0' && r <= '9') {

@@ -182,16 +182,18 @@ func stripMarkdownFences(data []byte) []byte {
 	content := string(data)
 	content = strings.TrimSpace(content)
 
-	if strings.HasPrefix(content, "```yaml") || strings.HasPrefix(content, "```yml") {
+	if strings.HasPrefix(content, "```") {
 		lines := strings.Split(content, "\n")
-		if len(lines) > 2 {
-			lines = lines[1 : len(lines)-1]
-			content = strings.Join(lines, "\n")
-		}
-	} else if strings.HasPrefix(content, "```") {
-		lines := strings.Split(content, "\n")
-		if len(lines) > 2 {
-			lines = lines[1 : len(lines)-1]
+		if len(lines) > 1 {
+			// Drop the opening fence line (```yaml / ```yml / ```).
+			lines = lines[1:]
+			// Only drop the trailing line if it is actually a closing
+			// fence. A truncated/absent closing fence must not eat a real
+			// content line — that would silently produce parseable-but-
+			// incomplete YAML (a missing step).
+			if n := len(lines); n > 0 && strings.TrimSpace(lines[n-1]) == "```" {
+				lines = lines[:n-1]
+			}
 			content = strings.Join(lines, "\n")
 		}
 	}

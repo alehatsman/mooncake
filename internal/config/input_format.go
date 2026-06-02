@@ -25,18 +25,60 @@ func DetectInputFormat(data []byte) string {
 	return "yaml"
 }
 
+// jsonToYAML parses JSON and re-encodes it as a YAML buffer. JSON numbers are
+// decoded with UseNumber() so they survive as json.Number rather than float64
+// — a plain any-decode turns every number into a float64, which yaml.Marshal
+// then renders in scientific/decimal form, losing precision on integers >2^53
+// (file modes, uids, timestamps, port/size fields) and forcing what was an int
+// into a float scalar. numbersToYAMLNodes replaces each json.Number with a
+// raw, unquoted YAML scalar node so yaml.Marshal emits the original lexical
+// number and the downstream typed/Node decode sees the correct YAML type.
+func jsonToYAML(data []byte) ([]byte, error) {
+	var generic any
+	dec := json.NewDecoder(bytes.NewReader(data))
+	dec.UseNumber()
+	if err := dec.Decode(&generic); err != nil {
+		return nil, fmt.Errorf("parse JSON: %w", err)
+	}
+	buf, err := yaml.Marshal(numbersToYAMLNodes(generic))
+	if err != nil {
+		return nil, fmt.Errorf("re-encode JSON as YAML: %w", err)
+	}
+	return buf, nil
+}
+
+// numbersToYAMLNodes walks a UseNumber-decoded JSON value and replaces every
+// json.Number with a *yaml.Node scalar carrying the number's original lexical
+// form. yaml.Marshal emits such a node verbatim and unquoted (tag inferred),
+// so an integer stays an integer and large values keep full precision instead
+// of round-tripping through float64.
+func numbersToYAMLNodes(v any) any {
+	switch t := v.(type) {
+	case map[string]any:
+		for k, val := range t {
+			t[k] = numbersToYAMLNodes(val)
+		}
+		return t
+	case []any:
+		for i, val := range t {
+			t[i] = numbersToYAMLNodes(val)
+		}
+		return t
+	case json.Number:
+		return &yaml.Node{Kind: yaml.ScalarNode, Value: t.String()}
+	default:
+		return v
+	}
+}
+
 // DecodeAuto decodes data into dst. If data sniffs as JSON, it is unmarshaled
 // into a generic any, re-encoded as YAML, and decoded via yaml.Unmarshal so
 // existing yaml:"..." struct tags keep working without a parallel json tag set.
 func DecodeAuto(data []byte, dst any) error {
 	if DetectInputFormat(data) == "json" {
-		var generic any
-		if err := json.Unmarshal(data, &generic); err != nil {
-			return fmt.Errorf("parse JSON: %w", err)
-		}
-		buf, err := yaml.Marshal(generic)
+		buf, err := jsonToYAML(data)
 		if err != nil {
-			return fmt.Errorf("re-encode JSON as YAML: %w", err)
+			return err
 		}
 		return yaml.Unmarshal(buf, dst)
 	}
@@ -49,13 +91,9 @@ func DecodeAuto(data []byte, dst any) error {
 // both formats — no need to maintain a parallel json-tag set on every Step.
 func DecodeAutoStrict(data []byte, dst any) error {
 	if DetectInputFormat(data) == "json" {
-		var generic any
-		if err := json.Unmarshal(data, &generic); err != nil {
-			return fmt.Errorf("parse JSON: %w", err)
-		}
-		buf, err := yaml.Marshal(generic)
+		buf, err := jsonToYAML(data)
 		if err != nil {
-			return fmt.Errorf("re-encode JSON as YAML: %w", err)
+			return err
 		}
 		dec := yaml.NewDecoder(bytes.NewReader(buf))
 		dec.KnownFields(true)
@@ -74,13 +112,9 @@ func DecodeAutoStrict(data []byte, dst any) error {
 // user's JSON file.
 func DecodeAutoNode(data []byte) (*yaml.Node, error) {
 	if DetectInputFormat(data) == "json" {
-		var generic any
-		if err := json.Unmarshal(data, &generic); err != nil {
-			return nil, fmt.Errorf("parse JSON: %w", err)
-		}
-		buf, err := yaml.Marshal(generic)
+		buf, err := jsonToYAML(data)
 		if err != nil {
-			return nil, fmt.Errorf("re-encode JSON as YAML: %w", err)
+			return nil, err
 		}
 		var root yaml.Node
 		if err := yaml.Unmarshal(buf, &root); err != nil {

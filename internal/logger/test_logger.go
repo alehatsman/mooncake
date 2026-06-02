@@ -14,7 +14,7 @@ type LogEntry struct {
 
 // TestLogger implements Logger interface and captures log output for testing.
 type TestLogger struct {
-	mu       sync.Mutex
+	mu       *sync.Mutex
 	Logs     []LogEntry
 	logLevel int
 	padLevel int
@@ -24,6 +24,7 @@ type TestLogger struct {
 // NewTestLogger creates a new TestLogger for use in tests.
 func NewTestLogger() *TestLogger {
 	return &TestLogger{
+		mu:       &sync.Mutex{},
 		Logs:     make([]LogEntry, 0),
 		logLevel: DebugLevel, // Capture everything in tests
 		padLevel: 0,
@@ -127,8 +128,9 @@ func (t *TestLogger) redact(text string) string {
 // WithPadLevel creates a new logger with the specified padding level.
 func (t *TestLogger) WithPadLevel(padLevel int) Logger {
 	return &TestLogger{
-		Logs:     t.Logs, // Share the same log slice
-		logLevel: t.logLevel,
+		mu:       t.mu,       // Share the same mutex — the derived logger
+		Logs:     t.Logs,     // aliases the same Logs backing array, so the
+		logLevel: t.logLevel, // two must serialize appends under one lock.
 		padLevel: padLevel,
 		redactor: t.redactor, // Share the same redactor
 	}

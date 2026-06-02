@@ -52,9 +52,28 @@ func LoadOrCreateToken(path string) (string, error) {
 		return "", fmt.Errorf("create token dir %s: %w", dir, err)
 	}
 
-	tmp := path + ".tmp"
-	if err := os.WriteFile(tmp, []byte(tok+"\n"), 0o600); err != nil {
+	// Stage into a uniquely named temp file in the dest dir so concurrent
+	// creators (a starting agentd plus a racing CLI, or two first-boot
+	// processes) can't collide on a fixed ".tmp" path and truncate each
+	// other's in-flight write.
+	tmpFile, err := os.CreateTemp(dir, "agentd.token-*")
+	if err != nil {
+		return "", fmt.Errorf("create token temp file: %w", err)
+	}
+	tmp := tmpFile.Name()
+	if err := tmpFile.Chmod(0o600); err != nil {
+		_ = tmpFile.Close()
+		_ = os.Remove(tmp)
+		return "", fmt.Errorf("chmod token temp file: %w", err)
+	}
+	if _, err := tmpFile.WriteString(tok + "\n"); err != nil {
+		_ = tmpFile.Close()
+		_ = os.Remove(tmp)
 		return "", fmt.Errorf("write token: %w", err)
+	}
+	if err := tmpFile.Close(); err != nil {
+		_ = os.Remove(tmp)
+		return "", fmt.Errorf("close token temp file: %w", err)
 	}
 	if err := os.Rename(tmp, path); err != nil {
 		_ = os.Remove(tmp)

@@ -8,7 +8,6 @@
 package container_image
 
 import (
-	"context"
 	"fmt"
 
 	"github.com/alehatsman/mooncake/internal/actions"
@@ -97,8 +96,12 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 	}
 	rt = rt.WithEnv(engineEnv)
 
-	bg := context.Background()
-	exists, err := rt.ImageExists(bg, renderedName)
+	// Use the run-wide context so SIGINT / fleet-kill / MCP shutdown
+	// cancellation reaches the engine subprocess (podman/docker pull
+	// of a multi-GB image can otherwise run unbounded). The podman and
+	// docker runtimes wire this ctx into exec.CommandContext.
+	runCtx := ctx.Ctx()
+	exists, err := rt.ImageExists(runCtx, renderedName)
 	if err != nil {
 		return nil, fmt.Errorf("container.image: inspect %s: %w", renderedName, err)
 	}
@@ -132,7 +135,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 			return res, nil
 		}
 		ctx.Logger().Infof("  Pulling image %s via %s", renderedName, rt.Name())
-		if err := rt.ImagePull(bg, renderedName); err != nil {
+		if err := rt.ImagePull(runCtx, renderedName); err != nil {
 			return nil, err
 		}
 		res.SetChanged(true)
@@ -149,7 +152,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 			return res, nil
 		}
 		ctx.Logger().Infof("  Removing image %s via %s", renderedName, rt.Name())
-		if err := rt.ImageRemove(bg, renderedName); err != nil {
+		if err := rt.ImageRemove(runCtx, renderedName); err != nil {
 			return nil, err
 		}
 		res.SetChanged(true)

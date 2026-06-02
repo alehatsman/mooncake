@@ -4,6 +4,7 @@ package pathutil
 import (
 	"fmt"
 	"os"
+	"os/user"
 	"path/filepath"
 	"strings"
 
@@ -40,6 +41,19 @@ func (p *PathExpander) ExpandPath(originalPath string, currentDir string, contex
 	// Handle home directory expansion ~/
 	if strings.HasPrefix(expandedPath, "~/") {
 		home := os.Getenv("HOME")
+		if home == "" {
+			// Fall back to the OS user record before giving up — HOME may
+			// be unset under service managers (scheduled tasks, systemd).
+			if u, uerr := user.Current(); uerr == nil {
+				home = u.HomeDir
+			}
+		}
+		if home == "" {
+			// Refuse to root the path at "/" — for a tool that writes and
+			// removes files, "~/config" becoming "/config" could target
+			// unexpected system paths.
+			return "", fmt.Errorf("cannot expand %q: HOME is unset and no home directory is available", originalPath)
+		}
 		expandedPath = home + expandedPath[1:]
 		return expandedPath, nil
 	}

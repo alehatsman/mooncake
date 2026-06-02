@@ -35,6 +35,28 @@ func newCtx(t *testing.T, plan bool) *executor.ExecutionContext {
 	}
 }
 
+func TestSkipColumns(t *testing.T) {
+	cases := []struct {
+		name string
+		line string
+		n    int
+		want string
+	}{
+		{"basic pid user args", "1234 root /usr/sbin/nginx -g daemon off;", 2, "/usr/sbin/nginx -g daemon off;"},
+		{"leading whitespace", "  42 alice /bin/sh -c 'echo hi'", 2, "/bin/sh -c 'echo hi'"},
+		{"username substring of pid", "1234 234 /opt/app --flag", 2, "/opt/app --flag"},
+		{"argv preserves internal spaces", "7 bob /a   b    c", 2, "/a   b    c"},
+		{"too few columns", "9 root", 2, ""},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := skipColumns(tc.line, tc.n); got != tc.want {
+				t.Errorf("skipColumns(%q, %d) = %q, want %q", tc.line, tc.n, got, tc.want)
+			}
+		})
+	}
+}
+
 func TestValidate_RequiresSelector(t *testing.T) {
 	h := &Handler{}
 	if err := h.Validate(&config.Step{ObserveProcess: nil}); err == nil {

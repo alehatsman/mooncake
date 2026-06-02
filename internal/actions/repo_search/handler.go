@@ -154,8 +154,9 @@ func (h *Handler) runImpl(ctx actions.Context, step *config.Step) (actions.Resul
 		return result, err
 	}
 
-	// Write output to file if specified
-	if rs.OutputFile != "" {
+	// Write output to file if specified. Skip in plan mode: plan must not
+	// mutate the filesystem (SupportsDryRun contract).
+	if rs.OutputFile != "" && ctx.Mode() != actions.ModePlan {
 		outputPath, err := ec.Svc.PathUtil.ExpandPath(rs.OutputFile, ec.CurrentDir, ctx.Variables())
 		if err != nil {
 			return result, fmt.Errorf("failed to expand output_file path: %w", err)

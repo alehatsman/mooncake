@@ -83,6 +83,45 @@ func TestMT23_IncludeFilesDefaultsToTrue(t *testing.T) {
 
 func boolPtr(b bool) *bool { return &b }
 
+// TestPlanModeDoesNotWriteOutputFile is a regression test: repo.tree
+// advertises SupportsDryRun, so `mooncake plan` must not mutate the
+// filesystem. Previously runImpl wrote OutputFile in both modes.
+func TestPlanModeDoesNotWriteOutputFile(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "a.txt"), []byte("a"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	outFile := filepath.Join(dir, "out", "tree.json")
+
+	step := &config.Step{
+		RepoTree: &config.RepoTree{
+			Path:       dir,
+			OutputFile: outFile,
+		},
+	}
+	ec := newTestExecutionContext(t)
+	ec.Svc.Mode = actions.ModePlan
+	h := &Handler{}
+	if err := h.Validate(step); err != nil {
+		t.Fatalf("validate: %v", err)
+	}
+	if _, err := h.Run(ec, step); err != nil {
+		t.Fatalf("run: %v", err)
+	}
+	if _, err := os.Stat(outFile); !os.IsNotExist(err) {
+		t.Fatalf("plan mode wrote output_file %s (stat err=%v); plan must not mutate the filesystem", outFile, err)
+	}
+
+	// Sanity: apply mode still writes it.
+	ec2 := newTestExecutionContext(t)
+	if _, err := h.Run(ec2, step); err != nil {
+		t.Fatalf("apply run: %v", err)
+	}
+	if _, err := os.Stat(outFile); err != nil {
+		t.Fatalf("apply mode did not write output_file %s: %v", outFile, err)
+	}
+}
+
 func newTestExecutionContext(t *testing.T) *executor.ExecutionContext {
 	t.Helper()
 	renderer, err := template.NewPongo2Renderer()

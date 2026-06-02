@@ -279,9 +279,12 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 	metadata.ValidationPass = len(violations) == 0
 	metadata.Violations = violations
 
-	// Write updated metadata back to file
-	if err := writeArtifactMetadata(validate.ArtifactFile, metadata); err != nil {
-		ec.Svc.Logger.Debugf("Failed to update artifact metadata: %v", err)
+	// Write updated metadata back to file. Skip in plan mode: plan must not
+	// mutate the on-disk artifact (SupportsDryRun contract).
+	if ctx.Mode() != actions.ModePlan {
+		if err := writeArtifactMetadata(validate.ArtifactFile, metadata); err != nil {
+			ec.Svc.Logger.Debugf("Failed to update artifact metadata: %v", err)
+		}
 	}
 
 	// Create result

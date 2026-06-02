@@ -51,9 +51,11 @@ func (t SSHTarget) String() string {
 	return t.Host
 }
 
-// ParseSSHTarget accepts `user@host`, `user@host:port`, or `host`. Port
-// can also be provided via a separate flag — that's the caller's choice;
-// when both are present the colon form wins.
+// ParseSSHTarget accepts `user@host`, `user@host:port`, or `host`. The host
+// may be a hostname, IPv4 address, or IPv6 literal; IPv6 with a port must be
+// bracketed (`[::1]:22`), matching net.SplitHostPort conventions. Port can
+// also be provided via a separate flag — that's the caller's choice; when
+// both are present the colon form wins.
 func ParseSSHTarget(s string) (SSHTarget, error) {
 	if s == "" {
 		return SSHTarget{}, fmt.Errorf("empty SSH target")
@@ -63,22 +65,64 @@ func ParseSSHTarget(s string) (SSHTarget, error) {
 		t.User = s[:i]
 		s = s[i+1:]
 	}
-	if j := strings.LastIndexByte(s, ':'); j >= 0 {
-		hostPart := s[:j]
-		portPart := s[j+1:]
-		port := 0
-		if _, err := fmt.Sscanf(portPart, "%d", &port); err != nil || port <= 0 {
-			return SSHTarget{}, fmt.Errorf("invalid port in %q: %v", s, err)
-		}
-		t.Host = hostPart
-		t.Port = port
-	} else {
-		t.Host = s
+
+	hostPart, port, err := splitHostPort(s)
+	if err != nil {
+		return SSHTarget{}, err
 	}
+	t.Host = hostPart
+	t.Port = port
+
 	if t.Host == "" {
 		return SSHTarget{}, fmt.Errorf("missing host in %q", s)
 	}
 	return t, nil
+}
+
+// splitHostPort separates a host[:port] string into host and port (0 when no
+// port is present). It is IPv6-aware: bare IPv6 literals (`::1`) keep all
+// their colons as part of the host, and bracketed forms (`[::1]`, `[::1]:22`)
+// are handled via net.SplitHostPort.
+func splitHostPort(s string) (string, int, error) {
+	// Bracketed host: `[host]` or `[host]:port`.
+	if strings.HasPrefix(s, "[") {
+		if strings.HasSuffix(s, "]") {
+			return strings.TrimSuffix(strings.TrimPrefix(s, "["), "]"), 0, nil
+		}
+		host, portStr, err := net.SplitHostPort(s)
+		if err != nil {
+			return "", 0, fmt.Errorf("invalid SSH target %q: %v", s, err)
+		}
+		port, err := parsePort(portStr, s)
+		if err != nil {
+			return "", 0, err
+		}
+		return host, port, nil
+	}
+
+	// More than one colon and not bracketed → bare IPv6 literal, no port.
+	if strings.Count(s, ":") > 1 {
+		return s, 0, nil
+	}
+
+	// At most one colon: optional host:port.
+	if j := strings.LastIndexByte(s, ':'); j >= 0 {
+		port, err := parsePort(s[j+1:], s)
+		if err != nil {
+			return "", 0, err
+		}
+		return s[:j], port, nil
+	}
+	return s, 0, nil
+}
+
+// parsePort parses a positive TCP port. target is used only for error context.
+func parsePort(portStr, target string) (int, error) {
+	port := 0
+	if _, err := fmt.Sscanf(portStr, "%d", &port); err != nil || port <= 0 {
+		return 0, fmt.Errorf("invalid port in %q: %v", target, err)
+	}
+	return port, nil
 }
 
 // ConnectOptions tweaks the dial / auth / host-key behavior. Zero-value

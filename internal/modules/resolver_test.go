@@ -86,3 +86,28 @@ func TestResolver_BadInlineRef(t *testing.T) {
 		t.Fatal("expected error")
 	}
 }
+
+func TestJoinSafe(t *testing.T) {
+	base := filepath.Join(string(filepath.Separator), "tmp", "modroot")
+	cases := []struct {
+		name string
+		rel  string
+		ok   bool
+	}{
+		{"plain subdir", "sub/pkg", true},
+		{"leading slash stripped", "/sub/pkg", true},
+		{"dot-prefixed within", "sub/../pkg", true},
+		{"parent escape", "../../../etc", false},
+		{"single parent escape", "..", false},
+		{"escape via segment", "sub/../../outside", false},
+	}
+	for _, c := range cases {
+		c := c
+		t.Run(c.name, func(t *testing.T) {
+			_, err := joinSafe(base, c.rel)
+			if (err == nil) != c.ok {
+				t.Fatalf("joinSafe(%q, %q) err=%v, want ok=%v", base, c.rel, err, c.ok)
+			}
+		})
+	}
+}

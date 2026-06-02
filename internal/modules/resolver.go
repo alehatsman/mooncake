@@ -3,6 +3,7 @@ package modules
 import (
 	"context"
 	"fmt"
+	"path/filepath"
 	"strings"
 )
 
@@ -99,7 +100,10 @@ func (r *Resolver) resolveRef(ctx context.Context, ref Reference, export string,
 	// Subpath: if the reference points at a subdirectory of the repo, the
 	// module root is that subdirectory, not the repo root.
 	if ref.Subpath != "" {
-		moduleRoot = joinSafe(moduleRoot, ref.Subpath)
+		moduleRoot, err = joinSafe(moduleRoot, ref.Subpath)
+		if err != nil {
+			return Resolved{}, fmt.Errorf("module %s: %w", ref.String(), err)
+		}
 	}
 	idx, err := LoadIndex(moduleRoot)
 	if err != nil {
@@ -113,9 +117,20 @@ func (r *Resolver) resolveRef(ctx context.Context, ref Reference, export string,
 }
 
 // joinSafe joins a base directory with a relative subpath while preventing
-// escapes via ".." segments.
-func joinSafe(base, rel string) string {
+// escapes via ".." segments. It returns an error (rather than a silently
+// escaping path) when rel resolves outside base — a malicious module
+// Reference.Subpath like "../../../etc" must not let LoadIndex/ResolveExport
+// read arbitrary filesystem locations.
+func joinSafe(base, rel string) (string, error) {
 	// Strip leading slashes so filepath.Join treats rel as relative.
 	rel = strings.TrimLeft(rel, "/")
-	return base + "/" + rel
+	joined := filepath.Join(base, rel)
+	relPath, err := filepath.Rel(base, joined)
+	if err != nil {
+		return "", fmt.Errorf("subpath %q is not relative to module root: %w", rel, err)
+	}
+	if relPath == ".." || strings.HasPrefix(relPath, ".."+string(filepath.Separator)) {
+		return "", fmt.Errorf("subpath %q escapes module root", rel)
+	}
+	return joined, nil
 }

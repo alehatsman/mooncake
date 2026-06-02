@@ -46,6 +46,14 @@ type OsSystemdReverseInfo struct {
 	// pre-apply.
 	PriorExisted bool
 
+	// PriorReadFailed is set when the pre-apply read of the unit
+	// file failed for a reason other than not-exist (e.g. EACCES on
+	// a root-owned /etc unit while mooncake runs unprivileged). In
+	// that case existence is unknown: Reverse must NOT assume the
+	// unit was absent (which would emit a state=absent step deleting
+	// a unit that may have pre-existed). It refuses instead.
+	PriorReadFailed bool
+
 	// PriorContent is the verbatim unit file bytes pre-apply.
 	// Empty when PriorExisted is false. Captured for future v6
 	// use (raw-content reverse) but not consumed by v5's Reverse.
@@ -76,6 +84,13 @@ func captureReverseInfo(scope, name, path string) *OsSystemdReverseInfo {
 		if exists {
 			info.PriorContent = content
 		}
+	} else {
+		// readFile only returns a non-nil error for failures other
+		// than not-exist (it maps fs.ErrNotExist to exists=false,
+		// err=nil). A genuine read error means existence is unknown
+		// — record that so Reverse refuses rather than deleting a
+		// possibly pre-existing unit.
+		info.PriorReadFailed = true
 	}
 	if enabled, err := systemctlIsEnabled(scope, name); err == nil {
 		info.PriorEnabled = enabled
@@ -120,6 +135,18 @@ func (Handler) Reverse(_ actions.Context, step *config.Step, result actions.Resu
 	}
 	if info.Name == "" {
 		return nil, errors.New("os.systemd Reverse: incomplete ReverseData (no Name)")
+	}
+
+	// Existence was undetermined at apply time (the unit file couldn't
+	// be read for a reason other than not-exist, e.g. EACCES). Refuse
+	// rather than risk deleting a unit that may have pre-existed.
+	if info.PriorReadFailed {
+		return nil, errors.New(
+			"os.systemd Reverse: cannot determine prior state of unit " +
+				info.Name + " — the unit file could not be read at apply " +
+				"time (e.g. permission denied on a root-owned unit). " +
+				"Refusing to emit a delete that might destroy a " +
+				"pre-existing unit.")
 	}
 
 	if !info.PriorExisted {
