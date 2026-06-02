@@ -280,21 +280,19 @@ func (p *defaultPerformer) WriteFile(path string, content []byte, mode os.FileMo
 		return e
 	}
 
-	// Create missing parent dirs. A bare os.MkdirAll creates missing
-	// dirs at 0o755 and is a no-op (never re-chmods) when the parent
-	// already exists — preserving any deliberately-tightened mode such
-	// as a 0700 ~/.ssh. Only when that fails AND escalation is wanted
-	// (needSudoForOwnership) do we route through Mkdir, which runs
-	// `mkdir -p` under the privileged runner so a target under a
-	// root-owned tree whose subdir doesn't yet exist still works — an
-	// unprivileged MkdirAll would otherwise EACCES before the sudo mv
-	// path is ever reached (issue #95).
+	// Create the parent dir when it is not already a directory we can see,
+	// routing that through Mkdir so escalation applies: under as_user (or
+	// become) a freshly created parent is made via privileged `mkdir -p` +
+	// chown, so it is owned by as_user rather than the invoking user
+	// (issue #95). The `statErr != nil` arm also covers the original #95
+	// case — a missing subdir under a root-owned tree the invoker can't
+	// even traverse — since Mkdir runs under the privileged runner instead
+	// of EACCESing like a bare os.MkdirAll. A *stattable existing* dir is
+	// left completely untouched (never re-chmod'd / re-chown'd), preserving
+	// a deliberately-tightened mode such as a 0700 ~/.ssh. With no
+	// escalation bound, Mkdir falls through to a plain os.MkdirAll.
 	if parent := filepath.Dir(path); parent != "" {
-		if err := os.MkdirAll(parent, 0o755); err != nil {
-			if !p.needSudoForOwnership() {
-				e.Err = fmt.Errorf("mkdir parent %s: %w", parent, err)
-				return e
-			}
+		if info, statErr := os.Stat(parent); statErr != nil || !info.IsDir() {
 			if me := p.Mkdir(parent, 0o755, opts); me.Err != nil {
 				e.Err = fmt.Errorf("mkdir parent %s: %w", parent, me.Err)
 				return e
@@ -443,19 +441,16 @@ func (p *defaultPerformer) CopyFile(src, dest string, mode os.FileMode, opts act
 		return e
 	}
 
-	// Create missing parent dirs. A bare os.MkdirAll creates missing
-	// dirs at 0o755 and is a no-op (never re-chmods) when the parent
-	// already exists — preserving any deliberately-tightened mode. Only
-	// when that fails AND escalation is wanted (needSudoForOwnership) do
-	// we route through Mkdir, which runs `mkdir -p` under the privileged
-	// runner so a dest under a root-owned tree whose subdir doesn't yet
-	// exist still works (issue #95).
+	// Create the parent dir when it is not already a directory we can see,
+	// routing that through Mkdir so escalation applies: under as_user (or
+	// become) a freshly created parent is made via privileged `mkdir -p` +
+	// chown, so it is owned by as_user rather than the invoking user
+	// (issue #95). The `statErr != nil` arm also covers a missing subdir
+	// under a root-owned tree the invoker can't traverse. A stattable
+	// existing dir is left untouched (never re-chmod'd / re-chown'd). With
+	// no escalation bound, Mkdir falls through to a plain os.MkdirAll.
 	if parent := filepath.Dir(dest); parent != "" {
-		if err := os.MkdirAll(parent, 0o755); err != nil {
-			if !p.needSudoForOwnership() {
-				e.Err = fmt.Errorf("mkdir parent %s: %w", parent, err)
-				return e
-			}
+		if info, statErr := os.Stat(parent); statErr != nil || !info.IsDir() {
 			if me := p.Mkdir(parent, 0o755, opts); me.Err != nil {
 				e.Err = fmt.Errorf("mkdir parent %s: %w", parent, me.Err)
 				return e
