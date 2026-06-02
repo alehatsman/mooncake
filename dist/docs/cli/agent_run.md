@@ -19,7 +19,7 @@ Execute agent iteration
 | `--model` | string | - | Model name (when using --provider) |
 | `--max-iterations` | int | `5` | Maximum iterations for loop mode |
 | `--auto-apply` | bool | false | Skip the plan-confirm gate (required for unattended/CI runs; spec-67 §10) |
-| `--style` | string | - | Planning style: plan (single complete plan, default) or step (one action per turn). Overrides MOONCAKE_AGENT_STYLE. |
+| `--style` | string | - | Planning style: plan (single complete plan, default) or step (one action per turn). Overrides MOONCAKE_AGENT_STYLE. Plan-style completes as soon as an iteration makes no new agent-attributable file changes, so a one-shot task (print, run a test, echo) finishes in a single iteration rather than re-planning; files already dirty in the workspace when the run started don't count (#87). |
 | `--allow-action` | []string | - | Permissions-as-contract allowlist (#11): action types the agent may use (repeatable). Empty = any action unless denied. |
 | `--deny-action` | []string | - | Permissions-as-contract denylist (#11): action types the agent may NOT use (repeatable), e.g. --deny-action shell --deny-action cmd. Wins over the allowlist. |
 | `--deny-network` | bool | false | Refuse any step that declares network egress (pkg install, download, http.request, remote git clone). |

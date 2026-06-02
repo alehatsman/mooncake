@@ -64,7 +64,7 @@ func AgentCommand() *cli.Command {
 					},
 					&cli.StringFlag{
 						Name:  "style",
-						Usage: "Planning style: plan (single complete plan, default) or step (one action per turn). Overrides MOONCAKE_AGENT_STYLE.",
+						Usage: "Planning style: plan (single complete plan, default) or step (one action per turn). Overrides MOONCAKE_AGENT_STYLE. Plan-style completes as soon as an iteration makes no new agent-attributable file changes, so a one-shot task (print, run a test, echo) finishes in a single iteration rather than re-planning; files already dirty in the workspace when the run started don't count (#87).",
 					},
 					&cli.StringSliceFlag{
 						Name:  "allow-action",
