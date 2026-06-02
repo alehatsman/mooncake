@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/alehatsman/mooncake/internal/actions"
+	"github.com/alehatsman/mooncake/internal/agent/llm"
 	"github.com/alehatsman/mooncake/internal/executor"
 )
 
@@ -92,6 +93,14 @@ type RunOptions struct {
 	// executor via executor.StartConfig.Registry. See actions.GlobalRegistry
 	// and the public facade package.
 	Registry *actions.Registry
+	// LLMClient, when non-nil, is the reasoning backend RunLoop generates
+	// plans with — bypassing the Provider/Endpoint/Model resolution chain.
+	// This is the seam for a fully custom or offline backend (a local
+	// ollama/vLLM client, or a deterministic mock in tests) without going
+	// through env/provider strings. nil keeps the default resolution from
+	// Provider/Endpoint/Model. Honored by RunLoop only (the single-shot Run
+	// path executes a provided plan and never calls a backend).
+	LLMClient llm.Client
 }
 
 // Output format values for RunOptions.OutputFormat. Mirrors the

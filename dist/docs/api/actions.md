@@ -130,6 +130,7 @@ func (h *Handler) Metadata() actions.ActionMetadata {
 - [func ObserveValueToMap(v any) any](<#func-observevaluetomap>)
 - [func PathNeedsSudo(p string) bool](<#func-pathneedssudo>)
 - [func Register(handler Handler)](<#func-register>)
+- [func RegisterBuiltins(dst *Registry) error](<#func-registerbuiltins>)
 - [type Action](<#type-action>)
 - [type ActionCategory](<#type-actioncategory>)
 - [type ActionDefinition](<#type-actiondefinition>)
@@ -225,7 +226,7 @@ var SystemPathPrefixes = []string{
 }
 ```
 
-## func [Count](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/registry.go#L177>)
+## func [Count](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/registry.go#L208>)
 
 ```go
 func Count() int
@@ -259,7 +260,7 @@ func GetFieldExample(actionName, fieldName string) string
 
 GetFieldExample returns an example value for a field based on schema
 
-## func [Has](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/registry.go#L172>)
+## func [Has](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/registry.go#L203>)
 
 ```go
 func Has(actionType string) bool
@@ -321,7 +322,7 @@ func (Handler) Permissions(step *config.Step) actions.PermissionSet {
 }
 ```
 
-## func [Register](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/registry.go#L155>)
+## func [Register](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/registry.go#L186>)
 
 ```go
 func Register(handler Handler)
@@ -336,6 +337,22 @@ func init() {
     actions.Register(&MyHandler{})
 }
 ```
+
+## func [RegisterBuiltins](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/registry.go#L158>)
+
+```go
+func RegisterBuiltins(dst *Registry) error
+```
+
+RegisterBuiltins registers every built\-in handler into dst \(the ones the global registry holds from package init\(\)\). It is the explicit alternative to GlobalRegistry\(\).Clone\(\) for a consumer that starts from NewRegistry\(\) and wants the built\-ins plus its own handlers:
+
+```
+reg := actions.NewRegistry()
+_ = actions.RegisterBuiltins(reg)
+_ = reg.Register(myCustomHandler)
+```
+
+A built\-in whose name is already present in dst is skipped \(so a consumer may pre\-register an override before calling this\). Returns the first non\-skip registration error, if any.
 
 ## type [Action](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/performer.go#L7>)
 
@@ -475,7 +492,7 @@ type ActionMetadata struct {
 }
 ```
 
-### func [List](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/registry.go#L167>)
+### func [List](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/registry.go#L198>)
 
 ```go
 func List() []ActionMetadata
@@ -977,7 +994,7 @@ type Handler interface {
 }
 ```
 
-### func [Get](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/registry.go#L162>)
+### func [Get](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/registry.go#L193>)
 
 ```go
 func Get(actionType string) (Handler, bool)

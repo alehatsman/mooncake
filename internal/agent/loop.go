@@ -182,13 +182,21 @@ func RunLoop(ctx context.Context, opts RunOptions) (*LoopResult, error) {
 		fmt.Fprintln(os.Stderr, AutoApplyWarning)
 	}
 
-	client, err := newClient(llm.ClientOptions{
-		Provider: opts.Provider,
-		Endpoint: opts.Endpoint,
-		Model:    opts.Model,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("failed to create LLM client: %w", err)
+	// A consumer may inject a fully custom reasoning backend (offline,
+	// local, or a deterministic test double) via opts.LLMClient, bypassing
+	// the Provider/Endpoint/Model resolution. nil falls back to the default
+	// resolution chain.
+	client := opts.LLMClient
+	if client == nil {
+		var err error
+		client, err = newClient(llm.ClientOptions{
+			Provider: opts.Provider,
+			Endpoint: opts.Endpoint,
+			Model:    opts.Model,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("failed to create LLM client: %w", err)
+		}
 	}
 
 	// Single per-loop state for the step-style bulk-approve gate.

@@ -143,6 +143,37 @@ func GlobalRegistry() *Registry {
 	return globalRegistry
 }
 
+// RegisterBuiltins registers every built-in handler into dst (the ones the
+// global registry holds from package init()). It is the explicit alternative
+// to GlobalRegistry().Clone() for a consumer that starts from NewRegistry()
+// and wants the built-ins plus its own handlers:
+//
+//	reg := actions.NewRegistry()
+//	_ = actions.RegisterBuiltins(reg)
+//	_ = reg.Register(myCustomHandler)
+//
+// A built-in whose name is already present in dst is skipped (so a consumer
+// may pre-register an override before calling this). Returns the first
+// non-skip registration error, if any.
+func RegisterBuiltins(dst *Registry) error {
+	globalRegistry.mu.RLock()
+	handlers := make([]Handler, 0, len(globalRegistry.handlers))
+	for _, h := range globalRegistry.handlers {
+		handlers = append(handlers, h)
+	}
+	globalRegistry.mu.RUnlock()
+
+	for _, h := range handlers {
+		if dst.Has(h.Metadata().Name) {
+			continue
+		}
+		if err := dst.Register(h); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // Register registers a handler in the global registry.
 // This is the most common way to register handlers from init() functions.
 // Panics if registration fails (e.g., duplicate handler name).

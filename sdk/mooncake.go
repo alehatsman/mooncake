@@ -36,6 +36,7 @@ import (
 
 	"github.com/alehatsman/mooncake/internal/actions"
 	"github.com/alehatsman/mooncake/internal/agent"
+	"github.com/alehatsman/mooncake/internal/agent/llm"
 	"github.com/alehatsman/mooncake/internal/config"
 	"github.com/alehatsman/mooncake/internal/executor"
 
@@ -63,9 +64,15 @@ type Handler = actions.Handler
 // template renderer, variables, event publisher, logger, and run mode.
 type Context = actions.Context
 
-// Result is the typed outcome a Handler.Run returns. Construct one with
-// NewResult.
+// Result is the typed outcome interface a Handler.Run returns. Build a
+// concrete one with NewResult (which returns a *ResultData implementing this
+// interface).
 type Result = actions.Result
+
+// ResultData is the concrete result value a handler populates — set Changed,
+// Stdout, Failed, Reason, etc. on it, then return it as a Result. Construct
+// with NewResult.
+type ResultData = executor.Result
 
 // ActionMetadata describes an action: its name, description, category, and
 // capability flags. Returned by Handler.Metadata.
@@ -119,9 +126,22 @@ func DefaultRegistry() *Registry {
 	return actions.GlobalRegistry().Clone()
 }
 
-// NewResult constructs an empty Result for a Handler.Run implementation to
-// populate (Changed / Stdout / Failed / …).
-func NewResult() Result {
+// RegisterBuiltins registers every built-in handler into reg — the explicit
+// alternative to DefaultRegistry for a consumer that starts from NewRegistry
+// and wants the built-ins alongside its own handlers. A built-in whose name
+// is already registered in reg is skipped, so pre-registering an override is
+// safe.
+//
+//	reg := mooncake.NewRegistry()
+//	_ = mooncake.RegisterBuiltins(reg)
+//	_ = reg.Register(myCustomHandler)
+func RegisterBuiltins(reg *Registry) error {
+	return actions.RegisterBuiltins(reg)
+}
+
+// NewResult constructs an empty result for a Handler.Run implementation to
+// populate (Changed / Stdout / Failed / …) and return as a Result.
+func NewResult() *ResultData {
 	return executor.NewResult()
 }
 
@@ -166,6 +186,31 @@ const (
 	OutcomeReject = agent.OutcomeReject
 	OutcomeAbort  = agent.OutcomeAbort
 )
+
+// ----------------------------------------------------------------------------
+// Reasoning backend (the L4 layer — swappable)
+// ----------------------------------------------------------------------------
+
+// LLMClient is the reasoning backend the loop generates plans against. Set
+// RunOptions.LLMClient to inject a fully custom or offline backend (a local
+// ollama / vLLM client, or a deterministic test double) directly, bypassing
+// the Provider/Endpoint/Model resolution. Implement this single method to
+// supply your own.
+type LLMClient = llm.Client
+
+// LLMClientOptions selects a built-in backend via the resolution chain
+// (provider flag → MOONCAKE_AGENT_PROVIDER → claude binary → CLAUDE_API_KEY →
+// MOONCAKE_AGENT_ENDPOINT openai-shape). Use with NewLLMClient when you want a
+// resolved client to inspect or reuse; for the common case, set the
+// Provider/Endpoint/Model fields on RunOptions instead.
+type LLMClientOptions = llm.ClientOptions
+
+// NewLLMClient resolves a built-in reasoning backend from opts. A fully
+// offline run points Endpoint at a local OpenAI-shape server (ollama / vLLM);
+// no cloud is required.
+func NewLLMClient(opts LLMClientOptions) (LLMClient, error) {
+	return llm.NewClientWithOptions(opts)
+}
 
 // RunLoop runs the iterate-until-done agent loop: generate a plan, gate it,
 // execute it, feed results back, and repeat until the goal is met, the user
