@@ -724,7 +724,7 @@ func TestHandler_Run_FileAssertion_Owner(t *testing.T) {
 	// Get current user
 	currentUser, err := user.Current()
 	if err != nil {
-		t.Fatalf("Failed to get current user: %v", err)
+		t.Skipf("current user unresolvable (hermetic CI without passwd/$USER): %v", err)
 	}
 
 	tests := []struct {
@@ -800,7 +800,7 @@ func TestHandler_Run_FileAssertion_Group(t *testing.T) {
 	// Get current user to find their primary group
 	currentUser, err := user.Current()
 	if err != nil {
-		t.Fatalf("Failed to get current user: %v", err)
+		t.Skipf("current user unresolvable (hermetic CI without passwd/$USER): %v", err)
 	}
 
 	// Get primary group

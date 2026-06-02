@@ -1503,7 +1503,7 @@ func TestHandler_Run_OwnershipLinuxOnly(t *testing.T) {
 
 	currentUser, err := user.Current()
 	if err != nil {
-		t.Fatalf("Failed to get current user: %v", err)
+		t.Skipf("current user unresolvable (hermetic CI without passwd/$USER): %v", err)
 	}
 
 	// Only run if not root
@@ -1823,7 +1823,7 @@ func TestHandler_SetOwnership(t *testing.T) {
 	// Get current user
 	currentUser, err := user.Current()
 	if err != nil {
-		t.Fatalf("Failed to get current user: %v", err)
+		t.Skipf("current user unresolvable (hermetic CI without passwd/$USER): %v", err)
 	}
 
 	step := &config.Step{
@@ -1888,7 +1888,7 @@ func TestHandler_TouchFile_WithOwnership(t *testing.T) {
 	// Get current user
 	currentUser, err := user.Current()
 	if err != nil {
-		t.Fatalf("Failed to get current user: %v", err)
+		t.Skipf("current user unresolvable (hermetic CI without passwd/$USER): %v", err)
 	}
 
 	step := &config.Step{
@@ -1958,7 +1958,7 @@ func TestHandler_Run_SymlinkWithOwnership(t *testing.T) {
 	// Get current user
 	currentUser, err := user.Current()
 	if err != nil {
-		t.Fatalf("Failed to get current user: %v", err)
+		t.Skipf("current user unresolvable (hermetic CI without passwd/$USER): %v", err)
 	}
 
 	step := &config.Step{
@@ -1997,7 +1997,7 @@ func TestHandler_Run_HardlinkWithOwnership(t *testing.T) {
 	// Get current user
 	currentUser, err := user.Current()
 	if err != nil {
-		t.Fatalf("Failed to get current user: %v", err)
+		t.Skipf("current user unresolvable (hermetic CI without passwd/$USER): %v", err)
 	}
 
 	step := &config.Step{
@@ -2031,7 +2031,7 @@ func TestHandler_Run_PermsWithOwnership(t *testing.T) {
 	// Get current user
 	currentUser, err := user.Current()
 	if err != nil {
-		t.Fatalf("Failed to get current user: %v", err)
+		t.Skipf("current user unresolvable (hermetic CI without passwd/$USER): %v", err)
 	}
 
 	step := &config.Step{

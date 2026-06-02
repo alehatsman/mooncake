@@ -1153,7 +1153,7 @@ func TestHandler_Run_OwnershipWithoutBecome(t *testing.T) {
 
 	currentUser, err := user.Current()
 	if err != nil {
-		t.Fatalf("Failed to get current user: %v", err)
+		t.Skipf("current user unresolvable (hermetic CI without passwd/$USER): %v", err)
 	}
 
 	// Only run if not root (to test permission error)
@@ -1301,7 +1301,7 @@ func TestHandler_SetOwnership_Success(t *testing.T) {
 	// Get current user
 	currentUser, err := user.Current()
 	if err != nil {
-		t.Fatalf("Failed to get current user: %v", err)
+		t.Skipf("current user unresolvable (hermetic CI without passwd/$USER): %v", err)
 	}
 
 	ec := mockExecutionContext()
@@ -1567,7 +1567,7 @@ func TestHandler_Run_WithOwnershipAndMode(t *testing.T) {
 	// Get current user
 	currentUser, err := user.Current()
 	if err != nil {
-		t.Fatalf("Failed to get current user: %v", err)
+		t.Skipf("current user unresolvable (hermetic CI without passwd/$USER): %v", err)
 	}
 
 	ec := mockExecutionContext()

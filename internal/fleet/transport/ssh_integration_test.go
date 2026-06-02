@@ -247,7 +247,11 @@ func TestConnect_RejectsBadPort(t *testing.T) {
 	// produce a different error shape).
 	t.Setenv("SSH_AUTH_SOCK", "")
 
-	_, err := Connect(context.Background(), SSHTarget{Host: "127.0.0.1", Port: 1}, ConnectOptions{
+	// Set User explicitly: with no user and no $USER in the env (as in the
+	// hermetic CI container), Connect short-circuits with a "no user set"
+	// error before it ever dials, so the addr-naming assertion below would
+	// never be reached. A fixed user lets the dial run and fail as intended.
+	_, err := Connect(context.Background(), SSHTarget{User: "tester", Host: "127.0.0.1", Port: 1}, ConnectOptions{
 		InsecureSkipHostKey: true,
 		Timeout:             200 * time.Millisecond,
 		IdentityFiles:       []string{keyPath},
