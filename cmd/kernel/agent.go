@@ -1,6 +1,7 @@
 package kernel
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -135,8 +136,12 @@ func agentRunAction(c *cli.Context) error {
 	// signal still hard-kills via Go's default disposition (NotifyContext
 	// restores it after the first). Parented on c.Context so the urfave
 	// app's own cancellation still propagates.
-	ctx, stop := signal.NotifyContext(c.Context, os.Interrupt, syscall.SIGTERM)
-	defer stop()
+	sigCtx, stopSignals := signal.NotifyContext(c.Context, os.Interrupt, syscall.SIGTERM)
+	defer stopSignals()
+	// #103: a child cancel the stdin control channel can trip on a `stop`
+	// message, in addition to the signal path above.
+	ctx, cancel := context.WithCancel(sigCtx)
+	defer cancel()
 
 	opts := agent.RunOptions{
 		Goal:          goal,
@@ -155,6 +160,21 @@ func agentRunAction(c *cli.Context) error {
 	}
 
 	if planPath == "" && !useStdin {
+		// #103: in programmatic mode (--output-format json, no --auto-apply)
+		// drive the confirm gate over a stdin NDJSON control channel instead
+		// of a TTY. The channel's `stop`/`abort` messages cancel the run;
+		// `approve`/`reject`/`edit` answer the gate, which parks on a
+		// plan.awaiting_approval event until a message arrives. stdin is free
+		// here — the plan-input paths use --plan / --stdin, which this branch
+		// excludes.
+		if jsonOut && !opts.AutoApply {
+			cc := agent.NewControlChannel(os.Stdin, cancel)
+			opts.Approver = cc.Approver(func(planBytes []byte) {
+				emitAgentEvent(os.Stdout, events.EventPlanAwaitingApproval,
+					events.PlanAwaitingApprovalData{Plan: string(planBytes)})
+			})
+		}
+
 		result, loopErr := agent.RunLoop(ctx, opts)
 		if loopErr != nil {
 			// The loop's own NDJSON/text stream already conveyed per-step

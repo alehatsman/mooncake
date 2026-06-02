@@ -317,17 +317,18 @@ func RunLoop(ctx context.Context, opts RunOptions) (*LoopResult, error) {
 		}
 
 		outcome, err := applyPlanIteration(ctx, wrappedBytes, opts.RepoRoot, log, gate, opts.Policy, opts.OutputFormat)
-		if err != nil {
-			return nil, err
-		}
-		// #101: a mid-apply cancellation. executor.Start returned a
-		// ctx-cancel error (now in outcome.ExecErr) after stopping between
-		// steps; for an in-step interrupt it already ran the transaction's
-		// LIFO rollback. Report StopCanceled instead of letting
-		// concludeIteration record the cancel as an execution_failed
-		// iteration — the run was stopped, not broken.
+		// #101: check cancellation BEFORE the error — a stop can surface as
+		// a ctx-cancel error from a blocking gate (#103 control "stop" while
+		// parked at plan.awaiting_approval) or as outcome.ExecErr from
+		// executor.Start (in-step interrupt, which already ran the
+		// transaction's LIFO rollback). Either way the run was stopped, not
+		// broken: report StopCanceled rather than returning the gate error or
+		// logging an execution_failed iteration.
 		if ctx.Err() != nil {
 			return &LoopResult{Iterations: iterations, StopReason: StopCanceled, FinalLog: finalLog(iterations)}, nil
+		}
+		if err != nil {
+			return nil, err
 		}
 		if !outcome.ValidationOK {
 			errMsg := ""

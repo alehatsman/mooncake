@@ -3,6 +3,7 @@ package agent
 import (
 	"context"
 	"errors"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -735,6 +736,44 @@ func TestRunLoop_PreCancelledContext_StopsImmediately(t *testing.T) {
 	}
 	if result.FinalLog != nil {
 		t.Errorf("FinalLog = %v, want nil (no iteration ran)", result.FinalLog)
+	}
+}
+
+// TestRunLoop_ControlChannel_StopWhileAwaitingApproval is the #103 end-to-end
+// acceptance: a programmatic run parks at the confirm gate (announce fires),
+// the driver responds with a `stop` control message, the control channel
+// cancels the run ctx, the parked approver unblocks, and RunLoop reports
+// StopCanceled without executing the plan.
+func TestRunLoop_ControlChannel_StopWhileAwaitingApproval(t *testing.T) {
+	repo := t.TempDir()
+	initGitRepo(t, repo)
+	plan := "- file.write:\n    path: hello.txt\n    content: hi\n"
+	stub := &stubLLMClient{plans: []string{plan}}
+	defer withStubClient(t, stub)()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	pr, pw := io.Pipe()
+	defer pw.Close()
+	cc := NewControlChannel(pr, cancel)
+
+	result, err := RunLoop(ctx, RunOptions{
+		Goal:          "stop at gate",
+		RepoRoot:      repo,
+		MaxIterations: 1,
+		Style:         StyleStep,
+		Approver: cc.Approver(func(_ []byte) {
+			// The driver, on seeing plan.awaiting_approval, sends stop.
+			go func() { _, _ = pw.Write([]byte(`{"type":"stop"}` + "\n")) }()
+		}),
+	})
+	if err != nil {
+		t.Fatalf("RunLoop: %v", err)
+	}
+	if result.StopReason != StopCanceled {
+		t.Errorf("StopReason = %q, want %q", result.StopReason, StopCanceled)
+	}
+	if _, serr := os.Stat(filepath.Join(repo, "hello.txt")); serr == nil {
+		t.Error("hello.txt exists — a plan stopped at the gate must not execute")
 	}
 }
 

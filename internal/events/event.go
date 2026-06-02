@@ -46,6 +46,15 @@ const (
 	// the executor's per-step lifecycle — agent emits it directly at the
 	// cmd layer so a programmatic consumer can key on it to finalize.
 	EventAgentCompleted Type = "agent.completed"
+	// EventPlanAwaitingApproval is emitted by a programmatic agent run
+	// (--output-format json, no --auto-apply) when the loop reaches the
+	// confirm gate and is parked waiting for an inbound control message
+	// (#103). Its Data is a PlanAwaitingApprovalData carrying the plan to
+	// approve. A driver (moongit) keys on it to know it must send an
+	// approve/reject/edit control message on the agent's stdin before the
+	// loop proceeds. Like agent.completed it isn't part of the executor's
+	// per-step lifecycle — the cmd layer emits it directly.
+	EventPlanAwaitingApproval Type = "plan.awaiting_approval"
 )
 
 // Event types for step lifecycle
@@ -166,6 +175,19 @@ type PlanGeneratingData struct {
 	Iteration int    `json:"iteration"`
 	Provider  string `json:"provider,omitempty"`
 	Model     string `json:"model,omitempty"`
+}
+
+// PlanAwaitingApprovalData contains data for plan.awaiting_approval events
+// (#103) — the plan the loop is parked on at the confirm gate. Iteration
+// ties it to the loop iteration; Plan is the sanitized plan text (the same
+// bytes the confirm gate received) so a driver can render what it's about
+// to approve without re-deriving it from the planner.delta stream.
+type PlanAwaitingApprovalData struct {
+	// Iteration is omitempty: the confirm gate doesn't carry the loop
+	// iteration, but the immediately-preceding plan.generating event does,
+	// so a driver can recover it from the stream.
+	Iteration int    `json:"iteration,omitempty"`
+	Plan      string `json:"plan"`
 }
 
 // PlannerDeltaData contains data for planner.delta events — a coalesced
