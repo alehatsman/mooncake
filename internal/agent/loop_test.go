@@ -463,6 +463,75 @@ func TestRunLoop_DistinctFailures_DoNotShortCircuit(t *testing.T) {
 	}
 }
 
+// TestRunLoop_StylePlan_NoFileChange_Repro reproduces #87: a plan-style one-shot
+// task that changes no files (print hello) should stop after ONE iteration with
+// StopSuccess, not re-plan into a redundant 2nd iteration that hits no_progress.
+func TestRunLoop_StylePlan_NoFileChange_Repro(t *testing.T) {
+	repo := t.TempDir()
+	initGitRepo(t, repo)
+
+	plan := `[{"name":"print hello 10 times","cmd":{"argv":["sh","-c","for i in 1 2 3 4 5 6 7 8 9 10; do echo hello; done"]}}]`
+	stub := &stubLLMClient{plans: []string{plan, plan, plan}}
+	cleanup := withStubClient(t, stub)
+	defer cleanup()
+
+	result, err := RunLoop(RunOptions{
+		Goal:          "print hello 10 times",
+		RepoRoot:      repo,
+		MaxIterations: 3,
+		AutoApply:     true,
+	})
+	if err != nil {
+		t.Fatalf("RunLoop: %v", err)
+	}
+	t.Logf("calls=%d stop_reason=%q terminal_status=%q iterations=%d", stub.calls, result.StopReason, result.TerminalStatus(), len(result.Iterations))
+	if stub.calls != 1 {
+		t.Errorf("LLM calls = %d, want 1 (a no-file-change plan-style task is done after one iteration)", stub.calls)
+	}
+	if result.StopReason != StopSuccess {
+		t.Errorf("StopReason = %q, want %q", result.StopReason, StopSuccess)
+	}
+}
+
+// TestRunLoop_StylePlan_InheritedDirtDoesNotBlockStopSuccess is the #87
+// regression: an untracked file already present in the workspace (NOT the
+// agent's own .mooncake scratch — e.g. moongit's harness-dropped MCP config in
+// /work) used to make diff-vs-HEAD non-empty every iteration, so plan-style's
+// "no files changed = done" never fired and a one-shot task re-planned into a
+// redundant no_progress iteration. The agent didn't touch that file, so it must
+// not count: the task still completes in ONE iteration with StopSuccess.
+func TestRunLoop_StylePlan_InheritedDirtDoesNotBlockStopSuccess(t *testing.T) {
+	repo := t.TempDir()
+	initGitRepo(t, repo)
+	// Simulate moongit's /work: a non-.mooncake untracked file present before
+	// the agent runs (the plan never touches it).
+	if err := os.WriteFile(filepath.Join(repo, "dex-mcp.json"), []byte("{}"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	plan := `[{"name":"print hello 10 times","cmd":{"argv":["sh","-c","for i in 1 2 3 4 5 6 7 8 9 10; do echo hello; done"]}}]`
+	stub := &stubLLMClient{plans: []string{plan, plan, plan}}
+	cleanup := withStubClient(t, stub)
+	defer cleanup()
+
+	result, err := RunLoop(RunOptions{
+		Goal:          "print hello 10 times",
+		RepoRoot:      repo,
+		MaxIterations: 3,
+		AutoApply:     true,
+	})
+	if err != nil {
+		t.Fatalf("RunLoop: %v", err)
+	}
+	t.Logf("calls=%d stop_reason=%q terminal_status=%q iterations=%d", stub.calls, result.StopReason, result.TerminalStatus(), len(result.Iterations))
+	if stub.calls != 1 {
+		t.Errorf("LLM calls = %d, want 1 (inherited workspace dirt must not force a redundant iteration)", stub.calls)
+	}
+	if result.StopReason != StopSuccess {
+		t.Errorf("StopReason = %q, want %q", result.StopReason, StopSuccess)
+	}
+}
+
 // TestRunLoop_StyleStep_NoChangeStall is the #77 regression: a step-style
 // planner that keeps proposing no-op (zero-mutation) steps never sends the
 // empty-plan done signal, so without a guard it burns every iteration. The

@@ -161,6 +161,18 @@ func RunLoop(opts RunOptions) (*LoopResult, error) {
 	// something resets it.
 	var noChangeStreak int
 
+	// inheritedDirty is the set of files already differing from HEAD when the
+	// loop started — workspace dirt the agent did NOT create (#87). A consumer
+	// like moongit materializes the agent in a /work checkout that may carry
+	// pre-existing untracked files (e.g. a dropped MCP config). Those would
+	// otherwise show up in every iteration's diff-vs-HEAD and make plan-style's
+	// "no files changed = done" check never fire, so a one-shot task that
+	// touches no files (print, run-a-test) re-plans into a redundant no_progress
+	// iteration instead of completing in one. Subtracting this baseline makes
+	// the done-signal agent-attributable. Captured once; it's the workspace the
+	// run inherited, not a moving target.
+	inheritedDirty := fileSet(collectChangedOrEmpty(opts.RepoRoot))
+
 	// terminate writes a failure-log entry, appends it to the run's
 	// iteration list, and returns the stop result. Collapses the
 	// log+append+return triplet repeated by every terminal exit below.
@@ -368,7 +380,7 @@ func RunLoop(opts RunOptions) (*LoopResult, error) {
 			iterLog.Artifacts = append(iterLog.Artifacts, planPath)
 		}
 
-		terminal, summary, fingerprint, streak := concludeIteration(opts, iterLog, &iterations, outcome, planHash, lastFailureFingerprint, noChangeStreak, log)
+		terminal, summary, fingerprint, streak := concludeIteration(opts, iterLog, &iterations, outcome, planHash, lastFailureFingerprint, noChangeStreak, inheritedDirty, log)
 		if terminal != nil {
 			return terminal, nil
 		}
@@ -450,6 +462,7 @@ func concludeIteration(
 	outcome iterationOutcome,
 	planHash, lastFingerprint string,
 	noChangeStreak int,
+	inheritedDirty map[string]bool,
 	log logger.Logger,
 ) (terminal *LoopResult, summary *IterationSummary, fingerprint string, newStreak int) {
 	if outcome.ExecErr != nil {
@@ -498,8 +511,11 @@ func concludeIteration(
 	// Under --style step the goal-reached signal is an empty plan (handled
 	// upstream); a no-op step is not a stop condition — the model may
 	// legitimately propose a diagnostic step and continue. Only plan-style
-	// treats "no files changed" as "we're done".
-	if len(outcome.ChangedFiles) == 0 && opts.Style != StyleStep {
+	// treats "no files changed" as "we're done". "Changed" here means
+	// agent-attributable: files dirty before the loop began (inheritedDirty,
+	// #87) don't count, so an inherited /work artifact can't keep a one-shot
+	// task from completing in a single iteration.
+	if !changedBeyondBaseline(outcome.ChangedFiles, inheritedDirty) && opts.Style != StyleStep {
 		return &LoopResult{Iterations: *iterations, StopReason: StopSuccess, FinalLog: iterLog}, nil, "", newStreak
 	}
 

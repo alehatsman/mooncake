@@ -174,3 +174,45 @@ func CollectDiffStat(repoRoot string) (DiffStat, error) {
 
 	return stat, nil
 }
+
+// collectChangedOrEmpty is CollectChangedFiles with the error flattened to an
+// empty slice: a failure to read the diff degrades to "no known dirt" rather
+// than aborting the loop (#87). Used to capture the workspace's inherited
+// baseline at loop start.
+func collectChangedOrEmpty(repoRoot string) []string {
+	changed, err := CollectChangedFiles(repoRoot)
+	if err != nil {
+		return nil
+	}
+	return changed
+}
+
+// fileSet builds a membership set from a changed-files slice. Returns nil for
+// an empty input — a nil set is a valid empty lookup (changedBeyondBaseline
+// then counts every change).
+func fileSet(files []string) map[string]bool {
+	if len(files) == 0 {
+		return nil
+	}
+	s := make(map[string]bool, len(files))
+	for _, f := range files {
+		s[f] = true
+	}
+	return s
+}
+
+// changedBeyondBaseline reports whether `changed` includes any file not already
+// in baseline — i.e. whether the iteration touched something the workspace
+// didn't arrive with (#87). With a nil/empty baseline every changed file
+// counts, preserving the original "any change vs HEAD" semantics on a clean
+// workspace. Filename-level: an agent edit to a file that was *already* dirty
+// at loop start isn't distinguished (treated as inherited), an acceptable edge
+// for the convergence heuristic.
+func changedBeyondBaseline(changed []string, baseline map[string]bool) bool {
+	for _, f := range changed {
+		if !baseline[f] {
+			return true
+		}
+	}
+	return false
+}
