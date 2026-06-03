@@ -114,7 +114,16 @@ func Run(ctx context.Context, opts RunOptions) (*IterationLog, error) {
 	publisher := events.NewPublisher()
 	defer publisher.Close()
 
-	log := logger.NewLogger(logger.ErrorLevel)
+	log := resolveLogger(opts, logger.NewLogger(logger.ErrorLevel))
+
+	// #121: attach caller-supplied subscribers first so they see every
+	// event the executor emits, including the run lifecycle. They ride
+	// alongside the built-in console/capture subscribers below; the
+	// publisher owns delivery and the run never Closes them (the caller
+	// owns their lifecycle).
+	for _, sub := range opts.Subscribers {
+		publisher.Subscribe(sub)
+	}
 
 	// Stream shell-step stdout/stderr to the operator's terminal during
 	// agent apply (single-shot path). Mirrors the loop-path wiring in

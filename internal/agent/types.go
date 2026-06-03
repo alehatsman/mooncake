@@ -7,7 +7,9 @@ import (
 
 	"github.com/alehatsman/mooncake/internal/actions"
 	"github.com/alehatsman/mooncake/internal/agent/llm"
+	"github.com/alehatsman/mooncake/internal/events"
 	"github.com/alehatsman/mooncake/internal/executor"
+	"github.com/alehatsman/mooncake/internal/logger"
 )
 
 type Snapshot struct {
@@ -101,6 +103,31 @@ type RunOptions struct {
 	// Provider/Endpoint/Model. Honored by RunLoop only (the single-shot Run
 	// path executes a provided plan and never calls a backend).
 	LLMClient llm.Client
+	// Subscribers are caller-supplied event subscribers attached to the
+	// executor's publisher on every plan-apply (#121). They receive the
+	// same live event stream the built-in console/capture subscribers do —
+	// step.* / file.* / transaction.* and the run lifecycle — so an
+	// in-process consumer (an SDK caller, a UI, a test) taps the run as it
+	// happens instead of parsing the stdout NDJSON. Attached alongside the
+	// built-ins in both the RunLoop apply path and the single-shot Run path;
+	// the publisher owns delivery, and the run does NOT Close these (the
+	// caller owns their lifecycle), matching apply.Config.ExtraSubscribers.
+	// nil/empty changes nothing.
+	Subscribers []events.Subscriber
+	// Logger, when non-nil, replaces the internal logger the executor logs
+	// through during apply (#121) — error/diagnostic output, not the event
+	// stream. A caller that wants the run's internal logging routed into its
+	// own logging surface (or silenced) supplies one here; LoggerLevel, when
+	// > 0, is applied to it via SetLogLevel so the caller can dial verbosity
+	// without constructing the logger at a specific level. nil keeps the
+	// built-in logger (ErrorLevel single-shot, OutputFormat-derived in the
+	// loop).
+	Logger logger.Logger
+	// LoggerLevel, when > 0, is the log level injected into Logger via
+	// SetLogLevel (logger.DebugLevel / InfoLevel / ErrorLevel). Ignored when
+	// Logger is nil. 0 (the zero value, == DebugLevel) leaves the supplied
+	// logger's level untouched — pass an explicit level only to override it.
+	LoggerLevel int
 }
 
 // Output format values for RunOptions.OutputFormat. Mirrors the

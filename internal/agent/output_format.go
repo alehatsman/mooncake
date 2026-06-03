@@ -46,3 +46,20 @@ func executorLogger(outputFormat string) logger.Logger {
 	}
 	return logger.NewLogger(logger.ErrorLevel)
 }
+
+// resolveLogger picks the logger an agent apply logs through, honoring a
+// caller's RunOptions.Logger override (#121). When opts.Logger is non-nil it
+// wins over fallback — a caller routes the run's internal error/diagnostic
+// logging into its own surface (or silences it with a discard logger) — and
+// opts.LoggerLevel (when > 0) is injected via SetLogLevel so the caller can
+// dial verbosity without constructing the logger at a fixed level. nil keeps
+// the built-in fallback the caller passed (executorLogger / ErrorLevel).
+func resolveLogger(opts RunOptions, fallback logger.Logger) logger.Logger {
+	if opts.Logger == nil {
+		return fallback
+	}
+	if opts.LoggerLevel > 0 {
+		opts.Logger.SetLogLevel(opts.LoggerLevel)
+	}
+	return opts.Logger
+}

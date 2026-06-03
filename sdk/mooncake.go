@@ -105,10 +105,7 @@ type (
 
 // Capability payload types. A consumer needs these to *implement* the
 // capability interfaces above against the facade alone: Permitter returns a
-// PermissionSet, Coster returns a CostEstimate. (Differ's Diff type and its
-// ResourceRef/DiffLine cluster are not re-exported yet — handlers without a
-// Differ get the kernel's coarse default; add them here when a facade consumer
-// needs a typed diff.)
+// PermissionSet, Coster returns a CostEstimate, Differ returns a Diff.
 type (
 	// PermissionSet declares the privileges/network/binaries a step requires,
 	// surfaced at plan time. Returned by Permitter.Permissions.
@@ -117,6 +114,67 @@ type (
 	// bytes, risk band, reversibility). Returned by Coster.Cost.
 	CostEstimate = actions.CostEstimate
 )
+
+// The Differ payload cluster (#120). A consumer that implements Differ must be
+// able to name every type its return value reaches through, against the facade
+// alone — Diff carries a ResourceRef (tagged by ResourceKind), an Operation,
+// and an optional []DiffLine (each tagged by a DiffOp).
+type (
+	// Diff is a machine-readable structural delta of what one step would
+	// change to one resource. Returned by Differ.Diff. Before/After are
+	// action-defined typed payloads (e.g. a file snapshot); Lines carries
+	// an optional unified-diff-style breakdown for textual content.
+	Diff = actions.Diff
+	// ResourceRef identifies the target of a step's change: a Kind, a
+	// human-readable Identifier (path / package / unit), and optional
+	// Attributes.
+	ResourceRef = actions.ResourceRef
+	// ResourceKind tags a ResourceRef so consumers can dispatch on the shape
+	// of Before/After (file, package, service, ...).
+	ResourceKind = actions.ResourceKind
+	// Operation is the coarse change classifier shared by every Diff
+	// (create / update / delete / noop).
+	Operation = actions.Operation
+	// DiffLine is one entry in a unified-diff-style breakdown of text content.
+	DiffLine = actions.DiffLine
+	// DiffOp is the one-character marker for a DiffLine ("+" / "-" / " ").
+	DiffOp = actions.DiffOp
+)
+
+// ResourceKind values. See ResourceRef.
+const (
+	ResourceFile    = actions.ResourceFile
+	ResourcePackage = actions.ResourcePackage
+	ResourceService = actions.ResourceService
+	ResourceText    = actions.ResourceText
+	ResourceShell   = actions.ResourceShell
+	ResourceVar     = actions.ResourceVar
+	ResourceGit     = actions.ResourceGit
+	ResourceOther   = actions.ResourceOther
+)
+
+// Operation values. See Diff.Operation.
+const (
+	OpCreate = actions.OpCreate
+	OpUpdate = actions.OpUpdate
+	OpDelete = actions.OpDelete
+	OpNoop   = actions.OpNoop
+)
+
+// DiffOp markers. See DiffLine.
+const (
+	DiffOpAdd     = actions.DiffOpAdd
+	DiffOpRemove  = actions.DiffOpRemove
+	DiffOpContext = actions.DiffOpContext
+)
+
+// Policy is the per-run permissions-as-contract gate (#11) applied to every
+// plan an agent run executes: an action allow/deny list, a network switch, and
+// a risk cap. A nil *Policy (and the zero value) enforces nothing. Set it on
+// RunOptions.Policy to drop the shell escape hatch from an unattended run
+// (Policy{DeniedActions: []string{"shell", "cmd"}}) — the planner may still
+// propose a denied step, but the executor refuses it before any side effect.
+type Policy = executor.Policy
 
 // Step is a single plan step. Handler.Validate and Handler.Run receive a
 // *Step; a custom handler reads its own configuration off it.
@@ -175,8 +233,38 @@ type LoopResult = agent.LoopResult
 // IterationLog records one iteration of the loop (or a single Run).
 type IterationLog = agent.IterationLog
 
+// DiffStat is the file/insertion/deletion count an iteration changed,
+// carried on IterationLog.DiffStat and AgentCompletedData.DiffStat.
+type DiffStat = agent.DiffStat
+
+// AgentCompletedData is the payload of the terminal agent.completed event
+// emitted in JSON output mode — the run outcome (iterations, stop reason,
+// status, diff stat, changed files) a programmatic consumer keys on without
+// parsing prose.
+type AgentCompletedData = agent.AgentCompletedData
+
 // StopReason explains why RunLoop stopped.
 type StopReason = agent.StopReason
+
+// StopReason values. See LoopResult.StopReason.
+const (
+	StopSuccess    = agent.StopSuccess
+	StopNoProgress = agent.StopNoProgress
+	StopNoChange   = agent.StopNoChange
+	StopFailed     = agent.StopFailed
+	StopMaxReached = agent.StopMaxReached
+	StopAborted    = agent.StopAborted
+	StopStepDone   = agent.StopStepDone
+	StopCanceled   = agent.StopCanceled
+)
+
+// Output format values for RunOptions.OutputFormat: "" / OutputFormatText is
+// the human-readable rendering; OutputFormatJSON emits the NDJSON event stream
+// (one Event per line) a programmatic consumer parses.
+const (
+	OutputFormatText = agent.OutputFormatText
+	OutputFormatJSON = agent.OutputFormatJSON
+)
 
 // Style selects the planning style.
 type Style = agent.Style

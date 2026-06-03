@@ -324,7 +324,7 @@ func RunLoop(ctx context.Context, opts RunOptions) (*LoopResult, error) {
 			return terminate(iterNum, planHash, "wrap_failed", err.Error(), StopFailed, err)
 		}
 
-		log := executorLogger(opts.OutputFormat)
+		log := resolveLogger(opts, executorLogger(opts.OutputFormat))
 
 		// Set up the plan-confirm gate (spec-67 §10): nil under --auto-apply,
 		// an injected RunOptions.Approver when set (#102), else the built-in
@@ -335,7 +335,7 @@ func RunLoop(ctx context.Context, opts RunOptions) (*LoopResult, error) {
 			return gateStop, gateErr
 		}
 
-		outcome, err := applyPlanIteration(ctx, wrappedBytes, opts.RepoRoot, log, gate, opts.Policy, opts.OutputFormat, opts.Registry)
+		outcome, err := applyPlanIteration(ctx, wrappedBytes, opts.RepoRoot, log, gate, opts.Policy, opts.OutputFormat, opts.Registry, opts.Subscribers)
 		// #101: check cancellation BEFORE the error — a stop can surface as
 		// a ctx-cancel error from a blocking gate (#103 control "stop" while
 		// parked at plan.awaiting_approval) or as outcome.ExecErr from
@@ -759,7 +759,7 @@ type planGate func() (ConfirmResult, error)
 // gate is the plan-confirm gate callback. Pass nil to skip the gate
 // (--auto-apply path). When gate returns an edited plan, the tempfile
 // is rewritten with the edited bytes before executor.Start runs.
-func applyPlanIteration(ctx context.Context, wrappedBytes []byte, repoRoot string, log logger.Logger, gate planGate, policy *executor.Policy, outputFormat string, registry *actions.Registry) (iterationOutcome, error) {
+func applyPlanIteration(ctx context.Context, wrappedBytes []byte, repoRoot string, log logger.Logger, gate planGate, policy *executor.Policy, outputFormat string, registry *actions.Registry, subscribers []events.Subscriber) (iterationOutcome, error) {
 	var out iterationOutcome
 	tmpFile, err := createPlanTempFile(repoRoot)
 	if err != nil {
@@ -810,6 +810,15 @@ func applyPlanIteration(ctx context.Context, wrappedBytes []byte, repoRoot strin
 	}
 
 	publisher := events.NewPublisher()
+	// #121 — attach caller-supplied subscribers first so they observe every
+	// event this iteration's apply emits (step.* / file.* / transaction.* /
+	// the run lifecycle), the same stream the built-in console/capture
+	// subscribers below receive. The publisher owns delivery; the run never
+	// Closes these (the caller owns their lifecycle), matching
+	// apply.Config.ExtraSubscribers.
+	for _, sub := range subscribers {
+		publisher.Subscribe(sub)
+	}
 	// Part 1 — stream shell-step stdout/stderr to the operator's
 	// terminal during agent apply, matching `mooncake task` (cmd/task.go
 	// sets StreamStepOutput:true for the same reason). Without this
