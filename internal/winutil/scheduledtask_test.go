@@ -64,7 +64,7 @@ func TestRenderXML_ContainsExpectedElements(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, want := range []string{
-		`<?xml version="1.0" encoding="UTF-8"?>`,
+		`<?xml version="1.0" encoding="UTF-16"?>`,
 		`<Task version="1.4"`,
 		`<URI>\Mooncake-Agentd-Autostart</URI>`,
 		`<Description>Start mooncake agentd at boot</Description>`,
