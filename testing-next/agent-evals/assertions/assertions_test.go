@@ -74,6 +74,45 @@ func TestContainsStep(t *testing.T) {
 	}
 }
 
+// TestContainsStep_Carrier proves the assertions recognize #111 carrier-form
+// steps (action: <verb> / with: {...}) — the verb is the value of action:, and
+// params live under with:. This is what lets an eval assert the planner emits
+// carrier-form for a custom action.
+func TestContainsStep_Carrier(t *testing.T) {
+	plan := `
+- name: notify deploy
+  action: notify.webhook
+  with:
+    url: https://hooks.example.com/deploy
+    body: '{"event":"deploy"}'
+`
+	steps, err := ParsePlan(plan)
+	if err != nil {
+		t.Fatalf("ParsePlan: %v", err)
+	}
+
+	hit, _ := Parse("contains_step notify.webhook")
+	if err := hit.Check(plan, steps); err != nil {
+		t.Errorf("contains_step should match the carrier verb, got: %v", err)
+	}
+	// The carrier keys themselves must never be reported as the verb.
+	for _, bad := range []string{"contains_step action", "contains_step with"} {
+		a, _ := Parse(bad)
+		if err := a.Check(plan, steps); err == nil {
+			t.Errorf("%q should NOT match a carrier step", bad)
+		}
+	}
+
+	withHit, _ := Parse("contains_step_with notify.webhook url=hooks.example.com")
+	if err := withHit.Check(plan, steps); err != nil {
+		t.Errorf("contains_step_with should read carrier params from with:, got: %v", err)
+	}
+	withMiss, _ := Parse("contains_step_with notify.webhook url=nope.invalid")
+	if err := withMiss.Check(plan, steps); err == nil {
+		t.Error("contains_step_with should fail on a non-matching with: value")
+	}
+}
+
 func TestContainsStepWith(t *testing.T) {
 	plan := `
 - file_replace:

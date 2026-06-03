@@ -25,6 +25,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/alehatsman/mooncake/examples/notify"
+	"github.com/alehatsman/mooncake/internal/actions"
 	"github.com/alehatsman/mooncake/internal/agent"
 	"github.com/alehatsman/mooncake/internal/agent/llm"
 	"github.com/alehatsman/mooncake/testing-next/agent-evals/assertions"
@@ -38,6 +40,32 @@ type goalFile struct {
 	Provider   string   `yaml:"provider"`
 	Model      string   `yaml:"model"`
 	Assertions []string `yaml:"assertions"`
+	// ActionsPack opts a goal into a custom-action vocabulary so the planner
+	// is prompted with (and can emit) Tier-2 actions. Empty → built-ins only,
+	// keeping existing goals' prompts byte-identical. See registryForPack.
+	ActionsPack string `yaml:"actions_pack"`
+}
+
+// registryForPack returns the action registry a goal's prompt+plan run
+// against. Empty pack → nil (the planner uses the embedded built-in schema,
+// unchanged). A named pack seeds the built-ins plus that pack's custom
+// handlers so notify.* etc. surface in the planner vocabulary via
+// BuildSchemaChunkForRegistry — this is what lets an eval assert the planner
+// emits carrier-form (#111) for a custom action.
+func registryForPack(pack string) (*actions.Registry, error) {
+	if pack == "" {
+		return nil, nil
+	}
+	reg := actions.GlobalRegistry().Clone()
+	switch pack {
+	case "notify":
+		if err := reg.Register(notify.WebhookHandler{}); err != nil {
+			return nil, fmt.Errorf("register notify pack: %w", err)
+		}
+	default:
+		return nil, fmt.Errorf("unknown actions_pack %q", pack)
+	}
+	return reg, nil
 }
 
 func main() {
@@ -117,9 +145,17 @@ func runOne(g goalFile, snapsDir string, client llm.Client, dryRun bool, timeout
 		return false
 	}
 
+	// Resolve the action vocabulary: a custom pack (if the goal opts in) or
+	// nil for built-ins only.
+	reg, err := registryForPack(g.ActionsPack)
+	if err != nil {
+		fmt.Printf("    FAIL: %v\n", err)
+		return false
+	}
+
 	// Build the prompt — exercises the real prompt builder so prompt
 	// regressions surface here.
-	_, _, err = agent.BuildPrompt(agent.PlanInput{Goal: g.Goal, Snapshot: snapshotBytes})
+	_, _, err = agent.BuildPrompt(agent.PlanInput{Goal: g.Goal, Snapshot: snapshotBytes, Registry: reg})
 	if err != nil {
 		fmt.Printf("    FAIL: build prompt: %v\n", err)
 		return false
@@ -132,7 +168,7 @@ func runOne(g goalFile, snapsDir string, client llm.Client, dryRun bool, timeout
 
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
-	sys, usr, _ := agent.BuildPrompt(agent.PlanInput{Goal: g.Goal, Snapshot: snapshotBytes})
+	sys, usr, _ := agent.BuildPrompt(agent.PlanInput{Goal: g.Goal, Snapshot: snapshotBytes, Registry: reg})
 	t0 := time.Now()
 	planYAML, err := client.GeneratePlan(ctx, sys, usr, g.Model)
 	dt := time.Since(t0)

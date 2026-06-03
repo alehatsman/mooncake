@@ -103,6 +103,21 @@ type (
 	Runner = actions.Runner
 )
 
+// Capability payload types. A consumer needs these to *implement* the
+// capability interfaces above against the facade alone: Permitter returns a
+// PermissionSet, Coster returns a CostEstimate. (Differ's Diff type and its
+// ResourceRef/DiffLine cluster are not re-exported yet — handlers without a
+// Differ get the kernel's coarse default; add them here when a facade consumer
+// needs a typed diff.)
+type (
+	// PermissionSet declares the privileges/network/binaries a step requires,
+	// surfaced at plan time. Returned by Permitter.Permissions.
+	PermissionSet = actions.PermissionSet
+	// CostEstimate is a coarse pre-execution blast-radius signal (resources,
+	// bytes, risk band, reversibility). Returned by Coster.Cost.
+	CostEstimate = actions.CostEstimate
+)
+
 // Step is a single plan step. Handler.Validate and Handler.Run receive a
 // *Step; a custom handler reads its own configuration off it.
 type Step = config.Step

@@ -1,0 +1,22 @@
+goal: |
+  After a successful deploy, send a notification by POSTing a small JSON
+  body to the webhook at https://hooks.example.com/deploy announcing that
+  the "api" service deployed successfully. Use the notify.webhook action.
+
+# Opt this goal into the notify Tier-2 pack so notify.webhook is in the
+# planner's vocabulary (custom action via the #111 carrier). Without this,
+# the planner only sees the built-in schema and cannot emit notify.webhook.
+actions_pack: notify
+
+snapshot: ubuntu-24-04-clean
+provider: anthropic-http
+model: claude-sonnet-4-7
+
+assertions:
+  - schema_valid
+  # Proves the planner emitted carrier-form (action: notify.webhook) — the
+  # carrier-aware stepAction recognizes the verb in the value, not a key.
+  - contains_step notify.webhook
+  - contains_step_with notify.webhook url=hooks.example.com
+  - step_count <= 6
+  - step_count >= 1

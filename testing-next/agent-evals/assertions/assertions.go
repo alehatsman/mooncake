@@ -55,6 +55,10 @@ var universalFields = map[string]struct{}{
 	"run_once":      {},
 	"notify":        {},
 	"handler":       {},
+	// #111 generic carrier: `action:` names the verb (its value), `with:`
+	// carries its params — neither is itself the action key.
+	"action": {},
+	"with":   {},
 }
 
 // Assertion is one parsed check that can run against a plan YAML.
@@ -189,6 +193,12 @@ func stripCodeFences(s string) string {
 // stepAction extracts the action verb from a step. Returns "" if the
 // step has only universal fields (which would be a malformed step).
 func stepAction(s Step) string {
+	// #111 generic carrier: the verb is the *value* of `action:`, not a key.
+	if v, ok := s["action"]; ok {
+		if name, ok := v.(string); ok && name != "" {
+			return name
+		}
+	}
 	for k := range s {
 		if _, universal := universalFields[k]; !universal {
 			return k
@@ -273,11 +283,17 @@ func (c containsStepWith) Check(_ string, steps []Step) error {
 		if stepAction(s) != c.action {
 			continue
 		}
-		body, ok := s[c.action].(map[string]interface{})
+		// Typed steps carry params under the action key; #111 carrier steps
+		// carry them under with:.
+		key := c.action
+		if _, carrier := s["action"]; carrier {
+			key = "with"
+		}
+		body, ok := s[key].(map[string]interface{})
 		if !ok {
 			// Action value isn't a map — e.g. `shell: ls -la`. Fall back
 			// to stringifying and matching the needle there.
-			if v, ok := s[c.action].(string); ok && strings.Contains(v, c.needle) {
+			if v, ok := s[key].(string); ok && strings.Contains(v, c.needle) {
 				return nil
 			}
 			continue
