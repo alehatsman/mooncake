@@ -137,6 +137,14 @@ func (h *Handler) Metadata() actions.ActionMetadata {
 - [type ActionDefinition](<#type-actiondefinition>)
 - [type ActionMetadata](<#type-actionmetadata>)
   - [func List() []ActionMetadata](<#func-list>)
+- [type CapturingPublisher](<#type-capturingpublisher>)
+  - [func NewCapturingPublisher() *CapturingPublisher](<#func-newcapturingpublisher>)
+  - [func (p *CapturingPublisher) Close()](<#func-capturingpublisher-close>)
+  - [func (p *CapturingPublisher) Events() []events.Event](<#func-capturingpublisher-events>)
+  - [func (p *CapturingPublisher) Flush()](<#func-capturingpublisher-flush>)
+  - [func (p *CapturingPublisher) Publish(event events.Event)](<#func-capturingpublisher-publish>)
+  - [func (p *CapturingPublisher) Subscribe(_ events.Subscriber) int](<#func-capturingpublisher-subscribe>)
+  - [func (p *CapturingPublisher) Unsubscribe(_ int)](<#func-capturingpublisher-unsubscribe>)
 - [type Context](<#type-context>)
 - [type CostEstimate](<#type-costestimate>)
 - [type Coster](<#type-coster>)
@@ -200,6 +208,20 @@ func (h *Handler) Metadata() actions.ActionMetadata {
 - [type Schema](<#type-schema>)
 - [type ServiceDiff](<#type-servicediff>)
 - [type SysctlDiff](<#type-sysctldiff>)
+- [type TestContext](<#type-testcontext>)
+  - [func NewTestContext(cfg TestContextConfig) *TestContext](<#func-newtestcontext>)
+  - [func (c *TestContext) Ctx() context.Context](<#func-testcontext-ctx>)
+  - [func (c *TestContext) Effects() Performer](<#func-testcontext-effects>)
+  - [func (c *TestContext) Evaluator() expression.Evaluator](<#func-testcontext-evaluator>)
+  - [func (c *TestContext) EventPublisher() events.Publisher](<#func-testcontext-eventpublisher>)
+  - [func (c *TestContext) Logger() logger.Logger](<#func-testcontext-logger>)
+  - [func (c *TestContext) MergeUserVars(vars map[string]interface{})](<#func-testcontext-mergeuservars>)
+  - [func (c *TestContext) Mode() Mode](<#func-testcontext-mode>)
+  - [func (c *TestContext) Privileged() *security.Privileged](<#func-testcontext-privileged>)
+  - [func (c *TestContext) StepID() string](<#func-testcontext-stepid>)
+  - [func (c *TestContext) Template() template.Renderer](<#func-testcontext-template>)
+  - [func (c *TestContext) Variables() map[string]interface{}](<#func-testcontext-variables>)
+- [type TestContextConfig](<#type-testcontextconfig>)
 - [type TransactionDiff](<#type-transactiondiff>)
 - [type TryDiff](<#type-trydiff>)
 - [type UserDiff](<#type-userdiff>)
@@ -508,6 +530,72 @@ func List() []ActionMetadata
 ```
 
 List returns all handlers from the global registry.
+
+## type [CapturingPublisher](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/testcontext.go#L183-L185>)
+
+CapturingPublisher is an events.Publisher that records every published event in memory so a test can assert on what a handler emitted. It is the default publisher NewTestContext installs when none is supplied.
+
+```go
+type CapturingPublisher struct {
+    // contains filtered or unexported fields
+}
+```
+
+### func [NewCapturingPublisher](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/testcontext.go#L188>)
+
+```go
+func NewCapturingPublisher() *CapturingPublisher
+```
+
+NewCapturingPublisher returns an empty CapturingPublisher.
+
+### func \(\*CapturingPublisher\) [Close](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/testcontext.go#L221>)
+
+```go
+func (p *CapturingPublisher) Close()
+```
+
+Close is a no\-op.
+
+### func \(\*CapturingPublisher\) [Events](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/testcontext.go#L202>)
+
+```go
+func (p *CapturingPublisher) Events() []events.Event
+```
+
+Events returns the events published so far, in order. The returned slice is a copy; mutating it does not affect the publisher.
+
+### func \(\*CapturingPublisher\) [Flush](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/testcontext.go#L218>)
+
+```go
+func (p *CapturingPublisher) Flush()
+```
+
+Flush is a no\-op; events are recorded synchronously.
+
+### func \(\*CapturingPublisher\) [Publish](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/testcontext.go#L193>)
+
+```go
+func (p *CapturingPublisher) Publish(event events.Event)
+```
+
+Publish records the event.
+
+### func \(\*CapturingPublisher\) [Subscribe](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/testcontext.go#L212>)
+
+```go
+func (p *CapturingPublisher) Subscribe(_ events.Subscriber) int
+```
+
+Subscribe is a no\-op; the capturing publisher has no subscribers.
+
+### func \(\*CapturingPublisher\) [Unsubscribe](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/testcontext.go#L215>)
+
+```go
+func (p *CapturingPublisher) Unsubscribe(_ int)
+```
+
+Unsubscribe is a no\-op.
 
 ## type [Context](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/interfaces.go#L47-L160>)
 
@@ -1756,6 +1844,148 @@ type SysctlDiff struct {
     // Value is the desired value, stringified. Empty when
     // state=absent.
     Value string `json:"value,omitempty"`
+}
+```
+
+## type [TestContext](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/testcontext.go#L27-L37>)
+
+TestContext is a self\-contained actions.Context for unit\-testing a custom Handler's Run / Reverse in isolation, without standing up the executor.
+
+It wires the REAL template renderer and expression evaluator \(so template and when\-expression behavior matches production\), a capturing event publisher \(so a test can assert which events a handler emitted\), a logger, a variables map, and a run Mode. Effects\(\) returns a no\-op Performer that records nothing — a handler that mutates the filesystem through ctx.Effects\(\) will not touch disk under this context, which is the point for an isolated unit test.
+
+Construct one with NewTestContext. The public SDK exposes this via mooncake.NewTestContext; external consumers never name this type directly.
+
+```go
+type TestContext struct {
+    // contains filtered or unexported fields
+}
+```
+
+### func [NewTestContext](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/testcontext.go#L74>)
+
+```go
+func NewTestContext(cfg TestContextConfig) *TestContext
+```
+
+NewTestContext builds a TestContext from cfg, filling any zero field with a production\-faithful default \(real renderer \+ evaluator, capturing publisher, error\-level logger, ModeApply\). It never returns an error: the renderer construction failure \(filter registration\) falls back to a zero\-value renderer, mirroring internal/apply's reverseContext, so callers in tests don't have to handle a degenerate error path.
+
+### func \(\*TestContext\) [Ctx](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/testcontext.go#L178>)
+
+```go
+func (c *TestContext) Ctx() context.Context
+```
+
+Ctx returns the configured run\-wide context.
+
+### func \(\*TestContext\) [Effects](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/testcontext.go#L147>)
+
+```go
+func (c *TestContext) Effects() Performer
+```
+
+Effects returns the configured Performer, or a no\-op performer bound to the current Mode when none was injected.
+
+### func \(\*TestContext\) [Evaluator](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/testcontext.go#L131>)
+
+```go
+func (c *TestContext) Evaluator() expression.Evaluator
+```
+
+Evaluator returns the configured expression evaluator.
+
+### func \(\*TestContext\) [EventPublisher](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/testcontext.go#L140>)
+
+```go
+func (c *TestContext) EventPublisher() events.Publisher
+```
+
+EventPublisher returns the configured event publisher.
+
+### func \(\*TestContext\) [Logger](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/testcontext.go#L134>)
+
+```go
+func (c *TestContext) Logger() logger.Logger
+```
+
+Logger returns the configured logger.
+
+### func \(\*TestContext\) [MergeUserVars](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/testcontext.go#L171>)
+
+```go
+func (c *TestContext) MergeUserVars(vars map[string]interface{})
+```
+
+MergeUserVars merges vars into the variable scope.
+
+### func \(\*TestContext\) [Mode](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/testcontext.go#L143>)
+
+```go
+func (c *TestContext) Mode() Mode
+```
+
+Mode returns the configured run mode.
+
+### func \(\*TestContext\) [Privileged](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/testcontext.go#L158>)
+
+```go
+func (c *TestContext) Privileged() *security.Privileged
+```
+
+Privileged returns an already\-root, no\-sudo escalation primitive so a handler that shells out under test does not block on a sudo prompt. Tests asserting against sudo behavior should construct their own Performer/handler double instead.
+
+### func \(\*TestContext\) [StepID](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/testcontext.go#L168>)
+
+```go
+func (c *TestContext) StepID() string
+```
+
+StepID returns the configured step ID.
+
+### func \(\*TestContext\) [Template](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/testcontext.go#L128>)
+
+```go
+func (c *TestContext) Template() template.Renderer
+```
+
+Template returns the configured renderer.
+
+### func \(\*TestContext\) [Variables](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/testcontext.go#L137>)
+
+```go
+func (c *TestContext) Variables() map[string]interface{}
+```
+
+Variables returns the variable scope map.
+
+## type [TestContextConfig](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/testcontext.go#L42-L66>)
+
+TestContextConfig is the resolved configuration NewTestContext builds a TestContext from. The SDK layer maps its functional options onto this struct; defaults are filled in by NewTestContext for any zero field.
+
+```go
+type TestContextConfig struct {
+    // Vars seeds the variable scope. nil yields an empty map.
+    Vars map[string]interface{}
+    // Renderer overrides the template renderer. nil yields a real Pongo2
+    // renderer.
+    Renderer template.Renderer
+    // Evaluator overrides the expression evaluator. nil yields a real expr
+    // evaluator.
+    Evaluator expression.Evaluator
+    // Publisher overrides the event publisher. nil yields a capturing
+    // publisher (*CapturingPublisher) whose events the caller can read back.
+    Publisher events.Publisher
+    // Logger overrides the logger. nil yields an error-level logger.
+    Logger logger.Logger
+    // Mode is the run mode. The zero value (ModeApply) is the default.
+    Mode Mode
+    // StepID overrides the step ID. "" yields "step-test".
+    StepID string
+    // Performer overrides the Effects() performer. nil yields a no-op
+    // performer that records nothing and touches no filesystem.
+    Performer Performer
+    // Ctx overrides the run-wide context returned by Ctx(). nil yields
+    // context.Background().
+    Ctx context.Context
 }
 ```
 
