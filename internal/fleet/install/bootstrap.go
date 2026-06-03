@@ -161,6 +161,14 @@ func Bootstrap(ctx context.Context, exec Executor, opts BootstrapOptions) (Boots
 	}
 
 	// === Step 4: Place binary ===
+	// Verify the artefact can run on the target before placing it — a
+	// cross-arch/OS mismatch (e.g. amd64 controller → arm64 target) would
+	// otherwise only surface as a failed service start. Runs after the
+	// idempotent short-circuit so a refresh that skips placement isn't
+	// blocked by a mismatched local binary.
+	if err := VerifyBinaryPlatform(opts.LocalBinary, opts.OS, opts.Arch); err != nil {
+		return BootstrapResult{}, fmt.Errorf("step 4 (binary platform check): %w", err)
+	}
 	report("placing binary → %s", inst.BinaryInstallPath())
 	if err := inst.PlaceBinary(ctx, exec, sudoer, opts.LocalBinary); err != nil {
 		return BootstrapResult{}, fmt.Errorf("step 4 (binary): %w", err)
