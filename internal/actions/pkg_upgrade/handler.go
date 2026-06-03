@@ -28,8 +28,18 @@ import (
 	"github.com/alehatsman/mooncake/internal/config"
 	"github.com/alehatsman/mooncake/internal/events"
 	"github.com/alehatsman/mooncake/internal/executor"
+	"github.com/alehatsman/mooncake/internal/sandbox"
 	"github.com/alehatsman/mooncake/internal/security"
 )
+
+// runWrapped runs argv through the privileged runner, routing it via a
+// transient systemd-run service when the agentd sandbox makes /usr
+// read-only (sandbox.Wrap is a no-op otherwise). Package managers write
+// under /usr, so they must escape ProtectSystem=yes — see issue #139.
+func runWrapped(ctx context.Context, runner *security.Privileged, name string, args ...string) ([]byte, error) {
+	argv := sandbox.Wrap(append([]string{name}, args...))
+	return runner.Run(ctx, argv[0], argv[1:]...)
+}
 
 const (
 	actionName    = "pkg.upgrade"
@@ -325,7 +335,7 @@ func realAptUpgrade(ctx context.Context, runner *security.Privileged, names []st
 	// preservation rules) is sufficient. apt-get auto-detects TTY
 	// absence under sudo and falls back to noninteractive anyway, so
 	// this is belt-and-suspenders.
-	out, err := runner.Run(ctx, "apt-get", args...)
+	out, err := runWrapped(ctx, runner, "apt-get", args...)
 	if err != nil {
 		msg := strings.TrimSpace(string(out))
 		if msg != "" {
@@ -337,7 +347,7 @@ func realAptUpgrade(ctx context.Context, runner *security.Privileged, names []st
 }
 
 func realAptAutoremove(ctx context.Context, runner *security.Privileged) error {
-	out, err := runner.Run(ctx, "apt-get", "autoremove", "-y")
+	out, err := runWrapped(ctx, runner, "apt-get", "autoremove", "-y")
 	if err != nil {
 		msg := strings.TrimSpace(string(out))
 		if msg != "" {
@@ -361,7 +371,7 @@ func realAptAutoremove(ctx context.Context, runner *security.Privileged) error {
 func realDnfUpgrade(ctx context.Context, runner *security.Privileged, names []string) error {
 	bin := dnfBinary()
 	args := append([]string{"upgrade", "-y"}, names...)
-	out, err := runner.Run(ctx, bin, args...)
+	out, err := runWrapped(ctx, runner, bin, args...)
 	if err != nil {
 		msg := strings.TrimSpace(string(out))
 		if msg != "" {
@@ -375,7 +385,7 @@ func realDnfUpgrade(ctx context.Context, runner *security.Privileged, names []st
 // realDnfAutoremove shells out to `dnf autoremove -y`. Available on
 // dnf since RHEL 8 + Fedora; yum (RHEL 7) supports the same verb.
 func realDnfAutoremove(ctx context.Context, runner *security.Privileged) error {
-	out, err := runner.Run(ctx, dnfBinary(), "autoremove", "-y")
+	out, err := runWrapped(ctx, runner, dnfBinary(), "autoremove", "-y")
 	if err != nil {
 		msg := strings.TrimSpace(string(out))
 		if msg != "" {
@@ -415,7 +425,7 @@ func realPacmanUpgrade(ctx context.Context, runner *security.Privileged, names [
 	if len(names) > 0 {
 		args = append([]string{"-S", "--noconfirm"}, names...)
 	}
-	out, err := runner.Run(ctx, "pacman", args...)
+	out, err := runWrapped(ctx, runner, "pacman", args...)
 	if err != nil {
 		msg := strings.TrimSpace(string(out))
 		if msg != "" {
@@ -464,7 +474,7 @@ func realPacmanAutoremove(ctx context.Context, runner *security.Privileged) erro
 	}
 	// Step 2: remove orphans + their unused deps + config files.
 	args := append([]string{"-Rns", "--noconfirm"}, orphans...)
-	out, err := runner.Run(ctx, "pacman", args...)
+	out, err := runWrapped(ctx, runner, "pacman", args...)
 	if err != nil {
 		msg := strings.TrimSpace(string(out))
 		if msg != "" {

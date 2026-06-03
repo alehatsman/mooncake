@@ -19,6 +19,7 @@ import (
 	"github.com/alehatsman/mooncake/internal/config"
 	"github.com/alehatsman/mooncake/internal/events"
 	"github.com/alehatsman/mooncake/internal/executor"
+	"github.com/alehatsman/mooncake/internal/sandbox"
 	"github.com/alehatsman/mooncake/internal/template"
 )
 
@@ -374,7 +375,13 @@ func (h *Handler) runCmd(ec *executor.ExecutionContext, become bool, cmdArgs []s
 	// hold today: brew steps lack as_user → no sudo; apt steps with
 	// as_user: root → sudo to root.
 	_ = become
-	return ec.Privileged().Run(ec.Svc.Ctx, cmdArgs[0], cmdArgs[1:]...)
+	// Under a hardened agentd (ProtectSystem=yes makes /usr read-only),
+	// apt/dpkg writes to /usr fail with EROFS. sandbox.Wrap routes the
+	// command through a transient systemd-run service that escapes the
+	// service's mount namespace; it's a no-op for direct `mooncake apply`
+	// and non-sandboxed agentds. See issue #139.
+	args := sandbox.Wrap(cmdArgs)
+	return ec.Privileged().Run(ec.Svc.Ctx, args[0], args[1:]...)
 }
 
 // installPackages installs or upgrades packages.
