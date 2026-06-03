@@ -246,10 +246,23 @@ func (t Task) withDefaults() Task {
 	return t
 }
 
-// RenderXML produces the Task Scheduler XML document for t. Output is
-// UTF-8-encoded and uses Windows line endings (`\r\n`) — that's what
-// Task Scheduler emits when round-tripping a task; matching its style
-// keeps the drift-detection compare clean.
+// RenderXML produces the Task Scheduler XML document for t. Output uses
+// Windows line endings (`\r\n`) — that's what Task Scheduler emits when
+// round-tripping a task; matching its style keeps the drift-detection
+// compare clean.
+//
+// The prolog MUST declare encoding="UTF-16" — do NOT "fix" it to UTF-8
+// to match the on-disk byte encoding. This document is consumed by
+//
+//	Register-ScheduledTask -Xml (Get-Content -Raw <file>)
+//
+// (RenderRegisterCommand): `Get-Content -Raw` decodes the file into a
+// .NET string, which is UTF-16 in memory, and the cmdlet hands that wide
+// string straight to the COM Task Scheduler parser. If the prolog claims
+// UTF-8 while the parser receives a UTF-16 string, registration dies with
+// "(1,40)::ERROR: unable to switch the encoding" (HRESULT 0x8004131a).
+// Export-ScheduledTask also emits a UTF-16 prolog, so this keeps the
+// drift compare matching too. Regressed once in #89; see issue #116.
 func RenderXML(t Task) (string, error) {
 	if err := t.Validate(); err != nil {
 		return "", err
@@ -257,7 +270,7 @@ func RenderXML(t Task) (string, error) {
 	t = t.withDefaults()
 
 	var b strings.Builder
-	b.WriteString(`<?xml version="1.0" encoding="UTF-8"?>` + "\r\n")
+	b.WriteString(`<?xml version="1.0" encoding="UTF-16"?>` + "\r\n")
 	b.WriteString(`<Task version="1.4" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">` + "\r\n")
 
 	// <RegistrationInfo>
