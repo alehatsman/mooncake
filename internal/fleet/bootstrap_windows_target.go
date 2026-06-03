@@ -125,22 +125,21 @@ func bootstrapWindows(ctx context.Context, sess *transport.Session, opts Bootstr
 	}
 
 	// === Step 4: upload binary ===
-	// Verify the artefact is a windows/<arch> PE before uploading it. The
-	// default --binary is the controller's own executable, so a linux
-	// controller would otherwise ship an ELF as mooncake.exe and only
-	// learn at task-run time (ERROR_EXE_MACHINE_TYPE_MISMATCH). Runs after
-	// the step-3 idempotent return so a refresh-only run isn't blocked.
-	binPath := opts.LocalBinary
-	if binPath == "" {
-		if binPath, err = os.Executable(); err != nil {
-			return BootstrapResult{}, fmt.Errorf("step 4 (resolve local binary): %w", err)
-		}
+	// Resolve which binary to ship (explicit --binary, then the
+	// ~/.mooncake/bin store, then a matching controller binary) and verify
+	// it's a windows/<arch> PE before uploading. Without this a linux
+	// controller would ship an ELF as mooncake.exe and only learn at
+	// task-run time (ERROR_EXE_MACHINE_TYPE_MISMATCH). Runs after the
+	// step-3 idempotent return so a refresh-only run isn't blocked.
+	binPath, err := install.ResolveBinary("windows", arch, opts.LocalBinary)
+	if err != nil {
+		return BootstrapResult{}, fmt.Errorf("step 4 (resolve binary): %w", err)
 	}
 	if err := install.VerifyBinaryPlatform(binPath, "windows", arch); err != nil {
 		return BootstrapResult{}, fmt.Errorf("step 4 (binary platform check): %w", err)
 	}
 	report("uploading binary → %s", wc.BinaryPath())
-	if err := installWindowsBinary(ctx, sess, wc, opts.LocalBinary); err != nil {
+	if err := installWindowsBinary(ctx, sess, wc, binPath); err != nil {
 		return BootstrapResult{}, fmt.Errorf("step 4 (binary): %w", err)
 	}
 

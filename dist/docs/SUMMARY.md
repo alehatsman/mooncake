@@ -126,6 +126,7 @@
     - [schema](cli/schema.md)
     - [schema.generate](cli/schema_generate.md)
     - [schema.validate](cli/schema_validate.md)
+    - [selfbuild](cli/selfbuild.md)
     - [snapshot](cli/snapshot.md)
     - [step](cli/step.md)
     - [task](cli/task.md)

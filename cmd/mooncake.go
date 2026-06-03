@@ -19,6 +19,7 @@ import (
 	modcmd "github.com/alehatsman/mooncake/cmd/mod"
 	querycmd "github.com/alehatsman/mooncake/cmd/query"
 	schemacmd "github.com/alehatsman/mooncake/cmd/schema"
+	selfbuildcmd "github.com/alehatsman/mooncake/cmd/selfbuild"
 	snapshotcmd "github.com/alehatsman/mooncake/cmd/snapshot"
 	stepcmd "github.com/alehatsman/mooncake/cmd/step"
 	taskcmd "github.com/alehatsman/mooncake/cmd/task"
@@ -49,6 +50,7 @@ func createApp() *cli.App {
 			modcmd.Command(),
 			docscmd.Command(),
 			schemacmd.Command(),
+			selfbuildcmd.Command(),
 			snapshotcmd.Command(),
 			historycmd.Command(),
 			mcpcmd.Command(),
