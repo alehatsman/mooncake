@@ -90,7 +90,7 @@ func validateAction(c *cli.Context) error {
 	// exit would kill the host process. urfave/cli reads the
 	// ExitCoder's code and exits the CLI process with it, so
 	// operator UX is identical.
-	_, diagnostics, err := config.ReadConfigWithValidation(configPath)
+	_, diagnostics, err := config.ReadConfigWithValidation(configPath, nil)
 	if err != nil {
 		return cli.Exit(fmt.Sprintf("Error reading config: %v", err), exitCodeRuntimeError)
 	}

@@ -98,7 +98,7 @@ func findShadowedApplyConfig(dir string) string {
 // on any error — the caller treats "couldn't decide" as "no tasks" so
 // shadow detection doesn't surface unrelated parse errors.
 func fileDefinesTasks(path string) bool {
-	parsed, _, err := ReadConfigWithValidation(path)
+	parsed, _, err := ReadConfigWithValidation(path, nil)
 	if err != nil || parsed == nil {
 		return false
 	}

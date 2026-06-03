@@ -88,7 +88,7 @@ func readWithDiags(t *testing.T, body string) []Diagnostic {
 		t.Fatalf("write: %v", err)
 	}
 	r := &YAMLConfigReader{}
-	_, diags, err := r.ReadConfigWithValidation(p)
+	_, diags, err := r.ReadConfigWithValidation(p, nil)
 	if err != nil {
 		t.Logf("reader err (may be expected for strict-mode rejects): %v", err)
 	}

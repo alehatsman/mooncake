@@ -3,6 +3,8 @@ package actions
 import (
 	"fmt"
 	"sync"
+
+	"github.com/alehatsman/mooncake/internal/config"
 )
 
 // Registry manages registered action handlers through a thread-safe map.
@@ -103,6 +105,21 @@ func (r *Registry) Has(actionType string) bool {
 
 	_, ok := r.handlers[actionType]
 	return ok
+}
+
+// PredicateFor returns a config.IsCustomAction backed by reg, falling back to
+// the global registry when reg is nil — the same registry the planner and
+// executor resolve actions against. Pass the result to
+// config.ReadConfigWithValidation (with a predicate) so a typed-key custom action
+// (`notify.webhook: {…}`) is folded into the carrier during validation exactly
+// as it will dispatch at execution. A built-in name passed through it stays
+// false-positive-free: built-ins have typed Step fields, so the parser never
+// folds them regardless.
+func PredicateFor(reg *Registry) config.IsCustomAction {
+	if reg == nil {
+		reg = GlobalRegistry()
+	}
+	return reg.Has
 }
 
 // Count returns the number of registered handlers.

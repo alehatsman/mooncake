@@ -8,6 +8,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/alehatsman/mooncake/internal/actions"
 	"github.com/alehatsman/mooncake/internal/config"
 	"github.com/alehatsman/mooncake/internal/events"
 	"github.com/alehatsman/mooncake/internal/executor"
@@ -31,6 +32,14 @@ func Run(ctx context.Context, opts RunOptions) (*IterationLog, error) {
 	}
 
 	planBytes = stripMarkdownFences(planBytes)
+
+	// Fold typed-key custom actions into the carrier before anything decodes
+	// the plan into typed steps (WrapInTransaction would drop the unknown
+	// key). Built-in-only plans are returned unchanged, so the hash is stable.
+	planBytes, err = config.NormalizePlanBytes(planBytes, actions.PredicateFor(opts.Registry))
+	if err != nil {
+		return nil, fmt.Errorf("failed to normalize plan: %w", err)
+	}
 
 	// Hash the LLM's raw output, not the wrapped form — RunLoop's
 	// no-progress check wants to detect "the model emitted the same
@@ -63,7 +72,7 @@ func Run(ctx context.Context, opts RunOptions) (*IterationLog, error) {
 		return nil, fmt.Errorf("failed to close temp file: %w", closeErr)
 	}
 
-	_, diagnostics, err := config.ReadConfigWithValidation(tmpFile.Name())
+	_, diagnostics, err := config.ReadConfigWithValidation(tmpFile.Name(), actions.PredicateFor(opts.Registry))
 	if err != nil {
 		return nil, writeFailureLog(opts.RepoRoot, iterNum, opts.Goal, planHash, fmt.Errorf("config validation failed: %w", err))
 	}
@@ -79,7 +88,7 @@ func Run(ctx context.Context, opts RunOptions) (*IterationLog, error) {
 		if err := EnsureInteractive(os.Stdin); err != nil {
 			return nil, err
 		}
-		result, gateErr := ConfirmPlan(os.Stdin, os.Stderr, planBytes)
+		result, gateErr := ConfirmPlan(os.Stdin, os.Stderr, planBytes, actions.PredicateFor(opts.Registry))
 		if gateErr != nil {
 			return nil, gateErr
 		}

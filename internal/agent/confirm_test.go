@@ -67,7 +67,7 @@ func TestConfirmPlan_StepGateAutoApproveCountdown(t *testing.T) {
 	// current step AND auto-approves the next two without prompting.
 	in := strings.NewReader("approve_next 2\n")
 	out := &bytes.Buffer{}
-	result, err := ConfirmPlanStep(in, out, []byte(samplePlan), state)
+	result, err := ConfirmPlanStep(in, out, []byte(samplePlan), state, nil)
 	if err != nil {
 		t.Fatalf("ConfirmPlanStep call 1: %v", err)
 	}
@@ -83,7 +83,7 @@ func TestConfirmPlan_StepGateAutoApproveCountdown(t *testing.T) {
 	for i := 2; i <= 3; i++ {
 		emptyReader := strings.NewReader("")
 		out := &bytes.Buffer{}
-		result, err := ConfirmPlanStep(emptyReader, out, []byte(samplePlan), state)
+		result, err := ConfirmPlanStep(emptyReader, out, []byte(samplePlan), state, nil)
 		if err != nil {
 			t.Fatalf("ConfirmPlanStep call %d: %v", i, err)
 		}
@@ -102,7 +102,7 @@ func TestConfirmPlan_StepGateAutoApproveCountdown(t *testing.T) {
 	// the test deterministic.
 	in4 := strings.NewReader("n\n")
 	out4 := &bytes.Buffer{}
-	result4, err := ConfirmPlanStep(in4, out4, []byte(samplePlan), state)
+	result4, err := ConfirmPlanStep(in4, out4, []byte(samplePlan), state, nil)
 	if err != nil {
 		t.Fatalf("ConfirmPlanStep call 4: %v", err)
 	}
@@ -118,7 +118,7 @@ func TestConfirmPlan_StepGateApproveThreadIsSticky(t *testing.T) {
 	state := &StepGateState{}
 	in := strings.NewReader("approve_thread\n")
 	out := &bytes.Buffer{}
-	result, err := ConfirmPlanStep(in, out, []byte(samplePlan), state)
+	result, err := ConfirmPlanStep(in, out, []byte(samplePlan), state, nil)
 	if err != nil {
 		t.Fatalf("ConfirmPlanStep: %v", err)
 	}
@@ -131,7 +131,7 @@ func TestConfirmPlan_StepGateApproveThreadIsSticky(t *testing.T) {
 	// Subsequent calls must Apply without reading input regardless of
 	// how many.
 	for i := 0; i < 5; i++ {
-		result, err := ConfirmPlanStep(strings.NewReader(""), &bytes.Buffer{}, []byte(samplePlan), state)
+		result, err := ConfirmPlanStep(strings.NewReader(""), &bytes.Buffer{}, []byte(samplePlan), state, nil)
 		if err != nil {
 			t.Fatalf("sticky call %d: %v", i, err)
 		}
@@ -145,7 +145,7 @@ func TestConfirmPlan_StepStylePromptIncludesBulkTokens(t *testing.T) {
 	state := &StepGateState{}
 	in := strings.NewReader("n\n")
 	out := &bytes.Buffer{}
-	_, _ = ConfirmPlanStep(in, out, []byte(samplePlan), state)
+	_, _ = ConfirmPlanStep(in, out, []byte(samplePlan), state, nil)
 	if !strings.Contains(out.String(), "approve_next N/approve_thread") {
 		t.Errorf("step-style prompt should advertise bulk-approve tokens; got: %s", out.String())
 	}
@@ -157,7 +157,7 @@ func TestConfirmPlan_PlanStyleRejectsStepTokens(t *testing.T) {
 	// explicit reject.
 	in := strings.NewReader("approve_next 3\napprove_thread\nn\n")
 	out := &bytes.Buffer{}
-	result, err := ConfirmPlan(in, out, []byte(samplePlan))
+	result, err := ConfirmPlan(in, out, []byte(samplePlan), nil)
 	if err != nil {
 		t.Fatalf("ConfirmPlan: %v", err)
 	}
@@ -179,7 +179,7 @@ const samplePlan = `- name: write hello
 func TestConfirmPlan_ApplyYes(t *testing.T) {
 	in := strings.NewReader("y\n")
 	out := &bytes.Buffer{}
-	result, err := ConfirmPlan(in, out, []byte(samplePlan))
+	result, err := ConfirmPlan(in, out, []byte(samplePlan), nil)
 	if err != nil {
 		t.Fatalf("ConfirmPlan: %v", err)
 	}
@@ -201,7 +201,7 @@ func TestConfirmPlan_RejectDefault(t *testing.T) {
 	// Empty line — should map to N (reject).
 	in := strings.NewReader("\n")
 	out := &bytes.Buffer{}
-	result, err := ConfirmPlan(in, out, []byte(samplePlan))
+	result, err := ConfirmPlan(in, out, []byte(samplePlan), nil)
 	if err != nil {
 		t.Fatalf("ConfirmPlan: %v", err)
 	}
@@ -213,7 +213,7 @@ func TestConfirmPlan_RejectDefault(t *testing.T) {
 func TestConfirmPlan_RejectExplicit(t *testing.T) {
 	in := strings.NewReader("n\n")
 	out := &bytes.Buffer{}
-	result, _ := ConfirmPlan(in, out, []byte(samplePlan))
+	result, _ := ConfirmPlan(in, out, []byte(samplePlan), nil)
 	if result.Outcome != OutcomeReject {
 		t.Errorf("n should reject, got %v", result.Outcome)
 	}
@@ -222,7 +222,7 @@ func TestConfirmPlan_RejectExplicit(t *testing.T) {
 func TestConfirmPlan_Abort(t *testing.T) {
 	in := strings.NewReader("abort\n")
 	out := &bytes.Buffer{}
-	result, _ := ConfirmPlan(in, out, []byte(samplePlan))
+	result, _ := ConfirmPlan(in, out, []byte(samplePlan), nil)
 	if result.Outcome != OutcomeAbort {
 		t.Errorf("abort should abort, got %v", result.Outcome)
 	}
@@ -231,7 +231,7 @@ func TestConfirmPlan_Abort(t *testing.T) {
 func TestConfirmPlan_ExplainThenApply(t *testing.T) {
 	in := strings.NewReader("explain 1\ny\n")
 	out := &bytes.Buffer{}
-	result, _ := ConfirmPlan(in, out, []byte(samplePlan))
+	result, _ := ConfirmPlan(in, out, []byte(samplePlan), nil)
 	if result.Outcome != OutcomeApply {
 		t.Errorf("apply after explain should apply, got %v", result.Outcome)
 	}
@@ -246,7 +246,7 @@ func TestConfirmPlan_ExplainThenApply(t *testing.T) {
 func TestConfirmPlan_ExplainOutOfRange(t *testing.T) {
 	in := strings.NewReader("explain 99\nn\n")
 	out := &bytes.Buffer{}
-	ConfirmPlan(in, out, []byte(samplePlan))
+	ConfirmPlan(in, out, []byte(samplePlan), nil)
 	if !strings.Contains(out.String(), "out of range") {
 		t.Errorf("out-of-range explain should warn, got: %s", out.String())
 	}
@@ -255,7 +255,7 @@ func TestConfirmPlan_ExplainOutOfRange(t *testing.T) {
 func TestConfirmPlan_InvalidThenAbort(t *testing.T) {
 	in := strings.NewReader("bogus\nabort\n")
 	out := &bytes.Buffer{}
-	result, _ := ConfirmPlan(in, out, []byte(samplePlan))
+	result, _ := ConfirmPlan(in, out, []byte(samplePlan), nil)
 	if result.Outcome != OutcomeAbort {
 		t.Errorf("invalid should re-prompt, abort should win, got %v", result.Outcome)
 	}
@@ -277,7 +277,7 @@ func TestConfirmPlan_EditApply(t *testing.T) {
 
 	in := strings.NewReader("edit\ny\n")
 	out := &bytes.Buffer{}
-	result, err := ConfirmPlan(in, out, []byte(samplePlan))
+	result, err := ConfirmPlan(in, out, []byte(samplePlan), nil)
 	if err != nil {
 		t.Fatalf("ConfirmPlan: %v", err)
 	}
@@ -290,6 +290,41 @@ func TestConfirmPlan_EditApply(t *testing.T) {
 	}
 	if !strings.Contains(out.String(), "edited step") {
 		t.Error("edited plan should re-render after edit before re-prompting")
+	}
+}
+
+// An operator who hand-edits a typed-key custom action in $EDITOR gets it
+// folded into the carrier at the editor boundary — so it validates and the
+// returned bytes (which the caller wraps + executes) are canonical carrier
+// form, not the dropped-on-decode typed key.
+func TestConfirmPlan_EditTypedKeyCustomActionFolded(t *testing.T) {
+	const edited = `- name: notify
+  notify.webhook:
+    url: https://hooks.example.com/deploy
+    method: POST
+`
+	orig := editorRunner
+	editorRunner = func(_, path string) error {
+		return os.WriteFile(path, []byte(edited), 0o600)
+	}
+	defer func() { editorRunner = orig }()
+
+	isCustom := func(name string) bool { return name == "notify.webhook" }
+	in := strings.NewReader("edit\ny\n")
+	out := &bytes.Buffer{}
+	result, err := ConfirmPlan(in, out, []byte(samplePlan), isCustom)
+	if err != nil {
+		t.Fatalf("ConfirmPlan: %v", err)
+	}
+	if result.Outcome != OutcomeApply {
+		t.Fatalf("expected Apply after edit, got %v (out: %s)", result.Outcome, out.String())
+	}
+	got := string(result.PlanBytes)
+	if !strings.Contains(got, "action: notify.webhook") || !strings.Contains(got, "with:") {
+		t.Errorf("edited typed-key action should be folded to carrier, got:\n%s", got)
+	}
+	if strings.Contains(got, "notify.webhook:") {
+		t.Errorf("typed key should be gone after folding, got:\n%s", got)
 	}
 }
 
@@ -307,7 +342,7 @@ nope
 	// operator rejects.
 	in := strings.NewReader("edit\nn\n")
 	out := &bytes.Buffer{}
-	result, _ := ConfirmPlan(in, out, []byte(samplePlan))
+	result, _ := ConfirmPlan(in, out, []byte(samplePlan), nil)
 	if result.Outcome != OutcomeReject {
 		t.Errorf("reject after broken edit should reject, got %v", result.Outcome)
 	}

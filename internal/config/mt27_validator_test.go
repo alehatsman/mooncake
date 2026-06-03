@@ -64,7 +64,7 @@ func TestMT27_ValidatorAcceptsRegisteredActions(t *testing.T) {
 			}
 			tmp.Close()
 
-			_, diags, _ := ReadConfigWithValidation(tmp.Name())
+			_, diags, _ := ReadConfigWithValidation(tmp.Name(), nil)
 			for _, d := range diags {
 				if strings.Contains(d.Message, "Step must have exactly one action") ||
 					strings.Contains(d.Message, "Step has no action") {

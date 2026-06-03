@@ -111,6 +111,86 @@ func TestWebhookHandler_E2E(t *testing.T) {
 	}
 }
 
+// TestWebhookHandler_TypedKeyE2E proves the typed-key form (#115): a custom
+// action written exactly like a built-in —
+//
+//   - name: notify deploy success
+//     notify.webhook:
+//     url: …
+//     method: POST
+//
+// dispatches end-to-end with no carrier (`action:`/`with:`) in the plan. The
+// config layer folds the typed key into the carrier against the run's registry
+// before validation and execution, so the planner needs no special teaching.
+// Same harness as TestWebhookHandler_E2E; only the plan syntax differs.
+func TestWebhookHandler_TypedKeyE2E(t *testing.T) {
+	var (
+		mu        sync.Mutex
+		hits      int
+		gotMethod string
+		gotAuth   string
+		gotBody   string
+	)
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		b, _ := io.ReadAll(r.Body)
+		mu.Lock()
+		hits++
+		gotMethod, gotAuth, gotBody = r.Method, r.Header.Get("Authorization"), string(b)
+		mu.Unlock()
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer srv.Close()
+
+	repo := t.TempDir()
+	initGitRepo(t, repo)
+
+	const secret = "s3cr3t-token-xyz"
+	// Typed-key YAML — notify.webhook as a step key, like shell:/file:. No
+	// carrier anywhere; the body is single-quoted so the JSON survives YAML.
+	plan := fmt.Sprintf(`- name: notify deploy success
+  notify.webhook:
+    url: %s
+    method: POST
+    headers:
+      Authorization: Bearer %s
+    body: '{"event":"deploy","ok":true}'
+`, srv.URL, secret)
+	backend := &stubLLM{plans: []string{plan}}
+
+	reg := mooncake.DefaultRegistry()
+	if err := reg.Register(notify.WebhookHandler{}); err != nil {
+		t.Fatalf("register notify.webhook: %v", err)
+	}
+
+	result, err := mooncake.RunLoop(context.Background(), mooncake.RunOptions{
+		Goal:          "notify the deploy webhook",
+		RepoRoot:      repo,
+		MaxIterations: 3,
+		AutoApply:     true,
+		LLMClient:     backend,
+		Registry:      reg,
+	})
+	if err != nil {
+		t.Fatalf("RunLoop: %v", err)
+	}
+
+	mu.Lock()
+	defer mu.Unlock()
+	if hits == 0 {
+		t.Fatalf("webhook never received a request — typed-key did not dispatch (stop=%s, iters=%d)",
+			result.StopReason, len(result.Iterations))
+	}
+	if gotMethod != http.MethodPost {
+		t.Errorf("method: got %q, want POST", gotMethod)
+	}
+	if !strings.Contains(gotBody, `"event":"deploy"`) {
+		t.Errorf("body not delivered: got %q", gotBody)
+	}
+	if gotAuth != "Bearer "+secret {
+		t.Errorf("custom header not forwarded: got %q", gotAuth)
+	}
+}
+
 // TestWebhookHandler_Validate covers the fail-fast config checks the executor
 // runs before dispatch — no network, no loop.
 func TestWebhookHandler_Validate(t *testing.T) {

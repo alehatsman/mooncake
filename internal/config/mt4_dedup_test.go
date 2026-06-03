@@ -31,7 +31,7 @@ func TestMT4_UnknownFieldSuppressesGenericOneOf(t *testing.T) {
 	}
 	tmp.Close()
 
-	_, diags, _ := ReadConfigWithValidation(tmp.Name())
+	_, diags, _ := ReadConfigWithValidation(tmp.Name(), nil)
 
 	gotUnknown := false
 	gotGenericOneOf := false
@@ -66,7 +66,7 @@ func TestMT4_NoActionStillShowsVocabulary(t *testing.T) {
 	tmp.WriteString(body)
 	tmp.Close()
 
-	_, diags, _ := ReadConfigWithValidation(tmp.Name())
+	_, diags, _ := ReadConfigWithValidation(tmp.Name(), nil)
 
 	gotVocab := false
 	for _, d := range diags {

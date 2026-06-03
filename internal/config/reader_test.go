@@ -275,7 +275,7 @@ func TestPackageLevelFunctions(t *testing.T) {
 `)
 		defer os.Remove(tmpFile)
 
-		parsedConfig, diagnostics, err := ReadConfigWithValidation(tmpFile)
+		parsedConfig, diagnostics, err := ReadConfigWithValidation(tmpFile, nil)
 		if err != nil {
 			t.Fatalf("ReadConfigWithValidation() error = %v", err)
 		}
@@ -298,7 +298,7 @@ func TestPackageLevelFunctions(t *testing.T) {
 `)
 		defer os.Remove(tmpFile)
 
-		_, diagnostics, err := ReadConfigWithValidation(tmpFile)
+		_, diagnostics, err := ReadConfigWithValidation(tmpFile, nil)
 		if err != nil {
 			t.Fatalf("ReadConfigWithValidation() error = %v", err)
 		}
@@ -316,7 +316,7 @@ func TestPackageLevelFunctions(t *testing.T) {
 `)
 		defer os.Remove(tmpFile)
 
-		_, diagnostics, err := ReadConfigWithValidation(tmpFile)
+		_, diagnostics, err := ReadConfigWithValidation(tmpFile, nil)
 		if err != nil {
 			t.Fatalf("ReadConfigWithValidation() error = %v", err)
 		}
@@ -418,7 +418,7 @@ func TestReadConfigWithValidation_EmptyFileGivesClearError(t *testing.T) {
 			tmpFile := createTempYAML(t, content)
 			defer os.Remove(tmpFile)
 
-			_, _, err := ReadConfigWithValidation(tmpFile)
+			_, _, err := ReadConfigWithValidation(tmpFile, nil)
 			if err == nil {
 				t.Fatal("expected error for empty config")
 			}
@@ -448,7 +448,7 @@ func TestReadConfigWithValidation_TopLevelDictHint(t *testing.T) {
 	tmpFile := createTempYAML(t, "log:\n  msg: hi\n")
 	defer os.Remove(tmpFile)
 
-	_, _, err := ReadConfigWithValidation(tmpFile)
+	_, _, err := ReadConfigWithValidation(tmpFile, nil)
 	if err == nil {
 		t.Fatal("expected error for top-level dict shape")
 	}
@@ -471,7 +471,7 @@ func TestReadConfigWithValidation_RunConfigShapeStillAccepted(t *testing.T) {
 	tmpFile := createTempYAML(t, "version: \"1\"\nsteps:\n  - log:\n      msg: hi\n")
 	defer os.Remove(tmpFile)
 
-	cfg, diags, err := ReadConfigWithValidation(tmpFile)
+	cfg, diags, err := ReadConfigWithValidation(tmpFile, nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -491,7 +491,7 @@ func TestReadConfigWithValidation_PlainListStillAccepted(t *testing.T) {
 	tmpFile := createTempYAML(t, "- log:\n    msg: hi\n")
 	defer os.Remove(tmpFile)
 
-	cfg, _, err := ReadConfigWithValidation(tmpFile)
+	cfg, _, err := ReadConfigWithValidation(tmpFile, nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -744,7 +744,7 @@ func TestReadConfigWithValidation_JSONArrayInput(t *testing.T) {
 	tmpFile := createTempYAML(t, `[{"name":"hi","shell":{"cmd":"echo hi"}}]`)
 	defer os.Remove(tmpFile)
 
-	cfg, _, err := ReadConfigWithValidation(tmpFile)
+	cfg, _, err := ReadConfigWithValidation(tmpFile, nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -760,7 +760,7 @@ func TestReadConfigWithValidation_JSONRunConfigInput(t *testing.T) {
 	tmpFile := createTempYAML(t, `{"version":"1.0","vars":{"app":"foo"},"steps":[{"name":"s1","shell":{"cmd":"echo {{app}}"}}]}`)
 	defer os.Remove(tmpFile)
 
-	cfg, _, err := ReadConfigWithValidation(tmpFile)
+	cfg, _, err := ReadConfigWithValidation(tmpFile, nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

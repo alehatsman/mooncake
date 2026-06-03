@@ -29,7 +29,7 @@ func NewYAMLConfigReader() Reader {
 // For backward compatibility, this method validates the config and returns
 // an error if any validation errors are found
 func (r *YAMLConfigReader) ReadConfig(path string) (*ParsedConfig, error) {
-	parsedConfig, diagnostics, err := r.ReadConfigWithValidation(path)
+	parsedConfig, diagnostics, err := r.ReadConfigWithValidation(path, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -42,9 +42,16 @@ func (r *YAMLConfigReader) ReadConfig(path string) (*ParsedConfig, error) {
 	return parsedConfig, nil
 }
 
-// ReadConfigWithValidation reads configuration steps from a YAML file with full validation
-// Returns parsed config (with steps, global vars, version), diagnostics (which may include warnings), and any parsing errors
-func (r *YAMLConfigReader) ReadConfigWithValidation(path string) (*ParsedConfig, []Diagnostic, error) {
+// ReadConfigWithValidation reads configuration steps from a YAML file with full validation.
+// Returns parsed config (with steps, global vars, version), diagnostics (which may include warnings), and any parsing errors.
+//
+// isCustom is the action-registry predicate: a typed-key custom action
+// (`notify.webhook: {…}`) whose name it recognizes is folded into the generic
+// carrier before validation, so it parses, validates, and dispatches exactly
+// like a built-in (see normalizeCustomActionSteps). Pass nil for built-ins
+// only — every non-builtin key then stays an unknown-field error, preserving
+// the strict typo diagnostics.
+func (r *YAMLConfigReader) ReadConfigWithValidation(path string, isCustom IsCustomAction) (*ParsedConfig, []Diagnostic, error) {
 	// #nosec G304 -- User-specified config file path is intentional and required functionality
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -75,6 +82,12 @@ func (r *YAMLConfigReader) ReadConfigWithValidation(path string) (*ParsedConfig,
 	// later swaps it for the resolved value (or the plan-output redactor
 	// rewrites it as `!secret <ref>` for JSON serialization).
 	substituteSecretTags(&rootNode)
+
+	// Fold typed-key custom actions (`notify.webhook: {…}`) into the generic
+	// #111 carrier BEFORE the location map, decode, and both validators run —
+	// so every downstream stage sees only carrier form and is untouched.
+	// No-op when isCustom is nil (no registry → built-ins only).
+	normalizeCustomActionSteps(&rootNode, isCustom)
 
 	// Build location map from yaml.Node tree
 	locationMap := buildLocationMap(&rootNode)
@@ -445,14 +458,15 @@ func ReadConfig(path string) (*ParsedConfig, error) {
 	return defaultReader.ReadConfig(path)
 }
 
-// ReadConfigWithValidation is a convenience function using the default YAML reader
-// Returns parsed config (with steps, global vars, version), diagnostics, and any parsing errors
-func ReadConfigWithValidation(path string) (*ParsedConfig, []Diagnostic, error) {
+// ReadConfigWithValidation is a convenience function using the default YAML reader.
+// Returns parsed config (with steps, global vars, version), diagnostics, and any parsing errors.
+// See (*YAMLConfigReader).ReadConfigWithValidation for isCustom.
+func ReadConfigWithValidation(path string, isCustom IsCustomAction) (*ParsedConfig, []Diagnostic, error) {
 	reader, ok := defaultReader.(*YAMLConfigReader)
 	if !ok {
 		return nil, nil, fmt.Errorf("internal error: defaultReader is not a YAMLConfigReader")
 	}
-	return reader.ReadConfigWithValidation(path)
+	return reader.ReadConfigWithValidation(path, isCustom)
 }
 
 // ReadVariables is a convenience function using the default YAML reader

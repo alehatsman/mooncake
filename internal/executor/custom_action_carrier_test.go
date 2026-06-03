@@ -89,6 +89,53 @@ steps:
 	}
 }
 
+// TestCustomActionTypedKey_ExecutesFromFile is the #115 acceptance for the
+// FILE ingestion boundary: a hand-written config that uses the custom action
+// as a typed key (`demo.greet:` — byte-identical to a built-in, no carrier)
+// dispatches end-to-end through executor.Start. No agent here — the planner's
+// reader folds the typed key into the carrier against the injected registry,
+// proving the file path works independently of the agent's NormalizePlanBytes.
+func TestCustomActionTypedKey_ExecutesFromFile(t *testing.T) {
+	dir := t.TempDir()
+	sentinel := filepath.Join(dir, "greeting.txt")
+
+	yaml := `version: "1.0"
+steps:
+  - name: greet via typed key
+    demo.greet:
+      who: world
+      out: ` + sentinel + `
+`
+	configPath := filepath.Join(dir, "config.yml")
+	if err := os.WriteFile(configPath, []byte(yaml), 0o644); err != nil {
+		t.Fatalf("write config: %v", err)
+	}
+
+	reg := actions.GlobalRegistry().Clone()
+	if err := reg.Register(greetWriteHandler{}); err != nil {
+		t.Fatalf("register custom handler: %v", err)
+	}
+
+	publisher := events.NewPublisher()
+	defer publisher.Close()
+
+	err := executor.Start(context.Background(), executor.StartConfig{
+		ConfigFilePath: configPath,
+		Registry:       reg,
+	}, logger.NewTestLogger(), publisher)
+	if err != nil {
+		t.Fatalf("executor.Start: %v", err)
+	}
+
+	got, err := os.ReadFile(sentinel)
+	if err != nil {
+		t.Fatalf("typed-key custom action did not run — sentinel missing: %v", err)
+	}
+	if string(got) != "world" {
+		t.Errorf("typed-key custom action ran but with wrong params: got %q, want %q", got, "world")
+	}
+}
+
 // TestCustomActionCarrier_CountsAsOneAction guards the one-action invariant:
 // the carrier counts as the step's single action, so combining it with a
 // typed action field is rejected, and a carrier-only step is valid.

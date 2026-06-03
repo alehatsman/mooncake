@@ -230,7 +230,7 @@ func (schemaValid) Check(planYAML string, _ []Step) error {
 		return fmt.Errorf("close tempfile: %w", err)
 	}
 
-	_, diags, err := config.ReadConfigWithValidation(path)
+	_, diags, err := config.ReadConfigWithValidation(path, nil)
 	if err != nil {
 		return fmt.Errorf("read+validate: %w", err)
 	}

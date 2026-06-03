@@ -163,8 +163,8 @@ type StepGateState struct {
 // Caller-supplied in/out are typically os.Stdin / os.Stderr. The
 // caller is responsible for ensuring `in` is a terminal — see
 // EnsureInteractive.
-func ConfirmPlan(in io.Reader, out io.Writer, planBytes []byte) (ConfirmResult, error) {
-	return confirmPlan(in, out, planBytes, StylePlan, nil)
+func ConfirmPlan(in io.Reader, out io.Writer, planBytes []byte, isCustom config.IsCustomAction) (ConfirmResult, error) {
+	return confirmPlan(in, out, planBytes, StylePlan, nil, isCustom)
 }
 
 // ConfirmPlanStep is the step-style wrapper around ConfirmPlan: same
@@ -177,14 +177,14 @@ func ConfirmPlan(in io.Reader, out io.Writer, planBytes []byte) (ConfirmResult, 
 // the sticky thread-approve flag survive turn-to-turn. When the gate
 // is already in auto-approve mode (counter > 0 or thread-approved),
 // the function short-circuits to OutcomeApply without reading from in.
-func ConfirmPlanStep(in io.Reader, out io.Writer, planBytes []byte, state *StepGateState) (ConfirmResult, error) {
+func ConfirmPlanStep(in io.Reader, out io.Writer, planBytes []byte, state *StepGateState, isCustom config.IsCustomAction) (ConfirmResult, error) {
 	if state == nil {
 		state = &StepGateState{}
 	}
-	return confirmPlan(in, out, planBytes, StyleStep, state)
+	return confirmPlan(in, out, planBytes, StyleStep, state, isCustom)
 }
 
-func confirmPlan(in io.Reader, out io.Writer, planBytes []byte, style Style, state *StepGateState) (ConfirmResult, error) {
+func confirmPlan(in io.Reader, out io.Writer, planBytes []byte, style Style, state *StepGateState, isCustom config.IsCustomAction) (ConfirmResult, error) {
 	// Auto-approve short-circuit: never reads from in. ApprovedThread
 	// is sticky; RemainingAutoApprovals decrements per call.
 	if style == StyleStep && state != nil {
@@ -234,6 +234,15 @@ func confirmPlan(in io.Reader, out io.Writer, planBytes []byte, style Style, sta
 			edited, editErr := editPlan(out, current)
 			if editErr != nil {
 				fmt.Fprintf(out, "edit failed: %v\n", editErr)
+				continue
+			}
+			// The editor is an ingestion boundary like the LLM and a file
+			// read: fold any typed-key custom action the operator hand-wrote
+			// into the carrier before validating and handing it back to wrap
+			// + execute. Built-in-only edits are returned unchanged.
+			edited, normErr := config.NormalizePlanBytes(edited, isCustom)
+			if normErr != nil {
+				fmt.Fprintf(out, "edited plan failed to parse: %v\n", normErr)
 				continue
 			}
 			if err := validateForGate(edited); err != nil {
@@ -483,7 +492,7 @@ func validateForGate(planBytes []byte) error {
 	if err := tmp.Close(); err != nil {
 		return fmt.Errorf("close tempfile: %w", err)
 	}
-	_, diags, err := config.ReadConfigWithValidation(path)
+	_, diags, err := config.ReadConfigWithValidation(path, nil)
 	if err != nil {
 		return err
 	}

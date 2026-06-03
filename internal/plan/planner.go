@@ -409,8 +409,10 @@ func uniqueSorted(in []string) []string {
 
 // readRunConfig reads and parses a config file with validation
 func (p *Planner) readRunConfig(path string) (*config.RunConfig, error) {
-	// Use ReadConfigWithValidation to get parsed config with steps, vars, and version
-	parsedConfig, diagnostics, err := config.ReadConfigWithValidation(path)
+	// Use ReadConfigWithValidation with the registry predicate so a typed-key custom action is folded
+	// into the carrier against the planner's registry — the same one the
+	// executor dispatches with — before validation.
+	parsedConfig, diagnostics, err := config.ReadConfigWithValidation(path, actions.PredicateFor(p.reg))
 	if err != nil {
 		return nil, fmt.Errorf("failed to read config: %w", err)
 	}

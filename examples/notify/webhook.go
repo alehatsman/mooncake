@@ -64,7 +64,7 @@ func (WebhookHandler) Metadata() mooncake.ActionMetadata {
 
 func (WebhookHandler) Validate(step *mooncake.Step) error {
 	if strings.TrimSpace(str(step.With["url"])) == "" {
-		return fmt.Errorf("notify.webhook: 'url' is required under with:")
+		return fmt.Errorf("notify.webhook: 'url' is required under 'with'")
 	}
 	if m := str(step.With["method"]); m != "" {
 		switch strings.ToUpper(m) {

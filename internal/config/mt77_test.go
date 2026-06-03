@@ -32,7 +32,7 @@ func TestMT77_UnknownStepFieldNotEmptyVocab(t *testing.T) {
 	}
 	tmp.Close()
 
-	_, diags, _ := ReadConfigWithValidation(tmp.Name())
+	_, diags, _ := ReadConfigWithValidation(tmp.Name(), nil)
 	for _, d := range diags {
 		// The fix's user-visible commitment.
 		if strings.Contains(d.Message, "exactly one action ()") {
@@ -61,7 +61,7 @@ func TestMT77_NoActionStillShowsVocab(t *testing.T) {
 	tmp.WriteString(yaml)
 	tmp.Close()
 
-	_, diags, _ := ReadConfigWithValidation(tmp.Name())
+	_, diags, _ := ReadConfigWithValidation(tmp.Name(), nil)
 	gotVocab := false
 	for _, d := range diags {
 		if strings.Contains(d.Message, "exactly one action (") && !strings.Contains(d.Message, "exactly one action ()") {

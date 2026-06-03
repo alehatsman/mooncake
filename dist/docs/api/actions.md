@@ -129,6 +129,7 @@ func (h *Handler) Metadata() actions.ActionMetadata {
 - [func IsReverser(h Handler) bool](<#func-isreverser>)
 - [func ObserveValueToMap(v any) any](<#func-observevaluetomap>)
 - [func PathNeedsSudo(p string) bool](<#func-pathneedssudo>)
+- [func PredicateFor(reg *Registry) config.IsCustomAction](<#func-predicatefor>)
 - [func Register(handler Handler)](<#func-register>)
 - [func RegisterBuiltins(dst *Registry) error](<#func-registerbuiltins>)
 - [type Action](<#type-action>)
@@ -226,7 +227,7 @@ var SystemPathPrefixes = []string{
 }
 ```
 
-## func [Count](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/registry.go#L208>)
+## func [Count](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/registry.go#L225>)
 
 ```go
 func Count() int
@@ -260,7 +261,7 @@ func GetFieldExample(actionName, fieldName string) string
 
 GetFieldExample returns an example value for a field based on schema
 
-## func [Has](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/registry.go#L203>)
+## func [Has](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/registry.go#L220>)
 
 ```go
 func Has(actionType string) bool
@@ -322,7 +323,15 @@ func (Handler) Permissions(step *config.Step) actions.PermissionSet {
 }
 ```
 
-## func [Register](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/registry.go#L186>)
+## func [PredicateFor](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/registry.go#L118>)
+
+```go
+func PredicateFor(reg *Registry) config.IsCustomAction
+```
+
+PredicateFor returns a config.IsCustomAction backed by reg, falling back to the global registry when reg is nil — the same registry the planner and executor resolve actions against. Pass the result to config.ReadConfigWithValidation \(with a predicate\) so a typed\-key custom action \(\`notify.webhook: \{…\}\`\) is folded into the carrier during validation exactly as it will dispatch at execution. A built\-in name passed through it stays false\-positive\-free: built\-ins have typed Step fields, so the parser never folds them regardless.
+
+## func [Register](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/registry.go#L203>)
 
 ```go
 func Register(handler Handler)
@@ -338,7 +347,7 @@ func init() {
 }
 ```
 
-## func [RegisterBuiltins](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/registry.go#L158>)
+## func [RegisterBuiltins](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/registry.go#L175>)
 
 ```go
 func RegisterBuiltins(dst *Registry) error
@@ -492,7 +501,7 @@ type ActionMetadata struct {
 }
 ```
 
-### func [List](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/registry.go#L198>)
+### func [List](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/registry.go#L215>)
 
 ```go
 func List() []ActionMetadata
@@ -994,7 +1003,7 @@ type Handler interface {
 }
 ```
 
-### func [Get](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/registry.go#L193>)
+### func [Get](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/registry.go#L210>)
 
 ```go
 func Get(actionType string) (Handler, bool)
@@ -1372,7 +1381,7 @@ type RawRunner interface {
 }
 ```
 
-## type [Registry](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/registry.go#L36-L39>)
+## type [Registry](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/registry.go#L38-L41>)
 
 Registry manages registered action handlers through a thread\-safe map.
 
@@ -1390,7 +1399,7 @@ type Registry struct {
 }
 ```
 
-### func [GlobalRegistry](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/registry.go#L142>)
+### func [GlobalRegistry](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/registry.go#L159>)
 
 ```go
 func GlobalRegistry() *Registry
@@ -1398,7 +1407,7 @@ func GlobalRegistry() *Registry
 
 GlobalRegistry returns the process\-wide default registry that init\(\)\-time Register calls populate. The executor, planner, and agent loop fall back to it when no registry is injected, so existing callers \(CLI, MCP, fleet\) keep working unchanged. Framework consumers should Clone it \(to inherit the built\-ins\) rather than mutating it.
 
-### func [NewRegistry](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/registry.go#L42>)
+### func [NewRegistry](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/registry.go#L44>)
 
 ```go
 func NewRegistry() *Registry
@@ -1406,7 +1415,7 @@ func NewRegistry() *Registry
 
 NewRegistry creates a new action registry.
 
-### func \(\*Registry\) [Clone](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/registry.go#L123>)
+### func \(\*Registry\) [Clone](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/registry.go#L140>)
 
 ```go
 func (r *Registry) Clone() *Registry
@@ -1414,7 +1423,7 @@ func (r *Registry) Clone() *Registry
 
 Clone returns a new Registry pre\-populated with this registry's handlers. Handlers are shared by reference \(they are stateless value/pointer dispatchers\), so the clone is cheap. The maps are independent: registering a new handler in the clone does not touch the original. This is how a consumer obtains a registry seeded with the built\-ins \(clone the global, then Register its own typed handlers\) without an explicit builtin list — see GlobalRegistry and the public facade package.
 
-### func \(\*Registry\) [Count](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/registry.go#L109>)
+### func \(\*Registry\) [Count](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/registry.go#L126>)
 
 ```go
 func (r *Registry) Count() int
@@ -1422,7 +1431,7 @@ func (r *Registry) Count() int
 
 Count returns the number of registered handlers.
 
-### func \(\*Registry\) [Get](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/registry.go#L67>)
+### func \(\*Registry\) [Get](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/registry.go#L69>)
 
 ```go
 func (r *Registry) Get(actionType string) (Handler, bool)
@@ -1430,7 +1439,7 @@ func (r *Registry) Get(actionType string) (Handler, bool)
 
 Get retrieves a handler by action type name. Returns the handler and true if found, nil and false otherwise.
 
-### func \(\*Registry\) [Has](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/registry.go#L100>)
+### func \(\*Registry\) [Has](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/registry.go#L102>)
 
 ```go
 func (r *Registry) Has(actionType string) bool
@@ -1438,7 +1447,7 @@ func (r *Registry) Has(actionType string) bool
 
 Has checks if a handler is registered for the given action type.
 
-### func \(\*Registry\) [List](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/registry.go#L83>)
+### func \(\*Registry\) [List](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/registry.go#L85>)
 
 ```go
 func (r *Registry) List() []ActionMetadata
@@ -1448,7 +1457,7 @@ List returns metadata for all registered handlers. Useful for introspection and 
 
 proposal\-05: the four spec\-22 ABI capability bools \(ImplementsDiff/Cost/Reverse/Permissions\) are populated here from the handler's live interface satisfaction — handler authors do not declare them by hand, so the columns can't drift from reality as new methods are added.
 
-### func \(\*Registry\) [Register](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/registry.go#L51>)
+### func \(\*Registry\) [Register](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/registry.go#L53>)
 
 ```go
 func (r *Registry) Register(handler Handler) error

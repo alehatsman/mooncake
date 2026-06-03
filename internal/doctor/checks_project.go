@@ -75,7 +75,7 @@ func (checkProjectValidate) Run(ctx Context) Result {
 		r.Message = "skipped (no project config)"
 		return r
 	}
-	_, diags, err := config.ReadConfigWithValidation(p)
+	_, diags, err := config.ReadConfigWithValidation(p, nil)
 	if err != nil {
 		r.Status = StatusError
 		r.Message = "cannot read config: " + err.Error()

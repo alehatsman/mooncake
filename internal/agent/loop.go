@@ -165,11 +165,11 @@ func resolveGate(ctx context.Context, opts RunOptions, planBytes []byte, stepGat
 	}
 	if opts.Style == StyleStep {
 		return func() (ConfirmResult, error) {
-			return ConfirmPlanStep(os.Stdin, os.Stderr, planBytes, stepGate)
+			return ConfirmPlanStep(os.Stdin, os.Stderr, planBytes, stepGate, actions.PredicateFor(opts.Registry))
 		}, nil, nil
 	}
 	return func() (ConfirmResult, error) {
-		return ConfirmPlan(os.Stdin, os.Stderr, planBytes)
+		return ConfirmPlan(os.Stdin, os.Stderr, planBytes, actions.PredicateFor(opts.Registry))
 	}, nil, nil
 }
 
@@ -282,6 +282,15 @@ func RunLoop(ctx context.Context, opts RunOptions) (*LoopResult, error) {
 		planBytes, err := SanitizePlan(rawPlan)
 		if err != nil {
 			return terminate(iterNum, "", "sanitization_failed", err.Error(), StopFailed, err)
+		}
+
+		// Fold typed-key custom actions into the carrier on the raw plan,
+		// once, before anything decodes it into typed steps (WrapInTransaction
+		// would otherwise drop the unknown key). Built-in-only plans are
+		// returned unchanged, so the hash below is stable.
+		planBytes, err = config.NormalizePlanBytes(planBytes, actions.PredicateFor(opts.Registry))
+		if err != nil {
+			return terminate(iterNum, "", "normalization_failed", err.Error(), StopFailed, err)
 		}
 
 		planHash := ComputePlanHash(planBytes)
@@ -765,7 +774,7 @@ func applyPlanIteration(ctx context.Context, wrappedBytes []byte, repoRoot strin
 		return out, fmt.Errorf("failed to close temp file: %w", closeErr)
 	}
 
-	_, diagnostics, vErr := config.ReadConfigWithValidation(tmpFile.Name())
+	_, diagnostics, vErr := config.ReadConfigWithValidation(tmpFile.Name(), actions.PredicateFor(registry))
 	out.Diagnostics = diagnostics
 	out.ValidationErr = vErr
 	if vErr != nil || config.HasErrors(diagnostics) {
