@@ -11,11 +11,15 @@
 #     stub panics, agent-tagged TODOs, generated-doc drift) without
 #     blocking iteration speed.
 #
-#   pre-push → mooncake task ci
-#     Full gate: build + test + lint + scan + docs/schema regen +
-#     arch-snapshot + budget + dupl + escalation-lint. Slow (~1-2 min).
-#     A SHA+TTL stamp dedupes the gate across a single `git push` that fans
-#     out to multiple remote URLs (git runs pre-push once per push URL).
+#   pre-push → mooncake task ci-fast
+#     Fast sanity gate (same as pre-commit) before commits leave the machine:
+#     a last check that catches a skipped/--no-verify commit or a dirty amend.
+#     The FULL gate (build + cross-build + test + lint + vuln + docs/schema +
+#     mkdocs + arch + budget + dupl + escalation-lint) now runs server-side on
+#     every push via moongit CI (mgitci.yml runs the identical `mooncake task
+#     ci`), so pre-push no longer carries it (#55). A SHA+TTL stamp dedupes the
+#     gate across a single `git push` that fans out to multiple remote URLs
+#     (git runs pre-push once per push URL).
 #
 # Bypass: `git commit --no-verify` or `git push --no-verify`. Use sparingly —
 # both hooks exist because the issues they catch are easier to fix at commit
@@ -65,7 +69,8 @@ echo "  ✓ pre-commit → mooncake task ci-fast"
 # ----- pre-push --------------------------------------------------------------
 cat > "$HOOKS_DIR/pre-push" << 'HOOK_EOF'
 #!/usr/bin/env bash
-# Full gate before the push leaves the machine. Bypass: git push --no-verify.
+# Fast sanity gate before the push leaves the machine. The full gate runs
+# server-side on push (moongit CI). Bypass: git push --no-verify.
 set -e
 
 REPO_ROOT="$(git rev-parse --show-toplevel)"
@@ -79,7 +84,7 @@ fi
 
 # Dedupe across a single `git push` that targets multiple remote URLs. Git runs
 # pre-push ONCE PER PUSH URL, so a dual-push remote (e.g. origin → github +
-# moongit) would otherwise run the full ~1-2min gate N times for one push.
+# moongit) would otherwise re-run the gate N times for one push.
 # Stamp the gated HEAD sha on success; if the stamp matches the current HEAD and
 # is within the TTL, the sibling URL's invocation skips the redundant re-run. A
 # new commit (or a re-push after the TTL) changes the key and re-gates.
@@ -96,10 +101,10 @@ if [ -f "$STAMP" ]; then
   fi
 fi
 
-echo "pre-push: running 'mooncake task ci' (build + test + lint + scan + docs/schema + arch + budget + dupl)..."
-if ! mooncake task ci; then
+echo "pre-push: running 'mooncake task ci-fast' (vet + gofmt + ai-lint + budget + docs-regen) — full gate runs server-side on push..."
+if ! mooncake task ci-fast; then
   echo "" >&2
-  echo "pre-push: ✗ full gate failed. Fix the issue above and re-push," >&2
+  echo "pre-push: ✗ fast gate failed. Fix the issue above and re-push," >&2
   echo "          or 'git push --no-verify' to bypass (not recommended)." >&2
   exit 1
 fi
@@ -108,7 +113,7 @@ fi
 printf '%s %s\n' "$HEAD_SHA" "$now" > "$STAMP"
 HOOK_EOF
 chmod +x "$HOOKS_DIR/pre-push"
-echo "  ✓ pre-push → mooncake task ci"
+echo "  ✓ pre-push → mooncake task ci-fast"
 
 cat <<EOM
 
@@ -119,9 +124,11 @@ Installed:
                 Auto-stages dist/docs/* + schema.json when a
                 handler/config Go file is staged and the generator
                 emits new content.
-  pre-push    → 'mooncake task ci'      (~1-2 min). Full build + test +
-                lint + scan + docs/schema regen + arch + budget + dupl
-                + escalation-lint before the commits leave the machine.
+  pre-push    → 'mooncake task ci-fast' (~seconds). Last fast sanity check
+                before commits leave the machine. The full build + test +
+                lint + scan + docs/schema + arch + budget + dupl +
+                escalation-lint gate now runs server-side on push (moongit
+                CI), so it no longer blocks the push locally.
 
 Bypass either with --no-verify when you really need it.
 
