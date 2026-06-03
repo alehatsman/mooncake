@@ -55,13 +55,22 @@ func startTestServerTCPWithLimit(t *testing.T, maxBytes int64) (cfg Config, tcpC
 	done := make(chan error, 1)
 	go func() { done <- srv.Serve(ctx) }()
 
-	// Wait for the TCP listener to accept.
-	deadline := time.Now().Add(2 * time.Second)
-	for time.Now().Before(deadline) {
-		c, err := net.DialTimeout("tcp", addr, 100*time.Millisecond)
+	// Wait until the HTTP server is actually serving — not just until the TCP
+	// listener accepts. A bare dial+close only proves a listener exists; the
+	// server can still RST the first real request if it hasn't started serving
+	// yet, which surfaced as flaky "connection reset by peer" failures under
+	// CI load. Poll a real request instead: any HTTP response (even the 401 for
+	// the missing bearer) proves the handler is live.
+	probe := &http.Client{Timeout: 200 * time.Millisecond}
+	deadline := time.Now().Add(5 * time.Second)
+	for {
+		resp, err := probe.Get("http://" + addr + "/v1/version")
 		if err == nil {
-			_ = c.Close()
+			_ = resp.Body.Close()
 			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("server did not become ready within deadline: %v", err)
 		}
 		time.Sleep(20 * time.Millisecond)
 	}

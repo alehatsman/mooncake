@@ -54,18 +54,25 @@ func startTestServer(t *testing.T) (cfg Config, client *http.Client, stop func()
 	done := make(chan error, 1)
 	go func() { done <- srv.Serve(ctx) }()
 
-	// Wait for the socket to appear.
-	deadline := time.Now().Add(2 * time.Second)
-	for time.Now().Before(deadline) {
-		if _, err := os.Stat(cfg.SocketPath); err == nil {
+	client = unixClient(cfg.SocketPath)
+
+	// Wait until the server is actually serving over the socket. The socket
+	// file appearing (os.Stat) doesn't prove the accept loop is running, so a
+	// real request could still race startup. Poll /v1/health (unauthenticated)
+	// until it answers — any response means the handler is live.
+	deadline := time.Now().Add(5 * time.Second)
+	for {
+		resp, err := client.Get("http://unix/v1/health")
+		if err == nil {
+			_ = resp.Body.Close()
 			break
 		}
+		if time.Now().After(deadline) {
+			cancel()
+			<-done
+			t.Fatalf("server did not become ready within deadline: %v", err)
+		}
 		time.Sleep(10 * time.Millisecond)
-	}
-	if _, err := os.Stat(cfg.SocketPath); err != nil {
-		cancel()
-		<-done
-		t.Fatalf("socket never appeared: %v", err)
 	}
 
 	stop = func() {
@@ -74,7 +81,7 @@ func startTestServer(t *testing.T) (cfg Config, client *http.Client, stop func()
 			t.Errorf("Serve returned error: %v", err)
 		}
 	}
-	return cfg, unixClient(cfg.SocketPath), stop
+	return cfg, client, stop
 }
 
 func TestHealthEndpoint(t *testing.T) {
@@ -331,19 +338,22 @@ func TestServe_TCPOnly(t *testing.T) {
 	go func() { done <- srv.Serve(ctx) }()
 	t.Cleanup(func() { cancel(); <-done })
 
-	// Wait for TCP listener to come up.
-	deadline := time.Now().Add(2 * time.Second)
-	var conn net.Conn
-	for time.Now().Before(deadline) {
-		conn, err = net.DialTimeout("tcp", addr, 100*time.Millisecond)
-		if err == nil {
-			_ = conn.Close()
+	// Wait until the HTTP server is actually serving — a bare dial+close only
+	// proves the listener accepts, not that the handler is live, so the real
+	// request below could race a half-ready server and get RST under load.
+	// Poll a real request instead: any HTTP response means it's serving.
+	probeClient := &http.Client{Timeout: 200 * time.Millisecond}
+	deadline := time.Now().Add(5 * time.Second)
+	for {
+		resp, perr := probeClient.Get("http://" + addr + "/v1/version")
+		if perr == nil {
+			_ = resp.Body.Close()
 			break
 		}
+		if time.Now().After(deadline) {
+			t.Fatalf("server did not become ready within deadline: %v", perr)
+		}
 		time.Sleep(20 * time.Millisecond)
-	}
-	if err != nil {
-		t.Fatalf("TCP listener never came up: %v", err)
 	}
 
 	// Hit /v1/version with the right token.
