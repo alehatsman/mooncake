@@ -90,9 +90,10 @@ func Bootstrap(ctx context.Context, opts BootstrapOptions) (BootstrapResult, err
 	if opts.Port == 0 {
 		opts.Port = 7878
 	}
-	if opts.LocalBinary == "" {
-		return BootstrapResult{}, errors.New("bootstrap: LocalBinary is empty")
-	}
+	// opts.LocalBinary may be empty: it's resolved lazily from the
+	// ~/.mooncake/bin store (by detected target platform) right before
+	// upload, after the idempotent short-circuit. An explicit --binary
+	// still flows through unchanged.
 	w := opts.Writer
 	if w == nil {
 		w = io.Discard

@@ -108,13 +108,11 @@ func fleetBootstrapAction(c *cli.Context) error {
 		target.Port = c.Int("port")
 	}
 
+	// Empty when --binary is unset: the bootstrap layer resolves it lazily
+	// from the ~/.mooncake/bin store (by detected target platform) right
+	// before upload, falling back to a matching controller binary. Passing
+	// it through empty keeps refresh-only runs working without a store.
 	binPath := c.String("binary")
-	if binPath == "" {
-		binPath, err = fleet.EnsureLocalBinaryPath()
-		if err != nil {
-			return err
-		}
-	}
 
 	peersPath := c.String("peers-file")
 	if peersPath == "" {
