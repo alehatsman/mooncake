@@ -6,7 +6,7 @@ goal: |
 
 snapshot: debian-13-with-tooling
 provider: anthropic-http
-model: claude-sonnet-4-7
+model: claude-sonnet-4-6
 
 assertions:
   - schema_valid

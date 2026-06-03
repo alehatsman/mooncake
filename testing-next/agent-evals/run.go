@@ -195,7 +195,17 @@ func runOne(g goalFile, snapsDir string, client llm.Client, dryRun bool, timeout
 			fmt.Printf("    OK   %s\n", a.String())
 		}
 	}
+	// On any failure, dump the emitted plan so the cause is debuggable
+	// without re-spending an LLM call.
+	if !allPassed {
+		fmt.Printf("    --- emitted plan ---\n%s\n    --------------------\n", indent(strings.TrimSpace(planYAML)))
+	}
 	return allPassed
+}
+
+// indent prefixes each line for readable nested plan output.
+func indent(s string) string {
+	return "    " + strings.ReplaceAll(s, "\n", "\n    ")
 }
 
 func loadGoals(dir string) ([]goalFile, error) {

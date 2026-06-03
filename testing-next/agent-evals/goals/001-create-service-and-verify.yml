@@ -5,7 +5,7 @@ goal: |
 
 snapshot: ubuntu-24-04-clean
 provider: anthropic-http
-model: claude-sonnet-4-7
+model: claude-sonnet-4-6
 
 assertions:
   - schema_valid
