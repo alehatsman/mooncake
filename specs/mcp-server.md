@@ -61,6 +61,11 @@ the same typed funnel as the CLI.
 - The agent daemon and its run store/HTTP lifecycle — `internal/agentd/**`.
 - The executor, action handlers, and transaction semantics the tools invoke —
   owned by the kernel specs; tools are a thin typed surface over them.
+- The SDK coding-execution surface — the `CodingBackend` interface and its
+  read/write semantics (`Read`/`Grep`/`Glob`/`Edit`/`Write`/`Exec`) are owned by
+  the sdk spec (`specs/sdk.md`, #145). When this server exposes
+  coding-execution tools, they are the JSON-RPC **wire form** of that interface
+  — the same seam serialized over the transport, not a redefinition.
 
 ## Checklist
 
