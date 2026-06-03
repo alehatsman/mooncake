@@ -125,6 +125,20 @@ func bootstrapWindows(ctx context.Context, sess *transport.Session, opts Bootstr
 	}
 
 	// === Step 4: upload binary ===
+	// Verify the artefact is a windows/<arch> PE before uploading it. The
+	// default --binary is the controller's own executable, so a linux
+	// controller would otherwise ship an ELF as mooncake.exe and only
+	// learn at task-run time (ERROR_EXE_MACHINE_TYPE_MISMATCH). Runs after
+	// the step-3 idempotent return so a refresh-only run isn't blocked.
+	binPath := opts.LocalBinary
+	if binPath == "" {
+		if binPath, err = os.Executable(); err != nil {
+			return BootstrapResult{}, fmt.Errorf("step 4 (resolve local binary): %w", err)
+		}
+	}
+	if err := install.VerifyBinaryPlatform(binPath, "windows", arch); err != nil {
+		return BootstrapResult{}, fmt.Errorf("step 4 (binary platform check): %w", err)
+	}
 	report("uploading binary → %s", wc.BinaryPath())
 	if err := installWindowsBinary(ctx, sess, wc, opts.LocalBinary); err != nil {
 		return BootstrapResult{}, fmt.Errorf("step 4 (binary): %w", err)
@@ -150,6 +164,20 @@ func bootstrapWindows(ctx context.Context, sess *transport.Session, opts Bootstr
 		return BootstrapResult{}, fmt.Errorf("step 5b (firewall): %w", err)
 	}
 
+	// The agentd rule covers Domain,Private only — opening a control-plane
+	// daemon on Public networks would be an unsafe default. But if the
+	// host's active connection profile IS Public, the rule won't apply and
+	// the port stays filtered. Warn now (before the reachability wait) so
+	// the operator can reclassify the network instead of staring at a bare
+	// timeout. Best-effort: a probe failure here must not fail bootstrap.
+	cats, _ := windowsNetworkCategories(ctx, sess)
+	if publicNetworkUncovered(cats) {
+		report("WARNING: an active network profile is Public; the 'Mooncake Agentd' "+
+			"rule covers Domain,Private only. If this host is reached over the Public "+
+			"interface, :%d will be filtered. Set it Private with: "+
+			"Set-NetConnectionProfile -InterfaceIndex <n> -NetworkCategory Private", opts.Port)
+	}
+
 	// === Step 6: poll /v1/version ===
 	report("waiting for /v1/version reachable")
 	addr := fmt.Sprintf("%s:%d", opts.Target.Host, opts.Port)
@@ -165,8 +193,14 @@ func bootstrapWindows(ctx context.Context, sess *transport.Session, opts Bootstr
 		// for an actionable error message.
 		taskInfo, _, _, _ := sess.Run(ctx, psWrap(
 			"Get-ScheduledTaskInfo -TaskName 'Mooncake-Agentd-Autostart' | Format-List LastTaskResult,LastRunTime"))
-		return BootstrapResult{}, fmt.Errorf("agentd not reachable at %s after 15s; task info:\n%s",
-			addr, strings.TrimSpace(taskInfo))
+		hint := ""
+		if publicNetworkUncovered(cats) {
+			hint = fmt.Sprintf("\nNOTE: active network profile is Public but the firewall rule "+
+				"covers Domain,Private only — if reached over that interface, set it Private "+
+				"(Set-NetConnectionProfile -InterfaceIndex <n> -NetworkCategory Private). Active profiles: %v", cats)
+		}
+		return BootstrapResult{}, fmt.Errorf("agentd not reachable at %s after 15s; task info:\n%s%s",
+			addr, strings.TrimSpace(taskInfo), hint)
 	}
 
 	// === Step 7: read bearer token ===
@@ -331,6 +365,40 @@ func ensureWindowsFirewall(ctx context.Context, sess *transport.Session, port in
 		return fmt.Errorf("firewall ensure (code=%d): %w (stderr: %s)", code, err, strings.TrimSpace(stderr))
 	}
 	return nil
+}
+
+// windowsNetworkCategories returns the NetworkCategory of every active
+// connection profile (one per line, e.g. "Public", "Private", "DomainAuthenticated").
+// Best-effort: callers treat a probe error as "unknown" and skip the
+// warning rather than failing bootstrap.
+func windowsNetworkCategories(ctx context.Context, sess *transport.Session) ([]string, error) {
+	cmd := psWrap(`Get-NetConnectionProfile | ForEach-Object { $_.NetworkCategory }`)
+	out, _, code, err := sess.Run(ctx, cmd)
+	if err != nil {
+		return nil, err
+	}
+	if code != 0 {
+		return nil, fmt.Errorf("Get-NetConnectionProfile exited %d", code)
+	}
+	var cats []string
+	for _, ln := range strings.Split(strings.ReplaceAll(out, "\r", ""), "\n") {
+		if s := strings.TrimSpace(ln); s != "" {
+			cats = append(cats, s)
+		}
+	}
+	return cats, nil
+}
+
+// publicNetworkUncovered reports whether any active connection profile is
+// Public — the one category the Domain,Private agentd firewall rule does
+// not cover. Pure so it's unit-testable without a remote.
+func publicNetworkUncovered(categories []string) bool {
+	for _, c := range categories {
+		if strings.EqualFold(strings.TrimSpace(c), "Public") {
+			return true
+		}
+	}
+	return false
 }
 
 // readWindowsToken returns the contents of the agentd token file. No
