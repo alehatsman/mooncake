@@ -1,6 +1,7 @@
 package apply
 
 import (
+	"github.com/alehatsman/mooncake/internal/actions"
 	"github.com/alehatsman/mooncake/internal/events"
 	"github.com/alehatsman/mooncake/internal/executor"
 )
@@ -112,4 +113,14 @@ type Config struct {
 	// it lowers straight into executor.StartConfig.Policy. See
 	// internal/executor/policy.go.
 	Policy *executor.Policy
+
+	// Registry, when non-nil, is the action registry this run resolves
+	// handlers against — threaded into executor.StartConfig.Registry so
+	// both the planner (plan-time platform/reversibility checks) and the
+	// executor (handler dispatch) see a consumer's custom typed actions.
+	// nil means "use the process-wide global" (CLI / MCP / agentd today).
+	// The SDK's mooncake.Apply sets it so an external consumer can run a
+	// config built on its own registered actions without mutating the
+	// global. See internal/executor StartConfig.Registry.
+	Registry *actions.Registry
 }

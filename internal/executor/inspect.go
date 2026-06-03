@@ -24,6 +24,18 @@ import (
 // via dispatchCheck — both emit EventStepChecked), then returns the
 // collected results.
 func InspectPlan(p *plan.Plan, sudoPass string, log logger.Logger) ([]plan.StepInspection, error) {
+	return InspectPlanWithRegistry(p, sudoPass, log, nil)
+}
+
+// InspectPlanWithRegistry is InspectPlan with an explicit action
+// registry threaded into check-mode dispatch. Pass a consumer-owned
+// registry so a plan built on custom typed actions resolves those
+// handlers' Differ/Coster output during the preview; nil falls back to
+// the process-wide global (identical to InspectPlan). This is the
+// dry-run primitive the public SDK's mooncake.Plan goes through so an
+// external consumer gets diffs/costs for its own actions without
+// mutating the global registry.
+func InspectPlanWithRegistry(p *plan.Plan, sudoPass string, log logger.Logger, registry *actions.Registry) ([]plan.StepInspection, error) {
 	collector := &inspectionCollector{
 		byStepID: make(map[string]plan.StepInspection),
 	}
@@ -37,7 +49,7 @@ func InspectPlan(p *plan.Plan, sudoPass string, log logger.Logger) ([]plan.StepI
 	// cancellation to interrupt that wouldn't already complete in ms.
 	// Add a ctx parameter only if a future use case needs deadlines on
 	// inspection.
-	if err := ExecutePlan(context.Background(), p, sudoPass, actions.ModePlan, log, pub); err != nil {
+	if err := executePlanWithCapture(context.Background(), p, sudoPass, actions.ModePlan, log, pub, nil, nil, registry); err != nil {
 		return nil, err
 	}
 	return collector.collect(p), nil

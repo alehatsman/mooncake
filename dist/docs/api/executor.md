@@ -87,6 +87,7 @@ log.Infof("Summary: %d changed, %d unchanged, %d failed",
 - [func ExecuteStep(step config.Step, ec *ExecutionContext) error](<#func-executestep>)
 - [func ExecuteSteps(steps []config.Step, ec *ExecutionContext) error](<#func-executesteps>)
 - [func InspectPlan(p *plan.Plan, sudoPass string, log logger.Logger) ([]plan.StepInspection, error)](<#func-inspectplan>)
+- [func InspectPlanWithRegistry(p *plan.Plan, sudoPass string, log logger.Logger, registry *actions.Registry) ([]plan.StepInspection, error)](<#func-inspectplanwithregistry>)
 - [func RegisterReverseDataType(name string, factory ReverseDataFactory)](<#func-registerreversedatatype>)
 - [func Start(ctx context.Context, startConfig StartConfig, log logger.Logger, publisher events.Publisher) error](<#func-start>)
 - [type AssertionError](<#type-assertionerror>)
@@ -311,6 +312,14 @@ InspectPlan runs the plan in non\-mutating ModePlan and returns per\-step inspec
 This is the primitive that powers \`mooncake plan\` after Spec 16: the plan command builds the static plan via planner.BuildPlan, then calls InspectPlan to fill in the per\-step state predictions.
 
 Implementation: subscribes a collector to a fresh SyncPublisher, dispatches the plan through the standard executor in check mode \(which routes Runner handlers via dispatchRunner and legacy handlers via dispatchCheck — both emit EventStepChecked\), then returns the collected results.
+
+## func [InspectPlanWithRegistry](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/inspect.go#L38>)
+
+```go
+func InspectPlanWithRegistry(p *plan.Plan, sudoPass string, log logger.Logger, registry *actions.Registry) ([]plan.StepInspection, error)
+```
+
+InspectPlanWithRegistry is InspectPlan with an explicit action registry threaded into check\-mode dispatch. Pass a consumer\-owned registry so a plan built on custom typed actions resolves those handlers' Differ/Coster output during the preview; nil falls back to the process\-wide global \(identical to InspectPlan\). This is the dry\-run primitive the public SDK's mooncake.Plan goes through so an external consumer gets diffs/costs for its own actions without mutating the global registry.
 
 ## func [RegisterReverseDataType](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/reverse_registry.go#L39>)
 
