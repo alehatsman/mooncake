@@ -105,6 +105,11 @@ func agentdRunCommand() *cli.Command {
 }
 
 func agentdRun(c *cli.Context) error {
+	// Put the daemon user's bin dirs (~/.local/bin, ~/bin, ~/go/bin) on
+	// PATH before serving so fleet-apply steps find user-installed CLIs
+	// (claude, go tools) that the service's minimal PATH would miss (#141).
+	agentd.ApplyPathAugmentation()
+
 	cfg, err := agentd.Default(c.Bool("system"))
 	if err != nil {
 		return err
