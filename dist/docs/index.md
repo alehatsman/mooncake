@@ -153,6 +153,11 @@ Reference for every `mooncake` subcommand and its flags.
 - [tool.list](cli/tool_list.md)
 - [tool.which](cli/tool_which.md)
 - [validate](cli/validate.md)
+- [vault](cli/vault.md)
+- [vault.add](cli/vault_add.md)
+- [vault.init](cli/vault_init.md)
+- [vault.list](cli/vault_list.md)
+- [vault.pubkey](cli/vault_pubkey.md)
 
 ## API
 

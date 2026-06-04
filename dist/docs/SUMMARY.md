@@ -137,6 +137,11 @@
     - [tool.list](cli/tool_list.md)
     - [tool.which](cli/tool_which.md)
     - [validate](cli/validate.md)
+    - [vault](cli/vault.md)
+    - [vault.add](cli/vault_add.md)
+    - [vault.init](cli/vault_init.md)
+    - [vault.list](cli/vault_list.md)
+    - [vault.pubkey](cli/vault_pubkey.md)
 - API:
     - [actions](api/actions.md)
     - [config](api/config.md)

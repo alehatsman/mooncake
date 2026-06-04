@@ -24,6 +24,7 @@ import (
 	stepcmd "github.com/alehatsman/mooncake/cmd/step"
 	taskcmd "github.com/alehatsman/mooncake/cmd/task"
 	toolcmd "github.com/alehatsman/mooncake/cmd/tool"
+	vaultcmd "github.com/alehatsman/mooncake/cmd/vault"
 )
 
 var version = "dev"
@@ -69,6 +70,7 @@ func createApp() *cli.App {
 			agentdcmd.RunsCommand(),
 			kernelcmd.AgentCommand(),
 			kernelcmd.ValidateCommand(),
+			vaultcmd.Command(),
 		},
 	}
 
