@@ -66,6 +66,7 @@
     - [windows.scheduled.task](actions/windows_scheduled_task.md)
 - Concepts:
     - [modules](concepts/modules.md)
+    - [security](concepts/security.md)
 - CLI:
     - [actions](cli/actions.md)
     - [actions.list](cli/actions_list.md)

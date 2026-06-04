@@ -29,6 +29,7 @@ var DefaultConceptDirs = []string{
 	"internal/plan",
 	"internal/presets",
 	"internal/schemagen",
+	"internal/security",
 }
 
 // writeConceptCards emits dist/docs/concepts/<slug>.md per concept

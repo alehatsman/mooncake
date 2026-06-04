@@ -78,6 +78,7 @@ One page per registered action: properties, examples, capabilities.
 How the kernel, planner, executor, and other core systems work.
 
 - [modules](concepts/modules.md)
+- [security](concepts/security.md)
 
 ## CLI
 
