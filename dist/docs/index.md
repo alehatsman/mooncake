@@ -93,6 +93,8 @@ Reference for every `mooncake` subcommand and its flags.
 - [agentd.bootstrap](cli/agentd_bootstrap.md)
 - [agentd.run](cli/agentd_run.md)
 - [apply](cli/apply.md)
+- [cron](cli/cron.md)
+- [cron.list](cli/cron_list.md)
 - [docs](cli/docs.md)
 - [docs.generate](cli/docs_generate.md)
 - [doctor](cli/doctor.md)

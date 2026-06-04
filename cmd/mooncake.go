@@ -9,6 +9,7 @@ import (
 	"github.com/urfave/cli/v2"
 
 	agentdcmd "github.com/alehatsman/mooncake/cmd/agentd"
+	croncmd "github.com/alehatsman/mooncake/cmd/cron"
 	docscmd "github.com/alehatsman/mooncake/cmd/docs"
 	doctorcmd "github.com/alehatsman/mooncake/cmd/doctor"
 	fleetcmd "github.com/alehatsman/mooncake/cmd/fleet"
@@ -71,6 +72,7 @@ func createApp() *cli.App {
 			kernelcmd.AgentCommand(),
 			kernelcmd.ValidateCommand(),
 			vaultcmd.Command(),
+			croncmd.Command(),
 		},
 	}
 
