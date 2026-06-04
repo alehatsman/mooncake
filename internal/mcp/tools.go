@@ -75,6 +75,9 @@ func boolProp(desc string) map[string]interface{} {
 }
 
 func objSchema(props map[string]interface{}, required []string) map[string]interface{} {
+	if props == nil {
+		props = map[string]interface{}{}
+	}
 	s := map[string]interface{}{"type": "object", "properties": props}
 	if len(required) > 0 {
 		s["required"] = required
