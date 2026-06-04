@@ -32,6 +32,12 @@ type InMemoryPlanOptions struct {
 	// or "error". Unknown values default to info.
 	LogLevel string
 
+	// OutputFormat selects the built-in renderer: "text", "json",
+	// "agent", or "quiet". Empty defaults to "text" (preserving the
+	// historic task-runner behaviour). SDK callers default it to
+	// "quiet" so an embedded run stays silent.
+	OutputFormat string
+
 	// StreamStepOutput mirrors Config.StreamStepOutput: render captured
 	// step stdout/stderr regardless of LogLevel. `mooncake task <name>`
 	// sets this true so shell steps stream by default without flipping
@@ -49,6 +55,22 @@ type InMemoryPlanOptions struct {
 	// in-memory path has no other source for this — without it, the
 	// runlog entry shows an empty file reference.
 	RootFile string
+
+	// Policy, if non-nil, is the per-run permissions-as-contract gate
+	// enforced at preflight — same semantics as Config.Policy on the
+	// config-path Runner. nil enforces nothing.
+	Policy *executor.Policy
+
+	// Registry resolves handlers for dispatch. nil uses the
+	// process-wide global. Set it to run a plan built on custom typed
+	// actions without mutating the global.
+	Registry *actions.Registry
+
+	// ExtraSubscribers receive every kernel event in order under the
+	// run's lifecycle. Subscribed before the built-in sinks. The run
+	// owns their lifecycle via the publisher (the caller must not
+	// Close them itself).
+	ExtraSubscribers []events.Subscriber
 }
 
 // NewRunnerFromInMemoryPlan constructs a Runner that executes a plan
@@ -72,55 +94,75 @@ func NewRunnerFromInMemoryPlan(p *plan.Plan, opts InMemoryPlanOptions) *Runner {
 }
 
 // runFromInMemoryPlan executes the caller-supplied plan. Subscriber
-// fan-out mirrors runFromPlan's set: console (text), stderr-error,
-// optional runlog or enriched op-linkage. We deliberately do not
-// install the first-run-hint subscriber here — that's a config-path
-// affordance for new users, and an in-memory apply is by definition
-// a programmatic call from another command (the user already knows
-// what they're doing).
+// fan-out mirrors runFromPlan's set: console (text by default),
+// stderr-error, optional runlog or enriched op-linkage. SDK callers
+// set OutputFormat="quiet" and supply their own ExtraSubscribers so
+// the run is silent and the event channel carries the signal. We
+// deliberately do not install the first-run-hint subscriber here —
+// that's a config-path affordance for new users.
 func (r *Runner) runFromInMemoryPlan(ctx context.Context) (*KernelResult, error) {
+	opts := r.inMemoryPlanOpts
+
 	publisher := events.NewPublisher()
 	defer publisher.Close()
+
+	// ExtraSubscribers first — they see every event, including
+	// plan.loaded, which fires before the built-in sinks are wired.
+	for _, sub := range opts.ExtraSubscribers {
+		publisher.Subscribe(sub)
+	}
 
 	tail := newCaptureSubscriber()
 	publisher.Subscribe(tail)
 
-	level := parseLogLevel(r.inMemoryPlanOpts.LogLevel)
+	level := parseLogLevel(opts.LogLevel)
 
-	// Match runFromPlan's text-only contract. Callers wanting JSON /
-	// agent output should render the *KernelResult themselves; the
-	// in-memory path's reason for being is "execute this plan", not
-	// "negotiate output format".
-	publisher.Subscribe(logger.NewConsoleSubscriber(level, outputFormatText, r.inMemoryPlanOpts.StreamStepOutput))
+	outputFormat := opts.OutputFormat
+	if outputFormat == "" {
+		outputFormat = outputFormatText
+	}
+
+	switch outputFormat {
+	case outputFormatQuiet:
+		publisher.Subscribe(logger.NewQuietSubscriber())
+	default:
+		publisher.Subscribe(logger.NewConsoleSubscriber(level, outputFormat, opts.StreamStepOutput))
+	}
 
 	var runID string
-	if r.inMemoryPlanOpts.OpID != "" {
+	if opts.OpID != "" {
 		runID = ops.NewRunID()
 	} else {
-		publisher.Subscribe(logger.NewRunLogSubscriber(r.inMemoryPlanOpts.RootFile))
+		publisher.Subscribe(logger.NewRunLogSubscriber(opts.RootFile))
 	}
 
 	publisher.Subscribe(logger.NewStderrErrorSubscriber())
 
-	internalLog := logger.NewLogger(level)
+	internalLog := internalLogger(outputFormat, level)
 	capture := &executor.RunCapture{}
 
-	execErr := executor.ExecutePlanWithCapture(
+	execErr := executor.ExecutePlanFull(
 		ctx,
 		r.inMemoryPlanData,
-		r.inMemoryPlanOpts.SudoPass,
+		opts.SudoPass,
 		actions.ModeApply,
 		internalLog,
 		publisher,
 		capture,
+		opts.Policy,
+		opts.Registry,
 	)
 
 	publisher.Flush()
 
-	if r.inMemoryPlanOpts.OpID != "" {
+	for _, sub := range opts.ExtraSubscribers {
+		sub.Close()
+	}
+
+	if opts.OpID != "" {
 		writeEnrichedRunlog(
-			filepath.Base(r.inMemoryPlanOpts.RootFile),
-			r.inMemoryPlanOpts.OpID,
+			filepath.Base(opts.RootFile),
+			opts.OpID,
 			runID,
 			tail,
 			capture,

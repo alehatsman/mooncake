@@ -83,6 +83,7 @@ log.Infof("Summary: %d changed, %d unchanged, %d failed",
 - [func AddGlobalVariables(scope *VariableScope)](<#func-addglobalvariables>)
 - [func DispatchStepAction(step config.Step, ec *ExecutionContext) error](<#func-dispatchstepaction>)
 - [func ExecutePlan(ctx context.Context, p *plan.Plan, sudoPass string, mode actions.Mode, log logger.Logger, publisher events.Publisher) error](<#func-executeplan>)
+- [func ExecutePlanFull(ctx context.Context, p *plan.Plan, sudoPass string, mode actions.Mode, log logger.Logger, publisher events.Publisher, capture *RunCapture, policy *Policy, registry *actions.Registry) error](<#func-executeplanfull>)
 - [func ExecutePlanWithCapture(ctx context.Context, p *plan.Plan, sudoPass string, mode actions.Mode, log logger.Logger, publisher events.Publisher, capture *RunCapture) error](<#func-executeplanwithcapture>)
 - [func ExecuteStep(step config.Step, ec *ExecutionContext) error](<#func-executestep>)
 - [func ExecuteSteps(steps []config.Step, ec *ExecutionContext) error](<#func-executesteps>)
@@ -270,6 +271,14 @@ ExecutePlan executes a pre\-compiled plan. Emits events through the provided pub
 Callers that need the typed \*KernelResult substrate \(R1.1b\) should use ExecutePlanWithCapture or go through executor.Start with StartConfig.Capture set; this entry point does not surface the per\-step records.
 
 ctx is checked between steps — see Start for the cancellation contract.
+
+## func [ExecutePlanFull](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/executor.go#L1393>)
+
+```go
+func ExecutePlanFull(ctx context.Context, p *plan.Plan, sudoPass string, mode actions.Mode, log logger.Logger, publisher events.Publisher, capture *RunCapture, policy *Policy, registry *actions.Registry) error
+```
+
+ExecutePlanFull runs a pre\-compiled plan with the full options set: capture, policy, and registry. All three may be nil \(nil capture disables the kernel\-result substrate; nil policy enforces nothing; nil registry uses the process\-wide global\). Used by the SDK's inline\-input execution path so ApplySteps/ApplyConfig/ApplyBytes thread policy and a consumer\-owned registry through the same funnel as Apply.
 
 ## func [ExecutePlanWithCapture](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/executor.go#L1382>)
 

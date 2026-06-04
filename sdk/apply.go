@@ -198,6 +198,110 @@ func Plan(_ context.Context, opts PlanOptions) (*PlanResult, error) {
 	return compiled, nil
 }
 
+// ----------------------------------------------------------------------------
+// Inline execution input — ApplyConfig / ApplySteps / ApplyBytes (#142)
+// ----------------------------------------------------------------------------
+
+// Config is the pre-parsed playbook shape: a top-level Vars map, a Modules
+// alias map, and the flat Steps list. Use it with ApplyConfig when you've
+// already assembled the config in memory and want to skip file I/O entirely.
+// Equivalent to the internal config.RunConfig; re-exported here so consumers
+// need not import internal packages.
+type Config = config.RunConfig
+
+// ApplyConfig executes a pre-parsed *Config with no LLM and no file I/O.
+// The config is compiled through the planner's full expansion pipeline
+// (templates, loops, includes) into an ephemeral in-memory plan, then fed
+// through the same kernel funnel as Apply: same Registry, Policy,
+// Subscribers, OutputFormat/LogLevel defaults. No YAML is written to disk.
+// Relative paths in steps resolve against the process cwd.
+func ApplyConfig(ctx context.Context, cfg *Config, opts ApplyOptions) (*ApplyResult, error) {
+	if cfg == nil {
+		err := fmt.Errorf("ApplyConfig: cfg must not be nil")
+		return apply.FailedResult(err), err
+	}
+	p, err := buildInlinePlan(cfg, nil, opts)
+	if err != nil {
+		return apply.FailedResult(err), err
+	}
+	return runInMemoryPlan(ctx, p, opts)
+}
+
+// ApplySteps executes an in-memory step slice with no LLM and no file I/O.
+// The steps are wrapped in a Config and compiled through the same expansion
+// + kernel funnel as ApplyConfig. Variables from opts.VarsFiles are merged
+// as initial vars. No YAML is written to disk.
+func ApplySteps(ctx context.Context, steps []Step, opts ApplyOptions) (*ApplyResult, error) {
+	return ApplyConfig(ctx, &Config{Steps: steps}, opts)
+}
+
+// ApplyBytes parses raw YAML (or JSON) bytes as a config and executes the
+// resulting steps with no LLM and no file I/O. The bytes must contain a
+// valid mooncake config — either a bare step list (`- shell: …`) or a
+// `steps:` block — and go through the identical validation pipeline as a
+// file source. No temp file is written. Variables from opts.VarsFiles are
+// merged on top of any vars declared in the bytes.
+func ApplyBytes(ctx context.Context, data []byte, opts ApplyOptions) (*ApplyResult, error) {
+	p, err := buildInlinePlan(nil, data, opts)
+	if err != nil {
+		return apply.FailedResult(err), err
+	}
+	return runInMemoryPlan(ctx, p, opts)
+}
+
+// buildInlinePlan compiles an in-memory config (either a parsed *Config or
+// raw bytes — exactly one non-nil) into an executable *plan.Plan via the
+// planner's BuildPlanFromConfig / BuildPlanFromBytes, so inline input runs
+// the same expansion as the file-sourced Apply path (#142). Vars from
+// opts.VarsFiles are merged as the planner's caller-supplied Variables.
+func buildInlinePlan(cfg *Config, data []byte, opts ApplyOptions) (*plan.Plan, error) {
+	variables, err := loadPlanVariables(opts.VarsFiles, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	planner, err := plan.NewPlanner()
+	if err != nil {
+		return nil, fmt.Errorf("create planner: %w", err)
+	}
+
+	pc := plan.PlannerConfig{
+		Variables: variables,
+		Tags:      opts.Tags,
+		SkipTags:  opts.SkipTags,
+		Names:     opts.Names,
+		Registry:  opts.Registry,
+	}
+
+	if data != nil {
+		return planner.BuildPlanFromBytes(data, pc)
+	}
+	return planner.BuildPlanFromConfig(cfg, pc)
+}
+
+// runInMemoryPlan wires ApplyOptions into InMemoryPlanOptions and executes
+// the given plan through apply.NewRunnerFromInMemoryPlan — the same code
+// path the task runner uses, extended with Policy/Registry/Subscribers and
+// the SDK's default quiet output.
+func runInMemoryPlan(ctx context.Context, p *plan.Plan, opts ApplyOptions) (*ApplyResult, error) {
+	outputFormat := opts.OutputFormat
+	if outputFormat == "" {
+		outputFormat = "quiet"
+	}
+	logLevel := opts.LogLevel
+	if logLevel == "" {
+		logLevel = "error"
+	}
+	imOpts := apply.InMemoryPlanOptions{
+		LogLevel:         logLevel,
+		OutputFormat:     outputFormat,
+		Policy:           opts.Policy,
+		Registry:         opts.Registry,
+		ExtraSubscribers: opts.Subscribers,
+	}
+	return apply.NewRunnerFromInMemoryPlan(p, imOpts).Run(ctx)
+}
+
 // loadPlanVariables merges variable files (lowest-to-highest precedence) and
 // overlays the inline map on top (highest). Returns a non-nil map.
 func loadPlanVariables(varsFiles []string, inline map[string]interface{}) (map[string]interface{}, error) {

@@ -141,6 +141,7 @@ Config structures are designed to be read\-only after parsing. The executor clon
 - [func HasErrors(diagnostics []Diagnostic) bool](<#func-haserrors>)
 - [func HintNoConfigFound(e *ErrNoConfigFound, cmdName string) string](<#func-hintnoconfigfound>)
 - [func NormalizePlanBytes(planBytes []byte, isCustom IsCustomAction) ([]byte, error)](<#func-normalizeplanbytes>)
+- [func ReadConfigBytesWithValidation(data []byte, label string, isCustom IsCustomAction) (*ParsedConfig, []Diagnostic, error)](<#func-readconfigbyteswithvalidation>)
 - [func ReadConfigWithValidation(path string, isCustom IsCustomAction) (*ParsedConfig, []Diagnostic, error)](<#func-readconfigwithvalidation>)
 - [func ReadVariables(path string) (map[string]interface{}, error)](<#func-readvariables>)
 - [func SchemaJSON() []byte](<#func-schemajson>)
@@ -292,6 +293,7 @@ Config structures are designed to be read\-only after parsing. The executor clon
 - [type WindowsScheduledTaskTrigger](<#type-windowsscheduledtasktrigger>)
 - [type YAMLConfigReader](<#type-yamlconfigreader>)
   - [func (r *YAMLConfigReader) ReadConfig(path string) (*ParsedConfig, error)](<#func-yamlconfigreader-readconfig>)
+  - [func (r *YAMLConfigReader) ReadConfigBytesWithValidation(data []byte, label string, isCustom IsCustomAction) (*ParsedConfig, []Diagnostic, error)](<#func-yamlconfigreader-readconfigbyteswithvalidation>)
   - [func (r *YAMLConfigReader) ReadConfigWithValidation(path string, isCustom IsCustomAction) (*ParsedConfig, []Diagnostic, error)](<#func-yamlconfigreader-readconfigwithvalidation>)
   - [func (r *YAMLConfigReader) ReadVariables(path string) (map[string]interface{}, error)](<#func-yamlconfigreader-readvariables>)
 
@@ -428,7 +430,15 @@ NormalizePlanBytes folds typed\-key custom actions in raw plan bytes into the ge
 
 The input is returned UNCHANGED — byte\-for\-byte — when isCustom is nil or no step needed folding, so a plan that uses only built\-ins \(the common case\) never gets reflowed and its hash is stable.
 
-## func [ReadConfigWithValidation](<https://github.com/alehatsman/mooncake/blob/main/internal/config/reader.go#L464>)
+## func [ReadConfigBytesWithValidation](<https://github.com/alehatsman/mooncake/blob/main/internal/config/reader.go#L493>)
+
+```go
+func ReadConfigBytesWithValidation(data []byte, label string, isCustom IsCustomAction) (*ParsedConfig, []Diagnostic, error)
+```
+
+ReadConfigBytesWithValidation is a convenience wrapper over the default YAML reader for in\-memory config bytes \(\#142\). label names the source in diagnostics; there is no file on disk. See \(\*YAMLConfigReader\).ReadConfigBytesWithValidation.
+
+## func [ReadConfigWithValidation](<https://github.com/alehatsman/mooncake/blob/main/internal/config/reader.go#L481>)
 
 ```go
 func ReadConfigWithValidation(path string, isCustom IsCustomAction) (*ParsedConfig, []Diagnostic, error)
@@ -436,7 +446,7 @@ func ReadConfigWithValidation(path string, isCustom IsCustomAction) (*ParsedConf
 
 ReadConfigWithValidation is a convenience function using the default YAML reader. Returns parsed config \(with steps, global vars, version\), diagnostics, and any parsing errors. See \(\*YAMLConfigReader\).ReadConfigWithValidation for isCustom.
 
-## func [ReadVariables](<https://github.com/alehatsman/mooncake/blob/main/internal/config/reader.go#L473>)
+## func [ReadVariables](<https://github.com/alehatsman/mooncake/blob/main/internal/config/reader.go#L502>)
 
 ```go
 func ReadVariables(path string) (map[string]interface{}, error)
@@ -1672,7 +1682,7 @@ type ParsedConfig struct {
 }
 ```
 
-### func [ReadConfig](<https://github.com/alehatsman/mooncake/blob/main/internal/config/reader.go#L457>)
+### func [ReadConfig](<https://github.com/alehatsman/mooncake/blob/main/internal/config/reader.go#L474>)
 
 ```go
 func ReadConfig(path string) (*ParsedConfig, error)
@@ -2915,6 +2925,14 @@ func (r *YAMLConfigReader) ReadConfig(path string) (*ParsedConfig, error)
 
 ReadConfig reads configuration steps from a YAML file For backward compatibility, this method validates the config and returns an error if any validation errors are found
 
+### func \(\*YAMLConfigReader\) [ReadConfigBytesWithValidation](<https://github.com/alehatsman/mooncake/blob/main/internal/config/reader.go#L69>)
+
+```go
+func (r *YAMLConfigReader) ReadConfigBytesWithValidation(data []byte, label string, isCustom IsCustomAction) (*ParsedConfig, []Diagnostic, error)
+```
+
+ReadConfigBytesWithValidation parses config bytes that are already in memory, with the identical validation/normalization pipeline as the file\-based reader \(auto YAML/JSON detection, secret\-tag substitution, custom\-action carrier folding, strict \+ schema \+ template validation\). label is a human\-readable source name used only in diagnostics — there is no file on disk \(\#142\). Used by the SDK's ApplyBytes inline entry.
+
 ### func \(\*YAMLConfigReader\) [ReadConfigWithValidation](<https://github.com/alehatsman/mooncake/blob/main/internal/config/reader.go#L54>)
 
 ```go
@@ -2925,7 +2943,7 @@ ReadConfigWithValidation reads configuration steps from a YAML file with full va
 
 isCustom is the action\-registry predicate: a typed\-key custom action \(\`notify.webhook: \{…\}\`\) whose name it recognizes is folded into the generic carrier before validation, so it parses, validates, and dispatches exactly like a built\-in \(see normalizeCustomActionSteps\). Pass nil for built\-ins only — every non\-builtin key then stays an unknown\-field error, preserving the strict typo diagnostics.
 
-### func \(\*YAMLConfigReader\) [ReadVariables](<https://github.com/alehatsman/mooncake/blob/main/internal/config/reader.go#L430>)
+### func \(\*YAMLConfigReader\) [ReadVariables](<https://github.com/alehatsman/mooncake/blob/main/internal/config/reader.go#L447>)
 
 ```go
 func (r *YAMLConfigReader) ReadVariables(path string) (map[string]interface{}, error)

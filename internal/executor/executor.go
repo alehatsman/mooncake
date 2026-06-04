@@ -1383,6 +1383,17 @@ func ExecutePlanWithCapture(ctx context.Context, p *plan.Plan, sudoPass string, 
 	return executePlanWithCapture(ctx, p, sudoPass, mode, log, publisher, capture, nil, nil)
 }
 
+// ExecutePlanFull runs a pre-compiled plan with the full options set:
+// capture, policy, and registry. All three may be nil (nil capture
+// disables the kernel-result substrate; nil policy enforces nothing;
+// nil registry uses the process-wide global). Used by the SDK's
+// inline-input execution path so ApplySteps/ApplyConfig/ApplyBytes
+// thread policy and a consumer-owned registry through the same funnel
+// as Apply.
+func ExecutePlanFull(ctx context.Context, p *plan.Plan, sudoPass string, mode actions.Mode, log logger.Logger, publisher events.Publisher, capture *RunCapture, policy *Policy, registry *actions.Registry) error {
+	return executePlanWithCapture(ctx, p, sudoPass, mode, log, publisher, capture, policy, registry)
+}
+
 // executePlanWithCapture is the shared implementation behind
 // ExecutePlan and Start. Pass capture=nil to disable the
 // kernel-result substrate (legacy callers).

@@ -255,6 +255,35 @@ func (p *Planner) BuildPlan(cfg PlannerConfig) (*Plan, error) {
 		return nil, err
 	}
 
+	return p.buildFromRunConfig(runConfig, cfg, cfg.ConfigPath, true)
+}
+
+// BuildPlanFromConfig generates a plan from an already-parsed RunConfig,
+// skipping the file read. It runs the identical pipeline as BuildPlan —
+// var merge, facts injection, step expansion (loops, includes, template
+// rendering), strict-template scan — so inline/in-memory input is not a
+// parallel code path (#142). Relative paths and `import:` references in
+// the steps resolve against the process cwd, since there is no source
+// file to anchor them. The synthetic root is labeled "<inline>" and no
+// input-file hash is computed (an in-memory plan cannot be stale).
+func (p *Planner) BuildPlanFromConfig(runConfig *config.RunConfig, cfg PlannerConfig) (*Plan, error) {
+	p.reg = cfg.Registry
+	if runConfig == nil {
+		return nil, fmt.Errorf("BuildPlanFromConfig: runConfig must not be nil")
+	}
+	return p.buildFromRunConfig(runConfig, cfg, inlineRootLabel, false)
+}
+
+// inlineRootLabel is the synthetic RootFile for in-memory plans built
+// via BuildPlanFromConfig — they have no source file on disk.
+const inlineRootLabel = "<inline>"
+
+// buildFromRunConfig is the shared body behind BuildPlan (file source)
+// and BuildPlanFromConfig (in-memory source). rootFile anchors path /
+// include resolution and labels the plan; trackInputFiles enables the
+// stale-plan input-file hash (file mode only — an in-memory plan cannot
+// be stale, so it skips both the abs-path seen-set seeding and the hash).
+func (p *Planner) buildFromRunConfig(runConfig *config.RunConfig, cfg PlannerConfig, rootFile string, trackInputFiles bool) (*Plan, error) {
 	// Task selection: when TaskName is set, swap the top-level Steps
 	// for the named task's Steps and layer the task's Vars between
 	// file-level vars (lowest) and caller-supplied Variables (highest).
@@ -265,7 +294,7 @@ func (p *Planner) BuildPlan(cfg PlannerConfig) (*Plan, error) {
 		task, ok := runConfig.Tasks[cfg.TaskName]
 		if !ok {
 			return nil, fmt.Errorf("task %q not found in %s (defined tasks: %s)",
-				cfg.TaskName, cfg.ConfigPath, joinTaskNames(runConfig.Tasks))
+				cfg.TaskName, rootFile, joinTaskNames(runConfig.Tasks))
 		}
 		runConfig.Steps = task.Steps
 		taskVars = task.Vars
@@ -275,7 +304,7 @@ func (p *Planner) BuildPlan(cfg PlannerConfig) (*Plan, error) {
 	plan := &Plan{
 		Version:     "1.0",
 		GeneratedAt: time.Now(),
-		RootFile:    cfg.ConfigPath,
+		RootFile:    rootFile,
 		Steps:       make([]config.Step, 0),
 		InitialVars: cfg.Variables,
 		Tags:        cfg.Tags,
@@ -322,13 +351,10 @@ func (p *Planner) BuildPlan(cfg PlannerConfig) (*Plan, error) {
 	// Create expansion context. CurrentDir must be absolute so that path
 	// expansion in walkAndRender produces absolute paths — otherwise the
 	// template/copy/file handlers re-join against their own (possibly
-	// different) CurrentDir at execute time and the path doubles.
-	currentDir := filepath.Dir(cfg.ConfigPath)
-	if !filepath.IsAbs(currentDir) {
-		if abs, absErr := filepath.Abs(currentDir); absErr == nil {
-			currentDir = abs
-		}
-	}
+	// different) CurrentDir at execute time and the path doubles. For an
+	// in-memory plan there is no source file, so relative paths anchor to
+	// the process cwd; for a file source they anchor to the config's dir.
+	currentDir := p.rootDir(rootFile, trackInputFiles)
 	ctx := &ExpansionContext{
 		Variables:  variables,
 		CurrentDir: currentDir,
@@ -337,35 +363,47 @@ func (p *Planner) BuildPlan(cfg PlannerConfig) (*Plan, error) {
 		Names:      cfg.Names,
 	}
 
-	// Mark root file as seen
-	absPath, err := filepath.Abs(cfg.ConfigPath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to resolve config path: %w", err)
-	}
-	p.seenFiles[absPath] = true
-	p.inputFiles = append(p.inputFiles, absPath)
+	if trackInputFiles {
+		// Mark root file as seen
+		absPath, err := filepath.Abs(rootFile)
+		if err != nil {
+			return nil, fmt.Errorf("failed to resolve config path: %w", err)
+		}
+		p.seenFiles[absPath] = true
+		p.inputFiles = append(p.inputFiles, absPath)
 
-	// Push root frame
-	p.includeStack = append(p.includeStack, IncludeFrame{
-		FilePath: absPath,
-		Line:     1,
-		Column:   1,
-	})
+		// Push root frame
+		p.includeStack = append(p.includeStack, IncludeFrame{
+			FilePath: absPath,
+			Line:     1,
+			Column:   1,
+		})
+	} else {
+		// In-memory source: push a virtual root frame so include-depth
+		// and error locations still have an anchor, but seed no real file.
+		p.includeStack = append(p.includeStack, IncludeFrame{
+			FilePath: filepath.Join(currentDir, rootFile),
+			Line:     1,
+			Column:   1,
+		})
+	}
 
 	// Expand all steps
 	if expandErr := p.expandSteps(runConfig.Steps, ctx, plan, 0); expandErr != nil {
 		return nil, expandErr
 	}
 
-	// Capture the input-file set + hash for stale-plan detection at
-	// apply time. Dedupe (a file may appear multiple times if included
-	// from multiple parents) and store sorted for determinism.
-	plan.InputFiles = uniqueSorted(p.inputFiles)
-	hash, err := HashInputFiles(plan.InputFiles)
-	if err != nil {
-		return nil, fmt.Errorf("hash input files: %w", err)
+	if trackInputFiles {
+		// Capture the input-file set + hash for stale-plan detection at
+		// apply time. Dedupe (a file may appear multiple times if included
+		// from multiple parents) and store sorted for determinism.
+		plan.InputFiles = uniqueSorted(p.inputFiles)
+		hash, err := HashInputFiles(plan.InputFiles)
+		if err != nil {
+			return nil, fmt.Errorf("hash input files: %w", err)
+		}
+		plan.InputFilesHash = hash
 	}
-	plan.InputFilesHash = hash
 
 	// Strict-template scan: surfaces `{{ root }}` references whose
 	// root identifier is not in initial_vars and not produced by a
@@ -375,6 +413,26 @@ func (p *Planner) BuildPlan(cfg PlannerConfig) (*Plan, error) {
 	plan.UnresolvedTemplates = CheckPlanStrict(plan)
 
 	return plan, nil
+}
+
+// rootDir returns the absolute directory relative paths and includes
+// resolve against. For a file source it is the config file's parent
+// dir; for an in-memory source (fromFile=false) it is the process cwd,
+// since there is no file to anchor against.
+func (p *Planner) rootDir(rootFile string, fromFile bool) string {
+	if !fromFile {
+		if wd, err := os.Getwd(); err == nil {
+			return wd
+		}
+		return "."
+	}
+	currentDir := filepath.Dir(rootFile)
+	if !filepath.IsAbs(currentDir) {
+		if abs, absErr := filepath.Abs(currentDir); absErr == nil {
+			currentDir = abs
+		}
+	}
+	return currentDir
 }
 
 // joinTaskNames returns the comma-separated, sorted list of keys in
@@ -416,7 +474,37 @@ func (p *Planner) readRunConfig(path string) (*config.RunConfig, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to read config: %w", err)
 	}
+	return runConfigFromParsed(parsedConfig, diagnostics)
+}
 
+// BuildPlanFromBytes parses raw config bytes and builds a plan from them
+// with no file on disk (#142). The bytes go through the identical
+// validation pipeline as a file source (auto YAML/JSON detection, custom-
+// action carrier folding, schema + strict + template validation), then
+// the same expansion as BuildPlan. Relative paths anchor to the cwd.
+func (p *Planner) BuildPlanFromBytes(data []byte, cfg PlannerConfig) (*Plan, error) {
+	p.reg = cfg.Registry
+	runConfig, err := p.readRunConfigBytes(data)
+	if err != nil {
+		return nil, err
+	}
+	return p.buildFromRunConfig(runConfig, cfg, inlineRootLabel, false)
+}
+
+// readRunConfigBytes parses + validates in-memory config bytes, mirroring
+// readRunConfig but without a file read (#142).
+func (p *Planner) readRunConfigBytes(data []byte) (*config.RunConfig, error) {
+	parsedConfig, diagnostics, err := config.ReadConfigBytesWithValidation(data, inlineRootLabel, actions.PredicateFor(p.reg))
+	if err != nil {
+		return nil, fmt.Errorf("failed to read config: %w", err)
+	}
+	return runConfigFromParsed(parsedConfig, diagnostics)
+}
+
+// runConfigFromParsed converts a *ParsedConfig into a *RunConfig after
+// failing on any error-severity diagnostics. Shared by the file- and
+// bytes-based readers.
+func runConfigFromParsed(parsedConfig *config.ParsedConfig, diagnostics []config.Diagnostic) (*config.RunConfig, error) {
 	// Check for validation errors
 	if len(diagnostics) > 0 && config.HasErrors(diagnostics) {
 		formatted := config.FormatDiagnosticsWithContext(diagnostics)

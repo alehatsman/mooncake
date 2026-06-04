@@ -51,10 +51,13 @@ gated, reversible, audited — with native-feeling latency.
   `With*` option helpers and `AssertHandlerConformance` exercise a handler's
   `Validate`/`Run` and its ABI conformance without standing up a real run
   (#123).
-- WHEN a coding driver dispatches a single synthesized step, the facade MUST
-  accept an in-memory plan — `ApplyConfig` / `ApplySteps` / `ApplyBytes` — so an
-  edit or exec runs without writing a temp YAML, sharing the `Apply` policy,
-  registry, and subscriber plumbing (planned, not built).
+- WHEN a coding driver dispatches a single synthesized step, the facade
+  accepts an in-memory plan — `ApplyConfig` / `ApplySteps` / `ApplyBytes` — so an
+  edit or exec runs without writing a temp YAML. The config is compiled
+  through the planner's expansion (templates, loops, includes) into an
+  ephemeral plan and executed via the in-memory apply runner, sharing the
+  `Apply` policy, registry, subscriber, and output-default plumbing; relative
+  paths resolve against the process cwd (#142).
 - WHEN a coding driver reads context, the facade MUST expose direct
   `Read` / `Grep` / `Glob` query helpers that return file content and matches
   WITHOUT compiling a plan or invoking the executor, so the read path stays at
@@ -101,8 +104,9 @@ gated, reversible, audited — with native-feeling latency.
 - [x] `ApplyOptions.Policy` gate (#11) + ordered `Subscribers` channel
 - [x] Authoring/testing: `NewTestContext`, `With*`, `AssertHandlerConformance`
       (#123)
-- [ ] Inline execution input: `ApplyConfig` / `ApplySteps` / `ApplyBytes`
-      (planned — follow-up issue)
+- [x] Inline execution input: `ApplyConfig` / `ApplySteps` / `ApplyBytes`
+      — compile through the planner's expansion into an in-memory plan, no
+      temp YAML; shared funnel with `Apply` (#142)
 - [ ] Read surface: `Read` / `Grep` / `Glob` direct query helpers, no executor
       (planned — follow-up issue)
 - [ ] Single-step mutation helpers: `Edit` / `Write` / `Exec` over one-step

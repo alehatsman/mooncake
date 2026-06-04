@@ -57,7 +57,24 @@ func (r *YAMLConfigReader) ReadConfigWithValidation(path string, isCustom IsCust
 	if err != nil {
 		return nil, nil, err
 	}
+	return r.parseConfigData(data, path, isCustom)
+}
 
+// ReadConfigBytesWithValidation parses config bytes that are already in
+// memory, with the identical validation/normalization pipeline as the
+// file-based reader (auto YAML/JSON detection, secret-tag substitution,
+// custom-action carrier folding, strict + schema + template validation).
+// label is a human-readable source name used only in diagnostics — there
+// is no file on disk (#142). Used by the SDK's ApplyBytes inline entry.
+func (r *YAMLConfigReader) ReadConfigBytesWithValidation(data []byte, label string, isCustom IsCustomAction) (*ParsedConfig, []Diagnostic, error) {
+	return r.parseConfigData(data, label, isCustom)
+}
+
+// parseConfigData is the shared body behind the file-based and
+// bytes-based readers: everything after the source bytes are obtained.
+// path is the source label (a real file path, or a "<...>" marker for
+// in-memory input) used in diagnostics and the empty-input message.
+func (r *YAMLConfigReader) parseConfigData(data []byte, path string, isCustom IsCustomAction) (*ParsedConfig, []Diagnostic, error) {
 	// MT-73: empty or whitespace-only files would otherwise surface as
 	// io.EOF (YAML) or "unexpected end of JSON input" (JSON). Replace with
 	// a clear "what to put here" message before format detection runs.
@@ -467,6 +484,18 @@ func ReadConfigWithValidation(path string, isCustom IsCustomAction) (*ParsedConf
 		return nil, nil, fmt.Errorf("internal error: defaultReader is not a YAMLConfigReader")
 	}
 	return reader.ReadConfigWithValidation(path, isCustom)
+}
+
+// ReadConfigBytesWithValidation is a convenience wrapper over the default
+// YAML reader for in-memory config bytes (#142). label names the source
+// in diagnostics; there is no file on disk. See
+// (*YAMLConfigReader).ReadConfigBytesWithValidation.
+func ReadConfigBytesWithValidation(data []byte, label string, isCustom IsCustomAction) (*ParsedConfig, []Diagnostic, error) {
+	reader, ok := defaultReader.(*YAMLConfigReader)
+	if !ok {
+		return nil, nil, fmt.Errorf("internal error: defaultReader is not a YAMLConfigReader")
+	}
+	return reader.ReadConfigBytesWithValidation(data, label, isCustom)
 }
 
 // ReadVariables is a convenience function using the default YAML reader

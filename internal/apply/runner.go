@@ -254,6 +254,14 @@ func (r *Runner) Run(ctx context.Context) (*KernelResult, error) {
 	return assembleResult(capture, tail, execErr), execErr
 }
 
+// FailedResult returns a KernelResult for early-exit paths where the
+// executor never ran (e.g. the SDK's inline-input entries rejecting a
+// nil/unparseable config before any plan is built). Exported so those
+// callers return the same typed shape as a kernel-level failure.
+func FailedResult(err error) *KernelResult {
+	return failedResult(err)
+}
+
 // failedResult returns a KernelResult for early-exit paths where the
 // executor never ran. Used for validate() errors so callers see a
 // consistent shape even when err != nil.

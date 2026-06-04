@@ -23,6 +23,8 @@ Package plan provides plan generation and persistence for mooncake configuration
 - [type Planner](<#type-planner>)
   - [func NewPlanner() (*Planner, error)](<#func-newplanner>)
   - [func (p *Planner) BuildPlan(cfg PlannerConfig) (*Plan, error)](<#func-planner-buildplan>)
+  - [func (p *Planner) BuildPlanFromBytes(data []byte, cfg PlannerConfig) (*Plan, error)](<#func-planner-buildplanfrombytes>)
+  - [func (p *Planner) BuildPlanFromConfig(runConfig *config.RunConfig, cfg PlannerConfig) (*Plan, error)](<#func-planner-buildplanfromconfig>)
   - [func (p *Planner) ExpandStepsWithContext(steps []config.Step, variables map[string]interface{}, currentDir string) ([]config.Step, error)](<#func-planner-expandstepswithcontext>)
 - [type PlannerConfig](<#type-plannerconfig>)
 - [type StaleError](<#type-staleerror>)
@@ -199,6 +201,22 @@ func (p *Planner) BuildPlan(cfg PlannerConfig) (*Plan, error)
 ```
 
 BuildPlan generates a deterministic execution plan from a config file
+
+### func \(\*Planner\) [BuildPlanFromBytes](<https://github.com/alehatsman/mooncake/blob/main/internal/plan/planner.go#L485>)
+
+```go
+func (p *Planner) BuildPlanFromBytes(data []byte, cfg PlannerConfig) (*Plan, error)
+```
+
+BuildPlanFromBytes parses raw config bytes and builds a plan from them with no file on disk \(\#142\). The bytes go through the identical validation pipeline as a file source \(auto YAML/JSON detection, custom\- action carrier folding, schema \+ strict \+ template validation\), then the same expansion as BuildPlan. Relative paths anchor to the cwd.
+
+### func \(\*Planner\) [BuildPlanFromConfig](<https://github.com/alehatsman/mooncake/blob/main/internal/plan/planner.go#L269>)
+
+```go
+func (p *Planner) BuildPlanFromConfig(runConfig *config.RunConfig, cfg PlannerConfig) (*Plan, error)
+```
+
+BuildPlanFromConfig generates a plan from an already\-parsed RunConfig, skipping the file read. It runs the identical pipeline as BuildPlan — var merge, facts injection, step expansion \(loops, includes, template rendering\), strict\-template scan — so inline/in\-memory input is not a parallel code path \(\#142\). Relative paths and \`import:\` references in the steps resolve against the process cwd, since there is no source file to anchor them. The synthetic root is labeled "\<inline\>" and no input\-file hash is computed \(an in\-memory plan cannot be stale\).
 
 ### func \(\*Planner\) [ExpandStepsWithContext](<https://github.com/alehatsman/mooncake/blob/main/internal/plan/planner.go#L225>)
 
