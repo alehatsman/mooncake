@@ -56,6 +56,10 @@ func RegisterAllTools(srv *Server) {
 			srv.RegisterTool(def, HandleGlobFiles)
 		case "run_plan_inline":
 			srv.RegisterTool(def, HandleRunPlanInline)
+		case "fleet_list_peers":
+			srv.RegisterTool(def, HandleListPeers)
+		case "fleet_run_plan":
+			srv.RegisterTool(def, HandleFleetRunPlan)
 		}
 	}
 }
@@ -270,6 +274,24 @@ func AllTools() []ToolDef {
 				"yaml":   strProp("Inline YAML or JSON plan content"),
 				"policy": policyProp(),
 			}, []string{"yaml"}),
+		},
+		{
+			Name:        "fleet_list_peers",
+			Description: "List every peer configured in peers.toml — name, addr, transport, tags, and roles. Read-only. Use this before fleet_run_plan to see which machines are available.",
+			InputSchema: objSchema(map[string]interface{}{
+				"peers_file": strProp("Optional path to peers.toml. Defaults to $XDG_CONFIG_HOME/mooncake/peers.toml."),
+			}, nil),
+		},
+		{
+			Name:        "fleet_run_plan",
+			Description: "Apply a mooncake config across the fleet (one or more remote peers). Drives `mooncake fleet apply` under the hood — uploads the plan, runs it on each peer in parallel, and returns per-peer outcomes + a summary. Mutates remote systems; use fleet_list_peers first to confirm targets.",
+			InputSchema: objSchema(map[string]interface{}{
+				"config":     strProp("Path to mooncake config YAML file"),
+				"peers_file": strProp("Optional path to peers.toml. Defaults to $XDG_CONFIG_HOME/mooncake/peers.toml."),
+				"peers":      strArrayProp("Optional peer name filter. Omit to target all peers. Each entry is an exact peer name from peers.toml."),
+				"vars_file":  strArrayProp("Optional vars files (relative or absolute paths). Same semantics as --vars-file on the CLI."),
+				"parallel":   map[string]interface{}{"type": "integer", "description": "Max number of peers to apply to concurrently. 0 = default (all peers)."},
+			}, []string{"config"}),
 		},
 	}
 }
