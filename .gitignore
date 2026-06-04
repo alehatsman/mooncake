@@ -77,6 +77,6 @@ docs-working/ARCH_SNAPSHOT.md
 .claude/
 # dex: track the committed opt-in config but ignore the local index
 # cache + generated artifacts (e.g. llm_guide.manifest.json). Without an
-# [index].include list dex indexes nothing, so the config must ship.
+# index.include list dex indexes nothing, so the config must ship.
 .dex/*
-!.dex/config.toml
+!.dex/config.yml

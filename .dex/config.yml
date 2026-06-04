@@ -1,0 +1,21 @@
+# dex indexing config. Indexing is opt-in: only paths matching an
+# include pattern below are indexed; everything else (generated docs
+# under dist/, build output, out/) is skipped. Patterns use gitignore
+# grammar — a trailing slash matches a directory subtree, "*.md" matches
+# at any depth, a leading slash anchors to the repo root.
+index:
+  include:
+    - cmd/        # Go entrypoints
+    - internal/   # Go packages (incl. nested *.md design notes)
+    - sdk/        # public Go SDK surface
+    - scripts/    # shell tooling
+    - examples/   # reference profiles / templates
+    - "/*.md"     # top-level docs only (README, VISION, ROADMAP, AGENT, …)
+    - tasks.yml
+    - go.mod
+  # Carve-outs within the included trees (same grammar). Generated /
+  # output dirs (dist/, out/, site/, build/) are excluded simply by not
+  # being included above, so they need no entry here.
+  ignore:
+    - internal/metrics/testdata/   # numeric proc/darwin command-output fixtures
+    - "examples/**/files/"         # inert example fixture payloads
