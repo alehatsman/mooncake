@@ -71,6 +71,12 @@ One page per registered action: properties, examples, capabilities.
 - [windows.hyperv.firewall.rule](actions/windows_hyperv_firewall_rule.md)
 - [windows.scheduled.task](actions/windows_scheduled_task.md)
 
+## Concepts
+
+How the kernel, planner, executor, and other core systems work.
+
+- [modules](concepts/modules.md)
+
 ## CLI
 
 Reference for every `mooncake` subcommand and its flags.

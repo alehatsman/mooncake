@@ -64,6 +64,8 @@
     - [windows.firewall.rule](actions/windows_firewall_rule.md)
     - [windows.hyperv.firewall.rule](actions/windows_hyperv_firewall_rule.md)
     - [windows.scheduled.task](actions/windows_scheduled_task.md)
+- Concepts:
+    - [modules](concepts/modules.md)
 - CLI:
     - [actions](cli/actions.md)
     - [actions.list](cli/actions_list.md)
