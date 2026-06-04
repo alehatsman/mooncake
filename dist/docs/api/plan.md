@@ -194,7 +194,7 @@ func NewPlanner() (*Planner, error)
 
 NewPlanner creates a new Planner instance. Returns an error if template renderer initialization fails.
 
-### func \(\*Planner\) [BuildPlan](<https://github.com/alehatsman/mooncake/blob/main/internal/plan/planner.go#L247>)
+### func \(\*Planner\) [BuildPlan](<https://github.com/alehatsman/mooncake/blob/main/internal/plan/planner.go#L249>)
 
 ```go
 func (p *Planner) BuildPlan(cfg PlannerConfig) (*Plan, error)
@@ -202,7 +202,7 @@ func (p *Planner) BuildPlan(cfg PlannerConfig) (*Plan, error)
 
 BuildPlan generates a deterministic execution plan from a config file
 
-### func \(\*Planner\) [BuildPlanFromBytes](<https://github.com/alehatsman/mooncake/blob/main/internal/plan/planner.go#L485>)
+### func \(\*Planner\) [BuildPlanFromBytes](<https://github.com/alehatsman/mooncake/blob/main/internal/plan/planner.go#L487>)
 
 ```go
 func (p *Planner) BuildPlanFromBytes(data []byte, cfg PlannerConfig) (*Plan, error)
@@ -210,7 +210,7 @@ func (p *Planner) BuildPlanFromBytes(data []byte, cfg PlannerConfig) (*Plan, err
 
 BuildPlanFromBytes parses raw config bytes and builds a plan from them with no file on disk \(\#142\). The bytes go through the identical validation pipeline as a file source \(auto YAML/JSON detection, custom\- action carrier folding, schema \+ strict \+ template validation\), then the same expansion as BuildPlan. Relative paths anchor to the cwd.
 
-### func \(\*Planner\) [BuildPlanFromConfig](<https://github.com/alehatsman/mooncake/blob/main/internal/plan/planner.go#L269>)
+### func \(\*Planner\) [BuildPlanFromConfig](<https://github.com/alehatsman/mooncake/blob/main/internal/plan/planner.go#L271>)
 
 ```go
 func (p *Planner) BuildPlanFromConfig(runConfig *config.RunConfig, cfg PlannerConfig) (*Plan, error)

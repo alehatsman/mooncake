@@ -223,11 +223,13 @@ func NewPlanner() (*Planner, error) {
 // This is useful for expanding preset steps which may contain includes, loops, etc.
 // Returns the expanded steps ready for execution.
 func (p *Planner) ExpandStepsWithContext(steps []config.Step, variables map[string]interface{}, currentDir string) ([]config.Step, error) {
-	// Create expansion context
+	// Create expansion context. FromComponent=true so output paths (plan:"outpath",
+	// e.g. file.copy dest) resolve against invocation_dir, not the module-cache dir.
 	ctx := &ExpansionContext{
-		Variables:  variables,
-		CurrentDir: currentDir,
-		Tags:       nil, // No tag filtering for preset expansion
+		Variables:     variables,
+		CurrentDir:    currentDir,
+		Tags:          nil, // No tag filtering for preset expansion
+		FromComponent: true,
 	}
 
 	// Create temporary plan to collect expanded steps
@@ -1564,11 +1566,12 @@ func (p *Planner) copyContextWithLoopVars(ctx *ExpansionContext, loopCtx *config
 	newVars := utils.MergeVariables(ctx.Variables, loopVars)
 
 	return &ExpansionContext{
-		Variables:  newVars,
-		CurrentDir: ctx.CurrentDir,
-		Tags:       ctx.Tags,
-		SkipTags:   ctx.SkipTags,
-		Names:      ctx.Names,
+		Variables:     newVars,
+		CurrentDir:    ctx.CurrentDir,
+		Tags:          ctx.Tags,
+		SkipTags:      ctx.SkipTags,
+		Names:         ctx.Names,
+		FromComponent: ctx.FromComponent,
 	}
 }
 
