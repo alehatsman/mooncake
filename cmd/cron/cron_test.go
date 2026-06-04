@@ -12,6 +12,13 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
+// TestMain disables cli's default os.Exit-on-ExitCoder so that tests can
+// inspect non-zero exit errors returned from app.Run without killing the process.
+func TestMain(m *testing.M) {
+	cli.OsExiter = func(_ int) {}
+	os.Exit(m.Run())
+}
+
 func newTestApp(w io.Writer) *cli.App {
 	app := &cli.App{Writer: w}
 	app.Commands = []*cli.Command{Command()}
@@ -274,5 +281,81 @@ func TestCronList_ManagedColumn(t *testing.T) {
 	}
 	if !strings.Contains(systemLine, "no") {
 		t.Errorf("system line should contain 'no': %q", systemLine)
+	}
+}
+
+// ---- cron remove ----
+
+func TestCronRemove_Managed(t *testing.T) {
+	dir := t.TempDir()
+	writeCronFile(t, dir, "backup", "# Managed by mooncake os.cron\n0 2 * * * root /bin/backup\n")
+
+	out, err := run(t, "cron", "remove", "--dir", dir, "backup")
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if !strings.Contains(out, "removed") {
+		t.Errorf("expected 'removed' in output, got: %q", out)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "backup")); !os.IsNotExist(err) {
+		t.Error("file should be gone")
+	}
+}
+
+func TestCronRemove_NotFound(t *testing.T) {
+	dir := t.TempDir()
+	_, err := run(t, "cron", "remove", "--dir", dir, "ghost")
+	if err == nil {
+		t.Fatal("expected error for missing file")
+	}
+	exitErr, ok := err.(cli.ExitCoder)
+	if !ok || exitErr.ExitCode() != 1 {
+		t.Errorf("expected exit code 1, got: %v", err)
+	}
+}
+
+func TestCronRemove_NotManagedBlocked(t *testing.T) {
+	dir := t.TempDir()
+	writeCronFile(t, dir, "system-job", "# system cron\n0 * * * * root /bin/x\n")
+
+	_, err := run(t, "cron", "remove", "--dir", dir, "system-job")
+	if err == nil {
+		t.Fatal("expected error for unmanaged file without --force")
+	}
+	exitErr, ok := err.(cli.ExitCoder)
+	if !ok || exitErr.ExitCode() != 2 {
+		t.Errorf("expected exit code 2, got: %v", err)
+	}
+	if _, statErr := os.Stat(filepath.Join(dir, "system-job")); statErr != nil {
+		t.Error("file should still exist")
+	}
+}
+
+func TestCronRemove_Force(t *testing.T) {
+	dir := t.TempDir()
+	writeCronFile(t, dir, "system-job", "# system cron\n0 * * * * root /bin/x\n")
+
+	_, err := run(t, "cron", "remove", "--dir", dir, "--force", "system-job")
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if _, statErr := os.Stat(filepath.Join(dir, "system-job")); !os.IsNotExist(statErr) {
+		t.Error("file should be gone after --force remove")
+	}
+}
+
+func TestCronRemove_PathTraversal(t *testing.T) {
+	dir := t.TempDir()
+	_, err := run(t, "cron", "remove", "--dir", dir, "../etc/passwd")
+	if err == nil {
+		t.Fatal("expected error for path traversal")
+	}
+}
+
+func TestCronRemove_MissingArg(t *testing.T) {
+	dir := t.TempDir()
+	_, err := run(t, "cron", "remove", "--dir", dir)
+	if err == nil {
+		t.Fatal("expected error for missing arg")
 	}
 }

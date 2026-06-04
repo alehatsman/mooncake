@@ -23,9 +23,10 @@ const (
 func Command() *cli.Command {
 	return &cli.Command{
 		Name:  "cron",
-		Usage: "Inspect cron.d entries",
+		Usage: "Inspect and manage cron.d entries",
 		Subcommands: []*cli.Command{
 			listCmd(),
+			removeCmd(),
 		},
 	}
 }
@@ -156,6 +157,64 @@ func parseCronFile(name string, managed bool, content string) []cronEntry {
 		})
 	}
 	return out
+}
+
+func removeCmd() *cli.Command {
+	return &cli.Command{
+		Name:      "remove",
+		Usage:     "Remove a mooncake-managed cron.d entry",
+		ArgsUsage: "<name>",
+		Description: `Deletes /etc/cron.d/<name> if it is managed by mooncake os.cron.
+Use --force to remove files not managed by mooncake.
+
+Exit codes:
+  0  removed (or already absent)
+  1  file not found
+  2  error (unreadable, not managed without --force, etc.)`,
+		Flags: []cli.Flag{
+			&cli.StringFlag{
+				Name:  "dir",
+				Value: defaultCronDir,
+				Usage: "Path to cron.d directory",
+			},
+			&cli.BoolFlag{
+				Name:    "force",
+				Aliases: []string{"f"},
+				Usage:   "Remove even if not managed by mooncake",
+			},
+		},
+		Action: runRemove,
+	}
+}
+
+func runRemove(c *cli.Context) error {
+	name := c.Args().First()
+	if name == "" {
+		return cli.Exit("cron remove: missing <name> argument", 2)
+	}
+	if strings.Contains(name, "/") || strings.Contains(name, "..") {
+		return cli.Exit("cron remove: name must not contain path separators", 2)
+	}
+
+	path := filepath.Join(c.String("dir"), name)
+
+	data, err := os.ReadFile(path) // #nosec G304
+	if err != nil {
+		if os.IsNotExist(err) {
+			return cli.Exit(fmt.Sprintf("cron remove: %s: not found", name), 1)
+		}
+		return cli.Exit(fmt.Sprintf("cron remove: read %s: %v", name, err), 2)
+	}
+
+	if !strings.HasPrefix(string(data), managedHeader) && !c.Bool("force") {
+		return cli.Exit(fmt.Sprintf("cron remove: %s is not managed by mooncake (use --force to remove anyway)", name), 2)
+	}
+
+	if err := os.Remove(path); err != nil {
+		return cli.Exit(fmt.Sprintf("cron remove: %v", err), 2)
+	}
+	fmt.Fprintf(c.App.Writer, "removed %s\n", path)
+	return nil
 }
 
 func printJSON(c *cli.Context, entries []cronEntry) error {

@@ -95,6 +95,7 @@ Reference for every `mooncake` subcommand and its flags.
 - [apply](cli/apply.md)
 - [cron](cli/cron.md)
 - [cron.list](cli/cron_list.md)
+- [cron.remove](cli/cron_remove.md)
 - [docs](cli/docs.md)
 - [docs.generate](cli/docs_generate.md)
 - [doctor](cli/doctor.md)
