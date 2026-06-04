@@ -6,7 +6,13 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"os/exec"
+	"path/filepath"
+	"runtime"
+	"strings"
 	"syscall"
+
+	"github.com/alehatsman/mooncake/internal/fleet/install"
 )
 
 // swapBinary atomically replaces dst with src on Linux/macOS.
@@ -60,6 +66,66 @@ func swapBinary(src, dst string) error {
 // stub that returns syscall.EXDEV to exercise the fallback path
 // without needing an actual cross-fs mount.
 var renameFunc = os.Rename
+
+// reRenderAutostart re-renders the systemd unit file (system-scope or
+// user-scope) from the current daemon config and runs daemon-reload so
+// the restarted process sees the correct ExecStart args. Called in the
+// upgrade goroutine just before reExec.
+//
+// No-op when BindAddr is empty (unix-socket-only daemons have no
+// TCP port to bake in and typically aren't managed by a service unit
+// that was written by fleet bootstrap).
+func reRenderAutostart(cfg Config, _ string) error {
+	if cfg.BindAddr == "" {
+		return nil
+	}
+	port, err := tcpPortFromBindAddr(cfg.BindAddr)
+	if err != nil {
+		return fmt.Errorf("reRenderAutostart: parse bind_addr %q: %w", cfg.BindAddr, err)
+	}
+
+	inst := install.Installer{
+		OS:     runtime.GOOS,
+		Port:   port,
+		AsUser: !cfg.SystemMode,
+	}
+	content, err := inst.Render()
+	if err != nil {
+		return fmt.Errorf("reRenderAutostart: render unit: %w", err)
+	}
+
+	unitPath := inst.UnitPath()
+	if strings.HasPrefix(unitPath, "~/") {
+		home, err := os.UserHomeDir()
+		if err != nil {
+			return fmt.Errorf("reRenderAutostart: expand home: %w", err)
+		}
+		unitPath = filepath.Join(home, unitPath[2:])
+	}
+
+	if err := os.MkdirAll(filepath.Dir(unitPath), 0o755); err != nil {
+		return fmt.Errorf("reRenderAutostart: create unit dir: %w", err)
+	}
+	if err := os.WriteFile(unitPath, content, 0o644); err != nil {
+		return fmt.Errorf("reRenderAutostart: write %s: %w", unitPath, err)
+	}
+
+	reloadArgs := []string{"daemon-reload"}
+	if !cfg.SystemMode {
+		reloadArgs = []string{"--user", "daemon-reload"}
+	}
+	return systemctlReloadFunc(reloadArgs)
+}
+
+// systemctlReloadFunc is a test seam for the systemctl daemon-reload call.
+// Production code uses the real exec; tests replace this with a no-op.
+var systemctlReloadFunc = func(args []string) error {
+	out, err := exec.Command("systemctl", args...).CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("reRenderAutostart: daemon-reload: %w (output: %s)", err, strings.TrimSpace(string(out)))
+	}
+	return nil
+}
 
 // reExec replaces this process with a fresh execution of binPath,
 // keeping the same os.Args and environ. file-descriptor inheritance
