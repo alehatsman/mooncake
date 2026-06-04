@@ -48,6 +48,14 @@ func RegisterAllTools(srv *Server) {
 			srv.RegisterTool(def, HandleDescribeAction)
 		case "list_presets":
 			srv.RegisterTool(def, HandleListPresets)
+		case "read_file":
+			srv.RegisterTool(def, HandleReadFile)
+		case "grep_files":
+			srv.RegisterTool(def, HandleGrepFiles)
+		case "glob_files":
+			srv.RegisterTool(def, HandleGlobFiles)
+		case "run_plan_inline":
+			srv.RegisterTool(def, HandleRunPlanInline)
 		}
 	}
 }
@@ -223,6 +231,45 @@ func AllTools() []ToolDef {
 			Name:        "list_presets",
 			Description: "List every preset discoverable on this host — built-in, registry-cloned, and local. Each entry carries name + description + version + source + path so an agent can decide which to plan with before running it. Returns JSON. Read-only.",
 			InputSchema: objSchema(nil, nil),
+		},
+		// CodingBackend wire-form tools (#145). These four tools are the JSON-RPC
+		// surface of the sdk.CodingBackend interface — swapping the backend
+		// implementation on the daemon side needs no prompt change.
+		{
+			Name:        "read_file",
+			Description: "Read raw bytes from a file on the daemon host. Returns base64-encoded content in a JSON envelope so binary files round-trip safely. Read-only.",
+			InputSchema: objSchema(map[string]interface{}{
+				"path":   strProp("Absolute or relative path to read"),
+				"offset": map[string]interface{}{"type": "integer", "description": "Byte offset to start from. 0 or omitted means start of file."},
+				"limit":  map[string]interface{}{"type": "integer", "description": "Maximum bytes to return. 0 or omitted means up to 16 MiB."},
+			}, []string{"path"}),
+		},
+		{
+			Name:        "grep_files",
+			Description: "Walk a directory tree and return lines matching a RE2 pattern. Equivalent to sdk.Grep — direct filesystem walk, no executor. Read-only.",
+			InputSchema: objSchema(map[string]interface{}{
+				"pattern":          strProp("RE2 regular expression to match against each line"),
+				"dir":              strProp("Root directory to search. Defaults to the daemon's working directory."),
+				"extensions":       strArrayProp("Only search files with these extensions (without leading dot, e.g. 'go', 'ts'). Empty means all files."),
+				"max_results":      map[string]interface{}{"type": "integer", "description": "Cap on number of matches returned. 0 means no cap."},
+				"case_insensitive": boolProp("Match case-insensitively."),
+			}, []string{"pattern"}),
+		},
+		{
+			Name:        "glob_files",
+			Description: "Return paths matching a glob pattern on the daemon host. Equivalent to sdk.Glob — direct filepath.Glob call, no executor. Read-only.",
+			InputSchema: objSchema(map[string]interface{}{
+				"pattern": strProp("Glob pattern (e.g. '*.go', 'src/**/*.ts')"),
+				"dir":     strProp("Base directory to resolve the pattern against. Omit to use pattern as-is."),
+			}, []string{"pattern"}),
+		},
+		{
+			Name:        "run_plan_inline",
+			Description: "Compile and run a mooncake YAML/JSON plan supplied as a string — no temp file required. Returns the same JSON envelope as run_plan. Use check_plan for a dry-run preview first. Mutates the system.",
+			InputSchema: objSchema(map[string]interface{}{
+				"yaml":   strProp("Inline YAML or JSON plan content"),
+				"policy": policyProp(),
+			}, []string{"yaml"}),
 		},
 	}
 }

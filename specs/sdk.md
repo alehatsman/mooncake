@@ -107,11 +107,11 @@ gated, reversible, audited — with native-feeling latency.
 - [x] Inline execution input: `ApplyConfig` / `ApplySteps` / `ApplyBytes`
       — compile through the planner's expansion into an in-memory plan, no
       temp YAML; shared funnel with `Apply` (#142)
-- [ ] Read surface: `Read` / `Grep` / `Glob` direct query helpers, no executor
-      (planned — follow-up issue)
-- [ ] Single-step mutation helpers: `Edit` / `Write` / `Exec` over one-step
-      `Apply` with `Plan` pre-flight (planned — follow-up issue)
-- [ ] `CodingBackend` interface + Mooncake / Native / Remote impls; MCP server
-      as its wire form (planned — follow-up issue)
+- [x] Read surface: `Read` / `Grep` / `Glob` direct query helpers, no executor
+      (#143)
+- [x] Single-step mutation helpers: `Edit` / `Write` / `Exec` over one-step
+      `Apply` with `Plan` pre-flight (#144)
+- [x] `CodingBackend` interface + Mooncake / Native / Remote impls; MCP server
+      as its wire form (#145)
 - [ ] Optional `Session` handle (repo root + `Policy` + `Subscribers`)
       (planned — follow-up issue)
