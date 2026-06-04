@@ -255,6 +255,10 @@ func (s *Server) selfReplaceHandler(w http.ResponseWriter, r *http.Request) {
 
 	go func() {
 		time.Sleep(1 * time.Second)
+		if err := reRenderAutostart(s.cfg, currentPath); err != nil {
+			s.log.Warn("self-upgrade: could not re-render autostart unit; peer may fail to restart after next reboot",
+				"err", err)
+		}
 		if err := reExec(currentPath); err != nil {
 			s.log.Error("self-upgrade re-exec failed", "err", err, "binary", currentPath)
 		}
