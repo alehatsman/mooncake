@@ -83,6 +83,8 @@
     - [docs](cli/docs.md)
     - [docs.generate](cli/docs_generate.md)
     - [doctor](cli/doctor.md)
+    - [drift](cli/drift.md)
+    - [drift.inspect](cli/drift_inspect.md)
     - [explain](cli/explain.md)
     - [facts](cli/facts.md)
     - [fleet](cli/fleet.md)

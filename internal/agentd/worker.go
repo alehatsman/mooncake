@@ -222,6 +222,22 @@ func (w *Worker) executeRun(runID string) {
 	}); err != nil {
 		w.log.Error("worker: mark success", "run_id", runID, "err", err)
 	}
+
+	// Spec-58: record the plan parameters so the drift loop has a stable
+	// reference frame. Best-effort — failure is logged but does not affect
+	// the run's terminal state.
+	driftRec := LastAppliedRecord{
+		Scope:     PlanScope(run.BaseDir, run.PlanPath, run.VarsFiles, run.Tags),
+		PlanPath:  run.PlanPath,
+		BaseDir:   run.BaseDir,
+		VarsFiles: run.VarsFiles,
+		Tags:      run.Tags,
+		AppliedAt: finishedAt,
+		RunID:     run.ID,
+	}
+	if err := WriteLastApplied(w.store.StateDir(), driftRec); err != nil {
+		w.log.Warn("worker: write last-applied drift record", "run_id", runID, "err", err)
+	}
 }
 
 // writeKernelResult writes the apply.KernelResult returned by apply.Runner

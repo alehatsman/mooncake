@@ -100,6 +100,9 @@ func NewStore(stateDir string) (*Store, error) {
 // Root returns the absolute path under which run directories live.
 func (s *Store) Root() string { return s.root }
 
+// StateDir returns the agentd state directory (parent of the runs/ dir).
+func (s *Store) StateDir() string { return filepath.Dir(s.root) }
+
 // RunDir returns the directory holding a run's files. Panics if id is not a
 // well-formed ULID — call validateID first if id came from a user.
 func (s *Store) RunDir(id string) string { return filepath.Join(s.root, id) }

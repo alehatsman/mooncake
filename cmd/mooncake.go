@@ -12,6 +12,7 @@ import (
 	croncmd "github.com/alehatsman/mooncake/cmd/cron"
 	docscmd "github.com/alehatsman/mooncake/cmd/docs"
 	doctorcmd "github.com/alehatsman/mooncake/cmd/doctor"
+	driftcmd "github.com/alehatsman/mooncake/cmd/drift"
 	fleetcmd "github.com/alehatsman/mooncake/cmd/fleet"
 	historycmd "github.com/alehatsman/mooncake/cmd/history"
 	initcmd "github.com/alehatsman/mooncake/cmd/init"
@@ -58,6 +59,7 @@ func createApp() *cli.App {
 			mcpcmd.Command(),
 			agentdcmd.Command(),
 			fleetcmd.Command(),
+			driftcmd.Command(),
 			stepcmd.Command(),
 			taskcmd.Command(),
 			toolcmd.Command(),
