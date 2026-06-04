@@ -156,6 +156,11 @@ Reference for every `mooncake` subcommand and its flags.
 - [vault.init](cli/vault_init.md)
 - [vault.list](cli/vault_list.md)
 - [vault.pubkey](cli/vault_pubkey.md)
+- [vault.recipients](cli/vault_recipients.md)
+- [vault.recipients.add](cli/vault_recipients_add.md)
+- [vault.recipients.list](cli/vault_recipients_list.md)
+- [vault.recipients.remove](cli/vault_recipients_remove.md)
+- [vault.rekey](cli/vault_rekey.md)
 
 ## API
 

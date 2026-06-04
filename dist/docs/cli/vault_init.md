@@ -5,16 +5,16 @@ name: mooncake vault init
 
 # mooncake vault init
 
-Generate a new Age identity (private key)
+Generate a new Age identity (private key) for this machine
 
 ## Description
 
 Creates a new Age X25519 identity and writes it to
 $MOONCAKE_VAULT_IDENTITY (default: ~/.config/mooncake/vault-identity.txt).
 
-Print the corresponding public key (recipient) with `mooncake vault pubkey`.
-Add the public key to your vault (or share with collaborators) so they can
-encrypt secrets for you with `mooncake vault add`.
+Next steps:
+  mooncake vault recipients add $(mooncake vault pubkey) --name $(hostname)
+  git add vault/recipients.txt && git commit
 
 ## Flags
 
