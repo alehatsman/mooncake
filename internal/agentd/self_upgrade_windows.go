@@ -6,10 +6,69 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"os/user"
 	"path/filepath"
+	"strings"
 	"syscall"
 	"time"
+
+	"github.com/alehatsman/mooncake/internal/fleet/install"
 )
+
+// reRenderAutostart re-registers the Windows scheduled task with freshly
+// rendered XML so the new binary's CLI args (agentd run --bind ...) are
+// baked in before the stop/start cycle in reExec fires. Called in the
+// upgrade goroutine between swapBinary and reExec.
+//
+// No-op when BindAddr is empty (unix-socket-only daemon, no TCP port).
+func reRenderAutostart(cfg Config, binPath string) error {
+	if cfg.BindAddr == "" {
+		return nil
+	}
+	port, err := tcpPortFromBindAddr(cfg.BindAddr)
+	if err != nil {
+		return fmt.Errorf("reRenderAutostart: parse bind_addr %q: %w", cfg.BindAddr, err)
+	}
+
+	u, err := user.Current()
+	if err != nil {
+		return fmt.Errorf("reRenderAutostart: current user: %w", err)
+	}
+
+	xmlPath := filepath.Join(os.TempDir(), "mooncake-rerender-task.xml")
+	inst := install.Installer{
+		OS:          "windows",
+		Port:        port,
+		BinaryPath:  binPath,
+		TokenPath:   cfg.TokenPath,
+		UserID:      u.Username,
+		StagingPath: xmlPath,
+	}
+	content, err := inst.Render()
+	if err != nil {
+		return fmt.Errorf("reRenderAutostart: render task xml: %w", err)
+	}
+	if err := os.WriteFile(xmlPath, content, 0o600); err != nil {
+		return fmt.Errorf("reRenderAutostart: write xml %s: %w", xmlPath, err)
+	}
+
+	// Register-ScheduledTask -Force updates in place without needing to
+	// stop the running task first. The new definition takes effect on the
+	// next Start-ScheduledTask call (which reExec issues via its helper).
+	registerCmd := inst.EnableStartCmd()
+	// EnableStartCmd appends a Start-ScheduledTask; strip it — reExec
+	// handles the stop/start cycle itself so we only want the register half.
+	registerOnly, _, _ := strings.Cut(registerCmd, "; Start-ScheduledTask")
+	out, err := exec.Command("powershell.exe",
+		"-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass",
+		"-Command", registerOnly,
+	).CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("reRenderAutostart: register task: %w (output: %s)",
+			err, strings.TrimSpace(string(out)))
+	}
+	return nil
+}
 
 // defaultScheduledTaskName mirrors the task name baked into the dotfiles
 // bootstrap (platforms/windows/bootstrap.yml). Operators using a
