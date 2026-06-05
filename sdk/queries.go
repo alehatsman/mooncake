@@ -57,11 +57,11 @@ type Match struct {
 // at that byte offset; if opts.Limit is non-zero at most that many bytes are
 // returned. Does NOT go through plan-build or the executor — direct OS call.
 func Read(path string, opts ReadOptions) ([]byte, error) {
-	f, err := os.Open(path) // #nosec G304 -- caller-supplied path is intentional
+	f, err := os.Open(path) // #nosec G304 G122 -- caller-supplied path is intentional
 	if err != nil {
 		return nil, err
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	if opts.Offset > 0 {
 		if _, err := f.Seek(opts.Offset, io.SeekStart); err != nil {
@@ -123,11 +123,11 @@ func Grep(pattern string, opts GrepOptions) ([]Match, error) {
 			return filepath.SkipAll
 		}
 
-		f, openErr := os.Open(path) // #nosec G304 -- path from WalkDir
+		f, openErr := os.Open(path) // #nosec G304 G122 -- path from WalkDir
 		if openErr != nil {
 			return nil
 		}
-		defer f.Close()
+		defer func() { _ = f.Close() }()
 
 		scanner := bufio.NewScanner(f)
 		lineNo := 0

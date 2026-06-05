@@ -181,7 +181,7 @@ func (b *NativeBackend) Grep(_ context.Context, pattern string, opts GrepOptions
 			return filepath.SkipAll
 		}
 
-		f, openErr := os.Open(path) // #nosec G304 -- path from WalkDir
+		f, openErr := os.Open(path) // #nosec G304 G122 -- path from WalkDir
 		if openErr != nil {
 			return nil
 		}
@@ -318,7 +318,7 @@ func NewRemoteBackend(cfg RemoteConfig) *RemoteBackend {
 	if cfg.PollInterval == 0 {
 		cfg.PollInterval = 250 * time.Millisecond
 	}
-	t := http.DefaultTransport.(*http.Transport).Clone()
+	t := http.DefaultTransport.(*http.Transport).Clone() //nolint:errcheck
 	t.DialContext = (&net.Dialer{
 		Timeout:   10 * time.Second,
 		KeepAlive: 30 * time.Second,

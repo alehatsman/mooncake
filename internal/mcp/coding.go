@@ -151,7 +151,7 @@ func HandleGrepFiles(_ context.Context, args json.RawMessage) (string, error) {
 			return filepath.SkipAll
 		}
 
-		f, openErr := os.Open(path) // #nosec G304 -- path from WalkDir
+		f, openErr := os.Open(path) // #nosec G304 G122 -- path from WalkDir
 		if openErr != nil {
 			return nil
 		}

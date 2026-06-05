@@ -461,7 +461,7 @@ func readRecipientsFile(dir string) ([]namedRecipient, error) {
 		}
 		return nil, fmt.Errorf("open recipients: %w", err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	var recs []namedRecipient
 	var pendingName string
@@ -624,6 +624,6 @@ func loadIdentities() ([]age.Identity, error) {
 		}
 		return nil, fmt.Errorf("open identity: %w", err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	return age.ParseIdentities(f)
 }

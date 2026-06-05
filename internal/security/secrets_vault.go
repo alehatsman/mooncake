@@ -158,7 +158,7 @@ func loadIdentitiesFromFile(path string) ([]age.Identity, error) {
 		}
 		return nil, fmt.Errorf("vault identity file open failed")
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	ids, err := age.ParseIdentities(f)
 	if err != nil {
 		return nil, fmt.Errorf("vault identity file parse failed")
