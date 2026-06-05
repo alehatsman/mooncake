@@ -4,6 +4,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/alehatsman/mooncake/internal/actions"
 	"github.com/alehatsman/mooncake/internal/config"
 	"github.com/alehatsman/mooncake/internal/winutil"
 )
@@ -150,5 +151,60 @@ func TestTitleCase_MappingTable(t *testing.T) {
 		if got := titleCase(in); got != want {
 			t.Errorf("titleCase(%q) = %q, want %q", in, got, want)
 		}
+	}
+}
+
+// TestRenderTemplates covers issue #24: the action must render its own
+// string fields. A `{{ var }}` in an action's arguments/execute (and the
+// principal + triggers) must resolve, not reach Task Scheduler verbatim.
+func TestRenderTemplates(t *testing.T) {
+	ctx := actions.NewTestContext(actions.TestContextConfig{
+		Vars: map[string]interface{}{
+			"wsl_distro": "Ubuntu-24.04",
+			"username":   `MINIPC\aleha`,
+			"wsl_exe":    `C:\Windows\System32\wsl.exe`,
+			"poll":       "5m",
+		},
+	})
+
+	in := &config.WindowsScheduledTask{
+		Name:        "WSL2-SSH-Keepalive",
+		Description: "keepalive for {{ wsl_distro }}",
+		Triggers: []config.WindowsScheduledTaskTrigger{
+			{Type: "repetition", Interval: "{{ poll }}"},
+		},
+		Actions: []config.WindowsScheduledTaskAction{
+			{Execute: "{{ wsl_exe }}", Arguments: "-d {{ wsl_distro }} -u root -- systemctl start ssh"},
+		},
+		Principal: &config.WindowsScheduledTaskPrincipal{User: "{{ username }}"},
+	}
+
+	out, err := renderTemplates(ctx, in)
+	if err != nil {
+		t.Fatalf("renderTemplates: %v", err)
+	}
+
+	if got, want := out.Actions[0].Arguments, "-d Ubuntu-24.04 -u root -- systemctl start ssh"; got != want {
+		t.Errorf("arguments = %q, want %q", got, want)
+	}
+	if got, want := out.Actions[0].Execute, `C:\Windows\System32\wsl.exe`; got != want {
+		t.Errorf("execute = %q, want %q", got, want)
+	}
+	if got, want := out.Principal.User, `MINIPC\aleha`; got != want {
+		t.Errorf("principal.user = %q, want %q", got, want)
+	}
+	if got, want := out.Triggers[0].Interval, "5m"; got != want {
+		t.Errorf("trigger.interval = %q, want %q", got, want)
+	}
+	if got, want := out.Description, "keepalive for Ubuntu-24.04"; got != want {
+		t.Errorf("description = %q, want %q", got, want)
+	}
+
+	// Original step must be untouched (plan mode may re-dispatch it).
+	if in.Actions[0].Arguments != "-d {{ wsl_distro }} -u root -- systemctl start ssh" {
+		t.Errorf("input mutated: %q", in.Actions[0].Arguments)
+	}
+	if in.Principal.User != "{{ username }}" {
+		t.Errorf("input principal mutated: %q", in.Principal.User)
 	}
 }

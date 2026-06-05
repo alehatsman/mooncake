@@ -104,6 +104,17 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		return result, fmt.Errorf("%s: only Windows is supported; got %s", actionName, runtime.GOOS)
 	}
 
+	// This handler is the render seam for its own string fields — there is
+	// no generic struct-walking template pass, so without this expressions
+	// like `{{ wsl_distro }}` in an action's arguments reach Task Scheduler
+	// verbatim. Matches how shell/command/wait_http render their fields.
+	// Issue #24.
+	t, err := renderTemplates(ctx, t)
+	if err != nil {
+		return result, err
+	}
+	result.Target = t.Name
+
 	state := normalizeState(t.State)
 
 	currentXML, exists, err := queryTaskXML(t.Name)
@@ -182,6 +193,95 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 }
 
 // ----- helpers -------------------------------------------------------------
+
+// renderTemplates returns a copy of t with all user-facing string fields
+// rendered through the template engine. Nested slices/pointers are deep-
+// copied so the original step (which plan mode may re-dispatch) is left
+// untouched. Enum-valued fields (logon_type, run_level, multiple_instances)
+// and duration/bool settings are not templated. Issue #24.
+func renderTemplates(ctx actions.Context, t *config.WindowsScheduledTask) (*config.WindowsScheduledTask, error) {
+	render := func(field, val string) (string, error) {
+		out, err := ctx.Template().Render(val, ctx.Variables())
+		if err != nil {
+			return "", &executor.RenderError{Field: field, Cause: err}
+		}
+		return out, nil
+	}
+
+	out := *t // shallow copy; nested slices/pointers replaced below
+	var err error
+
+	if out.Name, err = render(actionName+".name", t.Name); err != nil {
+		return nil, err
+	}
+	if out.Description, err = render(actionName+".description", t.Description); err != nil {
+		return nil, err
+	}
+
+	if len(t.Actions) > 0 {
+		out.Actions = make([]config.WindowsScheduledTaskAction, len(t.Actions))
+		for i, a := range t.Actions {
+			if a.Execute, err = render(actionName+".actions.execute", a.Execute); err != nil {
+				return nil, err
+			}
+			if a.Arguments, err = render(actionName+".actions.arguments", a.Arguments); err != nil {
+				return nil, err
+			}
+			if a.WorkingDirectory, err = render(actionName+".actions.working_directory", a.WorkingDirectory); err != nil {
+				return nil, err
+			}
+			out.Actions[i] = a
+		}
+	}
+
+	if t.Principal != nil {
+		p := *t.Principal
+		if p.User, err = render(actionName+".principal.user", p.User); err != nil {
+			return nil, err
+		}
+		out.Principal = &p
+	}
+
+	if t.Trigger != nil {
+		tr, terr := renderTrigger(render, *t.Trigger)
+		if terr != nil {
+			return nil, terr
+		}
+		out.Trigger = &tr
+	}
+	if len(t.Triggers) > 0 {
+		out.Triggers = make([]config.WindowsScheduledTaskTrigger, len(t.Triggers))
+		for i, tr := range t.Triggers {
+			rt, terr := renderTrigger(render, tr)
+			if terr != nil {
+				return nil, terr
+			}
+			out.Triggers[i] = rt
+		}
+	}
+
+	return &out, nil
+}
+
+// renderTrigger renders the string-valued fields of a trigger. Interval and
+// duration are rendered before they're parsed as durations downstream, so a
+// templated interval (e.g. "{{ poll_interval }}") resolves correctly.
+func renderTrigger(render func(string, string) (string, error), tr config.WindowsScheduledTaskTrigger) (config.WindowsScheduledTaskTrigger, error) {
+	var err error
+	if tr.UserID, err = render(actionName+".triggers.user_id", tr.UserID); err != nil {
+		return tr, err
+	}
+	if tr.Interval, err = render(actionName+".triggers.interval", tr.Interval); err != nil {
+		return tr, err
+	}
+	if tr.Duration, err = render(actionName+".triggers.duration", tr.Duration); err != nil {
+		return tr, err
+	}
+	if tr.StartBoundary, err = render(actionName+".triggers.start_boundary", tr.StartBoundary); err != nil {
+		return tr, err
+	}
+	return tr, nil
+}
 
 func normalizeState(s string) string {
 	if s == "" {
