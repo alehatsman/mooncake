@@ -420,15 +420,15 @@ func HintNoConfigFound(e *ErrNoConfigFound, cmdName string) string
 
 HintNoConfigFound returns the user\-facing remediation message for an ErrNoConfigFound. cmdName is the subcommand the user invoked, used in the "point explicitly" suggestion \(e.g. "apply", "plan", "validate"\).
 
-## func [NormalizePlanBytes](<https://github.com/alehatsman/mooncake/blob/main/internal/config/custom_action.go#L129>)
+## func [NormalizePlanBytes](<https://github.com/alehatsman/mooncake/blob/main/internal/config/custom_action.go#L200>)
 
 ```go
 func NormalizePlanBytes(planBytes []byte, isCustom IsCustomAction) ([]byte, error)
 ```
 
-NormalizePlanBytes folds typed\-key custom actions in raw plan bytes into the generic carrier and returns the re\-encoded YAML. Callers that decode a plan into typed config.Step values before it reaches a reader \(e.g. the agent's transaction wrap\) must run this first: a typed decode silently drops any key without a dedicated Step field, destroying the typed\-key form.
+NormalizePlanBytes applies both normalization passes to raw plan bytes and returns the re\-encoded YAML. Callers that decode a plan into typed config.Step values before it reaches a reader \(e.g. the agent's transaction wrap\) must run this first.
 
-The input is returned UNCHANGED — byte\-for\-byte — when isCustom is nil or no step needed folding, so a plan that uses only built\-ins \(the common case\) never gets reflowed and its hash is stable.
+The input is returned UNCHANGED — byte\-for\-byte — when no step needed folding, so a plan that uses only short\-form built\-ins never gets reflowed and its hash is stable.
 
 ## func [ReadConfigBytesWithValidation](<https://github.com/alehatsman/mooncake/blob/main/internal/config/reader.go#L493>)
 

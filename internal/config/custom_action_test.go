@@ -141,6 +141,120 @@ func TestReadConfig_TypedKeyInArtifactCaptureRejected(t *testing.T) {
 	}
 }
 
+// Long-form `action: shell` + `with: {cmd: …}` parses into step.Shell — the
+// same result as the short-form `shell: {cmd: …}`.
+func TestReadConfig_BuiltinCarrier_WithParams(t *testing.T) {
+	p := writeTemp(t, `
+- name: run it
+  action: shell
+  with:
+    cmd: echo hello
+`)
+	cfg, diags, err := ReadConfigWithValidation(p, nil)
+	if err != nil {
+		t.Fatalf("read: %v", err)
+	}
+	if errs := filterErrors(diags); len(errs) > 0 {
+		t.Fatalf("unexpected errors: %v", errs)
+	}
+	if len(cfg.Steps) != 1 {
+		t.Fatalf("got %d steps, want 1", len(cfg.Steps))
+	}
+	s := cfg.Steps[0]
+	if s.Shell == nil {
+		t.Fatal("step.Shell is nil — built-in carrier not folded")
+	}
+	if s.Shell.Cmd != "echo hello" {
+		t.Errorf("Shell.Cmd = %q, want %q", s.Shell.Cmd, "echo hello")
+	}
+	if s.Action != "" {
+		t.Errorf("step.Action should be empty after folding, got %q", s.Action)
+	}
+}
+
+// Long-form `action: observe.cpu` without any `with:` parses into a non-nil
+// step.ObserveCPU (empty config) — so the handler doesn't see a nil struct.
+func TestReadConfig_BuiltinCarrier_NoWith(t *testing.T) {
+	p := writeTemp(t, `
+- name: cpu check
+  action: observe.cpu
+`)
+	cfg, diags, err := ReadConfigWithValidation(p, nil)
+	if err != nil {
+		t.Fatalf("read: %v", err)
+	}
+	if errs := filterErrors(diags); len(errs) > 0 {
+		t.Fatalf("unexpected errors: %v", errs)
+	}
+	if len(cfg.Steps) != 1 {
+		t.Fatalf("got %d steps, want 1", len(cfg.Steps))
+	}
+	s := cfg.Steps[0]
+	if s.ObserveCPU == nil {
+		t.Fatal("step.ObserveCPU is nil — built-in carrier without with: not folded")
+	}
+}
+
+// Custom-action carriers (`action: notify.webhook` + `with: {…}`) are left
+// untouched by foldBuiltinCarrier and continue to dispatch via step.Action /
+// step.With as before.
+func TestReadConfig_BuiltinCarrier_CustomActionUnaffected(t *testing.T) {
+	p := writeTemp(t, `
+- name: notify
+  action: notify.webhook
+  with:
+    url: https://hooks.example.com/deploy
+`)
+	cfg, diags, err := ReadConfigWithValidation(p, notifyOnly)
+	if err != nil {
+		t.Fatalf("read: %v", err)
+	}
+	if errs := filterErrors(diags); len(errs) > 0 {
+		t.Fatalf("unexpected errors: %v", errs)
+	}
+	if len(cfg.Steps) != 1 {
+		t.Fatalf("got %d steps, want 1", len(cfg.Steps))
+	}
+	s := cfg.Steps[0]
+	if s.Action != "notify.webhook" {
+		t.Errorf("Action = %q, want notify.webhook", s.Action)
+	}
+	if got, _ := s.With["url"].(string); got != "https://hooks.example.com/deploy" {
+		t.Errorf("With[url] = %q, want the webhook URL", got)
+	}
+}
+
+// Short-form and long-form produce identical decoded steps.
+func TestReadConfig_BuiltinCarrier_EquivalentToShortForm(t *testing.T) {
+	short := writeTemp(t, `
+- name: s
+  shell:
+    cmd: echo hi
+`)
+	long := writeTemp(t, `
+- name: s
+  action: shell
+  with:
+    cmd: echo hi
+`)
+	cfgShort, _, err := ReadConfigWithValidation(short, nil)
+	if err != nil {
+		t.Fatalf("short read: %v", err)
+	}
+	cfgLong, _, err := ReadConfigWithValidation(long, nil)
+	if err != nil {
+		t.Fatalf("long read: %v", err)
+	}
+	sShort := cfgShort.Steps[0].Shell
+	sLong := cfgLong.Steps[0].Shell
+	if sShort == nil || sLong == nil {
+		t.Fatalf("Shell nil: short=%v long=%v", sShort, sLong)
+	}
+	if sShort.Cmd != sLong.Cmd {
+		t.Errorf("Cmd mismatch: short=%q long=%q", sShort.Cmd, sLong.Cmd)
+	}
+}
+
 func filterErrors(diags []Diagnostic) []Diagnostic {
 	var out []Diagnostic
 	for _, d := range diags {

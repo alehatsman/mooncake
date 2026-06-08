@@ -25,25 +25,26 @@ import (
 // hold the registry, pass its Has method.
 type IsCustomAction func(name string) bool
 
-// normalizeCustomActionSteps rewrites every typed-key custom action in the
-// parsed YAML node tree into the generic carrier form, in place:
+// normalizeCustomActionSteps rewrites steps in the parsed YAML node tree, in
+// place, handling two directions:
 //
-//   - notify.webhook:          - action: notify.webhook
-//     url: …          →         with:
-//     method: POST                url: …
-//     method: POST
+//  1. Built-in carrier (always): `action: shell` + `with: {cmd: …}` →
+//     `shell: {cmd: …}`. This lets authors use the generic carrier form for
+//     any built-in action, not just custom ones.
 //
-// A step key is folded only when it is NOT a known Step field AND isCustom
-// reports it as a registered custom action. Running this before strict-field
-// validation and decode means the rest of the pipeline (both validators,
-// DetermineActionType, executor dispatch) only ever sees carrier form and is
-// untouched. Keys that are neither known fields nor registered actions are
-// left alone for the unknown-field validator to flag — typo-catching is
-// preserved (a misspelled `notifyy.webhook:` still errors).
+//  2. Typed-key custom action (when isCustom != nil):
+//     `notify.webhook: {url: …}` → `action: notify.webhook` + `with: {url: …}`
 //
-// Returns whether it changed the tree; no-op (false) when isCustom is nil.
+// Running this before strict-field validation and decode means the rest of
+// the pipeline (both validators, DetermineActionType, executor dispatch) only
+// ever sees the canonical typed-field form for built-ins and carrier form for
+// custom actions. Keys that are neither known fields nor registered custom
+// actions are left alone for the unknown-field validator to flag — typo
+// diagnostics are preserved.
+//
+// Returns whether it changed the tree.
 func normalizeCustomActionSteps(root *yaml.Node, isCustom IsCustomAction) bool {
-	if isCustom == nil || root == nil {
+	if root == nil {
 		return false
 	}
 	node := root
@@ -86,15 +87,32 @@ func normalizeStepSeq(seq *yaml.Node, isCustom IsCustomAction) bool {
 	return changed
 }
 
-// normalizeStep folds a typed-key custom action at this step into the carrier
-// and recurses into any nested step lists (transaction / try / catch /
-// finally / on_change / on_rollback / heal — derived from the struct, so new
-// compound types are covered automatically).
+// normalizeStep handles two rewrites for a step mapping node and recurses into
+// nested step lists (transaction / try / catch / finally / on_change /
+// on_rollback / heal — derived from the struct, so new compound types are
+// covered automatically).
+//
+//  1. Built-in carrier: if the step has `action: <builtin>` (optionally plus
+//     `with: <params>`), rewrite to `<builtin>: <params>` so the typed decoder
+//     populates the dedicated Step field. An absent `with:` folds to `<builtin>:
+//     {}` so the handler receives a non-nil (empty) config struct.
+//
+//  2. Typed-key custom action (isCustom != nil): `notify.webhook: {…}` →
+//     `action: notify.webhook` + `with: {…}`.
 func normalizeStep(step *yaml.Node, isCustom IsCustomAction) bool {
 	if step == nil || step.Kind != yaml.MappingNode {
 		return false
 	}
 	changed := false
+
+	// Pass 1 — built-in carrier: fold `action: <builtin>` [+ `with: <params>`]
+	// into `<builtin>: <params>`. Must run before the per-key loop so the
+	// rewritten keys are visible to the compound-recurse and custom-action
+	// branches below.
+	if foldBuiltinCarrier(step) {
+		changed = true
+	}
+
 	out := make([]*yaml.Node, 0, len(step.Content))
 	for i := 0; i+1 < len(step.Content); i += 2 {
 		keyNode, valNode := step.Content[i], step.Content[i+1]
@@ -105,7 +123,7 @@ func normalizeStep(step *yaml.Node, isCustom IsCustomAction) bool {
 				changed = true
 			}
 			out = append(out, keyNode, valNode)
-		case !stepFieldNames[key] && isCustom(key):
+		case !stepFieldNames[key] && isCustom != nil && isCustom(key):
 			// Fold `name: {params}` → `action: name` + `with: {params}`.
 			out = append(out, scalarNode("action"), scalarNode(key), scalarNode("with"), valNode)
 			changed = true
@@ -117,19 +135,69 @@ func normalizeStep(step *yaml.Node, isCustom IsCustomAction) bool {
 	return changed
 }
 
-// NormalizePlanBytes folds typed-key custom actions in raw plan bytes into the
-// generic carrier and returns the re-encoded YAML. Callers that decode a plan
-// into typed config.Step values before it reaches a reader (e.g. the agent's
-// transaction wrap) must run this first: a typed decode silently drops any key
-// without a dedicated Step field, destroying the typed-key form.
+// foldBuiltinCarrier rewrites `action: <builtin>` [+ `with: <params>`] into
+// `<builtin>: <params>` within a step mapping node, in place. A missing or
+// null `with:` folds to an empty mapping (`{}`) so the handler receives a
+// non-nil config struct.
 //
-// The input is returned UNCHANGED — byte-for-byte — when isCustom is nil or no
-// step needed folding, so a plan that uses only built-ins (the common case)
-// never gets reflowed and its hash is stable.
-func NormalizePlanBytes(planBytes []byte, isCustom IsCustomAction) ([]byte, error) {
-	if isCustom == nil {
-		return planBytes, nil
+// Only fires when the `action:` value names a built-in action field (has an
+// `action:` struct tag on Step). Custom-action carriers (action: notify.webhook)
+// are left untouched — their `action:` value is not in builtinActionYAMLNames.
+//
+// Returns true when the step was modified.
+func foldBuiltinCarrier(step *yaml.Node) bool {
+	var actionIdx, withIdx int = -1, -1
+	for i := 0; i+1 < len(step.Content); i += 2 {
+		switch step.Content[i].Value {
+		case "action":
+			actionIdx = i
+		case "with":
+			withIdx = i
+		}
 	}
+	if actionIdx < 0 {
+		return false
+	}
+	actionName := step.Content[actionIdx+1].Value
+	yamlKey, ok := builtinActionYAMLNames[actionName]
+	if !ok {
+		return false // custom action or unknown — not our job
+	}
+
+	// Choose the params node: use with: value if present and non-null, else {}.
+	var paramsNode *yaml.Node
+	if withIdx >= 0 && step.Content[withIdx+1].Tag != "!!null" {
+		paramsNode = step.Content[withIdx+1]
+	} else {
+		paramsNode = &yaml.Node{Kind: yaml.MappingNode, Tag: "!!map"}
+	}
+
+	// Rebuild content: replace `action: <name>` with `<yamlKey>: <params>`,
+	// drop `with:`, keep everything else in original order.
+	out := make([]*yaml.Node, 0, len(step.Content))
+	for i := 0; i+1 < len(step.Content); i += 2 {
+		switch step.Content[i].Value {
+		case "action":
+			out = append(out, scalarNode(yamlKey), paramsNode)
+		case "with":
+			// already folded into paramsNode above
+		default:
+			out = append(out, step.Content[i], step.Content[i+1])
+		}
+	}
+	step.Content = out
+	return true
+}
+
+// NormalizePlanBytes applies both normalization passes to raw plan bytes and
+// returns the re-encoded YAML. Callers that decode a plan into typed
+// config.Step values before it reaches a reader (e.g. the agent's transaction
+// wrap) must run this first.
+//
+// The input is returned UNCHANGED — byte-for-byte — when no step needed
+// folding, so a plan that uses only short-form built-ins never gets reflowed
+// and its hash is stable.
+func NormalizePlanBytes(planBytes []byte, isCustom IsCustomAction) ([]byte, error) {
 	var root yaml.Node
 	if err := yaml.Unmarshal(planBytes, &root); err != nil {
 		return nil, fmt.Errorf("parse plan: %w", err)
@@ -166,6 +234,25 @@ func mappingValue(m *yaml.Node, key string) *yaml.Node {
 func scalarNode(value string) *yaml.Node {
 	return &yaml.Node{Kind: yaml.ScalarNode, Tag: "!!str", Value: value}
 }
+
+// builtinActionYAMLNames maps each built-in action's canonical name (the
+// `action:"…"` struct tag value, e.g. "observe.cpu") to its YAML field name
+// (e.g. "observe.cpu"). Used by foldBuiltinCarrier to detect and rewrite
+// `action: <builtin>` + `with: <params>` into the typed-field form.
+// Built from the `action:` tags on Step fields; never drifts as new actions
+// are added.
+var builtinActionYAMLNames = func() map[string]string {
+	m := make(map[string]string, len(actionFieldIndices))
+	for _, i := range actionFieldIndices {
+		f := stepType.Field(i)
+		actionTag := f.Tag.Get("action")
+		yamlKey := yamlFieldName(f)
+		if actionTag != "" && yamlKey != "" {
+			m[actionTag] = yamlKey
+		}
+	}
+	return m
+}()
 
 // stepFieldNames is the set of YAML keys recognized as Step fields — every
 // built-in action plus the universal step fields (name/when/as/…). Derived
