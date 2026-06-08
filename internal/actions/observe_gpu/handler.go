@@ -85,7 +85,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 
 	if ctx.Mode() == actions.ModePlan {
 		env := actions.PlanDeferred(GPUObservation{})
-		result.PublishObservation(env, "host")
+		result.PublishObservation(env, actions.ObserveTargetHost)
 		result.Checkable = true
 		result.Reason = "would observe GPU state (deferred to apply)"
 		return result, nil
@@ -107,7 +107,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		// Count.
 		env.Error = err.Error()
 	}
-	result.PublishObservation(env, "host")
+	result.PublishObservation(env, actions.ObserveTargetHost)
 	return result, nil
 }
 

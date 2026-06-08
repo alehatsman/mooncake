@@ -5,6 +5,11 @@ import (
 	"time"
 )
 
+// ObserveTargetHost is the conventional Target value for system-wide
+// observations (cpu, memory, gpu) that have no specific file or URL
+// to point at — they observe the host itself.
+const ObserveTargetHost = "host"
+
 // ObserveResult is the shared envelope returned by every observe.*
 // handler (spec-59). The typed per-handler payload lives in Value;
 // the universal fields (Found, AsOf, Error) wrap it so consumers can

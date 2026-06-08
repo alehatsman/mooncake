@@ -117,6 +117,7 @@ func (h *Handler) Metadata() actions.ActionMetadata {
 
 ## Index
 
+- [Constants](<#constants>)
 - [Variables](<#variables>)
 - [func Count() int](<#func-count>)
 - [func EvaluateBoolExpression(ctx Context, fieldName, expression string, evalContext map[string]interface{}) (bool, error)](<#func-evaluateboolexpression>)
@@ -227,6 +228,14 @@ func (h *Handler) Metadata() actions.ActionMetadata {
 - [type UserDiff](<#type-userdiff>)
 
 
+## Constants
+
+ObserveTargetHost is the conventional Target value for system\-wide observations \(cpu, memory, gpu\) that have no specific file or URL to point at — they observe the host itself.
+
+```go
+const ObserveTargetHost = "host"
+```
+
 ## Variables
 
 SystemPathPrefixes are POSIX directories that conventionally require root privileges to write to. Used by handlers' Permissions\(\) to declare Sudo=true for steps targeting system locations, so the executor preflight can surface a friendly error BEFORE the run rather than EACCES mid\-run.
@@ -317,7 +326,7 @@ func IsPermitter(h Handler) bool
 func IsReverser(h Handler) bool
 ```
 
-## func [ObserveValueToMap](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/observe.go#L57>)
+## func [ObserveValueToMap](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/observe.go#L62>)
 
 ```go
 func ObserveValueToMap(v any) any
@@ -1203,7 +1212,7 @@ type MountDiff struct {
 }
 ```
 
-## type [ObserveResult](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/observe.go#L26-L44>)
+## type [ObserveResult](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/observe.go#L31-L49>)
 
 ObserveResult is the shared envelope returned by every observe.\* handler \(spec\-59\). The typed per\-handler payload lives in Value; the universal fields \(Found, AsOf, Error\) wrap it so consumers can branch on observation outcome without knowing the per\-handler type.
 
@@ -1240,7 +1249,7 @@ type ObserveResult struct {
 }
 ```
 
-### func [PlanDeferred](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/observe.go#L82>)
+### func [PlanDeferred](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/observe.go#L87>)
 
 ```go
 func PlanDeferred(emptyValue any) ObserveResult

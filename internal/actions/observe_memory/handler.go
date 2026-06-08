@@ -72,7 +72,7 @@ func (h *Handler) Run(ctx actions.Context, _ *config.Step) (actions.Result, erro
 
 	if ctx.Mode() == actions.ModePlan {
 		env := actions.PlanDeferred(MemoryObservation{})
-		result.PublishObservation(env, "host")
+		result.PublishObservation(env, actions.ObserveTargetHost)
 		result.Checkable = true
 		result.Reason = "would observe memory state (deferred to apply)"
 		return result, nil
@@ -87,7 +87,7 @@ func (h *Handler) Run(ctx actions.Context, _ *config.Step) (actions.Result, erro
 	if err != nil {
 		env.Error = err.Error()
 	}
-	result.PublishObservation(env, "host")
+	result.PublishObservation(env, actions.ObserveTargetHost)
 	return result, nil
 }
 
