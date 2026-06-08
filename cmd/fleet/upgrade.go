@@ -52,10 +52,6 @@ func fleetUpgradeCommand() *cli.Command {
 				Usage: "Select peers: repeat to UNION. Each value is a name, `key=value` filter (`tag=production`), or `@k=v,k2=v2` AND-group. Default: every agentd peer.",
 			},
 			&cli.StringFlag{
-				Name:  "peers-file",
-				Usage: "Override the peers.toml path",
-			},
-			&cli.StringFlag{
 				Name: "binary",
 				Usage: "Path to the binary to push. Default: this process's executable. " +
 					"On a mismatched controller/peer arch you must pre-build with " +
@@ -74,10 +70,6 @@ func fleetUpgradeCommand() *cli.Command {
 				Name: "include-os",
 				Usage: "Allow upgrading peers running an OS outside the v1-supported " +
 					"set (default: linux). Repeat to allow multiple, e.g. --include-os darwin",
-			},
-			&cli.BoolFlag{
-				Name:  "no-color",
-				Usage: "Disable ANSI colors (also honors NO_COLOR env)",
 			},
 		},
 		Action: fleetUpgradeAction,

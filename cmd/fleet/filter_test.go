@@ -286,8 +286,9 @@ tags = ["darwin"]
 
 	app := newTestFleetApp()
 	err := app.Run([]string{
-		"mooncake", "fleet", "apply",
+		"mooncake", "fleet",
 		"--peers-file", peersPath,
+		"apply",
 		"--peer", "arch=arm64", // unsupported key — spec-50 allowlist is {tag,name,os,role}
 		planPath,
 	})
@@ -328,8 +329,9 @@ tags = ["darwin"]
 
 	app := newTestFleetApp()
 	err := app.Run([]string{
-		"mooncake", "fleet", "apply",
+		"mooncake", "fleet",
 		"--peers-file", peersPath,
+		"apply",
 		"--peer", "tag=nonexistent",
 		planPath,
 	})

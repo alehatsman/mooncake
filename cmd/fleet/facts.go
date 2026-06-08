@@ -45,10 +45,6 @@ func fleetFactsCommand() *cli.Command {
 				Name:  "peer",
 				Usage: "Select peers (only with --query): repeat to UNION. Each value is a name, `key=value` filter, or `@k=v,k2=v2` AND-group. Default: every peer in peers.toml.",
 			},
-			&cli.StringFlag{
-				Name:  "peers-file",
-				Usage: "Override the peers.toml path",
-			},
 		},
 		Action: fleetFactsAction,
 	}

@@ -25,7 +25,7 @@ func TestFleetFacts_FullPrint(t *testing.T) {
 	peersPath := writePeersToml(t, dir, map[string]string{"laptop": addr}, "tok")
 
 	app, out := captureLogsApp()
-	err := app.Run([]string{"mooncake", "fleet", "facts", "--peers-file", peersPath, "laptop"})
+	err := app.Run([]string{"mooncake", "fleet", "--peers-file", peersPath, "facts", "laptop"})
 	if err != nil {
 		t.Fatalf("unexpected error: %v\noutput: %s", err, out.String())
 	}
@@ -65,7 +65,7 @@ func TestFleetFacts_DotPathFilter(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.key, func(t *testing.T) {
 			app, out := captureLogsApp()
-			err := app.Run([]string{"mooncake", "fleet", "facts", "--peers-file", peersPath, "laptop", tt.key})
+			err := app.Run([]string{"mooncake", "fleet", "--peers-file", peersPath, "facts", "laptop", tt.key})
 			if err != nil {
 				t.Fatalf("unexpected error: %v\noutput: %s", err, out.String())
 			}
@@ -90,7 +90,7 @@ func TestFleetFacts_MissingKeyErrors(t *testing.T) {
 	peersPath := writePeersToml(t, dir, map[string]string{"laptop": addr}, "tok")
 
 	app, _ := captureLogsApp()
-	err := app.Run([]string{"mooncake", "fleet", "facts", "--peers-file", peersPath, "laptop", "nonexistent"})
+	err := app.Run([]string{"mooncake", "fleet", "--peers-file", peersPath, "facts", "laptop", "nonexistent"})
 	if err == nil {
 		t.Fatal("expected error for missing key")
 	}
@@ -113,7 +113,7 @@ func TestFleetFacts_QueryFanOut(t *testing.T) {
 	peersPath := writePeersToml(t, dir, map[string]string{"zebra": addrA, "alpha": addrB}, "tok")
 
 	app, out := captureLogsApp()
-	err := app.Run([]string{"mooncake", "fleet", "facts", "--peers-file", peersPath, "--query", "go_version"})
+	err := app.Run([]string{"mooncake", "fleet", "--peers-file", peersPath, "facts", "--query", "go_version"})
 	if err != nil {
 		t.Fatalf("unexpected error: %v\noutput: %s", err, out.String())
 	}
@@ -146,7 +146,7 @@ func TestFleetFacts_QueryUnreachablePeerShownAsDash(t *testing.T) {
 	peersPath := writePeersToml(t, dir, map[string]string{"ok-host": addrOK, "broken-host": addrBad}, "tok")
 
 	app, out := captureLogsApp()
-	err := app.Run([]string{"mooncake", "fleet", "facts", "--peers-file", peersPath, "--query", "go_version"})
+	err := app.Run([]string{"mooncake", "fleet", "--peers-file", peersPath, "facts", "--query", "go_version"})
 	if err != nil {
 		t.Fatalf("--query must exit 0 on partial reachability, got %v\noutput: %s", err, out.String())
 	}
@@ -179,17 +179,17 @@ func TestFleetFacts_ArgValidation(t *testing.T) {
 	}{
 		{
 			"no args, no --query",
-			[]string{"mooncake", "fleet", "facts", "--peers-file", peersPath},
+			[]string{"mooncake", "fleet", "--peers-file", peersPath, "facts"},
 			"expected",
 		},
 		{
 			"three positional args",
-			[]string{"mooncake", "fleet", "facts", "--peers-file", peersPath, "a", "b", "c"},
+			[]string{"mooncake", "fleet", "--peers-file", peersPath, "facts", "a", "b", "c"},
 			"expected",
 		},
 		{
 			"--query + positional",
-			[]string{"mooncake", "fleet", "facts", "--peers-file", peersPath, "--query", "k", "extra"},
+			[]string{"mooncake", "fleet", "--peers-file", peersPath, "facts", "--query", "k", "extra"},
 			"--query takes no positional",
 		},
 	}

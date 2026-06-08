@@ -30,10 +30,6 @@ func fleetDiscoverCommand() *cli.Command {
 			"/v1/version probe.",
 		Flags: []cli.Flag{
 			&cli.StringFlag{
-				Name:  "peers-file",
-				Usage: "Override the peers.toml path (default ~/.config/mooncake/peers.toml)",
-			},
-			&cli.StringFlag{
 				Name:  "ssh-config",
 				Usage: "Override the ssh_config path (default ~/.ssh/config). Use '-' to skip the SSH source entirely.",
 			},
@@ -54,10 +50,6 @@ func fleetDiscoverCommand() *cli.Command {
 				Name:  "mdns-timeout",
 				Value: 3 * time.Second,
 				Usage: "mDNS browse wall-clock timeout. Responses arriving after the timeout are dropped.",
-			},
-			&cli.BoolFlag{
-				Name:  "json",
-				Usage: "Emit candidates as a JSON array (one object per candidate) instead of the text table",
 			},
 		},
 		Action: fleetDiscoverAction,

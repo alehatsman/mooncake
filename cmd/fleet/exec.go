@@ -39,8 +39,6 @@ func fleetExecCommand() *cli.Command {
 				Name:  "peer",
 				Usage: "Select peers: repeat to UNION. Each value is a name, `key=value` filter (`tag=production`), or `@k=v,k2=v2` AND-group. Default: every peer in peers.toml.",
 			},
-			&cli.StringFlag{Name: "peers-file", Usage: "Override the peers.toml path"},
-			&cli.IntFlag{Name: "parallel", Usage: "Max peers in flight (0 = unbounded)", Value: 0},
 			&cli.StringSliceFlag{Name: "env", Usage: "KEY=VAL forwarded to the shell step (repeatable)"},
 			&cli.StringFlag{Name: "cwd", Usage: "Working directory on the peer"},
 			&cli.StringFlag{Name: "timeout", Usage: "Per-peer wall clock (e.g. 30s, 2m); enforced by the kernel"},
@@ -53,8 +51,6 @@ func fleetExecCommand() *cli.Command {
 				Name:  "shell",
 				Usage: "Override the default interpreter (bash, zsh, pwsh, powershell, cmd, ...)",
 			},
-			&cli.BoolFlag{Name: "no-color", Usage: "Disable ANSI colors in the [peer] prefix"},
-			&cli.BoolFlag{Name: "json", Usage: "Emit one JSONL record per peer instead of multiplexed lines"},
 		},
 		Action: fleetExecAction,
 	}

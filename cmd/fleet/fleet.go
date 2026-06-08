@@ -24,13 +24,29 @@ import (
 // tree can read it without threading the value through every action.
 var Version = "dev"
 
+// globalFleetFlags returns the four flags shared across all fleet subcommands.
+// Hoisted to the parent `fleet` command so urfave/cli v2's context lineage
+// walk makes them available from any subcommand action via c.String / c.Bool /
+// c.Int without re-declaring them per-subcommand.
+func globalFleetFlags() []cli.Flag {
+	return []cli.Flag{
+		&cli.StringFlag{Name: "peers-file", Usage: "Override the peers.toml path"},
+		&cli.BoolFlag{Name: "no-color", Usage: "Disable ANSI colors (also honors NO_COLOR env)"},
+		&cli.BoolFlag{Name: "json", Usage: "Emit JSONL instead of formatted text"},
+		&cli.IntFlag{Name: "parallel", Usage: "Max peers in flight (0 = unbounded)", Value: 0},
+	}
+}
+
 func Command() *cli.Command {
 	return &cli.Command{
 		Name:  "fleet",
 		Usage: "Manage and operate a personal fleet of mooncake peers (experimental)",
 		Description: "Drive plans across machines you own: discover peers, " +
 			"sync plan trees, apply with multiplexed logs. Peers are configured in " +
-			"~/.config/mooncake/peers.toml.",
+			"~/.config/mooncake/peers.toml. " +
+			"Global flags (--peers-file, --no-color, --json, --parallel) apply to all " +
+			"subcommands and must be placed before the subcommand name.",
+		Flags: globalFleetFlags(),
 		Subcommands: []*cli.Command{
 			fleetApplyCommand(),
 			fleetExecCommand(),
@@ -76,7 +92,6 @@ func fleetBootstrapCommand() *cli.Command {
 			&cli.StringFlag{Name: "name", Usage: "Peer name in peers.toml (default: hostname with dots → dashes)"},
 			&cli.StringSliceFlag{Name: "tag", Usage: "Tag to attach to the peer (repeatable)"},
 			&cli.StringFlag{Name: "binary", Usage: "Path to mooncake binary to upload (default: this process)"},
-			&cli.StringFlag{Name: "peers-file", Usage: "Override the peers.toml path"},
 			&cli.BoolFlag{
 				Name: "upgrade",
 				Usage: "Replace an already-installed mooncake of a different version. " +
@@ -173,7 +188,6 @@ func fleetPairCommand() *cli.Command {
 				Name:  "insecure-token-on-cmdline",
 				Usage: "Opt-in to --token-via literal:<token>. The token is visible in shell history, ps output, and audit logs; prefer stdin or file:.",
 			},
-			&cli.StringFlag{Name: "peers-file", Usage: "Override the peers.toml path"},
 		},
 		Action: fleetPairAction,
 	}
@@ -323,10 +337,6 @@ func fleetApplyCommand() *cli.Command {
 				Name:  "peer",
 				Usage: "Select peers: repeat to UNION. Each value is a name (`main_pc`), `key=value` filter (`tag=production`), or `@k=v,k2=v2` AND-group. Default: every peer in peers.toml (or the machine name when invoked as `fleet apply <machine>`).",
 			},
-			&cli.StringFlag{
-				Name:  "peers-file",
-				Usage: "Override the peers.toml path",
-			},
 			&cli.Int64Flag{
 				Name:  "max-sync-size",
 				Usage: "Plan-dir cumulative size cap in bytes (default 100 MiB)",
@@ -346,15 +356,6 @@ func fleetApplyCommand() *cli.Command {
 				Usage: "Filter steps to run on each peer by `key=value` (v1: tag=<x>); " +
 					"forwarded to daemon. Multiple values OR together. " +
 					"Example: --step-filter tag=deploy",
-			},
-			&cli.IntFlag{
-				Name:  "parallel",
-				Usage: "Maximum peers in flight at once (0 = unbounded, default)",
-				Value: 0,
-			},
-			&cli.BoolFlag{
-				Name:  "no-color",
-				Usage: "Disable ANSI colors in the [host] prefix (also honors NO_COLOR env)",
 			},
 		},
 		Action: fleetApplyAction,

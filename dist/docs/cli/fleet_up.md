@@ -16,7 +16,6 @@ Sends a WoL magic packet to each peer's stored MAC (see `fleet mac-refresh`). Th
 | Flag | Type | Default | Description |
 |------|------|---------|-------------|
 | `--peer` | []string | - | Select peers (in addition to positional args): repeat for UNION. Each value is a name, `key=value` filter, or `@k=v,k2=v2` AND-group. |
-| `--peers-file` | string | - | Override the peers.toml path |
 | `--broadcast` | string | - | UDP broadcast address for the magic packet (default 255.255.255.255:9). Use a directed broadcast like 10.0.0.255:9 for routed LANs. |
 | `--no-wait` | bool | false | Return immediately after sending the magic packet (skip the /v1/version reachability check) |
 | `--wait-timeout` | duration | `2m0s` | Maximum time to wait for each peer to come back online |

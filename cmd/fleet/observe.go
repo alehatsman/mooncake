@@ -35,8 +35,6 @@ func fleetObserveCommand() *cli.Command {
 			Name:  "peer",
 			Usage: "Select peers: repeat to UNION. Each value is a name, `key=value` filter (`tag=production`), or `@k=v,k2=v2` AND-group. Default: every peer in peers.toml.",
 		},
-		&cli.StringFlag{Name: "peers-file", Usage: "Override the peers.toml path"},
-		&cli.IntFlag{Name: "parallel", Usage: "Max peers in flight (0 = unbounded)", Value: 0},
 		&cli.StringFlag{Name: "format", Usage: "Output format: table (default) or json", Value: "table"},
 	}
 

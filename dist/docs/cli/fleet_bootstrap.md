@@ -31,7 +31,6 @@ Production bootstrap (spec-44 §88, 8-step sequence):
 | `--name` | string | - | Peer name in peers.toml (default: hostname with dots → dashes) |
 | `--tag` | []string | - | Tag to attach to the peer (repeatable) |
 | `--binary` | string | - | Path to mooncake binary to upload (default: this process) |
-| `--peers-file` | string | - | Override the peers.toml path |
 | `--upgrade` | bool | false | Replace an already-installed mooncake of a different version. Without this, version mismatch on the target errors out. |
 | `--user` | bool | false | Linux only: install the agentd as a user-scope systemd unit running as the SSH user (binary in ~/.local/bin, unit in ~/.config/systemd/user/, token in ~/.config/mooncake/). Default is a system-scope unit running as root. Implies `loginctl enable-linger` so the unit survives logout. |
 

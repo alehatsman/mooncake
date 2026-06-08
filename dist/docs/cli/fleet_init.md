@@ -15,7 +15,6 @@ Aggregates discovery sources (mDNS, ~/.ssh/config, existing peers.toml) and prom
 
 | Flag | Type | Default | Description |
 |------|------|---------|-------------|
-| `--peers-file` | string | - | Override the peers.toml path |
 | `--no-mdns` | bool | false | Skip the mDNS browse source |
 | `--no-ssh-config` | bool | false | Skip the ~/.ssh/config source |
 | `--mdns-timeout` | duration | `3s` | Cap mDNS browse wall-clock |

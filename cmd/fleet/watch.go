@@ -35,14 +35,11 @@ func fleetWatchCommand() *cli.Command {
 				Name:  "peer",
 				Usage: "Select peers: repeat to UNION. Each value is a name, `key=value` filter (`tag=production`), or `@k=v,k2=v2` AND-group. Default: every peer in peers.toml.",
 			},
-			&cli.StringFlag{Name: "peers-file", Usage: "Override the peers.toml path"},
 			&cli.DurationFlag{
 				Name:  "poll-interval",
 				Usage: "How often a peer is polled for new in-flight runs (jittered ±25%)",
 				Value: 2 * time.Second,
 			},
-			&cli.BoolFlag{Name: "no-color", Usage: "Disable ANSI colors in the [peer] prefix"},
-			&cli.BoolFlag{Name: "json", Usage: "Emit one JSONL record per event instead of multiplexed lines"},
 		},
 		Action: fleetWatchAction,
 	}

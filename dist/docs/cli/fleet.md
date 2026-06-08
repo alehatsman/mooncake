@@ -9,7 +9,16 @@ Manage and operate a personal fleet of mooncake peers (experimental)
 
 ## Description
 
-Drive plans across machines you own: discover peers, sync plan trees, apply with multiplexed logs. Peers are configured in ~/.config/mooncake/peers.toml.
+Drive plans across machines you own: discover peers, sync plan trees, apply with multiplexed logs. Peers are configured in ~/.config/mooncake/peers.toml. Global flags (--peers-file, --no-color, --json, --parallel) apply to all subcommands and must be placed before the subcommand name.
+
+## Flags
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--peers-file` | string | - | Override the peers.toml path |
+| `--no-color` | bool | false | Disable ANSI colors (also honors NO_COLOR env) |
+| `--json` | bool | false | Emit JSONL instead of formatted text |
+| `--parallel` | int | `0` | Max peers in flight (0 = unbounded) |
 
 ## Subcommands
 

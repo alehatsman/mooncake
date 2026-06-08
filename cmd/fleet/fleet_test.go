@@ -84,7 +84,7 @@ func TestFleetApply_NoPeersConfigured(t *testing.T) {
 	}
 
 	app := newTestFleetApp()
-	err := app.Run([]string{"mooncake", "fleet", "apply", "--peers-file", peersPath, planPath})
+	err := app.Run([]string{"mooncake", "fleet", "--peers-file", peersPath, "apply", planPath})
 	if err == nil {
 		t.Fatal("want error when no peers configured")
 	}
@@ -117,8 +117,9 @@ token = "t"
 
 	app := newTestFleetApp()
 	err := app.Run([]string{
-		"mooncake", "fleet", "apply",
+		"mooncake", "fleet",
 		"--peers-file", peersPath,
+		"apply",
 		"--peer", "nonexistent",
 		planPath,
 	})

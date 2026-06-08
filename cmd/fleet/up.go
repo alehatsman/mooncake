@@ -38,10 +38,6 @@ func fleetUpCommand() *cli.Command {
 				Usage: "Select peers (in addition to positional args): repeat for UNION. Each value is a name, `key=value` filter, or `@k=v,k2=v2` AND-group.",
 			},
 			&cli.StringFlag{
-				Name:  "peers-file",
-				Usage: "Override the peers.toml path",
-			},
-			&cli.StringFlag{
 				Name: "broadcast",
 				Usage: "UDP broadcast address for the magic packet (default " +
 					wol.DefaultBroadcast + "). Use a directed broadcast like " +

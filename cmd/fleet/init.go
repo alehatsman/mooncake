@@ -39,7 +39,6 @@ func fleetInitCommand() *cli.Command {
 			"peer's bearer token to the controller — is a manual paste " +
 			"in v1; --from-bootstrap / --ssh-fetch are spec-47 follow-ups.",
 		Flags: []cli.Flag{
-			&cli.StringFlag{Name: "peers-file", Usage: "Override the peers.toml path"},
 			&cli.BoolFlag{Name: "no-mdns", Usage: "Skip the mDNS browse source"},
 			&cli.BoolFlag{Name: "no-ssh-config", Usage: "Skip the ~/.ssh/config source"},
 			&cli.DurationFlag{Name: "mdns-timeout", Usage: "Cap mDNS browse wall-clock", Value: 3 * time.Second},

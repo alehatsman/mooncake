@@ -37,22 +37,10 @@ func fleetDoctorCommand() *cli.Command {
 			"curated hint. Designed for the moment `fleet status` " +
 			"reports unreachable and you want to know *why*.",
 		Flags: []cli.Flag{
-			&cli.StringFlag{
-				Name:  "peers-file",
-				Usage: "Override the peers.toml path",
-			},
 			&cli.DurationFlag{
 				Name:  "timeout",
 				Usage: "Per-rung deadline (DNS, TCP, each HTTP call)",
 				Value: 3 * time.Second,
-			},
-			&cli.BoolFlag{
-				Name:  "no-color",
-				Usage: "Disable ANSI colors (also honors NO_COLOR)",
-			},
-			&cli.BoolFlag{
-				Name:  "json",
-				Usage: "Emit one JSON object summarising all rungs; skip the table",
 			},
 		},
 		Action: fleetDoctorAction,

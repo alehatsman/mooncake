@@ -191,7 +191,7 @@ func TestFleetLogs_LatestInFlightPreferredOverTerminal(t *testing.T) {
 	peersPath := writePeersToml(t, dir, map[string]string{"laptop": addr}, "tok")
 
 	app, out := captureLogsApp()
-	err := app.Run([]string{"mooncake", "fleet", "logs", "--peers-file", peersPath, "laptop"})
+	err := app.Run([]string{"mooncake", "fleet", "--peers-file", peersPath, "logs", "laptop"})
 	if err != nil {
 		t.Fatalf("unexpected error: %v\noutput: %s", err, out.String())
 	}
@@ -221,7 +221,7 @@ func TestFleetLogs_FallsBackToNewestTerminal(t *testing.T) {
 	peersPath := writePeersToml(t, dir, map[string]string{"laptop": addr}, "tok")
 
 	app, out := captureLogsApp()
-	err := app.Run([]string{"mooncake", "fleet", "logs", "--peers-file", peersPath, "laptop"})
+	err := app.Run([]string{"mooncake", "fleet", "--peers-file", peersPath, "logs", "laptop"})
 	if err != nil {
 		t.Fatalf("unexpected error: %v\noutput: %s", err, out.String())
 	}
@@ -250,7 +250,7 @@ func TestFleetLogs_ExplicitRunIDBypassesResolver(t *testing.T) {
 	peersPath := writePeersToml(t, dir, map[string]string{"laptop": addr}, "tok")
 
 	app, out := captureLogsApp()
-	err := app.Run([]string{"mooncake", "fleet", "logs", "--peers-file", peersPath, "laptop", "RUN-OLD"})
+	err := app.Run([]string{"mooncake", "fleet", "--peers-file", peersPath, "logs", "laptop", "RUN-OLD"})
 	if err != nil {
 		t.Fatalf("unexpected error: %v\noutput: %s", err, out.String())
 	}
@@ -274,7 +274,7 @@ func TestFleetLogs_NoRunsErrorsCleanly(t *testing.T) {
 	peersPath := writePeersToml(t, dir, map[string]string{"laptop": addr}, "tok")
 
 	app, _ := captureLogsApp()
-	err := app.Run([]string{"mooncake", "fleet", "logs", "--peers-file", peersPath, "laptop"})
+	err := app.Run([]string{"mooncake", "fleet", "--peers-file", peersPath, "logs", "laptop"})
 	if err == nil {
 		t.Fatal("expected error for peer with no runs")
 	}
@@ -292,7 +292,7 @@ func TestFleetLogs_UnknownPeerErrors(t *testing.T) {
 	peersPath := writePeersToml(t, dir, map[string]string{"laptop": "127.0.0.1:0"}, "tok")
 
 	app, _ := captureLogsApp()
-	err := app.Run([]string{"mooncake", "fleet", "logs", "--peers-file", peersPath, "nonexistent"})
+	err := app.Run([]string{"mooncake", "fleet", "--peers-file", peersPath, "logs", "nonexistent"})
 	if err == nil {
 		t.Fatal("expected error for unknown peer")
 	}
@@ -313,9 +313,9 @@ func TestFleetLogs_ArgValidation(t *testing.T) {
 		argv []string
 		want string
 	}{
-		{"no args, no --all", []string{"mooncake", "fleet", "logs", "--peers-file", peersPath}, "expected"},
-		{"three positional args", []string{"mooncake", "fleet", "logs", "--peers-file", peersPath, "a", "b", "c"}, "expected"},
-		{"--all + positional", []string{"mooncake", "fleet", "logs", "--peers-file", peersPath, "--all", "laptop"}, "--all takes no positional"},
+		{"no args, no --all", []string{"mooncake", "fleet", "--peers-file", peersPath, "logs"}, "expected"},
+		{"three positional args", []string{"mooncake", "fleet", "--peers-file", peersPath, "logs", "a", "b", "c"}, "expected"},
+		{"--all + positional", []string{"mooncake", "fleet", "--peers-file", peersPath, "logs", "--all", "laptop"}, "--all takes no positional"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

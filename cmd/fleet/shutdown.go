@@ -34,10 +34,6 @@ func fleetShutdownCommand() *cli.Command {
 				Name:  "peer",
 				Usage: "Select peers (in addition to positional args): repeat for UNION. Each value is a name, `key=value` filter, or `@k=v,k2=v2` AND-group.",
 			},
-			&cli.StringFlag{
-				Name:  "peers-file",
-				Usage: "Override the peers.toml path",
-			},
 			&cli.BoolFlag{
 				Name:  "force",
 				Usage: "Tell the daemon to shut down even if a run is in flight",

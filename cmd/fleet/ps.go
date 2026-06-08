@@ -31,8 +31,6 @@ func fleetPsCommand() *cli.Command {
 				Name:  "peer",
 				Usage: "Select peers: repeat to UNION. Each value is a name (`main_pc`), `key=value` filter (`tag=production`), or `@k=v,k2=v2` AND-group. Default (no --peer): every peer in peers.toml.",
 			},
-			&cli.StringFlag{Name: "peers-file", Usage: "Override the peers.toml path"},
-			&cli.IntFlag{Name: "parallel", Usage: "Max peers in flight (0 = unbounded)", Value: 0},
 			&cli.DurationFlag{Name: "timeout", Usage: "Per-peer probe timeout", Value: 3 * time.Second},
 			&cli.StringFlag{
 				Name:  "status",
@@ -53,8 +51,6 @@ func fleetPsCommand() *cli.Command {
 				Value: "peer",
 			},
 			&cli.BoolFlag{Name: "short", Usage: "Truncate RUN_ID column to the last 10 chars"},
-			&cli.BoolFlag{Name: "no-color", Usage: "Disable ANSI colors"},
-			&cli.BoolFlag{Name: "json", Usage: "Emit one JSONL record per run instead of a table"},
 		},
 		Action: fleetPsAction,
 	}

@@ -102,7 +102,7 @@ func TestFleetMACRefresh_WritesMACToPeersToml(t *testing.T) {
 	peersPath := writePeersToml(t, dir, map[string]string{"laptop": addr}, "tok")
 
 	app, out := captureLogsApp()
-	err := app.Run([]string{"mooncake", "fleet", "mac-refresh", "--peers-file", peersPath, "laptop"})
+	err := app.Run([]string{"mooncake", "fleet", "--peers-file", peersPath, "mac-refresh", "laptop"})
 	if err != nil {
 		t.Fatalf("unexpected error: %v\noutput: %s", err, out.String())
 	}
@@ -131,7 +131,7 @@ func TestFleetMACRefresh_ReportsErrorOnNoMACFromPeer(t *testing.T) {
 	peersPath := writePeersToml(t, dir, map[string]string{"nas": addr}, "tok")
 
 	app, out := captureLogsApp()
-	err := app.Run([]string{"mooncake", "fleet", "mac-refresh", "--peers-file", peersPath, "nas"})
+	err := app.Run([]string{"mooncake", "fleet", "--peers-file", peersPath, "mac-refresh", "nas"})
 	if err == nil {
 		t.Fatalf("want error, got nil; output: %s", out.String())
 	}
@@ -154,7 +154,7 @@ func TestFleetShutdown_AutoCollectsMAC(t *testing.T) {
 	peersPath := writePeersToml(t, dir, map[string]string{"laptop": addr}, "tok")
 
 	app, out := captureLogsApp()
-	err := app.Run([]string{"mooncake", "fleet", "shutdown", "--peers-file", peersPath, "laptop"})
+	err := app.Run([]string{"mooncake", "fleet", "--peers-file", peersPath, "shutdown", "laptop"})
 	if err != nil {
 		t.Fatalf("unexpected error: %v\noutput: %s", err, out.String())
 	}
@@ -181,7 +181,7 @@ func TestFleetShutdown_SkipsMACWhenAlreadySet(t *testing.T) {
 	peersPath := writePeersTomlWithMAC(t, dir, "laptop", addr, "tok", "11:22:33:44:55:66")
 
 	app, _ := captureLogsApp()
-	err := app.Run([]string{"mooncake", "fleet", "shutdown", "--peers-file", peersPath, "laptop"})
+	err := app.Run([]string{"mooncake", "fleet", "--peers-file", peersPath, "shutdown", "laptop"})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -201,7 +201,7 @@ func TestFleetShutdown_NoMACCollectFlag(t *testing.T) {
 	peersPath := writePeersToml(t, dir, map[string]string{"laptop": addr}, "tok")
 
 	app, _ := captureLogsApp()
-	err := app.Run([]string{"mooncake", "fleet", "shutdown", "--peers-file", peersPath, "--no-mac-collect", "laptop"})
+	err := app.Run([]string{"mooncake", "fleet", "--peers-file", peersPath, "shutdown", "--no-mac-collect", "laptop"})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -221,7 +221,7 @@ func TestFleetShutdown_RefusesWithNoPeerSelected(t *testing.T) {
 	peersPath := writePeersToml(t, dir, map[string]string{"laptop": addr}, "tok")
 
 	app, out := captureLogsApp()
-	err := app.Run([]string{"mooncake", "fleet", "shutdown", "--peers-file", peersPath})
+	err := app.Run([]string{"mooncake", "fleet", "--peers-file", peersPath, "shutdown"})
 	if err == nil {
 		t.Fatalf("want error when no peer selected, got nil; output: %s", out.String())
 	}
@@ -238,7 +238,7 @@ func TestFleetUp_RefusesWithoutStoredMAC(t *testing.T) {
 	peersPath := writePeersToml(t, dir, map[string]string{"laptop": addr}, "tok")
 
 	app, out := captureLogsApp()
-	err := app.Run([]string{"mooncake", "fleet", "up", "--peers-file", peersPath, "laptop"})
+	err := app.Run([]string{"mooncake", "fleet", "--peers-file", peersPath, "up", "laptop"})
 	if err == nil {
 		t.Fatalf("want error when MAC is unset, got nil; output: %s", out.String())
 	}
@@ -271,7 +271,7 @@ func TestFleetUp_NoWaitSucceeds(t *testing.T) {
 
 	app, out := captureLogsApp()
 	err := app.Run([]string{
-		"mooncake", "fleet", "up", "--peers-file", peersPath,
+		"mooncake", "fleet", "--peers-file", peersPath, "up",
 		"--no-wait", "--broadcast", udp.LocalAddr().String(),
 		"laptop",
 	})
