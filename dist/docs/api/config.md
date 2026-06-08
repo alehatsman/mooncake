@@ -2846,7 +2846,7 @@ type WindowsScheduledTask struct {
     Description string                         `yaml:"description" json:"description,omitempty"` // Optional
     Trigger     *WindowsScheduledTaskTrigger   `yaml:"trigger" json:"trigger,omitempty"`         // Single-trigger shape (mutually exclusive with triggers)
     Triggers    []WindowsScheduledTaskTrigger  `yaml:"triggers" json:"triggers,omitempty"`       // Multi-trigger shape
-    Actions     []WindowsScheduledTaskAction   `yaml:"actions" json:"actions"`                   // Required, at least one
+    Actions     []WindowsScheduledTaskAction   `yaml:"actions" json:"actions,omitempty"`         // Required when state=present; absent for state=absent
     Principal   *WindowsScheduledTaskPrincipal `yaml:"principal" json:"principal,omitempty"`     // Optional; defaults to S4U + HighestAvailable
     Settings    *WindowsScheduledTaskSettings  `yaml:"settings" json:"settings,omitempty"`       // Optional
 }

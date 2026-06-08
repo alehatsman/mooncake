@@ -1305,7 +1305,7 @@ export interface WindowsHypervFirewallRuleAction {
  * @category system
  */
 export interface WindowsScheduledTaskAction {
-  actions: {
+  actions?: {
     arguments: string;
     execute: string;
     working_directory: string;

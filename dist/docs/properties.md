@@ -1390,7 +1390,7 @@ Manage Windows Task Scheduler entries
 
 | Property | Type | Required | Description |
 |----------|------|----------|-------------|
-| `actions` | array | **Yes** | - |
+| `actions` | array | No | - |
 | `description` | string | No | - |
 | `name` | string | **Yes** | - |
 | `principal` | object | No | - |

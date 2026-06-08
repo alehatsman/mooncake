@@ -27660,8 +27660,7 @@
         }
       },
       "required": [
-        "name",
-        "actions"
+        "name"
       ],
       "additionalProperties": false,
       "x-platforms": [
