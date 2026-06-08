@@ -312,7 +312,26 @@ func runUpdate(ctx context.Context, g *config.GitClone, ref, dest, beforeSHA str
 		}
 	}
 
-	fetchArgs := []string{"fetch", "--prune"}
+	// Reconcile origin URL to the configured repo before fetching.
+	// A checkout may have been cloned from a different URL (e.g. the
+	// URL was rotated, or the host changed). Without this, git fetch
+	// silently hits the old remote — and on dead loopback addresses
+	// under WSL mirrored networking the SYN black-holes with no RST,
+	// so git fetch hangs indefinitely.
+	currentURL, err := captureGit(ctx, dest, env, "remote", "get-url", "origin")
+	if err != nil {
+		return false, fmt.Errorf("git.clone: get origin url: %w", err)
+	}
+	if strings.TrimSpace(currentURL) != g.Repo {
+		if err := runGit(ctx, dest, env, "remote", "set-url", "origin", g.Repo); err != nil {
+			return false, fmt.Errorf("git.clone: reconcile origin url: %w", err)
+		}
+	}
+
+	// -c http.connectTimeout=10: abort the TCP handshake after 10 s
+	// instead of hanging indefinitely on a dead remote (e.g. a black-
+	// holed loopback address under WSL mirrored networking).
+	fetchArgs := []string{"-c", "http.connectTimeout=10", "fetch", "--prune"}
 	if g.Depth > 0 {
 		fetchArgs = append(fetchArgs, "--depth", strconv.Itoa(g.Depth))
 	}
