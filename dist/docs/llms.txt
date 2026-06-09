@@ -124,6 +124,7 @@ Reference for every `mooncake` subcommand and its flags.
 - [fleet.ps](cli/fleet_ps.md)
 - [fleet.shutdown](cli/fleet_shutdown.md)
 - [fleet.status](cli/fleet_status.md)
+- [fleet.top](cli/fleet_top.md)
 - [fleet.up](cli/fleet_up.md)
 - [fleet.upgrade](cli/fleet_upgrade.md)
 - [fleet.watch](cli/fleet_watch.md)

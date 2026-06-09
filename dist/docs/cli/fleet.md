@@ -36,6 +36,7 @@ Drive plans across machines you own: discover peers, sync plan trees, apply with
 - [ps](fleet_ps.md) — List in-flight (or recent) runs across fleet peers
 - [shutdown](fleet_shutdown.md) — Power off one or more fleet peers via agentd
 - [status](fleet_status.md) — Show one-line-per-peer health for the configured fleet
+- [top](fleet_top.md) — Live resource dashboard: CPU, memory, disk, GPU across fleet peers
 - [up](fleet_up.md) — Wake one or more peers via Wake-on-LAN
 - [upgrade](fleet_upgrade.md) — Push a new agentd binary to fleet peers and trigger re-exec
 - [watch](fleet_watch.md) — Stream live events from every peer; `tail -f` for the fleet

@@ -53,6 +53,7 @@ func Command() *cli.Command {
 			fleetObserveCommand(),
 			fleetPsCommand(),
 			fleetWatchCommand(),
+			fleetTopCommand(),
 			fleetStatusCommand(),
 			fleetDoctorCommand(),
 			fleetLogsCommand(),
