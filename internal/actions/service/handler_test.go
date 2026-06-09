@@ -823,3 +823,50 @@ func TestWrapBecomeErrorAsSetup(t *testing.T) {
 		}
 	})
 }
+
+func TestValidate_Scope(t *testing.T) {
+	h := &Handler{}
+	cases := []struct {
+		scope   string
+		wantErr bool
+	}{
+		{"user", false},
+		{"system", false},
+		{"User", false},
+		{"System", false},
+		{"", false},
+		{"invalid", true},
+		{"daemon", true},
+	}
+	for _, c := range cases {
+		step := &config.Step{OsService: &config.ServiceAction{Name: "svc", Scope: c.scope}}
+		err := h.Validate(step)
+		if c.wantErr && err == nil {
+			t.Errorf("scope=%q: expected error, got nil", c.scope)
+		}
+		if !c.wantErr && err != nil {
+			t.Errorf("scope=%q: unexpected error: %v", c.scope, err)
+		}
+	}
+}
+
+func TestPermissions_Scope(t *testing.T) {
+	h := &Handler{}
+	cases := []struct {
+		scope    string
+		wantSudo bool
+	}{
+		{"user", false},
+		{"User", false},
+		{"system", true},
+		{"System", true},
+		{"", true},
+	}
+	for _, c := range cases {
+		step := &config.Step{OsService: &config.ServiceAction{Name: "svc", Scope: c.scope}}
+		ps := h.Permissions(step)
+		if ps.Sudo != c.wantSudo {
+			t.Errorf("scope=%q: Sudo=%v, want %v", c.scope, ps.Sudo, c.wantSudo)
+		}
+	}
+}

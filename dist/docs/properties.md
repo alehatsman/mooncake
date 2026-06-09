@@ -592,6 +592,7 @@ Manage services across platforms (systemd, launchd, Windows)
 | `dropin` | object | No | - |
 | `enabled` | boolean | No | Enable service to start on boot (systemd: enable/disable, launchd: bootstrap/bootout) |
 | `name` | string | **Yes** | Service name (systemd: nginx, launchd: com.example.app) |
+| `scope` | string | No | Service scope: system (default, requires root) or user (no root; launchd: ~/Library/LaunchAgents + gui/<uid> domain) (allowed: `system, user`) |
 | `state` | string | No | Desired service state (allowed: `started, stopped, restarted, reloaded`) |
 | `unit` | object | No | - |
 

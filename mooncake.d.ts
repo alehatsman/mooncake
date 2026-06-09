@@ -658,6 +658,13 @@ export interface OsServiceAction {
    */
   name: string;
   /**
+   * Service scope: system (default, requires root) or user (no root;
+   * launchd: ~/Library/LaunchAgents + gui/<uid> domain)
+   * 
+   * @values system | user
+   */
+  scope?: "system" | "user";
+  /**
    * Desired service state
    * 
    * @values started | stopped | restarted | reloaded

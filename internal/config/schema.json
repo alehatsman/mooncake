@@ -1733,6 +1733,14 @@
           "description": "Service name (systemd: nginx, launchd: com.example.app)",
           "minLength": 1
         },
+        "scope": {
+          "type": "string",
+          "description": "Service scope: system (default, requires root) or user (no root; launchd: ~/Library/LaunchAgents + gui/\u003cuid\u003e domain)",
+          "enum": [
+            "system",
+            "user"
+          ]
+        },
         "state": {
           "type": "string",
           "description": "Desired service state",
