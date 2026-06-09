@@ -55,6 +55,9 @@ func fleetTopAction(c *cli.Context) error {
 
 	obsPeers := toObservePeers(peers)
 	interval := c.Duration("interval")
+	if interval < time.Second {
+		interval = time.Second
+	}
 	useColor := fleet.ShouldColor(c.App.Writer, c.Bool("no-color"))
 	parallel := c.Int("parallel")
 	w := c.App.Writer

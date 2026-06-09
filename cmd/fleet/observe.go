@@ -381,6 +381,13 @@ func extractValueMap(result map[string]any) map[string]any {
 	if result == nil {
 		return map[string]any{}
 	}
+	// step.completed event: result.data.value (current shape)
+	if data, ok := result["data"].(map[string]any); ok {
+		if v, ok := data["value"].(map[string]any); ok {
+			return v
+		}
+	}
+	// fallback: result.value (legacy / flat shape)
 	if v, ok := result["value"].(map[string]any); ok {
 		return v
 	}
@@ -391,6 +398,12 @@ func found(result map[string]any) bool {
 	if result == nil {
 		return false
 	}
+	// step.completed event: result.data.found
+	if data, ok := result["data"].(map[string]any); ok {
+		b, _ := data["found"].(bool)
+		return b
+	}
+	// fallback: result.found
 	b, _ := result["found"].(bool)
 	return b
 }
