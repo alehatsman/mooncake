@@ -40,7 +40,7 @@ var (
 		SourcesDir:  "/etc/apt/sources.list.d",
 		KeyringsDir: "/etc/apt/keyrings",
 	}
-	updateCache = realAptGetUpdate // func(runner) error
+	updateCache = realAptGetUpdate // func(context.Context, *security.Privileged) error
 )
 
 // SourcesPath returns the absolute path to the DEB822 sources file
@@ -133,7 +133,7 @@ func Run(ctx actions.Context, r *config.PkgRepo, result *executor.Result) (actio
 	}
 
 	if rendered.updateCache && plan.touchesSources {
-		if err := updateCache(runner); err != nil {
+		if err := updateCache(ctx.Ctx(), runner); err != nil {
 			return result, fmt.Errorf("pkg.repo.apt: apt-get update: %w", err)
 		}
 	}
@@ -380,8 +380,8 @@ func apply(ctx context.Context, performer actions.Performer, p plan_, r rendered
 	return nil
 }
 
-func realAptGetUpdate(runner *security.Privileged) error {
-	out, err := runner.Run(context.TODO(), "apt-get", "update")
+func realAptGetUpdate(ctx context.Context, runner *security.Privileged) error {
+	out, err := runner.Run(ctx, "apt-get", "update")
 	if err != nil {
 		msg := strings.TrimSpace(string(out))
 		if msg != "" {

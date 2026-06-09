@@ -16,6 +16,7 @@ import (
 	"io"
 	"log/slog"
 	"net"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
@@ -65,13 +66,19 @@ func startAgentdTCP(t *testing.T) (addr, token, syncedRoot string, stop func()) 
 	done := make(chan error, 1)
 	go func() { done <- srv.Serve(ctx) }()
 
-	// Wait for the TCP listener to accept.
-	deadline := time.Now().Add(2 * time.Second)
-	for time.Now().Before(deadline) {
-		c, err := net.DialTimeout("tcp", tcpAddr, 100*time.Millisecond)
+	// Poll a real HTTP request — a bare TCP dial only proves the listener
+	// exists; the HTTP handler can still RST the first request if it hasn't
+	// started serving yet (same pattern as startTestServerTCP in agentd).
+	probe := &http.Client{Timeout: 200 * time.Millisecond}
+	deadline := time.Now().Add(5 * time.Second)
+	for {
+		resp, err := probe.Get("http://" + tcpAddr + "/v1/version")
 		if err == nil {
-			_ = c.Close()
+			_ = resp.Body.Close()
 			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("agentd did not become ready within deadline: %v", err)
 		}
 		time.Sleep(20 * time.Millisecond)
 	}

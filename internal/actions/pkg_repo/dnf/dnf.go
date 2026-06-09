@@ -44,7 +44,7 @@ var (
 		ReposDir:   "/etc/yum.repos.d",
 		KeyringDir: "/etc/pki/rpm-gpg",
 	}
-	cleanCache = realCleanCache // func(runner) error
+	cleanCache = realCleanCache // func(context.Context, *security.Privileged) error
 )
 
 // RepoPath returns the absolute path to the .repo INI file for
@@ -119,7 +119,7 @@ func Run(ctx actions.Context, r *config.PkgRepo, result *executor.Result) (actio
 	}
 
 	if rendered.updateCache && plan.touchesRepo {
-		if err := cleanCache(runner); err != nil {
+		if err := cleanCache(ctx.Ctx(), runner); err != nil {
 			return result, fmt.Errorf("pkg.repo.dnf: dnf clean expire-cache: %w", err)
 		}
 	}
@@ -367,14 +367,14 @@ func apply(ctx context.Context, performer actions.Performer, p plan_, r rendered
 // on RHEL 7). Invalidates the per-repo metadata cache so the next
 // `dnf install` sees the freshly-added repo without forcing a full
 // network refresh up front.
-func realCleanCache(runner *security.Privileged) error {
+func realCleanCache(ctx context.Context, runner *security.Privileged) error {
 	bin := "dnf"
 	if _, err := exec.LookPath("dnf"); err != nil {
 		if _, fallbackErr := exec.LookPath("yum"); fallbackErr == nil {
 			bin = "yum"
 		}
 	}
-	out, err := runner.Run(context.TODO(), bin, "clean", "expire-cache")
+	out, err := runner.Run(ctx, bin, "clean", "expire-cache")
 	if err != nil {
 		msg := strings.TrimSpace(string(out))
 		if msg != "" {

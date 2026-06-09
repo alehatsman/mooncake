@@ -416,7 +416,7 @@ func (h *Handler) executeSudoCommand(ctx actions.Context, command string) error 
 	// PrivilegedRunner so this site inherits it for free. Combined
 	// output is folded into the error message so the operator sees
 	// the failing sh -c invocation verbatim.
-	out, err := ctx.Privileged().Run(context.TODO(), "sh", "-c", command)
+	out, err := ctx.Privileged().Run(ctx.Ctx(), "sh", "-c", command)
 	if err != nil {
 		msg := strings.TrimSpace(string(out))
 		if msg != "" {

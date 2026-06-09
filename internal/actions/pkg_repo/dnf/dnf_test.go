@@ -69,7 +69,7 @@ func newStubFS(t *testing.T) *stubFS {
 	paths = Paths{ReposDir: s.reposDir, KeyringDir: s.keyringDir}
 	shared.HTTPFetchKey = func(context.Context, string) ([]byte, error) { return s.keyBody, nil }
 	shared.VerifyKeyFingerprint = func([]byte, string) error { return nil }
-	cleanCache = func(_ *security.Privileged) error {
+	cleanCache = func(_ context.Context, _ *security.Privileged) error {
 		s.cacheCalled++
 		return nil
 	}
