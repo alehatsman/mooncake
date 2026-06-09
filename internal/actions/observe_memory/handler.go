@@ -100,6 +100,8 @@ func readMemory() (MemoryObservation, error) {
 		return readMemoryLinux()
 	case "darwin":
 		return readMemoryDarwin()
+	case "windows":
+		return readMemoryWindows()
 	}
 	return MemoryObservation{}, fmt.Errorf("observe.memory not implemented on %s", runtime.GOOS)
 }
