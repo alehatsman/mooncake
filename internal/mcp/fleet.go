@@ -93,7 +93,6 @@ func HandleFleetRunPlan(ctx context.Context, args json.RawMessage) (string, erro
 		return "", fmt.Errorf("%s", fleet.NoPeersSelectedError(len(peerCfg.Peers), unknown))
 	}
 
-	var w bytes.Buffer
 	cfg := &fleet.ApplyConfig{
 		PlanArg:       params.Config,
 		PeersPath:     peersPath,
@@ -105,7 +104,6 @@ func HandleFleetRunPlan(ctx context.Context, args json.RawMessage) (string, erro
 		NoColor:       true,
 		Writer:        io.Discard,
 	}
-	_ = w
 
 	kr, runErr := fleet.NewOrchestrator(cfg).Run(ctx)
 

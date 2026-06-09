@@ -166,9 +166,8 @@ func AllTools() []ToolDef {
 			Name:        "run_plan",
 			Description: "Apply a mooncake config to the user's system. Every step is typed and rolls back automatically on failure — safer than running raw shell. Mutates the system; preview with `check_plan` first.",
 			InputSchema: objSchema(map[string]interface{}{
-				"config":  strProp("Path to mooncake config YAML file"),
-				"dry_run": boolProp("If true, simulate without making changes"),
-				"policy":  policyProp(),
+				"config": strProp("Path to mooncake config YAML file"),
+				"policy": policyProp(),
 			}, []string{"config"}),
 		},
 		{
@@ -379,7 +378,7 @@ func HandleFactQuery(_ context.Context, args json.RawMessage) (string, error) {
 	m := f.ToMap()
 	key := strings.ReplaceAll(params.Query, ".", "_")
 	val, ok := m[key]
-	if !ok || val == nil || val == "" || val == false {
+	if !ok || val == nil {
 		return `{"found":false}`, nil
 	}
 
@@ -709,5 +708,5 @@ func HandleCheckPlan(_ context.Context, args json.RawMessage) (string, error) {
 	if err := enc.Encode(result); err != nil {
 		return "", err
 	}
-	return buf.String(), nil
+	return strings.TrimRight(buf.String(), "\n"), nil
 }
