@@ -66,4 +66,5 @@
 | wait.port | ✓ | ✓ | ✓ | ✓ |
 | windows.firewall_rule | ✗ | ✗ | ✓ | ✗ |
 | windows.hyperv_firewall_rule | ✗ | ✗ | ✓ | ✗ |
+| windows.registry | ✗ | ✗ | ✓ | ✗ |
 | windows.scheduled_task | ✗ | ✗ | ✓ | ✗ |

@@ -70,6 +70,7 @@ One page per registered action: properties, examples, capabilities.
 - [wait.port](actions/wait_port.md)
 - [windows.firewall.rule](actions/windows_firewall_rule.md)
 - [windows.hyperv.firewall.rule](actions/windows_hyperv_firewall_rule.md)
+- [windows.registry](actions/windows_registry.md)
 - [windows.scheduled.task](actions/windows_scheduled_task.md)
 
 ## Concepts

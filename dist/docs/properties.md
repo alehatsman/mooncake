@@ -1043,6 +1043,7 @@ Execute shell commands
 | `when` | string | No | Conditional expression for step execution (universal) |
 | `windows.firewall_rule` | any | No | Manage Windows Firewall inbound/outbound rules |
 | `windows.hyperv_firewall_rule` | any | No | Manage Windows Hyper-V Firewall rules (WSL2 mirrored networking) |
+| `windows.registry` | any | No | Manage Windows registry keys and values |
 | `windows.scheduled_task` | any | No | Manage Windows Task Scheduler entries |
 | `with` | object | No | Parameters for the custom action named by action: (generic carrier). |
 
@@ -1380,6 +1381,15 @@ Manage Windows Hyper-V Firewall rules (WSL2 mirrored networking)
 **Metadata:**
 - Category: `system`
 - Version: `1.0.0`
+
+
+---
+
+## Windows.registry
+
+Manage Windows registry keys and values
+
+*No properties defined in schema.*
 
 
 ---

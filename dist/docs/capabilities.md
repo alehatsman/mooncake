@@ -66,4 +66,5 @@
 | wait.port | network | Yes | No | No |
 | windows.firewall_rule | system | Yes | No | Yes |
 | windows.hyperv_firewall_rule | system | Yes | No | Yes |
+| windows.registry | system | Yes | No | Yes |
 | windows.scheduled_task | system | Yes | No | Yes |

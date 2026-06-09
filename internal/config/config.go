@@ -1000,6 +1000,18 @@ type WindowsScheduledTaskSettings struct {
 	Hidden                     *bool  `yaml:"hidden" json:"hidden,omitempty"`
 }
 
+// WindowsRegistry manages a Windows registry key or value. Identity is
+// (path, name): path is the key path (e.g. HKLM:\SOFTWARE\MyApp); name
+// is the value name within that key. When name is omitted, only the key's
+// existence is managed (key-only mode).
+type WindowsRegistry struct {
+	Path  string `yaml:"path" json:"path"`             // Registry key path (required), e.g. HKLM:\SOFTWARE\MyApp
+	Name  string `yaml:"name" json:"name,omitempty"`   // Value name; omit for key-only presence management
+	Value string `yaml:"value" json:"value,omitempty"` // Desired value data (required when name is set and state=present)
+	Type  string `yaml:"type" json:"type,omitempty"`   // string (default), dword, qword, expand_string, multi_string, binary
+	State string `yaml:"state" json:"state,omitempty"` // present (default) | absent
+}
+
 // OsMount declares a filesystem mount: an `/etc/fstab` entry plus the
 // matching live mount state. Identity is the destination mount point
 // (one fstab entry per dest). Linux-only for v1.
@@ -1988,6 +2000,7 @@ type Step struct {
 	WindowsFirewallRule       *WindowsFirewallRule       `yaml:"windows.firewall_rule,omitempty"        json:"windows.firewall_rule,omitempty"        action:"windows.firewall_rule"`
 	WindowsHyperVFirewallRule *WindowsHyperVFirewallRule `yaml:"windows.hyperv_firewall_rule,omitempty" json:"windows.hyperv_firewall_rule,omitempty" action:"windows.hyperv_firewall_rule"`
 	WindowsScheduledTask      *WindowsScheduledTask      `yaml:"windows.scheduled_task,omitempty"       json:"windows.scheduled_task,omitempty"       action:"windows.scheduled_task"`
+	WindowsRegistry           *WindowsRegistry           `yaml:"windows.registry,omitempty"             json:"windows.registry,omitempty"             action:"windows.registry"`
 	ContainerImage            *ContainerImage            `yaml:"container.image,omitempty"   json:"container.image,omitempty"   action:"container.image"`
 	Container                 *Container                 `yaml:"container,omitempty"         json:"container,omitempty"         action:"container"`
 	Cmd                       *CommandAction             `yaml:"cmd,omitempty"               json:"cmd,omitempty"               action:"cmd"`
@@ -2531,6 +2544,7 @@ func (s *Step) Clone() *Step {
 		WindowsFirewallRule:       s.WindowsFirewallRule,
 		WindowsHyperVFirewallRule: s.WindowsHyperVFirewallRule,
 		WindowsScheduledTask:      s.WindowsScheduledTask,
+		WindowsRegistry:           s.WindowsRegistry,
 		ContainerImage:            s.ContainerImage,
 		Container:                 s.Container,
 		Cmd:                       s.Cmd,

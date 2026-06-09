@@ -1328,6 +1328,15 @@ export interface WindowsHypervFirewallRuleAction {
 }
 
 /**
+ * Manage Windows registry keys and values
+ * 
+ * @platforms windows
+ * @category system
+ */
+export interface WindowsRegistryAction {
+}
+
+/**
  * Manage Windows Task Scheduler entries
  * 
  * @platforms windows
@@ -1723,6 +1732,10 @@ export interface Step {
    * Manage Windows Hyper-V Firewall rules (WSL2 mirrored networking)
    */
   "windows.hyperv_firewall_rule"?: WindowsHypervFirewallRuleAction;
+  /**
+   * Manage Windows registry keys and values
+   */
+  "windows.registry"?: WindowsRegistryAction;
   /**
    * Manage Windows Task Scheduler entries
    */
