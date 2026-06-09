@@ -21,7 +21,7 @@ import (
 //
 // Resources=1 (the named user). Bytes=-1.
 //
-// Reversible=true — the Reverser interface is declared (refusal in
+// Reversible=true — Reverser implemented (reverse.go).
 // v1, pending apply-time getent snapshot). The natural inverse —
 // recreate the user with the captured pre-apply attributes (uid,
 // shell, groups, etc.) — is a clean reverse once the capture

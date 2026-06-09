@@ -22,7 +22,7 @@ import (
 //
 // Resources counts targeted keys. Bytes=-1.
 //
-// Reversible=true — Reverser interface declared (refusal pending
+// Reversible=true — Reverser implemented (reverse.go).
 // apply-time capture).
 func (Handler) Cost(_ actions.Context, step *config.Step) (actions.CostEstimate, error) {
 	cost := actions.CostEstimate{

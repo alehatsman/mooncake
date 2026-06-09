@@ -140,6 +140,12 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 			result.Reason = "would remove rule " + f.Name
 			return result, nil
 		}
+		result.ReverseData = &WindowsHyperVFirewallRuleReverseInfo{
+			AppliedState:        stateAbsent,
+			PriorExisted:        true,
+			ResolvedVMCreatorID: vmID,
+			PriorRule:           observedRuleToSnapshot(current),
+		}
 		if err := deleteRule(ctx.Ctx(), f.Name, vmID); err != nil {
 			return result, err
 		}
@@ -174,6 +180,12 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		}
 		// Apply. Like windows.firewall_rule, we delete+recreate on
 		// drift rather than field-by-field Set-* gymnastics.
+		result.ReverseData = &WindowsHyperVFirewallRuleReverseInfo{
+			AppliedState:        statePresent,
+			PriorExisted:        current != nil,
+			ResolvedVMCreatorID: vmID,
+			PriorRule:           observedRuleToSnapshot(current),
+		}
 		if current != nil {
 			if err := deleteRule(ctx.Ctx(), f.Name, vmID); err != nil {
 				return result, err

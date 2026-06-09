@@ -16,7 +16,7 @@ import (
 // key per step and is easily inverted by re-setting the prior
 // value.
 //
-// Reversible=true — Reverser interface declared (refusal pending
+// Reversible=true — Reverser implemented (reverse.go).
 // apply-time capture of prior runtime value + file entry).
 func (Handler) Cost(_ actions.Context, _ *config.Step) (actions.CostEstimate, error) {
 	return actions.CostEstimate{

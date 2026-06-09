@@ -135,6 +135,11 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 			result.Reason = "would remove task " + t.Name
 			return result, nil
 		}
+		result.ReverseData = &WindowsScheduledTaskReverseInfo{
+			AppliedState: stateAbsent,
+			TaskName:     t.Name,
+			PriorExisted: true,
+		}
 		if _, err := runPS(winutil.RenderUnregisterCommand(t.Name)); err != nil {
 			return result, fmt.Errorf("unregister: %w", err)
 		}
@@ -169,6 +174,11 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 				result.Reason = "would update task " + t.Name
 			}
 			return result, nil
+		}
+		result.ReverseData = &WindowsScheduledTaskReverseInfo{
+			AppliedState: statePresent,
+			TaskName:     t.Name,
+			PriorExisted: exists,
 		}
 		// Stage XML to a temp file, register from there. -Force
 		// replaces any existing task with the same name.

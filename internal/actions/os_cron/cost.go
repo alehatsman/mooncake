@@ -13,7 +13,7 @@ import (
 // (commands the cron entry runs) is an attribute of that command,
 // not the action itself.
 //
-// Reversible=true — Reverser interface declared (refusal pending
+// Reversible=true — Reverser implemented (reverse.go).
 // apply-time capture).
 func (Handler) Cost(_ actions.Context, _ *config.Step) (actions.CostEstimate, error) {
 	return actions.CostEstimate{

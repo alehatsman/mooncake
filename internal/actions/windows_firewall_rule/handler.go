@@ -126,6 +126,11 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 			result.Reason = "would remove rule " + f.Name
 			return result, nil
 		}
+		result.ReverseData = &WindowsFirewallRuleReverseInfo{
+			AppliedState: stateAbsent,
+			PriorExisted: true,
+			PriorRule:    observedRuleToSnapshot(current),
+		}
 		if err := deleteRule(ctx, f.Name); err != nil {
 			return result, err
 		}
@@ -161,6 +166,11 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		// recreate rather than try to Set-NetFirewallRule each
 		// drifting field — the latter is field-by-field PowerShell
 		// gymnastics that don't pay off given how cheap recreate is.
+		result.ReverseData = &WindowsFirewallRuleReverseInfo{
+			AppliedState: statePresent,
+			PriorExisted: current != nil,
+			PriorRule:    observedRuleToSnapshot(current),
+		}
 		if current != nil {
 			if err := deleteRule(ctx, f.Name); err != nil {
 				return result, err

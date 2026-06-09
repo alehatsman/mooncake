@@ -28247,6 +28247,7 @@
         "windows"
       ],
       "x-implements-check": true,
+      "x-implements-reverse": true,
       "x-category": "system",
       "x-supports-dry-run": true,
       "x-version": "1.0.0"
@@ -28301,6 +28302,7 @@
         "windows"
       ],
       "x-implements-check": true,
+      "x-implements-reverse": true,
       "x-category": "system",
       "x-supports-dry-run": true,
       "x-version": "1.0.0"
@@ -28451,6 +28453,7 @@
         "windows"
       ],
       "x-implements-check": true,
+      "x-implements-reverse": true,
       "x-category": "system",
       "x-supports-dry-run": true,
       "x-version": "1.0.0"

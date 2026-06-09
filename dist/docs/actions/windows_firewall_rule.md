@@ -10,7 +10,7 @@ capabilities:
   check: true
   diff: false
   cost: false
-  reverse: false
+  reverse: true
   permissions: false
 ---
 

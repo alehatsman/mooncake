@@ -21,7 +21,7 @@ import (
 //
 // Resources=1, Bytes=-1.
 //
-// Reversible=true — Reverser interface declared (refusal pending
+// Reversible=true — Reverser implemented (reverse.go).
 // pre-state capture).
 func (Handler) Cost(_ actions.Context, step *config.Step) (actions.CostEstimate, error) {
 	cost := actions.CostEstimate{

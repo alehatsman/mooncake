@@ -18,7 +18,7 @@ import (
 // when the step transitions state to absent (removing a unit
 // stops + disables; same blast radius as os.service stop).
 //
-// Reversible=true — Reverser interface declared (refusal pending
+// Reversible=true — Reverser implemented (reverse.go).
 // apply-time capture of unit-file content + prior enabled/started
 // state).
 func (Handler) Cost(_ actions.Context, step *config.Step) (actions.CostEstimate, error) {

@@ -18,7 +18,7 @@ import (
 // Risk=8 when state=absent (the fstab entry is removed; if the
 // volume isn't also unmounted, the next reboot won't restore it).
 //
-// Reversible=true — Reverser interface declared (refusal pending
+// Reversible=true — Reverser implemented (reverse.go).
 // pre-state capture).
 func (Handler) Cost(_ actions.Context, step *config.Step) (actions.CostEstimate, error) {
 	cost := actions.CostEstimate{
