@@ -734,3 +734,80 @@ func (c *Client) SelfReplace(ctx context.Context, stagedPath, sha256 string, for
 	}
 	return &out, nil
 }
+
+// CallMCPTool dispatches one MCP tools/call to the peer's POST /v1/mcp
+// endpoint and returns the first text content block from the result.
+// args must be a valid JSON object (or nil for tools with no arguments).
+func (c *Client) CallMCPTool(ctx context.Context, tool string, args json.RawMessage) (string, error) {
+	ctx, cancel := withTimeout(ctx)
+	defer cancel()
+
+	if args == nil {
+		args = json.RawMessage("{}")
+	}
+	rpc := struct {
+		JSONRPC string `json:"jsonrpc"`
+		ID      int    `json:"id"`
+		Method  string `json:"method"`
+		Params  struct {
+			Name      string          `json:"name"`
+			Arguments json.RawMessage `json:"arguments"`
+		} `json:"params"`
+	}{
+		JSONRPC: "2.0",
+		ID:      1,
+		Method:  "tools/call",
+	}
+	rpc.Params.Name = tool
+	rpc.Params.Arguments = args
+
+	payload, err := json.Marshal(rpc)
+	if err != nil {
+		return "", fmt.Errorf("CallMCPTool: marshal: %w", err)
+	}
+
+	req, err := c.authReq(ctx, http.MethodPost, c.BaseURL+"/v1/mcp", bytes.NewReader(payload))
+	if err != nil {
+		return "", err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.ContentLength = int64(len(payload))
+
+	resp, err := c.http.Do(req)
+	if err != nil {
+		return "", c.wrap("POST /v1/mcp", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	body, err := readSmallBody(resp)
+	if err != nil {
+		return "", c.wrap("POST /v1/mcp: read body", err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		return "", c.httpErr("POST /v1/mcp", resp.StatusCode, body)
+	}
+
+	var rpcResp struct {
+		Error *struct {
+			Message string `json:"message"`
+		} `json:"error"`
+		Result struct {
+			Content []struct {
+				Type string `json:"type"`
+				Text string `json:"text"`
+			} `json:"content"`
+		} `json:"result"`
+	}
+	if err := json.Unmarshal(body, &rpcResp); err != nil {
+		return "", c.wrap("POST /v1/mcp: decode", err)
+	}
+	if rpcResp.Error != nil {
+		return "", fmt.Errorf("[%s] mcp tool %q: %s", c.Name, tool, rpcResp.Error.Message)
+	}
+	for _, block := range rpcResp.Result.Content {
+		if block.Type == "text" {
+			return block.Text, nil
+		}
+	}
+	return "", fmt.Errorf("[%s] mcp tool %q: no text content in response", c.Name, tool)
+}

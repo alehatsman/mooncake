@@ -60,6 +60,8 @@ func RegisterAllTools(srv *Server) {
 			srv.RegisterTool(def, HandleListPeers)
 		case "fleet_run_plan":
 			srv.RegisterTool(def, HandleFleetRunPlan)
+		case "fleet_check_plan":
+			srv.RegisterTool(def, HandleFleetCheckPlan)
 		}
 	}
 }
@@ -293,6 +295,17 @@ func AllTools() []ToolDef {
 				"peers":      strArrayProp("Optional peer name filter. Omit to target all peers. Each entry is an exact peer name from peers.toml."),
 				"vars_file":  strArrayProp("Optional vars files (relative or absolute paths). Same semantics as --vars-file on the CLI."),
 				"parallel":   map[string]interface{}{"type": "integer", "description": "Max number of peers to apply to concurrently. 0 = default (all peers)."},
+			}, []string{"config"}),
+		},
+		{
+			Name:        "fleet_check_plan",
+			Description: "Preview what a mooncake config would do across the fleet — per-peer would-change predictions, diffs, and cost estimates without touching any remote system. Run this before fleet_run_plan to confirm targets and expected changes. Read-only.",
+			InputSchema: objSchema(map[string]interface{}{
+				"config":     strProp("Path to mooncake config YAML file"),
+				"peers_file": strProp("Optional path to peers.toml. Defaults to $XDG_CONFIG_HOME/mooncake/peers.toml."),
+				"peers":      strArrayProp("Optional peer name filter. Omit to target all peers. Each entry is an exact peer name from peers.toml."),
+				"vars_file":  strArrayProp("Optional vars files (relative or absolute paths). Same semantics as --vars-file on the CLI."),
+				"parallel":   map[string]interface{}{"type": "integer", "description": "Max number of peers to check concurrently. 0 = default (all peers)."},
 			}, []string{"config"}),
 		},
 	}

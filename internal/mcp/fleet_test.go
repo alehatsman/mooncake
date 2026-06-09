@@ -142,3 +142,61 @@ func TestHandleFleetRunPlan_MissingConfig(t *testing.T) {
 		t.Fatal("expected error when config param is missing")
 	}
 }
+
+// TestHandleFleetCheckPlan_MissingConfig verifies the tool requires the config param.
+func TestHandleFleetCheckPlan_MissingConfig(t *testing.T) {
+	_, err := mcp.HandleFleetCheckPlan(context.Background(), []byte(`{}`))
+	if err == nil {
+		t.Fatal("expected error when config param is missing")
+	}
+}
+
+// TestHandleFleetCheckPlan_NoPeers verifies the tool errors on an empty peers file.
+func TestHandleFleetCheckPlan_NoPeers(t *testing.T) {
+	path := writePeersToml(t, "")
+	args, _ := json.Marshal(map[string]interface{}{
+		"config":     "/nonexistent/plan.yml",
+		"peers_file": path,
+	})
+	_, err := mcp.HandleFleetCheckPlan(context.Background(), args)
+	if err == nil {
+		t.Fatal("expected error when no peers configured")
+	}
+}
+
+// TestHandleFleetCheckPlan_UnknownPeer verifies the tool errors when the
+// requested peer name is not in peers.toml.
+func TestHandleFleetCheckPlan_UnknownPeer(t *testing.T) {
+	const toml = `
+[[peers]]
+name = "box1"
+addr = "192.168.1.10:7777"
+transport = "agentd"
+token = "tok1"
+`
+	path := writePeersToml(t, toml)
+	args, _ := json.Marshal(map[string]interface{}{
+		"config":     "/nonexistent/plan.yml",
+		"peers_file": path,
+		"peers":      []string{"no-such-peer"},
+	})
+	_, err := mcp.HandleFleetCheckPlan(context.Background(), args)
+	if err == nil {
+		t.Fatal("expected error when peer name doesn't match")
+	}
+}
+
+// TestHandleFleetCheckPlan_ToolInAllTools verifies the tool is registered
+// in the public AllTools list.
+func TestHandleFleetCheckPlan_ToolInAllTools(t *testing.T) {
+	found := false
+	for _, def := range mcp.AllTools() {
+		if def.Name == "fleet_check_plan" {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatal("fleet_check_plan not found in AllTools()")
+	}
+}

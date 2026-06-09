@@ -222,3 +222,141 @@ func encodeJSON(v interface{}) (string, error) {
 	}
 	return strings.TrimRight(buf.String(), "\n"), nil
 }
+
+// HandleFleetCheckPlan previews what a config would do across the fleet
+// without mutating any remote system. It syncs plan files to each peer then
+// calls check_plan via the peer's MCP endpoint, returning per-peer
+// would-change predictions alongside sync stats.
+func HandleFleetCheckPlan(ctx context.Context, args json.RawMessage) (string, error) {
+	var params struct {
+		Config    string   `json:"config"`
+		PeersFile string   `json:"peers_file"`
+		Peers     []string `json:"peers"`
+		VarsFile  []string `json:"vars_file"`
+		Parallel  int      `json:"parallel"`
+	}
+	if err := json.Unmarshal(args, &params); err != nil || params.Config == "" {
+		return "", fmt.Errorf("config parameter required")
+	}
+
+	peersPath, err := resolvePeersPath(params.PeersFile)
+	if err != nil {
+		return "", err
+	}
+
+	peerCfg, err := fleet.LoadPeers(peersPath)
+	if err != nil {
+		return "", fmt.Errorf("load peers: %w", err)
+	}
+	if len(peerCfg.Peers) == 0 {
+		return "", fmt.Errorf("%s", fleet.NoPeersConfiguredError(peersPath))
+	}
+
+	selected, unknown := filterPeersByName(peerCfg.Peers, params.Peers)
+	if len(selected) == 0 {
+		return "", fmt.Errorf("%s", fleet.NoPeersSelectedError(len(peerCfg.Peers), unknown))
+	}
+
+	controllerID, err := fleet.EnsureControllerID()
+	if err != nil {
+		return "", fmt.Errorf("controller id: %w", err)
+	}
+
+	planAbs, planDir, err := fleet.ResolvePlanPath(params.Config)
+	if err != nil {
+		return "", fmt.Errorf("resolve plan: %w", err)
+	}
+
+	varsAbs := fleet.ResolveVarsFilesAbs(planDir, params.VarsFile)
+
+	type peerCheckOut struct {
+		Status      string          `json:"status"`
+		WouldChange *int            `json:"would_change,omitempty"`
+		Check       json.RawMessage `json:"check,omitempty"`
+		Sync        struct {
+			Total      int   `json:"total"`
+			Put        int   `json:"put"`
+			Skipped    int   `json:"skipped"`
+			BytesTotal int64 `json:"bytes_total"`
+		} `json:"sync"`
+		Error string `json:"error,omitempty"`
+	}
+
+	sem := make(chan struct{}, max(params.Parallel, len(selected)))
+	if params.Parallel > 0 {
+		sem = make(chan struct{}, params.Parallel)
+	}
+
+	type indexed struct {
+		i   int
+		out peerCheckOut
+	}
+	ch := make(chan indexed, len(selected))
+
+	for i, p := range selected {
+		go func(i int, p fleet.Peer) {
+			sem <- struct{}{}
+			defer func() { <-sem }()
+
+			client := fleet.NewTransportClient(p)
+			overlayVars := fleet.ResolveVarsFiles(planDir, p)
+			peerVars := append(append([]string{}, overlayVars...), varsAbs...)
+
+			r := fleet.Check(ctx, fleet.CheckOptions{
+				PeerName:     p.Name,
+				Peer:         client,
+				PlanDir:      planDir,
+				PlanPath:     planAbs,
+				VarsFiles:    peerVars,
+				ControllerID: controllerID,
+			})
+
+			out := peerCheckOut{}
+			out.Sync.Total = r.Sync.Total
+			out.Sync.Put = r.Sync.Put
+			out.Sync.Skipped = r.Sync.Skipped
+			out.Sync.BytesTotal = r.Sync.BytesTotal
+
+			if r.Error != nil {
+				out.Status = "error"
+				out.Error = r.Error.Error()
+			} else {
+				out.Status = "ok"
+				raw := json.RawMessage(r.Raw)
+				out.Check = raw
+				// Extract would_change count for the summary field.
+				var checkSummary struct {
+					Inspections []struct {
+						WouldChange bool `json:"would_change"`
+					} `json:"inspections"`
+				}
+				if json.Unmarshal([]byte(r.Raw), &checkSummary) == nil {
+					n := 0
+					for _, ins := range checkSummary.Inspections {
+						if ins.WouldChange {
+							n++
+						}
+					}
+					out.WouldChange = &n
+				}
+			}
+			ch <- indexed{i: i, out: out}
+		}(i, p)
+	}
+
+	peers := make(map[string]peerCheckOut, len(selected))
+	for range selected {
+		item := <-ch
+		peers[selected[item.i].Name] = item.out
+	}
+
+	warnUnknown := unknown
+	result := map[string]interface{}{
+		"peers":       peers,
+		"total_peers": len(selected),
+	}
+	if len(warnUnknown) > 0 {
+		result["unknown_peers"] = warnUnknown
+	}
+	return encodeJSON(result)
+}
