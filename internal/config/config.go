@@ -734,6 +734,7 @@ type ServiceAction struct {
 	Name         string         `yaml:"name" json:"name"`                             // Service name (required)
 	State        string         `yaml:"state" json:"state,omitempty"`                 // started|stopped|restarted|reloaded
 	Enabled      *bool          `yaml:"enabled" json:"enabled,omitempty"`             // Enable service on boot
+	Scope        string         `yaml:"scope" json:"scope,omitempty"`                 // system|user (default: system); user routes to ~/Library/LaunchAgents on darwin, ~/.config/systemd/user on linux
 	DaemonReload bool           `yaml:"daemon_reload" json:"daemon_reload,omitempty"` // Run daemon-reload after unit changes (systemd)
 	Unit         *ServiceUnit   `yaml:"unit" json:"unit,omitempty"`                   // Unit file management
 	Dropin       *ServiceDropin `yaml:"dropin" json:"dropin,omitempty"`               // Drop-in configuration file

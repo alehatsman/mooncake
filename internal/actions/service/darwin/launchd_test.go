@@ -46,6 +46,36 @@ func newMockExecutionContext() *executor.ExecutionContext {
 	}
 }
 
+func TestIsSystemScope(t *testing.T) {
+	cases := []struct {
+		name    string
+		scope   string
+		become  bool
+		wantSys bool
+	}{
+		{"scope=system", "system", false, true},
+		{"scope=System (case)", "System", false, true},
+		{"scope=user", "user", false, false},
+		{"scope=user beats become=true", "user", true, false},
+		{"scope=system beats become=false", "system", false, true},
+		{"no scope, become=true", "", true, true},
+		{"no scope, become=false", "", false, false},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			sa := &config.ServiceAction{Name: "svc", Scope: c.scope}
+			step := config.Step{OsService: sa}
+			if c.become {
+				step.AsUser = "root"
+			}
+			got := isSystemScope(sa, step)
+			if got != c.wantSys {
+				t.Errorf("isSystemScope=%v, want %v", got, c.wantSys)
+			}
+		})
+	}
+}
+
 func TestIsServiceLoaded(t *testing.T) {
 	if runtime.GOOS != "darwin" {
 		t.Skip("Skipping launchd test on non-macOS")

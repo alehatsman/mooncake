@@ -39,10 +39,10 @@ func Handle(serviceName string, serviceAction *config.ServiceAction, step config
 	changed := false
 	operations := []string{}
 
-	// User agent vs. system daemon: become: true selects the system
-	// LaunchDaemons / system domain; otherwise we manage the user's
-	// LaunchAgents under their home and the gui/<uid> domain.
-	isSystem := step.ShouldBecome()
+	// scope: system (or become: true) selects /Library/LaunchDaemons +
+	// the system launchd domain. scope: user (default when neither is
+	// set) writes to ~/Library/LaunchAgents + gui/<uid> domain.
+	isSystem := isSystemScope(serviceAction, step)
 	domain := GetDomain(isSystem)
 
 	if serviceAction.Unit != nil {
@@ -132,7 +132,7 @@ func CapturePriorState(serviceName string, step config.Step, ec *executor.Execut
 		info.HadEnabledIntent = step.OsService.Enabled != nil
 		info.HadStateIntent = step.OsService.State != ""
 	}
-	isSystem := step.ShouldBecome()
+	isSystem := isSystemScope(step.OsService, step)
 	domain := GetDomain(isSystem)
 	serviceID := fmt.Sprintf("%s/%s", domain, serviceName)
 	loaded, err := IsServiceLoaded(serviceID, step, ec)
@@ -169,6 +169,20 @@ func GetPlistPath(serviceName string, unit *config.ServiceUnit, isSystem bool) s
 
 	homeDir := os.Getenv("HOME")
 	return fmt.Sprintf("%s/Library/LaunchAgents/%s.plist", homeDir, serviceName)
+}
+
+// isSystemScope returns true when the step targets system launchd
+// (LaunchDaemons + "system" domain). Explicit scope: system or the
+// legacy become: true both select system; everything else is user.
+func isSystemScope(sa *config.ServiceAction, step config.Step) bool {
+	if sa != nil && strings.EqualFold(sa.Scope, "system") {
+		return true
+	}
+	if sa != nil && strings.EqualFold(sa.Scope, "user") {
+		return false
+	}
+	// No scope field — fall back to become flag for backward compatibility.
+	return step.ShouldBecome()
 }
 
 func managePlist(serviceName string, unit *config.ServiceUnit, isSystem bool, step config.Step, ec *executor.ExecutionContext) (bool, error) {

@@ -90,7 +90,14 @@ func (h *Handler) Metadata() actions.ActionMetadata {
 // doesn't exist). RequiredBinaries left empty because the handler
 // detects the backend; demanding a specific binary on PATH would
 // break cross-platform support.
-func (h *Handler) Permissions(_ *config.Step) actions.PermissionSet {
+//
+// scope: user drops Sudo — launchd gui/<uid> domain and systemd
+// --user bus are both owned by the login session; no elevation
+// needed for LaunchAgents writes or bootout/bootstrap in gui/<uid>.
+func (h *Handler) Permissions(step *config.Step) actions.PermissionSet {
+	if step != nil && step.OsService != nil && strings.EqualFold(step.OsService.Scope, "user") {
+		return actions.PermissionSet{Sudo: false}
+	}
 	return actions.PermissionSet{Sudo: true}
 }
 
@@ -116,6 +123,13 @@ func (h *Handler) Validate(step *config.Step) error {
 		}
 		if !isValid {
 			return fmt.Errorf("invalid state %q, must be one of: %v", serviceAction.State, shared.ValidStates)
+		}
+	}
+
+	if serviceAction.Scope != "" {
+		scope := strings.ToLower(serviceAction.Scope)
+		if scope != "system" && scope != "user" {
+			return fmt.Errorf("os.service: scope must be system or user, got %q", serviceAction.Scope)
 		}
 	}
 
