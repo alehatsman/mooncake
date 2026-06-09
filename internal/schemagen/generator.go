@@ -763,6 +763,7 @@ var actionStructByName = map[string]any{
 	"windows.scheduled_task":       &config.WindowsScheduledTask{},
 	"http.request":                 &config.HTTPRequest{},
 
+	"process":         &config.ProcessAction{},
 	"observe.port":    &config.ObservePort{},
 	"observe.process": &config.ObserveProcess{},
 	"observe.http":    &config.ObserveHTTP{},

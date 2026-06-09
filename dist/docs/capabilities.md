@@ -41,6 +41,7 @@
 | pkg.list | system | Yes | No | Yes |
 | pkg.repo | system | Yes | Yes | Yes |
 | pkg.upgrade | system | Yes | Yes | Yes |
+| process | command | Yes | No | Yes |
 | read.json | data | Yes | No | No |
 | read.yaml | data | Yes | No | No |
 | repo.patch | file | Yes | Yes | Yes |

@@ -41,6 +41,7 @@
 | pkg.list | ✓ | ✓ | ✗ | ✗ |
 | pkg.repo | ✓ | ✓ | ✗ | ✗ |
 | pkg.upgrade | ✓ | ✓ | ✗ | ✗ |
+| process | ✓ | ✓ | ✓ | ✓ |
 | read.json | ✓ | ✓ | ✓ | ✓ |
 | read.yaml | ✓ | ✓ | ✓ | ✓ |
 | repo.patch | ✓ | ✓ | ✓ | ✓ |

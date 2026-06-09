@@ -755,6 +755,44 @@ type ServiceDropin struct {
 	SrcTemplate string `yaml:"src_template" json:"src_template,omitempty" plan:"path"` // Template file path
 }
 
+// ProcessAction represents a supervised long-running process scoped to
+// either the current plan run or the user session. It fills the gap
+// between shell: (fire-and-forget) and os.service: (OS-installed daemon).
+type ProcessAction struct {
+	Name    string            `yaml:"name" json:"name"`                 // Process name — used for pid file (required)
+	Command []string          `yaml:"command" json:"command"`           // Command + args (required)
+	Env     map[string]string `yaml:"env" json:"env,omitempty"`         // Additional environment variables
+	Cwd     string            `yaml:"cwd" json:"cwd,omitempty"`         // Working directory
+	State   string            `yaml:"state" json:"state,omitempty"`     // running|stopped|restarted|absent (default: running)
+	Scope   string            `yaml:"scope" json:"scope,omitempty"`     // session|plan (default: session)
+	Health  *ProcessHealth    `yaml:"health" json:"health,omitempty"`   // Health gate to wait for after start
+	Restart *ProcessRestart   `yaml:"restart" json:"restart,omitempty"` // Restart policy
+	Log     *ProcessLog       `yaml:"log" json:"log,omitempty"`         // Log file configuration
+}
+
+// ProcessHealth defines a gate that must pass before the process step
+// is considered successful. Exactly one predicate should be set.
+type ProcessHealth struct {
+	PortOpen   int    `yaml:"port_open" json:"port_open,omitempty"`     // TCP port that must be connectable
+	HTTPOk     string `yaml:"http_ok" json:"http_ok,omitempty"`         // URL that must return HTTP 2xx
+	FileExists string `yaml:"file_exists" json:"file_exists,omitempty"` // Path that must exist
+	Timeout    string `yaml:"timeout" json:"timeout,omitempty"`         // How long to wait (default: 30s)
+}
+
+// ProcessRestart controls automatic restart behaviour when the process exits.
+type ProcessRestart struct {
+	OnExit      string `yaml:"on_exit" json:"on_exit,omitempty"`             // never|on_failure|always (default: never)
+	MaxInWindow int    `yaml:"max_in_window" json:"max_in_window,omitempty"` // Max restarts in Window before giving up
+	Window      string `yaml:"window" json:"window,omitempty"`               // Rolling window for MaxInWindow (e.g. "60s")
+}
+
+// ProcessLog configures stdout/stderr file capture for a process.
+type ProcessLog struct {
+	Stdout string `yaml:"stdout" json:"stdout,omitempty"` // File path for stdout; defaults to ~/.mooncake/processes/<name>.out
+	Stderr string `yaml:"stderr" json:"stderr,omitempty"` // File path for stderr; defaults to ~/.mooncake/processes/<name>.err
+	Rotate string `yaml:"rotate" json:"rotate,omitempty"` // Max log file size before rotation (e.g. "10M")
+}
+
 // OsUser represents a declarative OS user account. Idempotent at the
 // field level: each setting is compared with current state and only
 // drifting fields are modified.
@@ -1937,6 +1975,7 @@ type Step struct {
 	PkgUpgrade                *PkgUpgrade                `yaml:"pkg.upgrade,omitempty"       json:"pkg.upgrade,omitempty"       action:"pkg.upgrade"`
 	PkgList                   *PkgList                   `yaml:"pkg.list,omitempty"          json:"pkg.list,omitempty"          action:"pkg.list"`
 	Tool                      *Tool                      `yaml:"tool,omitempty"              json:"tool,omitempty"              action:"tool"`
+	Process                   *ProcessAction             `yaml:"process,omitempty"           json:"process,omitempty"           action:"process"`
 	OsService                 *ServiceAction             `yaml:"os.service,omitempty"        json:"os.service,omitempty"        action:"os.service"`
 	OsUser                    *OsUser                    `yaml:"os.user,omitempty"           json:"os.user,omitempty"           action:"os.user"`
 	OsGroup                   *OsGroup                   `yaml:"os.group,omitempty"          json:"os.group,omitempty"          action:"os.group"`
@@ -2479,6 +2518,7 @@ func (s *Step) Clone() *Step {
 		PkgUpgrade:                s.PkgUpgrade,
 		PkgList:                   s.PkgList,
 		Tool:                      s.Tool,
+		Process:                   s.Process,
 		OsService:                 s.OsService,
 		OsUser:                    s.OsUser,
 		OsGroup:                   s.OsGroup,

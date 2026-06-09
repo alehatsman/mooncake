@@ -71,6 +71,7 @@ import (
 	_ "github.com/alehatsman/mooncake/internal/actions/assert"
 	_ "github.com/alehatsman/mooncake/internal/actions/command"
 	_ "github.com/alehatsman/mooncake/internal/actions/preset"
+	_ "github.com/alehatsman/mooncake/internal/actions/process"
 	_ "github.com/alehatsman/mooncake/internal/actions/shell"
 	_ "github.com/alehatsman/mooncake/internal/actions/tool"
 

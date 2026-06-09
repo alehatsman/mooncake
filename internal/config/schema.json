@@ -2314,6 +2314,92 @@
         "package.managed"
       ]
     },
+    "process": {
+      "type": "object",
+      "description": "Supervise a long-running process scoped to the plan or session",
+      "properties": {
+        "command": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "cwd": {
+          "type": "string"
+        },
+        "env": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "health": {
+          "type": "object",
+          "properties": {
+            "file_exists": {
+              "type": "string"
+            },
+            "http_ok": {
+              "type": "string"
+            },
+            "port_open": {
+              "type": "integer"
+            },
+            "timeout": {
+              "type": "string",
+              "pattern": "^[0-9]+(ns|us|µs|ms|s|m|h)$"
+            }
+          },
+          "additionalProperties": false
+        },
+        "log": {
+          "type": "object",
+          "properties": {
+            "rotate": {
+              "type": "string"
+            },
+            "stderr": {
+              "type": "string"
+            },
+            "stdout": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "restart": {
+          "type": "object",
+          "properties": {
+            "max_in_window": {
+              "type": "integer"
+            },
+            "on_exit": {
+              "type": "string"
+            },
+            "window": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        "scope": {
+          "type": "string"
+        },
+        "state": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "command"
+      ],
+      "additionalProperties": false,
+      "x-implements-check": true,
+      "x-category": "command",
+      "x-supports-dry-run": true
+    },
     "read.json": {
       "type": "object",
       "description": "Read a JSON file and optionally extract a value by path",
@@ -2874,6 +2960,10 @@
           "description": "Upgrade named packages or all installed packages (apt + dnf + pacman on linux, brew on darwin)",
           "$ref": "#/definitions/pkg.upgrade"
         },
+        "process": {
+          "description": "Supervise a long-running process scoped to the plan or session",
+          "$ref": "#/definitions/process"
+        },
         "props": {
           "type": "object",
           "description": "Parameter values passed to the component invoked by `use:`.",
@@ -3274,6 +3364,11 @@
               },
               {
                 "required": [
+                  "process"
+                ]
+              },
+              {
+                "required": [
                   "read.json"
                 ]
               },
@@ -3619,6 +3714,11 @@
               {
                 "required": [
                   "pkg.upgrade"
+                ]
+              },
+              {
+                "required": [
+                  "process"
                 ]
               },
               {
@@ -3972,6 +4072,11 @@
               },
               {
                 "required": [
+                  "process"
+                ]
+              },
+              {
+                "required": [
                   "read.json"
                 ]
               },
@@ -4317,6 +4422,11 @@
               {
                 "required": [
                   "pkg.upgrade"
+                ]
+              },
+              {
+                "required": [
+                  "process"
                 ]
               },
               {
@@ -4670,6 +4780,11 @@
               },
               {
                 "required": [
+                  "process"
+                ]
+              },
+              {
+                "required": [
                   "read.json"
                 ]
               },
@@ -5015,6 +5130,11 @@
               {
                 "required": [
                   "pkg.upgrade"
+                ]
+              },
+              {
+                "required": [
+                  "process"
                 ]
               },
               {
@@ -5368,6 +5488,11 @@
               },
               {
                 "required": [
+                  "process"
+                ]
+              },
+              {
+                "required": [
                   "read.json"
                 ]
               },
@@ -5713,6 +5838,11 @@
               {
                 "required": [
                   "pkg.upgrade"
+                ]
+              },
+              {
+                "required": [
+                  "process"
                 ]
               },
               {
@@ -6066,6 +6196,11 @@
               },
               {
                 "required": [
+                  "process"
+                ]
+              },
+              {
+                "required": [
                   "read.json"
                 ]
               },
@@ -6411,6 +6546,11 @@
               {
                 "required": [
                   "pkg.upgrade"
+                ]
+              },
+              {
+                "required": [
+                  "process"
                 ]
               },
               {
@@ -6764,6 +6904,11 @@
               },
               {
                 "required": [
+                  "process"
+                ]
+              },
+              {
+                "required": [
                   "read.json"
                 ]
               },
@@ -7109,6 +7254,11 @@
               {
                 "required": [
                   "pkg.upgrade"
+                ]
+              },
+              {
+                "required": [
+                  "process"
                 ]
               },
               {
@@ -7462,6 +7612,11 @@
               },
               {
                 "required": [
+                  "process"
+                ]
+              },
+              {
+                "required": [
                   "read.json"
                 ]
               },
@@ -7807,6 +7962,11 @@
               {
                 "required": [
                   "pkg.upgrade"
+                ]
+              },
+              {
+                "required": [
+                  "process"
                 ]
               },
               {
@@ -8160,6 +8320,11 @@
               },
               {
                 "required": [
+                  "process"
+                ]
+              },
+              {
+                "required": [
                   "read.json"
                 ]
               },
@@ -8505,6 +8670,11 @@
               {
                 "required": [
                   "pkg.upgrade"
+                ]
+              },
+              {
+                "required": [
+                  "process"
                 ]
               },
               {
@@ -8858,6 +9028,11 @@
               },
               {
                 "required": [
+                  "process"
+                ]
+              },
+              {
+                "required": [
                   "read.json"
                 ]
               },
@@ -9203,6 +9378,11 @@
               {
                 "required": [
                   "pkg.upgrade"
+                ]
+              },
+              {
+                "required": [
+                  "process"
                 ]
               },
               {
@@ -9556,6 +9736,11 @@
               },
               {
                 "required": [
+                  "process"
+                ]
+              },
+              {
+                "required": [
                   "read.json"
                 ]
               },
@@ -9901,6 +10086,11 @@
               {
                 "required": [
                   "pkg.upgrade"
+                ]
+              },
+              {
+                "required": [
+                  "process"
                 ]
               },
               {
@@ -10254,6 +10444,11 @@
               },
               {
                 "required": [
+                  "process"
+                ]
+              },
+              {
+                "required": [
                   "read.json"
                 ]
               },
@@ -10599,6 +10794,11 @@
               {
                 "required": [
                   "pkg.upgrade"
+                ]
+              },
+              {
+                "required": [
+                  "process"
                 ]
               },
               {
@@ -10952,6 +11152,11 @@
               },
               {
                 "required": [
+                  "process"
+                ]
+              },
+              {
+                "required": [
                   "read.json"
                 ]
               },
@@ -11297,6 +11502,11 @@
               {
                 "required": [
                   "pkg.upgrade"
+                ]
+              },
+              {
+                "required": [
+                  "process"
                 ]
               },
               {
@@ -11650,6 +11860,11 @@
               },
               {
                 "required": [
+                  "process"
+                ]
+              },
+              {
+                "required": [
                   "read.json"
                 ]
               },
@@ -11995,6 +12210,11 @@
               {
                 "required": [
                   "pkg.upgrade"
+                ]
+              },
+              {
+                "required": [
+                  "process"
                 ]
               },
               {
@@ -12348,6 +12568,11 @@
               },
               {
                 "required": [
+                  "process"
+                ]
+              },
+              {
+                "required": [
                   "read.json"
                 ]
               },
@@ -12693,6 +12918,11 @@
               {
                 "required": [
                   "pkg.upgrade"
+                ]
+              },
+              {
+                "required": [
+                  "process"
                 ]
               },
               {
@@ -13046,6 +13276,11 @@
               },
               {
                 "required": [
+                  "process"
+                ]
+              },
+              {
+                "required": [
                   "read.json"
                 ]
               },
@@ -13391,6 +13626,11 @@
               {
                 "required": [
                   "pkg.upgrade"
+                ]
+              },
+              {
+                "required": [
+                  "process"
                 ]
               },
               {
@@ -13744,6 +13984,11 @@
               },
               {
                 "required": [
+                  "process"
+                ]
+              },
+              {
+                "required": [
                   "read.json"
                 ]
               },
@@ -14089,6 +14334,11 @@
               {
                 "required": [
                   "pkg.upgrade"
+                ]
+              },
+              {
+                "required": [
+                  "process"
                 ]
               },
               {
@@ -14442,6 +14692,11 @@
               },
               {
                 "required": [
+                  "process"
+                ]
+              },
+              {
+                "required": [
                   "read.json"
                 ]
               },
@@ -14787,6 +15042,11 @@
               {
                 "required": [
                   "pkg.upgrade"
+                ]
+              },
+              {
+                "required": [
+                  "process"
                 ]
               },
               {
@@ -15140,6 +15400,11 @@
               },
               {
                 "required": [
+                  "process"
+                ]
+              },
+              {
+                "required": [
                   "read.json"
                 ]
               },
@@ -15485,6 +15750,11 @@
               {
                 "required": [
                   "pkg.upgrade"
+                ]
+              },
+              {
+                "required": [
+                  "process"
                 ]
               },
               {
@@ -15838,6 +16108,11 @@
               },
               {
                 "required": [
+                  "process"
+                ]
+              },
+              {
+                "required": [
                   "read.json"
                 ]
               },
@@ -16183,6 +16458,11 @@
               {
                 "required": [
                   "pkg.upgrade"
+                ]
+              },
+              {
+                "required": [
+                  "process"
                 ]
               },
               {
@@ -16536,6 +16816,11 @@
               },
               {
                 "required": [
+                  "process"
+                ]
+              },
+              {
+                "required": [
                   "read.json"
                 ]
               },
@@ -16885,6 +17170,11 @@
               },
               {
                 "required": [
+                  "process"
+                ]
+              },
+              {
+                "required": [
                   "read.json"
                 ]
               },
@@ -17230,6 +17520,365 @@
               {
                 "required": [
                   "pkg.repo"
+                ]
+              },
+              {
+                "required": [
+                  "process"
+                ]
+              },
+              {
+                "required": [
+                  "read.json"
+                ]
+              },
+              {
+                "required": [
+                  "read.yaml"
+                ]
+              },
+              {
+                "required": [
+                  "repo.patch"
+                ]
+              },
+              {
+                "required": [
+                  "repo.search"
+                ]
+              },
+              {
+                "required": [
+                  "repo.tree"
+                ]
+              },
+              {
+                "required": [
+                  "shell"
+                ]
+              },
+              {
+                "required": [
+                  "text.delete_range"
+                ]
+              },
+              {
+                "required": [
+                  "text.insert"
+                ]
+              },
+              {
+                "required": [
+                  "text.line"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.ini"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.json"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.yaml"
+                ]
+              },
+              {
+                "required": [
+                  "text.replace"
+                ]
+              },
+              {
+                "required": [
+                  "tool"
+                ]
+              },
+              {
+                "required": [
+                  "transaction"
+                ]
+              },
+              {
+                "required": [
+                  "try"
+                ]
+              },
+              {
+                "required": [
+                  "use"
+                ]
+              },
+              {
+                "required": [
+                  "vars"
+                ]
+              },
+              {
+                "required": [
+                  "vars.load"
+                ]
+              },
+              {
+                "required": [
+                  "wait.command"
+                ]
+              },
+              {
+                "required": [
+                  "wait.file"
+                ]
+              },
+              {
+                "required": [
+                  "wait.http"
+                ]
+              },
+              {
+                "required": [
+                  "wait.port"
+                ]
+              },
+              {
+                "required": [
+                  "windows.firewall_rule"
+                ]
+              },
+              {
+                "required": [
+                  "windows.hyperv_firewall_rule"
+                ]
+              },
+              {
+                "required": [
+                  "windows.scheduled_task"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "required": [
+            "process"
+          ],
+          "properties": {
+            "process": {
+              "$ref": "#/definitions/process"
+            }
+          },
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "action"
+                ]
+              },
+              {
+                "required": [
+                  "artifact.capture"
+                ]
+              },
+              {
+                "required": [
+                  "artifact.validate"
+                ]
+              },
+              {
+                "required": [
+                  "assert"
+                ]
+              },
+              {
+                "required": [
+                  "cmd"
+                ]
+              },
+              {
+                "required": [
+                  "container"
+                ]
+              },
+              {
+                "required": [
+                  "container.image"
+                ]
+              },
+              {
+                "required": [
+                  "file.copy"
+                ]
+              },
+              {
+                "required": [
+                  "file.download"
+                ]
+              },
+              {
+                "required": [
+                  "file.template"
+                ]
+              },
+              {
+                "required": [
+                  "file.unarchive"
+                ]
+              },
+              {
+                "required": [
+                  "file.write"
+                ]
+              },
+              {
+                "required": [
+                  "git.checkout"
+                ]
+              },
+              {
+                "required": [
+                  "git.clone"
+                ]
+              },
+              {
+                "required": [
+                  "git.config"
+                ]
+              },
+              {
+                "required": [
+                  "http.request"
+                ]
+              },
+              {
+                "required": [
+                  "import"
+                ]
+              },
+              {
+                "required": [
+                  "log"
+                ]
+              },
+              {
+                "required": [
+                  "observe.cpu"
+                ]
+              },
+              {
+                "required": [
+                  "observe.disk"
+                ]
+              },
+              {
+                "required": [
+                  "observe.gpu"
+                ]
+              },
+              {
+                "required": [
+                  "observe.http"
+                ]
+              },
+              {
+                "required": [
+                  "observe.logs"
+                ]
+              },
+              {
+                "required": [
+                  "observe.memory"
+                ]
+              },
+              {
+                "required": [
+                  "observe.port"
+                ]
+              },
+              {
+                "required": [
+                  "observe.process"
+                ]
+              },
+              {
+                "required": [
+                  "observe.service"
+                ]
+              },
+              {
+                "required": [
+                  "os.cron"
+                ]
+              },
+              {
+                "required": [
+                  "os.firewall"
+                ]
+              },
+              {
+                "required": [
+                  "os.group"
+                ]
+              },
+              {
+                "required": [
+                  "os.mount"
+                ]
+              },
+              {
+                "required": [
+                  "os.service"
+                ]
+              },
+              {
+                "required": [
+                  "os.ssh_key"
+                ]
+              },
+              {
+                "required": [
+                  "os.sysctl"
+                ]
+              },
+              {
+                "required": [
+                  "os.systemd"
+                ]
+              },
+              {
+                "required": [
+                  "os.user"
+                ]
+              },
+              {
+                "required": [
+                  "pkg"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.hold"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.list"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.repo"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.upgrade"
                 ]
               },
               {
@@ -17588,6 +18237,11 @@
               },
               {
                 "required": [
+                  "process"
+                ]
+              },
+              {
+                "required": [
                   "read.yaml"
                 ]
               },
@@ -17933,6 +18587,11 @@
               {
                 "required": [
                   "pkg.upgrade"
+                ]
+              },
+              {
+                "required": [
+                  "process"
                 ]
               },
               {
@@ -18286,6 +18945,11 @@
               },
               {
                 "required": [
+                  "process"
+                ]
+              },
+              {
+                "required": [
                   "read.json"
                 ]
               },
@@ -18635,6 +19299,11 @@
               },
               {
                 "required": [
+                  "process"
+                ]
+              },
+              {
+                "required": [
                   "read.json"
                 ]
               },
@@ -18980,6 +19649,11 @@
               {
                 "required": [
                   "pkg.upgrade"
+                ]
+              },
+              {
+                "required": [
+                  "process"
                 ]
               },
               {
@@ -19340,6 +20014,11 @@
               },
               {
                 "required": [
+                  "process"
+                ]
+              },
+              {
+                "required": [
                   "read.json"
                 ]
               },
@@ -19685,6 +20364,11 @@
               {
                 "required": [
                   "pkg.upgrade"
+                ]
+              },
+              {
+                "required": [
+                  "process"
                 ]
               },
               {
@@ -20038,6 +20722,11 @@
               },
               {
                 "required": [
+                  "process"
+                ]
+              },
+              {
+                "required": [
                   "read.json"
                 ]
               },
@@ -20383,6 +21072,11 @@
               {
                 "required": [
                   "pkg.upgrade"
+                ]
+              },
+              {
+                "required": [
+                  "process"
                 ]
               },
               {
@@ -20736,6 +21430,11 @@
               },
               {
                 "required": [
+                  "process"
+                ]
+              },
+              {
+                "required": [
                   "read.json"
                 ]
               },
@@ -21081,6 +21780,11 @@
               {
                 "required": [
                   "pkg.upgrade"
+                ]
+              },
+              {
+                "required": [
+                  "process"
                 ]
               },
               {
@@ -21434,6 +22138,11 @@
               },
               {
                 "required": [
+                  "process"
+                ]
+              },
+              {
+                "required": [
                   "read.json"
                 ]
               },
@@ -21779,6 +22488,11 @@
               {
                 "required": [
                   "pkg.upgrade"
+                ]
+              },
+              {
+                "required": [
+                  "process"
                 ]
               },
               {
@@ -22132,6 +22846,11 @@
               },
               {
                 "required": [
+                  "process"
+                ]
+              },
+              {
+                "required": [
                   "read.json"
                 ]
               },
@@ -22477,6 +23196,11 @@
               {
                 "required": [
                   "pkg.upgrade"
+                ]
+              },
+              {
+                "required": [
+                  "process"
                 ]
               },
               {
@@ -22828,6 +23552,11 @@
               },
               {
                 "required": [
+                  "process"
+                ]
+              },
+              {
+                "required": [
                   "read.json"
                 ]
               },
@@ -23171,6 +23900,11 @@
               {
                 "required": [
                   "pkg.upgrade"
+                ]
+              },
+              {
+                "required": [
+                  "process"
                 ]
               },
               {
@@ -23524,6 +24258,11 @@
               },
               {
                 "required": [
+                  "process"
+                ]
+              },
+              {
+                "required": [
                   "read.json"
                 ]
               },
@@ -23869,6 +24608,11 @@
               {
                 "required": [
                   "pkg.upgrade"
+                ]
+              },
+              {
+                "required": [
+                  "process"
                 ]
               },
               {
@@ -24222,6 +24966,11 @@
               },
               {
                 "required": [
+                  "process"
+                ]
+              },
+              {
+                "required": [
                   "read.json"
                 ]
               },
@@ -24567,6 +25316,11 @@
               {
                 "required": [
                   "pkg.upgrade"
+                ]
+              },
+              {
+                "required": [
+                  "process"
                 ]
               },
               {
@@ -24920,6 +25674,11 @@
               },
               {
                 "required": [
+                  "process"
+                ]
+              },
+              {
+                "required": [
                   "read.json"
                 ]
               },
@@ -25265,6 +26024,11 @@
               {
                 "required": [
                   "pkg.upgrade"
+                ]
+              },
+              {
+                "required": [
+                  "process"
                 ]
               },
               {
@@ -25618,6 +26382,11 @@
               },
               {
                 "required": [
+                  "process"
+                ]
+              },
+              {
+                "required": [
                   "read.json"
                 ]
               },
@@ -25963,6 +26732,11 @@
               {
                 "required": [
                   "pkg.upgrade"
+                ]
+              },
+              {
+                "required": [
+                  "process"
                 ]
               },
               {
@@ -26316,6 +27090,11 @@
               },
               {
                 "required": [
+                  "process"
+                ]
+              },
+              {
+                "required": [
                   "read.json"
                 ]
               },
@@ -26661,6 +27440,11 @@
               {
                 "required": [
                   "pkg.upgrade"
+                ]
+              },
+              {
+                "required": [
+                  "process"
                 ]
               },
               {

@@ -867,6 +867,35 @@ export interface PkgUpgradeAction {
 }
 
 /**
+ * Supervise a long-running process scoped to the plan or session
+ * @category command
+ */
+export interface ProcessAction {
+  command: string[];
+  cwd?: string;
+  env?: Record<string, any>;
+  health?: {
+    file_exists: string;
+    http_ok: string;
+    port_open: number;
+    timeout: string;
+  };
+  log?: {
+    rotate: string;
+    stderr: string;
+    stdout: string;
+  };
+  name: string;
+  restart?: {
+    max_in_window: number;
+    on_exit: string;
+    window: string;
+  };
+  scope?: string;
+  state?: string;
+}
+
+/**
  * Read a JSON file and optionally extract a value by path
  * @category data
  */
@@ -1590,6 +1619,10 @@ export interface Step {
    * on linux, brew on darwin)
    */
   "pkg.upgrade"?: PkgUpgradeAction;
+  /**
+   * Supervise a long-running process scoped to the plan or session
+   */
+  process?: ProcessAction;
   /**
    * Read a JSON file and optionally extract a value by path
    */

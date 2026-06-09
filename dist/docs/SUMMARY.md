@@ -39,6 +39,7 @@
     - [pkg.list](actions/pkg_list.md)
     - [pkg.repo](actions/pkg_repo.md)
     - [pkg.upgrade](actions/pkg_upgrade.md)
+    - [process](actions/process.md)
     - [read.json](actions/read_json.md)
     - [read.yaml](actions/read_yaml.md)
     - [repo.patch](actions/repo_patch.md)
