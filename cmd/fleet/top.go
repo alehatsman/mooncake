@@ -1,13 +1,12 @@
 package fleet
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"io"
 	"os"
+	"strings"
 	"sync"
-	"text/tabwriter"
 	"time"
 
 	"github.com/urfave/cli/v2"
@@ -214,6 +213,8 @@ func gatherTopRows(ctx context.Context, peers []observe.Peer, controllerID strin
 }
 
 // renderTopFrame clears the terminal (when isTTY) and redraws the metrics table.
+// Column widths are computed from plain-text cell values; ANSI codes are applied
+// after, so escape bytes never corrupt tabwriter's width accounting.
 func renderTopFrame(w io.Writer, rows []topRow, useColor, isTTY bool, interval time.Duration) {
 	if isTTY {
 		fmt.Fprint(w, "\033[H\033[2J")
@@ -222,29 +223,83 @@ func renderTopFrame(w io.Writer, rows []topRow, useColor, isTTY bool, interval t
 	now := time.Now().Format("15:04:05")
 	fmt.Fprintf(w, "fleet top  %d peer(s)  %s  (every %s)\n\n", len(rows), now, interval)
 
-	buf := &bytes.Buffer{}
-	tw := tabwriter.NewWriter(buf, 0, 0, 2, ' ', 0)
-	fmt.Fprintln(tw, "PEER\tCPU%\tMEM%\tDISK%\tGPU%\tLOAD_1M\tSTATUS")
+	headers := []string{"PEER", "CPU%", "MEM%", "DISK%", "GPU%", "LOAD_1M", "STATUS"}
 
-	for _, r := range rows {
+	type rowCells struct {
+		plain  [7]string // plain text (for width), no ANSI
+		cpuPct *float64
+		memPct *float64
+		dskPct *float64
+		gpuPct *float64
+		status string
+	}
+
+	cells := make([]rowCells, len(rows))
+	for i, r := range rows {
 		st := "ok"
 		if r.errMsg != "" {
 			st = "unreachable"
 		} else if r.cpuPct == nil && r.memPct == nil {
 			st = "partial"
 		}
-		fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\t%s\t%s\n",
-			r.peer,
-			topColorPct(r.cpuPct, 60, 85, useColor),
-			topColorPct(r.memPct, 70, 85, useColor),
-			topColorPct(r.diskPct, 70, 90, useColor),
-			topColorPct(r.gpuPct, 60, 85, useColor),
-			topFmtLoad(r.load1m),
-			topFmtStatus(st, useColor),
-		)
+		cells[i] = rowCells{
+			plain:  [7]string{r.peer, topFmtPct(r.cpuPct), topFmtPct(r.memPct), topFmtPct(r.diskPct), topFmtPct(r.gpuPct), topFmtLoad(r.load1m), st},
+			cpuPct: r.cpuPct, memPct: r.memPct, dskPct: r.diskPct, gpuPct: r.gpuPct, status: st,
+		}
 	}
-	_ = tw.Flush()
-	_, _ = w.Write(buf.Bytes())
+
+	// Compute per-column width from plain text.
+	widths := make([]int, len(headers))
+	for i, h := range headers {
+		widths[i] = len(h)
+	}
+	for _, c := range cells {
+		for i, v := range c.plain {
+			// "—" is a 3-byte UTF-8 rune but 1 display column; adjust.
+			dw := displayWidth(v)
+			if dw > widths[i] {
+				widths[i] = dw
+			}
+		}
+	}
+
+	// Header row (plain, no color).
+	for i, h := range headers {
+		if i > 0 {
+			fmt.Fprint(w, "  ")
+		}
+		fmt.Fprintf(w, "%-*s", widths[i], h)
+	}
+	fmt.Fprintln(w)
+
+	// Data rows: write colored cell + trailing spaces to hit column width.
+	for _, c := range cells {
+		for i, plain := range c.plain {
+			if i > 0 {
+				fmt.Fprint(w, "  ")
+			}
+			var colored string
+			switch i {
+			case 1:
+				colored = topColorPct(c.cpuPct, 60, 85, useColor)
+			case 2:
+				colored = topColorPct(c.memPct, 70, 85, useColor)
+			case 3:
+				colored = topColorPct(c.dskPct, 70, 90, useColor)
+			case 4:
+				colored = topColorPct(c.gpuPct, 60, 85, useColor)
+			case 6:
+				colored = topFmtStatus(c.status, useColor)
+			default:
+				colored = plain
+			}
+			fmt.Fprint(w, colored)
+			if pad := widths[i] - displayWidth(plain); pad > 0 {
+				fmt.Fprint(w, strings.Repeat(" ", pad))
+			}
+		}
+		fmt.Fprintln(w)
+	}
 
 	if useColor {
 		fmt.Fprintf(w, "\n\x1b[2m^C to quit\x1b[0m\n")
@@ -253,12 +308,18 @@ func renderTopFrame(w io.Writer, rows []topRow, useColor, isTTY bool, interval t
 	}
 }
 
-func topColorPct(v *float64, warnAt, critAt float64, useColor bool) string {
+// topFmtPct returns the plain-text representation of a percentage value.
+func topFmtPct(v *float64) string {
 	if v == nil {
 		return "—"
 	}
-	s := fmt.Sprintf("%.1f%%", *v)
-	if !useColor {
+	return fmt.Sprintf("%.1f%%", *v)
+}
+
+// topColorPct wraps topFmtPct with ANSI color when useColor is true.
+func topColorPct(v *float64, warnAt, critAt float64, useColor bool) string {
+	s := topFmtPct(v)
+	if !useColor || v == nil {
 		return s
 	}
 	switch {
@@ -269,6 +330,17 @@ func topColorPct(v *float64, warnAt, critAt float64, useColor bool) string {
 	default:
 		return "\x1b[32m" + s + "\x1b[0m"
 	}
+}
+
+// displayWidth returns the number of terminal columns a string occupies,
+// treating multi-byte UTF-8 runes as 1 column (sufficient for the ASCII +
+// em-dash subset used in this table).
+func displayWidth(s string) int {
+	n := 0
+	for range s {
+		n++
+	}
+	return n
 }
 
 func topFmtLoad(v *float64) string {
