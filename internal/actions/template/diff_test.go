@@ -188,3 +188,35 @@ func TestDiff_Template_RegisteredAsDiffer(t *testing.T) {
 		t.Error("*Handler should satisfy actions.Differ")
 	}
 }
+
+// TestDiff_Template_StepVarsEvaluated — regression for #166: Diff must apply
+// step-level vars (with template expressions) so the desired SHA matches what
+// handler.Run will actually write.
+func TestDiff_Template_StepVarsEvaluated(t *testing.T) {
+	dir := t.TempDir()
+	src := filepath.Join(dir, "src.tpl")
+	writeFile(t, src, `CONCURRENCY="{{ flood_concurrency }}"`, 0o644)
+	dest := filepath.Join(dir, "out.txt")
+	// File on disk already has the correctly-rendered content.
+	writeFile(t, dest, `CONCURRENCY="8"`, 0o644)
+
+	stepVars := map[string]interface{}{
+		"flood_concurrency": "{{ props.flood_concurrency }}",
+	}
+	step := &config.Step{FileTemplate: &config.Template{
+		Src:  src,
+		Dest: dest,
+		Mode: "0644",
+		Vars: &stepVars,
+	}}
+	ctx := diffTestCtx(t)
+	ctx.Scope.Props = map[string]interface{}{"flood_concurrency": "8"}
+
+	d, err := (Handler{}).Diff(ctx, step)
+	if err != nil {
+		t.Fatalf("Diff: %v", err)
+	}
+	if d.Operation != actions.OpNoop {
+		t.Errorf("Operation = %q, want noop — step vars must be evaluated so desired SHA matches existing content", d.Operation)
+	}
+}

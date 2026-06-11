@@ -159,10 +159,18 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		return result, fmt.Errorf("failed to read template: %w", err)
 	}
 
-	// Merge per-step vars before rendering.
+	// Merge per-step vars before rendering. Evaluate any template
+	// expressions in the vars values (e.g. "{{ props.foo }}") first so
+	// the rendered template receives the resolved values, not the raw
+	// template strings.
 	variables := ctx.Variables()
 	if tmpl.Vars != nil && len(*tmpl.Vars) > 0 {
-		variables = utils.MergeVariables(ctx.Variables(), *tmpl.Vars)
+		evaluated, evErr := evalStepVars(*tmpl.Vars, ctx)
+		if evErr != nil {
+			result.Failed = true
+			return result, fmt.Errorf("step vars eval: %w", evErr)
+		}
+		variables = utils.MergeVariables(ctx.Variables(), evaluated)
 	}
 
 	output, err := ctx.Template().Render(string(templateBytes), variables)
@@ -213,4 +221,23 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 	}
 
 	return result, nil
+}
+
+// evalStepVars renders template expressions in step-level vars using the
+// current execution context. Non-string values pass through unchanged.
+func evalStepVars(vars map[string]interface{}, ctx actions.Context) (map[string]interface{}, error) {
+	out := make(map[string]interface{}, len(vars))
+	for k, v := range vars {
+		s, ok := v.(string)
+		if !ok || s == "" {
+			out[k] = v
+			continue
+		}
+		r, err := ctx.Template().Render(s, ctx.Variables())
+		if err != nil {
+			return nil, fmt.Errorf("var %q: %w", k, err)
+		}
+		out[k] = r
+	}
+	return out, nil
 }

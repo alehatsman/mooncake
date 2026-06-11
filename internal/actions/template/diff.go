@@ -11,6 +11,7 @@ import (
 	filehandler "github.com/alehatsman/mooncake/internal/actions/file"
 	"github.com/alehatsman/mooncake/internal/config"
 	"github.com/alehatsman/mooncake/internal/executor"
+	"github.com/alehatsman/mooncake/internal/utils"
 )
 
 // Diff implements actions.Differ for file.template (spec-22 phase 4).
@@ -43,7 +44,11 @@ func (Handler) Diff(ctx actions.Context, step *config.Step) (actions.Diff, error
 	// Read + render the template Src to compute desired After content.
 	// Mirror handler.readAndRenderTemplate but kept inline so Diff
 	// doesn't need an ExecutionContext.
-	desired, renderErr := readAndRender(ctx, tpl.Src)
+	var stepVars map[string]interface{}
+	if tpl.Vars != nil {
+		stepVars = *tpl.Vars
+	}
+	desired, renderErr := readAndRender(ctx, tpl.Src, stepVars)
 	after := &filehandler.FileSnapshot{
 		Path:   renderedDest,
 		Exists: true,
@@ -96,16 +101,24 @@ func parseTemplateMode(s string) os.FileMode {
 	return m
 }
 
-// readAndRender opens tpl.Src, reads its bytes, and renders through the
-// step's Pongo2 template engine using the current variable scope. Pure
-// read-only — no side effects on disk. Returns the raw rendered bytes
-// (not a string) so the caller can feed them directly to sha256.
-func readAndRender(ctx actions.Context, src string) ([]byte, error) {
+// readAndRender opens src, reads its bytes, and renders through the
+// step's Pongo2 template engine. stepVars (may be nil) are evaluated
+// against the current scope first and then merged over it — mirroring
+// what handler.Run does — so the SHA reflects the actual rendered output.
+func readAndRender(ctx actions.Context, src string, stepVars map[string]interface{}) ([]byte, error) {
 	srcBytes, err := os.ReadFile(src) //nolint:gosec // intentional: user-supplied template path
 	if err != nil {
 		return nil, fmt.Errorf("read template src: %w", err)
 	}
-	rendered, err := ctx.Template().Render(string(srcBytes), ctx.Variables())
+	vars := ctx.Variables()
+	if len(stepVars) > 0 {
+		evaluated, evErr := evalStepVars(stepVars, ctx)
+		if evErr != nil {
+			return nil, fmt.Errorf("eval step vars: %w", evErr)
+		}
+		vars = utils.MergeVariables(vars, evaluated)
+	}
+	rendered, err := ctx.Template().Render(string(srcBytes), vars)
 	if err != nil {
 		return nil, fmt.Errorf("render template: %w", err)
 	}

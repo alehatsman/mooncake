@@ -785,6 +785,28 @@ Upgrade named packages or all installed packages (apt + dnf + pacman on linux, b
 
 ---
 
+## Process
+
+Supervise a long-running process scoped to the plan or session
+
+| Property | Type | Required | Description |
+|----------|------|----------|-------------|
+| `command` | array | **Yes** | - |
+| `cwd` | string | No | - |
+| `env` | object | No | - |
+| `health` | object | No | - |
+| `log` | object | No | - |
+| `name` | string | **Yes** | - |
+| `restart` | object | No | - |
+| `scope` | string | No | - |
+| `state` | string | No | - |
+
+**Metadata:**
+- Category: `command`
+
+
+---
+
 ## Read.json
 
 Read a JSON file and optionally extract a value by path
@@ -1004,6 +1026,7 @@ Execute shell commands
 | `pkg.list` | any | No | Return the installed packages and versions (read-only; apt + dnf + pacman on linux, brew on darwin) |
 | `pkg.repo` | any | No | Manage a third-party package repository (apt, dnf/yum, brew taps) |
 | `pkg.upgrade` | any | No | Upgrade named packages or all installed packages (apt + dnf + pacman on linux, brew on darwin) |
+| `process` | any | No | Supervise a long-running process scoped to the plan or session |
 | `props` | object | No | Parameter values passed to the component invoked by `use:`. |
 | `read.json` | any | No | Read a JSON file and optionally extract a value by path |
 | `read.yaml` | any | No | Read a YAML file and optionally extract a value by path |

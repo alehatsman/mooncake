@@ -17,6 +17,20 @@ capabilities:
 
 Supervise a long-running process scoped to the plan or session
 
+## Properties
+
+| Property | Type | Required | Description |
+|----------|------|----------|-------------|
+| `command` | array | **Yes** | - |
+| `cwd` | string | No | - |
+| `env` | object | No | - |
+| `health` | object | No | - |
+| `log` | object | No | - |
+| `name` | string | **Yes** | - |
+| `restart` | object | No | - |
+| `scope` | string | No | - |
+| `state` | string | No | - |
+
 ## Examples
 
 ```yaml

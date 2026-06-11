@@ -242,6 +242,43 @@ func TestHandler_Run(t *testing.T) {
 			wantChanged:     true,
 			wantErr:         false,
 		},
+		{
+			// Regression for #166: step vars with template expressions must be
+			// evaluated before merging so "{{ props.X }}" resolves to the prop
+			// value, not the raw expression string.
+			name:            "step vars template expression resolved from props",
+			templateContent: `CONCURRENCY="{{ flood_concurrency }}"`,
+			variables: map[string]interface{}{
+				"props": map[string]interface{}{
+					"flood_concurrency": "8",
+				},
+			},
+			templateVars: &map[string]interface{}{
+				"flood_concurrency": "{{ props.flood_concurrency }}",
+			},
+			wantOutput:  `CONCURRENCY="8"`,
+			wantMode:    0644,
+			wantChanged: true,
+			wantErr:     false,
+		},
+		{
+			// Props-sourced step var shadows same-named flat context var.
+			name:            "step vars template expression shadows flat var",
+			templateContent: "val={{ concurrency }}",
+			variables: map[string]interface{}{
+				"concurrency": "flat",
+				"props": map[string]interface{}{
+					"concurrency": "prop-val",
+				},
+			},
+			templateVars: &map[string]interface{}{
+				"concurrency": "{{ props.concurrency }}",
+			},
+			wantOutput:  "val=prop-val",
+			wantMode:    0644,
+			wantChanged: true,
+			wantErr:     false,
+		},
 	}
 
 	for _, tt := range tests {
