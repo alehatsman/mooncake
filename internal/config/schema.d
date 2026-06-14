@@ -1334,6 +1334,11 @@ export interface WindowsHypervFirewallRuleAction {
  * @category system
  */
 export interface WindowsRegistryAction {
+  name?: string;
+  path: string;
+  state?: string;
+  type?: string;
+  value?: string;
 }
 
 /**

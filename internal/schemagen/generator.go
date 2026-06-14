@@ -761,6 +761,7 @@ var actionStructByName = map[string]any{
 	"windows.firewall_rule":        &config.WindowsFirewallRule{},
 	"windows.hyperv_firewall_rule": &config.WindowsHyperVFirewallRule{},
 	"windows.scheduled_task":       &config.WindowsScheduledTask{},
+	"windows.registry":             &config.WindowsRegistry{},
 	"http.request":                 &config.HTTPRequest{},
 
 	"process":         &config.ProcessAction{},

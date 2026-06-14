@@ -29018,6 +29018,27 @@
     "windows.registry": {
       "type": "object",
       "description": "Manage Windows registry keys and values",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "state": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string"
+        },
+        "value": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "path"
+      ],
       "additionalProperties": false,
       "x-platforms": [
         "windows"
