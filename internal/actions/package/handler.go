@@ -337,8 +337,7 @@ func (h *Handler) updateCache(ec *executor.ExecutionContext, manager string, bec
 
 	output, err := h.runCmd(ec, become, cmdArgs)
 	if err != nil {
-		ec.Svc.Logger.Debugf("    Output: %s", strings.TrimSpace(string(output)))
-		return fmt.Errorf("failed to update package cache: %w", err)
+		return pkgCmdError("failed to update package cache", err, output)
 	}
 
 	return nil
@@ -382,6 +381,37 @@ func (h *Handler) runCmd(ec *executor.ExecutionContext, become bool, cmdArgs []s
 	// and non-sandboxed agentds. See issue #139.
 	args := sandbox.Wrap(cmdArgs)
 	return ec.Privileged().Run(ec.Svc.Ctx, args[0], args[1:]...)
+}
+
+// maxErrOutputLines bounds how much command output is folded into a failure
+// error. Package managers (notably brew) emit hundreds of progress lines
+// before the real error; the cause almost always lives in the tail.
+const maxErrOutputLines = 20
+
+// tailOutput returns the trimmed last n lines of a command's combined
+// output, or "" when there is none.
+func tailOutput(output []byte, n int) string {
+	text := strings.TrimSpace(string(output))
+	if text == "" {
+		return ""
+	}
+	lines := strings.Split(text, "\n")
+	if len(lines) > n {
+		lines = lines[len(lines)-n:]
+	}
+	return strings.Join(lines, "\n")
+}
+
+// pkgCmdError wraps a failed package-manager command, folding the tail of its
+// combined output into the error so the actual cause (e.g. "untrusted tap",
+// "No available formula with the name ...") surfaces in the step failure and
+// RECAP instead of a bare "exit status 1". Falls back to the plain wrapped
+// error when the command produced no output.
+func pkgCmdError(msg string, execErr error, output []byte) error {
+	if detail := tailOutput(output, maxErrOutputLines); detail != "" {
+		return fmt.Errorf("%s: %w\n%s", msg, execErr, detail)
+	}
+	return fmt.Errorf("%s: %w", msg, execErr)
 }
 
 // installPackages installs or upgrades packages.
@@ -461,8 +491,7 @@ func (h *Handler) installPackages(ec *executor.ExecutionContext, manager string,
 
 			output, execErr := h.runCmd(ec, become, cmdArgs)
 			if execErr != nil {
-				ec.Svc.Logger.Debugf("    Output: %s", strings.TrimSpace(string(output)))
-				return nil, fmt.Errorf("failed to install package %q: %w", pkg, execErr)
+				return nil, pkgCmdError(fmt.Sprintf("failed to install package %q", pkg), execErr, output)
 			}
 		}
 		result.SetChanged(true)
@@ -480,8 +509,7 @@ func (h *Handler) installPackages(ec *executor.ExecutionContext, manager string,
 
 	output, execErr := h.runCmd(ec, become, cmdArgs)
 	if execErr != nil {
-		ec.Svc.Logger.Debugf("    Output: %s", strings.TrimSpace(string(output)))
-		return nil, fmt.Errorf("failed to install packages %v: %w", toInstall, execErr)
+		return nil, pkgCmdError(fmt.Sprintf("failed to install packages %v", toInstall), execErr, output)
 	}
 
 	result.SetChanged(true)
@@ -561,8 +589,7 @@ func (h *Handler) removePackages(ec *executor.ExecutionContext, manager string, 
 
 			output, execErr := h.runCmd(ec, become, cmdArgs)
 			if execErr != nil {
-				ec.Svc.Logger.Debugf("    Output: %s", strings.TrimSpace(string(output)))
-				return nil, fmt.Errorf("failed to remove package %q: %w", pkg, execErr)
+				return nil, pkgCmdError(fmt.Sprintf("failed to remove package %q", pkg), execErr, output)
 			}
 		}
 		result.SetChanged(true)
@@ -579,8 +606,7 @@ func (h *Handler) removePackages(ec *executor.ExecutionContext, manager string, 
 
 	output, execErr := h.runCmd(ec, become, cmdArgs)
 	if execErr != nil {
-		ec.Svc.Logger.Debugf("    Output: %s", strings.TrimSpace(string(output)))
-		return nil, fmt.Errorf("failed to remove packages %v: %w", toRemove, execErr)
+		return nil, pkgCmdError(fmt.Sprintf("failed to remove packages %v", toRemove), execErr, output)
 	}
 
 	result.SetChanged(true)
@@ -603,8 +629,7 @@ func (h *Handler) executeUpgrade(ec *executor.ExecutionContext, manager string, 
 
 	output, execErr := h.runCmd(ec, become, cmdArgs)
 	if execErr != nil {
-		ec.Svc.Logger.Debugf("    Output: %s", strings.TrimSpace(string(output)))
-		return nil, fmt.Errorf("failed to upgrade packages: %w", execErr)
+		return nil, pkgCmdError("failed to upgrade packages", execErr, output)
 	}
 
 	result.SetChanged(true)
