@@ -20,6 +20,7 @@ import (
 	"github.com/alehatsman/mooncake/internal/events"
 	"github.com/alehatsman/mooncake/internal/executor"
 	"github.com/alehatsman/mooncake/internal/sandbox"
+	"github.com/alehatsman/mooncake/internal/security"
 	"github.com/alehatsman/mooncake/internal/template"
 )
 
@@ -402,6 +403,37 @@ func tailOutput(output []byte, n int) string {
 	return strings.Join(lines, "\n")
 }
 
+// warmSudoTimestamp pre-authenticates the user's cached sudo credential
+// ahead of a brew cask install. brew runs casks unprivileged and shells out
+// to `sudo` itself for pkg-based or privileged casks; without a warm
+// timestamp the operator is prompted "Password:" once per such cask on the
+// inherited terminal — even though mooncake already holds the password from
+// --ask-become-pass. Running `sudo -S -v` with that password seeds the
+// timestamp so brew's child sudo calls reuse it silently.
+//
+// Best-effort and non-fatal: it only acts in password mode (SudoPass set),
+// and any failure is logged at Debug while the install proceeds — brew then
+// falls back to prompting exactly as before. The step itself stays
+// unprivileged (brew must never run as root); this only touches the sudo
+// credential cache.
+func (h *Handler) warmSudoTimestamp(ec *executor.ExecutionContext) {
+	if ec.Svc.SudoPass == "" {
+		// Passwordless sudo (NOPASSWD) or no password configured: brew's
+		// own sudo won't block on a prompt, so there's nothing to seed.
+		return
+	}
+	warm := &security.Privileged{
+		SudoPass:   ec.Svc.SudoPass,
+		Escalation: ec.Svc.Escalation,
+		AsUser:     "root",
+	}
+	// `sudo -S -v` validates the credential and refreshes the timestamp
+	// without running a command.
+	if _, err := warm.Run(ec.Svc.Ctx, "-v"); err != nil {
+		ec.Svc.Logger.Debugf("  sudo timestamp warmup failed (brew casks may prompt for a password): %v", err)
+	}
+}
+
 // pkgCmdError wraps a failed package-manager command, folding the tail of its
 // combined output into the error so the actual cause (e.g. "untrusted tap",
 // "No available formula with the name ...") surfaces in the step failure and
@@ -501,6 +533,14 @@ func (h *Handler) installPackages(ec *executor.ExecutionContext, manager string,
 			AlreadyPresent: existingPkgs,
 		})
 		return result, nil
+	}
+
+	if manager == pmBrew && cask {
+		// brew installs casks unprivileged and shells out to its own
+		// `sudo` for pkg-based / privileged casks. Seed the sudo
+		// timestamp first so those child invocations reuse the cached
+		// credential instead of prompting "Password:" once per cask.
+		h.warmSudoTimestamp(ec)
 	}
 
 	cmdArgs := h.buildBatchInstallCommand(manager, toInstall, upgrade, cask, extra)
