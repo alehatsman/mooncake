@@ -29,6 +29,20 @@ func TestTailOutput(t *testing.T) {
 	}
 }
 
+func TestStartSudoKeepalive_NoPasswordIsNoop(t *testing.T) {
+	// With no sudo password configured there is nothing to keep alive:
+	// startSudoKeepalive must not spawn a goroutine (which would touch the
+	// nil ec.Svc.Ctx) and must return a stop that is safe to call repeatedly.
+	h := &Handler{}
+	ec := newMockExecutionContext() // SudoPass: ""
+	stop := h.startSudoKeepalive(ec)
+	if stop == nil {
+		t.Fatal("stop func is nil")
+	}
+	stop()
+	stop() // idempotent: second call must not panic on a closed channel
+}
+
 func TestPkgCmdError(t *testing.T) {
 	execErr := errors.New("exit status 1")
 

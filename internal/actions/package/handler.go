@@ -14,6 +14,8 @@ import (
 	"os/exec"
 	"runtime"
 	"strings"
+	"sync"
+	"time"
 
 	"github.com/alehatsman/mooncake/internal/actions"
 	"github.com/alehatsman/mooncake/internal/config"
@@ -403,6 +405,48 @@ func tailOutput(output []byte, n int) string {
 	return strings.Join(lines, "\n")
 }
 
+// sudoKeepaliveInterval is how often startSudoKeepalive refreshes the sudo
+// timestamp. Comfortably under sudo's default timestamp_timeout (5 min) so a
+// long cask batch never lapses between refreshes.
+const sudoKeepaliveInterval = 60 * time.Second
+
+// startSudoKeepalive seeds the sudo timestamp and then refreshes it on an
+// interval until the returned stop function is called (or the run context is
+// cancelled). It covers brew cask batches that run longer than sudo's
+// timestamp_timeout — a single seed would lapse mid-batch and the next
+// pkg-based cask would prompt again. See warmSudoTimestamp for why brew casks
+// need this at all.
+//
+// Returns an idempotent stop function; callers `defer stop()`. When there's
+// nothing to keep alive (no password configured) the stop is a no-op and no
+// goroutine is started.
+func (h *Handler) startSudoKeepalive(ec *executor.ExecutionContext) func() {
+	if ec.Svc.SudoPass == "" {
+		return func() {}
+	}
+	// Seed immediately so the first cask doesn't prompt before the first tick.
+	h.warmSudoTimestamp(ec)
+
+	done := make(chan struct{})
+	go func() {
+		ticker := time.NewTicker(sudoKeepaliveInterval)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-done:
+				return
+			case <-ec.Svc.Ctx.Done():
+				return
+			case <-ticker.C:
+				h.warmSudoTimestamp(ec)
+			}
+		}
+	}()
+
+	var once sync.Once
+	return func() { once.Do(func() { close(done) }) }
+}
+
 // warmSudoTimestamp pre-authenticates the user's cached sudo credential
 // ahead of a brew cask install. brew runs casks unprivileged and shells out
 // to `sudo` itself for pkg-based or privileged casks; without a warm
@@ -537,10 +581,12 @@ func (h *Handler) installPackages(ec *executor.ExecutionContext, manager string,
 
 	if manager == pmBrew && cask {
 		// brew installs casks unprivileged and shells out to its own
-		// `sudo` for pkg-based / privileged casks. Seed the sudo
-		// timestamp first so those child invocations reuse the cached
-		// credential instead of prompting "Password:" once per cask.
-		h.warmSudoTimestamp(ec)
+		// `sudo` for pkg-based / privileged casks. Keep the sudo
+		// timestamp warm for the whole batch so those child invocations
+		// reuse the cached credential instead of prompting "Password:"
+		// once per cask.
+		stop := h.startSudoKeepalive(ec)
+		defer stop()
 	}
 
 	cmdArgs := h.buildBatchInstallCommand(manager, toInstall, upgrade, cask, extra)
