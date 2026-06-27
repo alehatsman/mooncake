@@ -3,6 +3,7 @@ module github.com/alehatsman/mooncake
 go 1.26.4
 
 require (
+	filippo.io/age v1.3.1
 	github.com/expr-lang/expr v1.17.7
 	github.com/fatih/color v1.18.0
 	github.com/flosch/pongo2/v6 v6.0.0
@@ -19,7 +20,6 @@ require (
 )
 
 require (
-	filippo.io/age v1.3.1 // indirect
 	filippo.io/hpke v0.4.0 // indirect
 	github.com/cenkalti/backoff v2.2.1+incompatible // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.7 // indirect

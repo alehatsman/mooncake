@@ -36,7 +36,7 @@ vars:
   BIN: out/mooncake
 
 modules:
-  goq: "host.docker.internal:8080/alehatsman/go-quality@v0.1.1"
+  goq: "host.docker.internal:8080/alehatsman/go-quality@v0.1.2"
 
 tasks:
 
