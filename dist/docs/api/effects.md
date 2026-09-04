@@ -18,15 +18,15 @@ Spec 16 \(docs\-working/specs/done/spec\-16\-unify\-dryrun\-execute.md\) collaps
 - [type ModeFunc](<#type-modefunc>)
 
 
-## func [NewPerformer](<https://github.com/alehatsman/mooncake/blob/main/internal/effects/default.go#L56>)
+## func [NewPerformer](<https://github.com/alehatsman/mooncake/blob/main/internal/effects/default.go#L57>)
 
 ```go
 func NewPerformer(modeFn ModeFunc, sudoPass string, passwordlessSudo bool, asUser string) actions.Performer
 ```
 
-NewPerformer constructs an actions.Performer that performs real filesystem operations in ModeApply and inspects state in ModePlan. modeFn is called once per primitive to decide the path; sudoPass is consulted when escalation is needed; passwordlessSudo lets a NOPASSWD operator skip configuring a password — runSudo then uses \`sudo \-n\`. asUser is the step's bound AsUser \(spec\-72 Layer C\): empty → no escalation, "root"/"0" → sudo to root, "\<name\>" → sudo to root \+ post\-write chown to \<name\>.
+NewPerformer constructs an actions.Performer that performs real filesystem operations in ModeApply and inspects state in ModePlan. modeFn is called once per primitive to decide the path; sudoPass is consulted when escalation is needed; passwordlessSudo lets a NOPASSWD operator skip configuring a password — runSudo then uses \`sudo \-n\`. asUser is the step's bound AsUser \(spec\-72 Layer C\): empty → no escalation; any other value → sudo to root \+ post\-write chown to that user \(root/0 chown to 0:0, per issue \#168\).
 
-## func [ShellQuote](<https://github.com/alehatsman/mooncake/blob/main/internal/effects/default.go#L957>)
+## func [ShellQuote](<https://github.com/alehatsman/mooncake/blob/main/internal/effects/default.go#L975>)
 
 ```go
 func ShellQuote(s string) string
@@ -36,7 +36,7 @@ ShellQuote single\-quotes a string for safe POSIX\-shell interpolation. Embedded
 
 Go's \`%q\` verb is NOT a substitute — it escapes for Go\-string syntax, not POSIX\-shell syntax, and leaves $\(...\) / backtick substitution active inside double quotes.
 
-## type [ContentDiff](<https://github.com/alehatsman/mooncake/blob/main/internal/effects/default.go#L359-L366>)
+## type [ContentDiff](<https://github.com/alehatsman/mooncake/blob/main/internal/effects/default.go#L377-L384>)
 
 ContentDiff is a small structured summary attached to Effect.Detail for WriteFile when content would change.
 

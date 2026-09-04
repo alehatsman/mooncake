@@ -55,16 +55,23 @@ func TestWithChown_EmptyAsUser_PassesThrough(t *testing.T) {
 	}
 }
 
-// TestWithChown_RootAsUser_NoChown — the "root" / "0" AsUser doesn't
-// need an explicit chown (sudo's already operating as root → file
-// lands owned by root).
-func TestWithChown_RootAsUser_NoChown(t *testing.T) {
+// TestWithChown_RootAsUser_Chown — issue #168: the "root" / "0"
+// AsUser still needs an explicit chown 0:0. Mkdir/Touch create the
+// path directly under sudo so this is a no-op for them, but
+// WriteFile/CopyFile stage content in a tempfile owned by the
+// unprivileged process and `mv` it into place under sudo — a
+// same-filesystem `mv` is a rename(2), which preserves that
+// pre-sudo owner instead of resetting it to root. Without an
+// explicit chown here, those two primitives silently land the file
+// owned by the invoking user, not root.
+func TestWithChown_RootAsUser_Chown(t *testing.T) {
 	for _, target := range []string{"root", "0"} {
 		t.Run(target, func(t *testing.T) {
 			p := NewPerformer(func() actions.Mode { return actions.ModeApply }, "", false, target).(*defaultPerformer)
 			base := "mv /tmp/x /etc/foo && chmod 0644 /etc/foo"
-			if got := p.withChown(base, "/etc/foo"); got != base {
-				t.Errorf("withChown added chown for AsUser=%q (should be no-op):\n  got: %s", target, got)
+			want := base + " && chown 0:0 " + ShellQuote("/etc/foo")
+			if got := p.withChown(base, "/etc/foo"); got != want {
+				t.Errorf("withChown for AsUser=%q:\n  got:  %s\n  want: %s", target, got, want)
 			}
 		})
 	}

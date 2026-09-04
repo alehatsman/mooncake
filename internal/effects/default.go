@@ -38,10 +38,11 @@ type defaultPerformer struct {
 	passwordlessSudo bool
 	// asUser is the step's bound AsUser, threaded in by
 	// ec.Effects() before the handler sees the Performer. Empty
-	// means "do not escalate"; "root"/"0" means sudo; "<name>"
-	// means sudo + chown the resulting file to <name>'s uid:gid
-	// so the named-user file.write / template / copy works as
-	// the operator expects. Spec-72 Layer C.
+	// means "do not escalate"; any other value means sudo + chown
+	// the resulting file to that user (root/0 -> 0:0, "<name>" ->
+	// <name>'s uid:gid) so the escalated write lands owned by who
+	// the operator declared, not by whoever happened to create it.
+	// Spec-72 Layer C; the root/0 chown was added by issue #168.
 	asUser string
 }
 
@@ -51,8 +52,8 @@ type defaultPerformer struct {
 // is consulted when escalation is needed; passwordlessSudo lets a
 // NOPASSWD operator skip configuring a password — runSudo then uses
 // `sudo -n`. asUser is the step's bound AsUser (spec-72 Layer C):
-// empty → no escalation, "root"/"0" → sudo to root, "<name>" → sudo
-// to root + post-write chown to <name>.
+// empty → no escalation; any other value → sudo to root + post-write
+// chown to that user (root/0 chown to 0:0, per issue #168).
 func NewPerformer(modeFn ModeFunc, sudoPass string, passwordlessSudo bool, asUser string) actions.Performer {
 	return &defaultPerformer{
 		modeFn:           modeFn,
@@ -96,13 +97,29 @@ func (p *defaultPerformer) becomeFallback(_ actions.PerformerOpts, directErr err
 }
 
 // chownSpec returns the "uid:gid" string for the bound AsUser (or
-// empty when no chown is needed — empty AsUser or root/0). Used by
+// empty when no chown is needed — only for empty AsUser). Used by
 // the sudo paths in WriteFile / CopyFile / Mkdir / Touch to chown
-// the resulting path to the named user after writing as root. Resolved
-// once per call (rare enough that caching isn't worth the complexity).
+// the resulting path to the target user after writing as root.
+// Resolved once per call (rare enough that caching isn't worth the
+// complexity).
+//
+// root/0 return an explicit "0:0" rather than "" (issue #168): Mkdir
+// and Touch create the path directly under sudo, so it's already
+// root-owned and the chown is a harmless no-op — but WriteFile and
+// CopyFile stage content in a tempfile owned by the *unprivileged*
+// process, then `mv` it into place under sudo. When src and dest
+// share a filesystem, `mv` is a rename(2), which preserves the
+// original (pre-sudo) owner regardless of which user ran the mv.
+// Skipping the chown for root/0 silently left those files owned by
+// the invoking user instead of root. Explicit chown, every time
+// escalation happens, closes that gap for good instead of relying on
+// each primitive's incidental creation semantics.
 func (p *defaultPerformer) chownSpec() string {
-	if p.asUser == "" || p.asUser == "root" || p.asUser == "0" {
+	if p.asUser == "" {
 		return ""
+	}
+	if p.asUser == "root" || p.asUser == "0" {
+		return "0:0"
 	}
 	u, err := user.Lookup(p.asUser)
 	if err != nil {
@@ -117,10 +134,11 @@ func (p *defaultPerformer) chownSpec() string {
 }
 
 // withChown appends a `&& chown uid:gid <path>` clause to a sudo
-// command line when the bound AsUser is a named non-root user.
-// Returns the original sudoCmd untouched for AsUser="" / "root" / "0".
-// path is the destination the chown should target — the sudo command
-// is assumed to have already moved/created the file at that location.
+// command line whenever an AsUser is bound. Returns the original
+// sudoCmd untouched only for AsUser="" (no escalation, nothing to
+// chown). path is the destination the chown should target — the
+// sudo command is assumed to have already moved/created the file at
+// that location.
 func (p *defaultPerformer) withChown(sudoCmd, path string) string {
 	spec := p.chownSpec()
 	if spec == "" {
