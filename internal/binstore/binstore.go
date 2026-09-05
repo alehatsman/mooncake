@@ -10,20 +10,15 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+
+	"github.com/alehatsman/mooncake/internal/statedir"
 )
 
 // Dir returns the binary store directory: ~/.mooncake/bin. $MOONCAKE_HOME
 // overrides the ~/.mooncake base (its bin/ subdir) so tests and
 // non-standard layouts can redirect it.
 func Dir() (string, error) {
-	if h := os.Getenv("MOONCAKE_HOME"); h != "" {
-		return filepath.Join(h, "bin"), nil
-	}
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return "", fmt.Errorf("locate home dir: %w", err)
-	}
-	return filepath.Join(home, ".mooncake", "bin"), nil
+	return statedir.Path("bin")
 }
 
 // BinaryName returns the store filename for a (goos, goarch) build:

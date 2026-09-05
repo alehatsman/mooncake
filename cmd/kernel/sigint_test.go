@@ -1,6 +1,7 @@
 package kernel
 
 import (
+	"os"
 	"os/exec"
 	"runtime"
 	"strings"
@@ -37,6 +38,11 @@ func TestIssue87_SIGINTExitsCleanly(t *testing.T) {
 	}
 
 	cmd := exec.Command(bin, "apply", "-c", cfg, "--output-format", "json")
+	// The spawned binary is a real mooncake, not a test binary, so
+	// statedir's test guard doesn't apply to it — point it at a temp
+	// state dir explicitly or it appends to the developer's own
+	// ~/.mooncake/ops.jsonl on every run of this test.
+	cmd.Env = append(os.Environ(), "MOONCAKE_HOME="+t.TempDir())
 	// New process group so we can send SIGINT to the leader without
 	// touching the test runner.
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
@@ -95,6 +101,11 @@ func TestIssue87_SIGTERMExitsCleanly(t *testing.T) {
 	}
 
 	cmd := exec.Command(bin, "apply", "-c", cfg, "--output-format", "json")
+	// The spawned binary is a real mooncake, not a test binary, so
+	// statedir's test guard doesn't apply to it — point it at a temp
+	// state dir explicitly or it appends to the developer's own
+	// ~/.mooncake/ops.jsonl on every run of this test.
+	cmd.Env = append(os.Environ(), "MOONCAKE_HOME="+t.TempDir())
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 	if err := cmd.Start(); err != nil {
 		t.Fatalf("start: %v", err)

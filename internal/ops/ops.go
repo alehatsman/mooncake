@@ -19,12 +19,13 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/alehatsman/mooncake/internal/jsonllog"
 	"github.com/oklog/ulid/v2"
+
+	"github.com/alehatsman/mooncake/internal/statedir"
 )
 
 // ErrNotFound is returned by Read when no op has the requested id.
@@ -66,13 +67,11 @@ func NewRunID() string {
 	return "r/" + id.String()
 }
 
-// LogPath returns the ops.jsonl path under ~/.mooncake.
+// LogPath returns the ops.jsonl path under the state dir (~/.mooncake,
+// or $MOONCAKE_HOME). Errors when a test binary would write to the
+// developer's own history — see statedir.ErrTestIsolation.
 func LogPath() (string, error) {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return "", fmt.Errorf("cannot determine home directory: %w", err)
-	}
-	return filepath.Join(home, ".mooncake", "ops.jsonl"), nil
+	return statedir.Path("ops.jsonl")
 }
 
 // Append writes e as a single JSON line to ~/.mooncake/ops.jsonl.

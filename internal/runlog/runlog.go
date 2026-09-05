@@ -8,10 +8,11 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"path/filepath"
 	"time"
 
 	"github.com/alehatsman/mooncake/internal/jsonllog"
+
+	"github.com/alehatsman/mooncake/internal/statedir"
 )
 
 // ErrNoHistory is returned by Last/Recent/At when the log file is absent
@@ -77,13 +78,11 @@ type StepEntry struct {
 	Diff     json.RawMessage `json:"diff,omitempty"`
 }
 
-// logPath returns the path to the run log file.
+// logPath returns the path to the run log file under the state dir
+// (~/.mooncake, or $MOONCAKE_HOME). Errors when a test binary would
+// write to the developer's own history — see statedir.ErrTestIsolation.
 func logPath() (string, error) {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return "", fmt.Errorf("cannot determine home directory: %w", err)
-	}
-	return filepath.Join(home, ".mooncake", "runs.jsonl"), nil
+	return statedir.Path("runs.jsonl")
 }
 
 // Append writes e as a single JSON line to ~/.mooncake/runs.jsonl.
