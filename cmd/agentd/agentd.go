@@ -18,6 +18,7 @@ import (
 	"github.com/urfave/cli/v2"
 
 	"github.com/alehatsman/mooncake/internal/agentd"
+	"github.com/alehatsman/mooncake/internal/envpath"
 	"github.com/alehatsman/mooncake/internal/fleet/install"
 )
 
@@ -105,10 +106,13 @@ func agentdRunCommand() *cli.Command {
 }
 
 func agentdRun(c *cli.Context) error {
-	// Put the daemon user's bin dirs (~/.local/bin, ~/bin, ~/go/bin) on
-	// PATH before serving so fleet-apply steps find user-installed CLIs
-	// (claude, go tools) that the service's minimal PATH would miss (#141).
-	agentd.ApplyPathAugmentation()
+	// Put the daemon user's bin dirs (~/.local/bin, ~/bin, ~/go/bin) and
+	// the platform package-manager prefixes on PATH before serving, so
+	// fleet-apply steps find user-installed CLIs (claude, go tools) that
+	// the service's minimal PATH would miss (#141). main() already did
+	// this; repeated here (idempotent) so the daemon keeps the guarantee
+	// if it is ever started through another entry point.
+	envpath.Apply()
 
 	cfg, err := agentd.Default(c.Bool("system"))
 	if err != nil {

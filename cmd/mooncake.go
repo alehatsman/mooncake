@@ -27,6 +27,7 @@ import (
 	taskcmd "github.com/alehatsman/mooncake/cmd/task"
 	toolcmd "github.com/alehatsman/mooncake/cmd/tool"
 	vaultcmd "github.com/alehatsman/mooncake/cmd/vault"
+	"github.com/alehatsman/mooncake/internal/envpath"
 )
 
 var version = "dev"
@@ -109,6 +110,14 @@ func applyQuietUsageError(cmds []*cli.Command) {
 }
 
 func main() {
+	// Make the process PATH describe the machine, not the shell that
+	// launched us: the user bin dirs and this platform's package-manager
+	// prefixes. Must happen before any step runs — a playbook that
+	// installs Homebrew and then drives `pkg`/`pkg.repo` in the same run
+	// resolves `brew` only if /opt/homebrew/bin was already on PATH when
+	// the step dispatched (#141).
+	envpath.Apply()
+
 	// Propagate the linker-stamped binary version into the cmd/
 	// sub-packages that surface it back to operators or remotes.
 	fleetcmd.Version = version
