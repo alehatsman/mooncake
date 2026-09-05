@@ -53,6 +53,13 @@ type Config struct {
 	// written to the run audit.
 	LogLevel string
 
+	// KeepGoing continues past a failing step and reports every
+	// failure together when the run ends (still exiting non-zero).
+	// The unattended-provisioning lever: one unavailable package
+	// shouldn't strand the other 160 steps. See
+	// executor.RunServices.KeepGoing.
+	KeepGoing bool
+
 	// StreamStepOutput, when true, makes the console subscriber render
 	// captured step stdout/stderr lines regardless of LogLevel. The
 	// dev-loop entry points (`mooncake task <name>`) want shell-step

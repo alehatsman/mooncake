@@ -690,10 +690,12 @@ func (h *Handler) executeAssertGitDiff(assertDiff *config.AssertGitDiff, ec *exe
 }
 
 // Run is the Spec 16 entry point. Assertions don't mutate system state,
-// so plan mode evaluates the assertion directly: any failure becomes a
-// plan failure (which is the intent — you want plan to catch a broken
-// assertion). Reports Checkable=true and WouldChange=false when the
-// assertion passes; a failure surfaces as a plan-time error.
+// so plan mode evaluates the assertion directly and reports what it
+// found: Checkable=true with WouldChange=false when the assertion
+// already holds, WouldChange=true with the mismatch in Reason when it
+// doesn't. A plan-time mismatch is information, not an error — the
+// steps that would satisfy the assertion haven't run yet. In apply
+// mode a failed assertion fails the step as always.
 func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, error) {
 	ec, ok := ctx.(*executor.ExecutionContext)
 	if !ok {
@@ -766,6 +768,26 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 			Type:     assertType,
 		}
 		ec.EmitEvent(events.EventAssertFailed, failureData)
+
+		// Plan mode reports; it does not abort. At plan time none of the
+		// steps that establish an assertion's precondition have run, so
+		// on a fresh machine every post-condition assert in a playbook
+		// fails by construction — `Verify git config` before the step
+		// that writes ~/.gitconfig, `Verify zsh installation` before the
+		// step that installs zsh. Erroring there made `mooncake plan`
+		// unusable on exactly the machine that most needs a preview, and
+		// one such step aborted inspection for the whole plan.
+		//
+		// The assertion still surfaces: WouldChange marks it as work
+		// outstanding, and Reason carries the mismatch. Apply mode is
+		// unchanged — there, a failed assertion is a real failure.
+		if ctx.Mode() == actions.ModePlan {
+			result.Checkable = true
+			result.WouldChange = true
+			result.Reason = fmt.Sprintf("assertion does not hold yet: %v", err)
+			return result, nil
+		}
+
 		return result, err
 	}
 

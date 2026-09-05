@@ -760,6 +760,33 @@ func handleStepError(step config.Step, ec *ExecutionContext, stepErr error, step
 		captureResult(ec, step, failedResult.ToRegisteredResult())
 		return nil
 	}
+
+	// --keep-going: carry on, but remember. Deliberately after the
+	// transaction rollback above and gated on TxnParent — a transaction
+	// is all-or-nothing by construction, and letting the run continue
+	// past a rolled-back transaction would leave exactly the partial
+	// state the transaction exists to prevent.
+	if ec.Svc.KeepGoing && step.TxnParent == "" {
+		// Plan mode uses the same machinery to survive un-inspectable
+		// steps, but there it isn't a failure — the plan output already
+		// renders the step as "not checkable: <why>", so shouting about
+		// it twice just buries the preview.
+		if ec.Mode() == actions.ModePlan {
+			ec.Svc.Logger.Debugf("  [not checkable] %v", stepErr)
+		} else {
+			ec.Svc.Logger.Errorf("  [KEEP-GOING] step failed, continuing: %v", stepErr)
+		}
+		ec.Svc.DeferredFailures = append(ec.Svc.DeferredFailures, DeferredFailure{
+			StepName: stepLabel(&step),
+			Err:      stepErr,
+		})
+		failedResult := NewResult()
+		failedResult.Failed = true
+		failedResult.Rc = 1
+		captureResult(ec, step, failedResult.ToRegisteredResult())
+		return nil
+	}
+
 	ec.Svc.Logger.Errorf("%v", stepErr)
 	return stepErr
 }
@@ -940,7 +967,21 @@ func ExecuteStep(step config.Step, ec *ExecutionContext) error {
 	// the normal started/completed lifecycle below.
 	if ec.Mode() == actions.ModePlan && hasStepName && step.Import == nil {
 		if handled, err := dispatchPlanMode(step, ec, stepName); handled || err != nil {
-			return err
+			// A step that can't be inspected is a fact about that step,
+			// not a reason to abandon the preview. Route it through the
+			// normal failure path so it emits step.failed (which the
+			// inspection collector renders as "not checkable: <why>")
+			// and so KeepGoing applies — InspectPlan sets it, which is
+			// what lets `mooncake plan` survive a step needing sudo or
+			// a binary an earlier step installs.
+			if err != nil {
+				planDepth := 0
+				if step.LoopContext != nil {
+					planDepth = step.LoopContext.Depth
+				}
+				return handleStepError(step, ec, err, ec.CurrentStepID, stepName, planDepth, 0)
+			}
+			return nil
 		}
 	}
 
@@ -1173,6 +1214,11 @@ type StartConfig struct {
 	MaxOutputBytes    int
 	MaxOutputLines    int
 
+	// KeepGoing continues the run past a failing step, collecting the
+	// failures and returning them together at the end (still a
+	// non-zero exit). See RunServices.KeepGoing.
+	KeepGoing bool
+
 	// Capture, if non-nil, is populated by Start with the compiled
 	// plan and per-step records. R1.1b's internal/apply.Runner uses
 	// this to build its typed *KernelResult. Other callers leave nil.
@@ -1350,7 +1396,7 @@ func Start(ctx context.Context, startConfig StartConfig, log logger.Logger, publ
 	startConfig.Capture.setPlan(planData)
 
 	// Execute the plan with event publisher
-	return executePlanWithCapture(ctx, planData, sudoPassword, actions.ModeApply, log, publisher, startConfig.Capture, startConfig.Policy, startConfig.Registry)
+	return executePlanWithCapture(ctx, planData, sudoPassword, actions.ModeApply, log, publisher, startConfig.Capture, startConfig.Policy, startConfig.Registry, startConfig.KeepGoing)
 }
 
 // ExecutePlan executes a pre-compiled plan.
@@ -1364,7 +1410,7 @@ func Start(ctx context.Context, startConfig StartConfig, log logger.Logger, publ
 // ctx is checked between steps — see Start for the cancellation
 // contract.
 func ExecutePlan(ctx context.Context, p *plan.Plan, sudoPass string, mode actions.Mode, log logger.Logger, publisher events.Publisher) error {
-	return executePlanWithCapture(ctx, p, sudoPass, mode, log, publisher, nil, nil, nil)
+	return executePlanWithCapture(ctx, p, sudoPass, mode, log, publisher, nil, nil, nil, false)
 }
 
 // ExecutePlanWithCapture runs a pre-compiled plan and fills the
@@ -1380,7 +1426,7 @@ func ExecutePlan(ctx context.Context, p *plan.Plan, sudoPass string, mode action
 // ctx is checked between steps — see Start for the cancellation
 // contract.
 func ExecutePlanWithCapture(ctx context.Context, p *plan.Plan, sudoPass string, mode actions.Mode, log logger.Logger, publisher events.Publisher, capture *RunCapture) error {
-	return executePlanWithCapture(ctx, p, sudoPass, mode, log, publisher, capture, nil, nil)
+	return executePlanWithCapture(ctx, p, sudoPass, mode, log, publisher, capture, nil, nil, false)
 }
 
 // ExecutePlanFull runs a pre-compiled plan with the full options set:
@@ -1391,13 +1437,13 @@ func ExecutePlanWithCapture(ctx context.Context, p *plan.Plan, sudoPass string, 
 // thread policy and a consumer-owned registry through the same funnel
 // as Apply.
 func ExecutePlanFull(ctx context.Context, p *plan.Plan, sudoPass string, mode actions.Mode, log logger.Logger, publisher events.Publisher, capture *RunCapture, policy *Policy, registry *actions.Registry) error {
-	return executePlanWithCapture(ctx, p, sudoPass, mode, log, publisher, capture, policy, registry)
+	return executePlanWithCapture(ctx, p, sudoPass, mode, log, publisher, capture, policy, registry, false)
 }
 
 // executePlanWithCapture is the shared implementation behind
 // ExecutePlan and Start. Pass capture=nil to disable the
 // kernel-result substrate (legacy callers).
-func executePlanWithCapture(ctx context.Context, p *plan.Plan, sudoPass string, mode actions.Mode, log logger.Logger, publisher events.Publisher, capture *RunCapture, policy *Policy, registry *actions.Registry) error {
+func executePlanWithCapture(ctx context.Context, p *plan.Plan, sudoPass string, mode actions.Mode, log logger.Logger, publisher events.Publisher, capture *RunCapture, policy *Policy, registry *actions.Registry, keepGoing bool) error {
 	steps := p.Steps
 	variables := p.InitialVars
 
@@ -1481,6 +1527,7 @@ func executePlanWithCapture(ctx context.Context, p *plan.Plan, sudoPass string, 
 	svc := &RunServices{
 		Logger:           log.WithPadLevel(0),
 		SudoPass:         sudoPass,
+		KeepGoing:        keepGoing,
 		Escalation:       escalation,
 		PasswordlessSudo: escalation.Reason == security.EscalationAvailablePasswordless,
 		Tags:             []string{}, // tag filtering done by planner (step.Skipped)
@@ -1538,6 +1585,14 @@ func executePlanWithCapture(ctx context.Context, p *plan.Plan, sudoPass string, 
 
 	// Execute pre-expanded steps
 	execErr := ExecuteSteps(steps, &executionContext)
+
+	// --keep-going deferred the failures rather than erasing them: the
+	// run reports and exits non-zero exactly as it would have, just
+	// after doing the rest of the work. Folded in before run.completed
+	// so Success/ErrorMessage on the event agree with the exit code.
+	if execErr == nil && len(svc.DeferredFailures) > 0 {
+		execErr = &DeferredFailuresError{Failures: svc.DeferredFailures}
+	}
 
 	// Calculate duration
 	duration := time.Since(startTime)

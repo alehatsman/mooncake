@@ -150,6 +150,23 @@ type RunServices struct {
 	// (spec-72 §1). Consumed by *security.Privileged for the actual
 	// sudo wrap and by preflight for diagnostic messages.
 	Escalation security.EscalationReport
+	// KeepGoing makes a failing step record-and-continue instead of
+	// aborting the run (`mooncake apply --keep-going`). The failures
+	// are collected in DeferredFailures and re-raised as a single
+	// error when the run ends, so the exit code is unchanged — only
+	// how much work gets done before you see it. Steps inside a
+	// transaction are exempt: all-or-nothing wins over keep-going.
+	//
+	// The case this exists for is unattended first-provisioning, where
+	// one unavailable upstream package (a cask disabled by Homebrew,
+	// a repo mirror down) otherwise strands every later step in the
+	// run and you find out 20 minutes in.
+	KeepGoing bool
+
+	// DeferredFailures accumulates what KeepGoing swallowed. Appended
+	// from the step loop, which is sequential, so no lock is needed.
+	DeferredFailures []DeferredFailure
+
 	// Capture, if non-nil, records the compiled plan and per-step
 	// outcomes for callers that want the typed *KernelResult shape
 	// (internal/apply.Runner for R1.1b). nil for the legacy

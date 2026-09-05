@@ -2,6 +2,8 @@ package executor
 
 import (
 	"context"
+	"errors"
+	"fmt"
 
 	"github.com/alehatsman/mooncake/internal/actions"
 	"github.com/alehatsman/mooncake/internal/events"
@@ -49,7 +51,19 @@ func InspectPlanWithRegistry(p *plan.Plan, sudoPass string, log logger.Logger, r
 	// cancellation to interrupt that wouldn't already complete in ms.
 	// Add a ctx parameter only if a future use case needs deadlines on
 	// inspection.
-	if err := executePlanWithCapture(context.Background(), p, sudoPass, actions.ModePlan, log, pub, nil, nil, registry); err != nil {
+	// keepGoing: an inspection error belongs to ONE step, so it must not
+	// blind the operator to the other 180. A plan is a preview — every
+	// step that can be predicted should be, and the ones that can't say
+	// why, in place, via the EventStepFailed branch in the collector.
+	//
+	// This is what made `mooncake plan` unusable on a fresh machine: a
+	// step needing sudo with no password configured, or a binary that an
+	// earlier step in the same plan installs, aborted the whole preview.
+	err := executePlanWithCapture(context.Background(), p, sudoPass, actions.ModePlan, log, pub, nil, nil, registry, true)
+	var deferred *DeferredFailuresError
+	if err != nil && !errors.As(err, &deferred) {
+		// A genuine setup error (bad plan, unusable renderer) still
+		// aborts — that's not a per-step condition.
 		return nil, err
 	}
 	return collector.collect(p), nil
@@ -91,6 +105,21 @@ func (c *inspectionCollector) OnEvent(e events.Event) {
 			Detail:      d.Detail,
 			Diff:        diff,
 			Cost:        cost,
+		}
+	case events.EventStepFailed:
+		// Reached only in plan mode via the keepGoing path above: the
+		// step could not be inspected (needs sudo, needs a binary an
+		// earlier step installs, handler errored). Not a plan failure —
+		// a plan-shaped answer of "can't tell you about this one".
+		d, ok := e.Data.(events.StepFailedData)
+		if !ok {
+			return
+		}
+		c.byStepID[d.StepID] = plan.StepInspection{
+			StepID:     d.StepID,
+			ActionType: d.Action,
+			Checkable:  false,
+			Reason:     fmt.Sprintf("not checkable: %s", d.ErrorMessage),
 		}
 	case events.EventStepSkipped:
 		d, ok := e.Data.(events.StepSkippedData)

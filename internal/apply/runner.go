@@ -222,6 +222,8 @@ func (r *Runner) Run(ctx context.Context) (*KernelResult, error) {
 		MaxOutputBytes:    r.cfg.MaxOutputBytes,
 		MaxOutputLines:    r.cfg.MaxOutputLines,
 
+		KeepGoing: r.cfg.KeepGoing,
+
 		Capture:  capture,
 		Policy:   r.cfg.Policy,
 		Registry: r.cfg.Registry,

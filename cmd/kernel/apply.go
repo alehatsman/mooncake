@@ -69,6 +69,10 @@ func applyFlags() []cli.Flag {
 			Usage:   "Preview changes without executing (sugar for `mooncake plan`)",
 		},
 		&cli.BoolFlag{
+			Name:  "keep-going",
+			Usage: "Continue past a failing step and report all failures at the end (still exits non-zero). Steps inside a transaction keep all-or-nothing semantics.",
+		},
+		&cli.BoolFlag{
 			Name:  "tui",
 			Value: false,
 			Usage: "Use the animated TUI subscriber (default: raw console output)",
@@ -202,6 +206,7 @@ func run(c *cli.Context) error {
 		FactsJSONPath:     c.String("facts-json"),
 		OpID:              recordOp("apply", configPath, false),
 		StreamStepOutput:  !c.Bool("no-stream-output"),
+		KeepGoing:         c.Bool("keep-going"),
 	}
 	return runWithSignalCtx(c.Context, func(ctx context.Context) error {
 		kr, runErr := apply.NewRunner(cfg).Run(ctx)
