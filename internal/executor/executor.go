@@ -659,6 +659,40 @@ func classifyCancelReason(runCtx context.Context) string {
 	}
 }
 
+// failedStepRecord builds the Result stored in the run log for a step that
+// errored. It starts from the live envelope so a handler that got far enough
+// to fill in stdout/rc/start time keeps those, then overlays the terminal
+// status, message and duration.
+//
+// A copy, not the envelope itself: the continue_on_error and --keep-going
+// branches hand their own synthetic Result to captureResult for `register:`,
+// and the two views of the step must not alias.
+func failedStepRecord(ec *ExecutionContext, stepErr error, exitCode int, stepDuration time.Duration, cancelled bool) *Result {
+	r := NewResult()
+	if ec.CurrentResult != nil {
+		clone := *ec.CurrentResult
+		r = &clone
+	}
+	// Mirrors the counter classification above: a step torn down by a
+	// run-wide cancel is cancelled, not failed, and Status() reads these
+	// same two fields.
+	if cancelled {
+		r.Cancelled = true
+	} else {
+		r.Failed = true
+	}
+	if r.Error == "" {
+		r.Error = stepErr.Error()
+	}
+	// -1 is handleStepError's "no exit code applies" sentinel (issue #21:
+	// never fabricate one for a command that exited 0).
+	if r.Rc == 0 && exitCode > 0 {
+		r.Rc = exitCode
+	}
+	r.Duration = stepDuration
+	return r
+}
+
 func handleStepError(step config.Step, ec *ExecutionContext, stepErr error, stepID, stepName string, depth int, stepDuration time.Duration) error {
 	// F058: this is the single run-counter classification site for a
 	// failed step. A step torn down mid-flight by run-wide cancel counts
@@ -740,6 +774,19 @@ func handleStepError(step config.Step, ec *ExecutionContext, stepErr error, step
 		failedData.Stderr = truncateTail(ec.CurrentResult.Stderr, 65536)
 	}
 	ec.EmitEvent(events.EventStepFailed, failedData)
+
+	// Feed the failure into the run-log capture. postExecuteSuccess owns
+	// the success path's appendStep and is deliberately not reached for a
+	// failed step, so without this the record is simply absent: runs.jsonl
+	// carries failed=1 in its header while every step it lists reads ok or
+	// changed. Which step failed, and why, is the one thing a run log gets
+	// opened for — and after a fresh-machine provision the terminal
+	// scrollback that held the answer is long gone.
+	//
+	// Placed before the branches below so all three exits are covered
+	// (fatal, continue_on_error, --keep-going). None of them reach
+	// postExecuteSuccess, so there is no double-record.
+	ec.Svc.Capture.appendStep(step, failedStepRecord(ec, stepErr, failedData.ExitCode, stepDuration, cancelled))
 
 	// spec-30: a body child's failure triggers LIFO rollback of its
 	// transaction's previously-completed children. Run BEFORE the

@@ -49,6 +49,25 @@ func writeEnrichedRunlog(configBasename, opID, runID string, tail *captureSubscr
 	_ = runlog.Append(entry)
 }
 
+// maxRunlogErrBytes caps the error text copied into a run-log step record.
+// Package-manager and shell failures fold the tail of the command's output
+// into their error, which is exactly what makes them diagnosable and also
+// what makes them long. 4 KiB keeps runs.jsonl greppable line-by-line while
+// still carrying the failing command's last ~50 lines; the untruncated text
+// is on the step.failed event.
+const maxRunlogErrBytes = 4096
+
+// truncateErr keeps the TAIL of an error message, for the same reason
+// handleStepError keeps the tail of stdout: the diagnosis ("No available
+// formula", the failing assertion, the exit code) is at the end, while the
+// head is the command that was run — which the step record already names.
+func truncateErr(msg string) string {
+	if len(msg) <= maxRunlogErrBytes {
+		return msg
+	}
+	return "…" + msg[len(msg)-maxRunlogErrBytes:]
+}
+
 // buildStepEntries projects executor StepRecords into the runlog
 // shape: action verb, best-effort resource handle, result status,
 // reversibility flag.
@@ -67,6 +86,10 @@ func buildStepEntries(records []executor.StepRecord) []runlog.StepEntry {
 		if sr.Result != nil {
 			entry.Result = sr.Result.Status()
 			entry.DurationMs = sr.Result.Duration.Milliseconds()
+			if entry.Result == "failed" || entry.Result == "cancelled" {
+				entry.Error = truncateErr(sr.Result.Error)
+				entry.ExitCode = sr.Result.Rc
+			}
 			if !sr.Result.StartTime.IsZero() {
 				entry.StartTS = sr.Result.StartTime.UTC()
 			}

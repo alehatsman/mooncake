@@ -76,6 +76,13 @@ type StepEntry struct {
 	// Reverse"; Reverted says "we actually called it on this run".
 	Reverted bool            `json:"reverted,omitempty"`
 	Diff     json.RawMessage `json:"diff,omitempty"`
+	// Error and ExitCode are set only for failed/cancelled steps. Without
+	// them a failed record answers "which step" but not "why", which is
+	// half of what a post-mortem needs. Error is capped by the writer —
+	// the untruncated text (plus full stdout/stderr) rides the step.failed
+	// event; this copy exists so `runs.jsonl` alone stays diagnosable.
+	Error    string `json:"error,omitempty"`
+	ExitCode int    `json:"exit_code,omitempty"`
 }
 
 // logPath returns the path to the run log file under the state dir

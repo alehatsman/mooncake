@@ -198,6 +198,13 @@ type RunStep struct {
 	DurationMs int64           `json:"duration_ms,omitempty" yaml:"duration_ms,omitempty"`
 	Reversible bool            `json:"reversible,omitempty"  yaml:"reversible,omitempty"`
 	Diff       json.RawMessage `json:"diff,omitempty"        yaml:"-"`
+	// Error and ExitCode carry a failed step's reason through to
+	// `mooncake explain`. Recording why a step failed in runs.jsonl is
+	// only half the job if the tool for reading runs.jsonl drops it.
+	// Both omitempty, so successful steps and pre-existing entries are
+	// unchanged.
+	Error    string `json:"error,omitempty"     yaml:"error,omitempty"`
+	ExitCode int    `json:"exit_code,omitempty" yaml:"exit_code,omitempty"`
 }
 
 // RunCaveats surfaces the run-level metadata an operator wants

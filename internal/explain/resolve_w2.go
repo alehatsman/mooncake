@@ -120,6 +120,8 @@ func runPayloadFrom(e runlog.Entry) *RunPayload {
 			DurationMs: s.DurationMs,
 			Reversible: s.Reversible,
 			Diff:       s.Diff,
+			Error:      s.Error,
+			ExitCode:   s.ExitCode,
 		})
 	}
 	return &RunPayload{

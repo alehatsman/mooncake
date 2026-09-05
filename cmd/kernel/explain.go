@@ -151,8 +151,25 @@ func renderExplainRunText(w io.Writer, p *explain.RunPayload) {
 			if summary := summarizeDiff(s.Diff); summary != "" {
 				fmt.Fprintf(w, "      diff: %s\n", summary)
 			}
+			// The reason a step failed is why anyone opens a past run.
+			// Kept to the first line here — text mode stays scannable
+			// and the JSON / YAML formats carry the full message.
+			if s.Error != "" {
+				fmt.Fprintf(w, "      error: %s\n", firstLine(s.Error))
+			}
 		}
 	}
+}
+
+// firstLine returns the leading line of msg, ellipsized when more
+// follows. Step errors fold in the tail of a command's output, which is
+// exactly what makes them useful in the JSON payload and unreadable in a
+// per-step text row.
+func firstLine(msg string) string {
+	if i := strings.IndexByte(msg, '\n'); i >= 0 {
+		return strings.TrimRight(msg[:i], "\r") + " …"
+	}
+	return msg
 }
 
 // summarizeDiff condenses a typed actions.Diff JSON payload to a
