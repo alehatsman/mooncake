@@ -10,6 +10,7 @@
 package package_handler
 
 import (
+	"encoding/json"
 	"fmt"
 	"os/exec"
 	"runtime"
@@ -769,28 +770,113 @@ func (h *Handler) isPackageInstalled(ec *executor.ExecutionContext, manager, pkg
 	return err == nil, nil
 }
 
-// fetchBrewInstalledSet runs `brew list --formula` or `brew list --cask` once
-// and returns the installed package names as a set. This allows callers to
-// replace N per-package subprocess calls with two bulk calls total.
+// brewInfoInstalled is the subset of `brew info --json=v2 --installed` that
+// answers "what else is this package called?".
+type brewInfoInstalled struct {
+	Formulae []struct {
+		Name     string   `json:"name"`
+		FullName string   `json:"full_name"`
+		Aliases  []string `json:"aliases"`
+		OldNames []string `json:"oldnames"`
+	} `json:"formulae"`
+	Casks []struct {
+		Token     string   `json:"token"`
+		FullToken string   `json:"full_token"`
+		OldTokens []string `json:"old_tokens"`
+	} `json:"casks"`
+}
+
+// fetchBrewInstalledSet returns every name an installed brew package can
+// legitimately be referred to by, as a set.
+//
+// `brew list` prints one canonical name per package, and a playbook rarely
+// spells packages that way. Matching on that alone reports three whole
+// classes of installed package as missing, forever:
+//
+//	tap-qualified   hashicorp/tap/packer  listed as  packer
+//	alias           python                listed as  python@3.14
+//	renamed         docker                listed as  docker-desktop
+//
+// Each is a step that reinstalls on every apply and never converges — the
+// plan says "would install" on a machine where the package is demonstrably
+// there. `brew info --json=v2 --installed` carries full_name, aliases,
+// oldnames (and full_token / old_tokens for casks), so indexing every one of
+// them makes the membership test agree with reality.
+//
+// --installed takes no package names, so unlike `brew info <names...>` a
+// single bad name in the playbook can't poison the whole lookup. One
+// subprocess, ~1s on a 200-formula machine.
+//
+// Falls back to `brew list` if the JSON call or its schema ever fails:
+// stale-but-working name matching beats failing the step outright.
 func (h *Handler) fetchBrewInstalledSet(ec *executor.ExecutionContext, cask bool) (map[string]struct{}, error) {
+	kind := map[bool]string{true: "casks", false: "formulae"}[cask]
+	ec.Svc.Logger.Debugf("    Fetching installed brew %s", kind)
+
+	set, err := h.fetchBrewInstalledNames(ec, cask)
+	if err == nil {
+		return set, nil
+	}
+	ec.Svc.Logger.Debugf("    brew info --json=v2 --installed unusable (%v); falling back to brew list", err)
+
 	var args []string
 	if cask {
 		args = []string{pmBrew, "list", "--cask"}
 	} else {
 		args = []string{pmBrew, "list", "--formula"}
 	}
-	ec.Svc.Logger.Debugf("    Fetching installed brew %s list", map[bool]string{true: "casks", false: "formulae"}[cask])
 	out, err := h.runCmd(ec, false, args)
 	if err != nil {
 		return nil, fmt.Errorf("brew list failed: %w", err)
 	}
-	set := make(map[string]struct{})
+	set = make(map[string]struct{})
 	for _, line := range strings.Split(strings.TrimSpace(string(out)), "\n") {
 		if name := strings.TrimSpace(line); name != "" {
 			set[name] = struct{}{}
 		}
 	}
 	return set, nil
+}
+
+// fetchBrewInstalledNames builds the alias-aware installed set. See
+// fetchBrewInstalledSet for why.
+func (h *Handler) fetchBrewInstalledNames(ec *executor.ExecutionContext, cask bool) (map[string]struct{}, error) {
+	out, err := h.runCmd(ec, false, []string{pmBrew, "info", "--json=v2", "--installed"})
+	if err != nil {
+		return nil, err
+	}
+	var info brewInfoInstalled
+	if err := json.Unmarshal(out, &info); err != nil {
+		return nil, fmt.Errorf("parsing brew info json: %w", err)
+	}
+	return brewNameSet(&info, cask), nil
+}
+
+// brewNameSet indexes one side of a brew info payload under every name it
+// answers to. Split out from the subprocess call so it is testable against
+// fixture JSON.
+func brewNameSet(info *brewInfoInstalled, cask bool) map[string]struct{} {
+	set := make(map[string]struct{})
+	add := func(names ...string) {
+		for _, n := range names {
+			if n = strings.TrimSpace(n); n != "" {
+				set[n] = struct{}{}
+			}
+		}
+	}
+	if cask {
+		for _, c := range info.Casks {
+			add(c.Token, c.FullToken)
+			add(c.OldTokens...)
+		}
+		return set
+	}
+	for _, f := range info.Formulae {
+		add(f.Name, f.FullName)
+		add(f.Aliases...)
+		add(f.OldNames...)
+	}
+	return set
 }
 
 // buildInstallCommand builds the install command for a single package.
