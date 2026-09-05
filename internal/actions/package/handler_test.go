@@ -3,6 +3,7 @@ package package_handler
 
 import (
 	"runtime"
+	"slices"
 	"strings"
 	"testing"
 
@@ -1570,5 +1571,38 @@ func TestHandler_Reverse_Cask(t *testing.T) {
 	}
 	if rev.Pkg.State != stateAbsent {
 		t.Errorf("Reverse step state = %q, want %q", rev.Pkg.State, stateAbsent)
+	}
+}
+
+// TestHandler_BuildInstallCommand_CaskAdopt covers the flag that lets a cask
+// install converge on a machine where the app was already dragged into
+// /Applications by hand — without --adopt brew hard-errors there forever.
+func TestHandler_BuildInstallCommand_CaskAdopt(t *testing.T) {
+	h := &Handler{}
+
+	tests := []struct {
+		name      string
+		cask      bool
+		extra     []string
+		wantAdopt bool
+	}{
+		{name: "cask install adopts", cask: true, wantAdopt: true},
+		{name: "formula install does not", cask: false, wantAdopt: false},
+		// brew's own parser has `conflicts "--adopt", "--force"`, so an
+		// explicit --force from the playbook must win outright.
+		{name: "explicit --force wins", cask: true, extra: []string{"--force"}, wantAdopt: false},
+		{name: "explicit -f wins", cask: true, extra: []string{"-f"}, wantAdopt: false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cmd := h.buildInstallCommand(pmBrew, "google-chrome", false, tt.cask, tt.extra)
+			if got := slices.Contains(cmd, "--adopt"); got != tt.wantAdopt {
+				t.Errorf("--adopt present = %v, want %v (cmd: %v)", got, tt.wantAdopt, cmd)
+			}
+			if cmd[len(cmd)-1] != "google-chrome" {
+				t.Errorf("package name must stay last: %v", cmd)
+			}
+		})
 	}
 }

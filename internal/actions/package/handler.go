@@ -816,11 +816,40 @@ func (h *Handler) buildInstallCommand(manager, pkg string, upgrade bool, cask bo
 func (h *Handler) buildBatchInstallCommand(manager string, pkgs []string, upgrade bool, cask bool, extra []string) []string {
 	_ = upgrade
 	base := installCommandBase(manager, cask)
+	if manager == pmBrew && cask {
+		base = append(base, brewCaskAdoptFlag(extra)...)
+	}
 	cmd := make([]string, 0, len(base)+len(extra)+len(pkgs))
 	cmd = append(cmd, base...)
 	cmd = append(cmd, extra...)
 	cmd = append(cmd, pkgs...)
 	return cmd
+}
+
+// brewCaskAdoptFlag returns ["--adopt"] for cask installs, or nil when the
+// caller already asked for --force (brew's own parser rejects the pair).
+//
+// A "fresh" machine is rarely fresh: Chrome, Slack and friends are routinely
+// already sitting in /Applications from a manual drag-and-drop install. Plain
+// `brew install --cask X` hard-errors on those ("It seems there is already an
+// App at '/Applications/X.app'"), which leaves the step permanently red on a
+// machine that already satisfies the declared state. state: present means the
+// app should be there — and it is.
+//
+// --adopt takes ownership of the existing bundle instead. It is not a clobber:
+// brew adopts unconditionally only for casks declaring auto_updates (Chrome,
+// Slack, VS Code — the ones that drift from the cask version by design), and
+// otherwise compares Info.plist bundle versions and still refuses when they
+// differ. The only outcome we give up is an error nobody could act on.
+//
+// Requires Homebrew >= 3.6 (2022); older brews reject the flag.
+func brewCaskAdoptFlag(extra []string) []string {
+	for _, arg := range extra {
+		if arg == "--force" || arg == "-f" {
+			return nil
+		}
+	}
+	return []string{"--adopt"}
 }
 
 // installCommandBase returns the manager-specific install command prefix.
