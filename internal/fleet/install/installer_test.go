@@ -342,3 +342,34 @@ func TestParseVersion(t *testing.T) {
 		})
 	}
 }
+
+// TestInstaller_LogTailCmd pins the per-platform log source. This is the
+// only channel through which a start failure's *cause* reaches the
+// operator — statusCmd() carries the exit code, not the reason (#51) —
+// so a regression here is silent until someone is already debugging
+// blind. The darwin path must track the plist's StandardOutPath.
+func TestInstaller_LogTailCmd(t *testing.T) {
+	darwin := Installer{OS: "darwin"}.logTailCmd()
+	if !strings.Contains(darwin, "/var/log/mooncake-agentd.log") {
+		t.Errorf("darwin logTailCmd missing the plist log path: %q", darwin)
+	}
+
+	linux := Installer{OS: "linux"}.logTailCmd()
+	if !strings.Contains(linux, "journalctl -u mooncake-agentd") {
+		t.Errorf("linux logTailCmd should read the system journal: %q", linux)
+	}
+	if strings.Contains(linux, "--user") {
+		t.Errorf("system-mode logTailCmd must not pass --user: %q", linux)
+	}
+
+	user := Installer{OS: "linux", AsUser: true}.logTailCmd()
+	if !strings.Contains(user, "journalctl --user -u mooncake-agentd") {
+		t.Errorf("user-mode logTailCmd should read the user journal: %q", user)
+	}
+
+	// Windows has no unit log to tail; the empty string is the signal
+	// EnableAndStart uses to skip the lookup entirely.
+	if got := (Installer{OS: "windows"}.logTailCmd()); got != "" {
+		t.Errorf("windows logTailCmd should be empty, got %q", got)
+	}
+}

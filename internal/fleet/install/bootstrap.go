@@ -341,11 +341,20 @@ func (i Installer) EnableAndStart(ctx context.Context, sudoer *Sudoer, host stri
 		}
 		time.Sleep(300 * time.Millisecond)
 	}
-	// Last-ditch: pull status output for the user. Don't fail on
-	// this — the wrap is purely informational.
+	// Last-ditch: pull status and the daemon's own log for the user.
+	// Don't fail on either — the wrap is purely informational, and a
+	// missing log must not mask the reachability error itself.
 	status, _, _, _ := sudoer.Run(ctx, i.IsActiveCmd()+"; "+i.statusCmd())
-	return fmt.Errorf("agentd never reachable at %s after 10s; status:\n%s",
+	msg := fmt.Sprintf("agentd never reachable at %s after 10s; status:\n%s",
 		addr, strings.TrimSpace(status))
+	if cmd := i.logTailCmd(); cmd != "" {
+		if out, _, _, err := sudoer.Run(ctx, cmd); err == nil {
+			if out = strings.TrimSpace(out); out != "" {
+				msg += fmt.Sprintf("\n\nagentd log (last 30 lines):\n%s", out)
+			}
+		}
+	}
+	return errors.New(msg)
 }
 
 // ReadToken handles step 7. System-mode path /etc/mooncake/agentd.token
@@ -413,6 +422,39 @@ func (i Installer) statusCmd() string {
 		return "systemctl status " + i.UnitName() + " --no-pager -n 30 2>&1 || true"
 	case "darwin":
 		return "launchctl print system/" + i.UnitName() + " 2>&1 | head -n 50 || true"
+	}
+	return ""
+}
+
+// darwinAgentdLog is where the launchd plist sends both stdout and
+// stderr. Must stay in step with StandardOutPath/StandardErrorPath in
+// init/com.mooncake.agentd.plist — darwin is always system-mode
+// (--user is Linux-only), so there is exactly one path to track.
+const darwinAgentdLog = "/var/log/mooncake-agentd.log"
+
+// logTailCmd returns a per-platform command dumping the tail of the
+// agentd's own log. statusCmd() reports *that* the unit failed;
+// this reports *why*. The two are complementary and neither
+// substitutes for the other: launchctl/systemctl know the exit code,
+// only the daemon knows what it choked on.
+//
+// Motivating case (#49): a macOS socket-path bug surfaced through
+// statusCmd() as nothing but `last exit code = 1`, while the daemon
+// had written `mkdir /run: read-only file system` to its log on every
+// spawn. Whoever ran bootstrap had no way to see that without knowing
+// the log path in advance.
+//
+// Neither .service template redirects stdout/stderr, so on Linux the
+// output is in the journal rather than a file.
+func (i Installer) logTailCmd() string {
+	switch i.OS {
+	case "linux":
+		if i.AsUser {
+			return "journalctl --user -u " + i.UnitName() + " -n 30 --no-pager 2>&1 || true"
+		}
+		return "journalctl -u " + i.UnitName() + " -n 30 --no-pager 2>&1 || true"
+	case "darwin":
+		return "tail -n 30 " + darwinAgentdLog + " 2>&1 || true"
 	}
 	return ""
 }
