@@ -5,7 +5,7 @@ name: mooncake task
 
 # mooncake task
 
-Run a named task from tasks.yml (or `tasks:` in mooncake.yml)
+Run a named task from tasks.yml (or tasks: in mooncake.yml)
 
 ## Description
 

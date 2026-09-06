@@ -6,6 +6,9 @@ import (
 	"os"
 	"path/filepath"
 	"time"
+
+	"github.com/alehatsman/mooncake/internal/jsonllog"
+	"github.com/alehatsman/mooncake/internal/utils"
 )
 
 const minFreeBytes = 100 * 1024 * 1024 // 100 MiB — see spec-41
@@ -71,10 +74,27 @@ func (checkRunsLog) Run(ctx Context) Result {
 		return r
 	}
 	age := time.Since(info.ModTime())
+	r.Message = fmt.Sprintf("runs.jsonl: %s, last write %s",
+		utils.HumanBytes(info.Size()), formatAgeAgo(age))
+
+	// The log rolls at jsonllog.MaxBytes, but a log most of the way there
+	// is worth surfacing before the roll rather than after: doctor used
+	// to report a 9 MB / 24,903-line runs.jsonl as a flat ✓ with no
+	// retention policy behind it at all (#176).
+	if info.Size() >= runsLogWarnBytes {
+		r.Status = StatusWarning
+		r.Fix = "run `mooncake history gc` to prune it, or wait for the automatic roll at " +
+			utils.HumanBytes(jsonllog.MaxBytes)
+		return r
+	}
 	r.Status = StatusOK
-	r.Message = fmt.Sprintf("runs.jsonl: %d bytes, last write %s", info.Size(), formatAgeAgo(age))
 	return r
 }
+
+// runsLogWarnBytes is three quarters of the roll threshold — far enough
+// along to be worth a nudge, not so close that the warning and the roll
+// arrive together.
+var runsLogWarnBytes = jsonllog.MaxBytes * 3 / 4
 
 // formatAgeAgo wraps formatAge with the "ago" suffix when appropriate so
 // the headline reads naturally ("just now" stays bare; "12m" becomes

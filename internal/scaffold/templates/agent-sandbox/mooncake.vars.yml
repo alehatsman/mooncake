@@ -1,3 +1,0 @@
-# Variables available to mooncake.yml as {{ name }}.
-# Agents: prefer adding variables here over hard-coding values in the playbook.
-{}

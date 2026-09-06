@@ -435,7 +435,7 @@ NormalizePlanBytes applies both normalization passes to raw plan bytes and retur
 
 The input is returned UNCHANGED — byte\-for\-byte — when no step needed folding, so a plan that uses only short\-form built\-ins never gets reflowed and its hash is stable.
 
-## func [ReadConfigBytesWithValidation](<https://github.com/alehatsman/mooncake/blob/main/internal/config/reader.go#L493>)
+## func [ReadConfigBytesWithValidation](<https://github.com/alehatsman/mooncake/blob/main/internal/config/reader.go#L513>)
 
 ```go
 func ReadConfigBytesWithValidation(data []byte, label string, isCustom IsCustomAction) (*ParsedConfig, []Diagnostic, error)
@@ -443,7 +443,7 @@ func ReadConfigBytesWithValidation(data []byte, label string, isCustom IsCustomA
 
 ReadConfigBytesWithValidation is a convenience wrapper over the default YAML reader for in\-memory config bytes \(\#142\). label names the source in diagnostics; there is no file on disk. See \(\*YAMLConfigReader\).ReadConfigBytesWithValidation.
 
-## func [ReadConfigWithValidation](<https://github.com/alehatsman/mooncake/blob/main/internal/config/reader.go#L481>)
+## func [ReadConfigWithValidation](<https://github.com/alehatsman/mooncake/blob/main/internal/config/reader.go#L501>)
 
 ```go
 func ReadConfigWithValidation(path string, isCustom IsCustomAction) (*ParsedConfig, []Diagnostic, error)
@@ -451,7 +451,7 @@ func ReadConfigWithValidation(path string, isCustom IsCustomAction) (*ParsedConf
 
 ReadConfigWithValidation is a convenience function using the default YAML reader. Returns parsed config \(with steps, global vars, version\), diagnostics, and any parsing errors. See \(\*YAMLConfigReader\).ReadConfigWithValidation for isCustom.
 
-## func [ReadVariables](<https://github.com/alehatsman/mooncake/blob/main/internal/config/reader.go#L502>)
+## func [ReadVariables](<https://github.com/alehatsman/mooncake/blob/main/internal/config/reader.go#L522>)
 
 ```go
 func ReadVariables(path string) (map[string]interface{}, error)
@@ -1687,7 +1687,7 @@ type ParsedConfig struct {
 }
 ```
 
-### func [ReadConfig](<https://github.com/alehatsman/mooncake/blob/main/internal/config/reader.go#L474>)
+### func [ReadConfig](<https://github.com/alehatsman/mooncake/blob/main/internal/config/reader.go#L494>)
 
 ```go
 func ReadConfig(path string) (*ParsedConfig, error)
@@ -3020,7 +3020,7 @@ ReadConfigWithValidation reads configuration steps from a YAML file with full va
 
 isCustom is the action\-registry predicate: a typed\-key custom action \(\`notify.webhook: \{…\}\`\) whose name it recognizes is folded into the generic carrier before validation, so it parses, validates, and dispatches exactly like a built\-in \(see normalizeCustomActionSteps\). Pass nil for built\-ins only — every non\-builtin key then stays an unknown\-field error, preserving the strict typo diagnostics.
 
-### func \(\*YAMLConfigReader\) [ReadVariables](<https://github.com/alehatsman/mooncake/blob/main/internal/config/reader.go#L447>)
+### func \(\*YAMLConfigReader\) [ReadVariables](<https://github.com/alehatsman/mooncake/blob/main/internal/config/reader.go#L467>)
 
 ```go
 func (r *YAMLConfigReader) ReadVariables(path string) (map[string]interface{}, error)

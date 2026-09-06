@@ -43,7 +43,7 @@ func fleetLogsCommand() *cli.Command {
 			},
 			&cli.StringSliceFlag{
 				Name:  "peer",
-				Usage: "Select peers (only with --all): repeat to UNION. Each value is a name, `key=value` filter, or `@k=v,k2=v2` AND-group. Default: every peer in peers.toml.",
+				Usage: "Select peers (only with --all): repeat to UNION. Each value is a name, key=value filter, or @k=v,k2=v2 AND-group. Default: every peer in peers.toml.",
 			},
 		},
 		Action: fleetLogsAction,

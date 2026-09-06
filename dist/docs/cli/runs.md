@@ -10,7 +10,7 @@ Submit and follow runs on the local agentd daemon
 ## Subcommands
 
 - [apply](runs_apply.md) — Submit a config to agentd and stream events back
-- [follow](runs_follow.md) — Stream events for an existing run, rendered like `apply`
+- [follow](runs_follow.md) — Stream events for an existing run, rendered like apply
 - [get](runs_get.md) — Print the JSON record for one run
 - [list](runs_list.md) — List runs known to the daemon
 

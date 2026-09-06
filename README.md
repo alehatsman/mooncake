@@ -4,12 +4,12 @@
 [![Security](https://github.com/alehatsman/mooncake/actions/workflows/security.yml/badge.svg?branch=master)](https://github.com/alehatsman/mooncake/actions/workflows/security.yml)
 [![codecov](https://codecov.io/gh/alehatsman/mooncake/branch/master/graph/badge.svg)](https://codecov.io/gh/alehatsman/mooncake)
 
-**A safe execution layer for AI-driven system configuration.**
+**Declarative provisioning and machine management in one binary.**
 
-Mooncake is a single Go binary that turns YAML intent into typed,
-idempotent system mutations — with auto-revert on failure, secrets
-that never leak into logs, and a clean ABI an AI agent can call
-without losing your machine.
+Mooncake turns YAML intent into typed, idempotent system mutations —
+with auto-revert on failure, secrets that never leak into logs, and a
+typed ABI safe enough for anything to drive: you, a script, or an
+agent.
 
 ```yaml
 - name: deploy a new app config atomically
@@ -58,7 +58,7 @@ mooncake apply
 `mooncake apply` (and `plan`, `validate`) auto-discover
 `./mooncake.yml` or `./mooncake/main.yml`, so you rarely need `-c`.
 
-## Agent-safety features
+## Safety features
 
 Every claim here links to a working example you can run:
 
@@ -98,7 +98,8 @@ JSON — is one short YAML file.
 
 ## What you can do
 
-The full action surface (40+ typed actions). Highlights:
+The full action surface (66 typed actions, 42 of them reversible).
+Highlights:
 
 | Action | Purpose |
 |---|---|
@@ -119,7 +120,7 @@ See the full [actions reference](https://mooncake.alehatsman.com/guide/config/ac
 `{{memory_total_mb}}`, `{{distribution}}`, `{{package_manager}}`.
 Run `mooncake facts` to see all.
 
-**Control flow**: `when:`, `with_items:`, `with_filetree:`, `tags:`,
+**Control flow**: `when:`, `for_each:`, `for_each_file:`, `tags:`,
 `as_user:`, `--peer-filter tag=os=darwin` for fleet apply.
 
 ## Personal fleet
@@ -147,7 +148,7 @@ mooncake fleet logs --all
 
 The fleet plumbing is real `golang.org/x/crypto/ssh` + SFTP for
 bootstrap, agentd over HTTP+SSE for everyday transport. See
-[`docs-working/epics/done/epic-personal-fleet.md`](docs-working/epics/done/epic-personal-fleet.md)
+[`specs/fleet.md`](specs/fleet.md) and [`specs/agentd.md`](specs/agentd.md)
 for the design rationale.
 
 ## Comparison
@@ -155,13 +156,13 @@ for the design rationale.
 | Capability | Mooncake | Ansible | Shell scripts |
 |---|---|---|---|
 | Single-binary install | ✓ | Python + modules | n/a |
-| Idempotent typed actions | ✓ (40+ with Reverse) | ✓ (untyped) | ✗ |
+| Idempotent typed actions | ✓ (66, 42 with Reverse) | ✓ (untyped) | ✗ |
 | Dry-run with structural diffs | ✓ `plan --diff` | partial (check mode) | ✗ |
 | **Transactions with auto-revert** | ✓ `transaction:` | ✗ | ✗ |
 | **Secret refs that don't leak** | ✓ `!secret env:KEY` | partial (Vault module) | ✗ |
 | Reactive triggers without registry | ✓ `on_change:` | partial (`notify:` + handlers) | ✗ |
 | Cross-platform single config | Linux + macOS + Windows | Limited Windows | OS-specific |
-| Designed for AI agent use | ✓ typed ABI + MCP server | ✗ untyped | ✗ unsafe |
+| Machine-drivable surface | ✓ typed ABI + MCP server + JSON output | ✗ untyped | ✗ unsafe |
 | Personal-fleet peer-to-peer | ✓ `fleet apply` | hub-style (AWX) | n/a |
 
 Mooncake isn't trying to replace Ansible at enterprise scale — it
@@ -178,13 +179,13 @@ Quick links:
 - [Actions reference](https://mooncake.alehatsman.com/guide/config/actions/)
 - [Complete reference](https://mooncake.alehatsman.com/guide/config/reference/)
 - [AI / LLM specification](https://mooncake.alehatsman.com/ai-specification/)
-- [Presets](https://mooncake.alehatsman.com/guide/presets/) — parameterized YAML workflows (in-tree library being retired; module-system replacement in design — see `docs-working/vision/sharing_and_modules.md`)
+- [Modules](https://mooncake.alehatsman.com/guide/modules/) — Git-native distribution for reusable, parameterized YAML components. `mooncake mod add <host>/<owner>/<repo>@<tag>`
 
 ### Local examples
 
 The [`examples/`](examples/) directory has a curated learning path —
 see [`examples/README.md`](examples/README.md) for the ordered tour.
-Notable demos for the agent-safety story:
+Notable demos for the safety story:
 
 - [`examples/transactions/rollback-demo.yml`](examples/transactions/rollback-demo.yml) — deliberate failure shows auto-revert in action
 - [`examples/secrets/env-secret.yml`](examples/secrets/env-secret.yml) — `!secret env:APP_TOKEN` with redaction
@@ -202,7 +203,7 @@ cat examples/README.md  # ordered learning path
 
 Tested across Linux (Ubuntu, Debian, Alpine, Fedora, Arch), macOS
 (Intel + Apple Silicon), and Windows Server.
-See [testing docs](docs-next/testing/README.md).
+See [testing docs](testing-next/README.md).
 
 ## Contributing
 
@@ -210,7 +211,7 @@ Contributions welcome. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 - [Report bugs](https://github.com/alehatsman/mooncake/issues)
 - [Request features](https://github.com/alehatsman/mooncake/issues)
-- [Roadmap](docs-next/development/roadmap.md)
+- [Roadmap](docs-working/plan-2026-09-07-provisioning-focus.md)
 
 ## License
 

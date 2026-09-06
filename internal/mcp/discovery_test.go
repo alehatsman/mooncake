@@ -128,26 +128,8 @@ func TestHandleDescribeAction_MissingName(t *testing.T) {
 	}
 }
 
-// TestHandleListPresets_Shape — the discovery tool returns valid JSON
-// with a `presets` slice + `total`. We don't assert the count
-// (depends on the host's preset registry) but we do assert the
-// shape so a future regression breaking the wire envelope shows up.
-func TestHandleListPresets_Shape(t *testing.T) {
-	out, err := HandleListPresets(context.Background(), nil)
-	if err != nil {
-		t.Fatalf("HandleListPresets: %v", err)
-	}
-	var got listPresetsResult
-	if err := json.Unmarshal([]byte(out), &got); err != nil {
-		t.Fatalf("unmarshal: %v\n%s", err, out)
-	}
-	if got.Total != len(got.Presets) {
-		t.Errorf("Total=%d != len(Presets)=%d", got.Total, len(got.Presets))
-	}
-}
-
-// TestDiscoveryViaToolsCall — RegisterAllTools wires all three
-// discovery handlers so MCP tools/call dispatches resolve. Pre-fix
+// TestDiscoveryViaToolsCall — RegisterAllTools wires the discovery
+// handlers so MCP tools/call dispatches resolve. Pre-fix
 // the switch in RegisterAllTools wouldn't have a case for the new
 // names and the dispatch would surface a "tool not found" — same
 // shape as a missing-tool regression.
@@ -169,11 +151,6 @@ func TestDiscoveryViaToolsCall(t *testing.T) {
 			name:     "describe_action",
 			req:      `{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"describe_action","arguments":{"name":"file.copy"}}}`,
 			mustHave: `"file.copy"`,
-		},
-		{
-			name:     "list_presets",
-			req:      `{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"list_presets","arguments":{}}}`,
-			mustHave: `"presets"`,
 		},
 	}
 	for _, c := range cases {

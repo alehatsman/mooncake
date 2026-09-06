@@ -67,11 +67,44 @@ func hostnameForLocalOverlays() (string, error) {
 	return h, nil
 }
 
-// resolveLocalOverlays returns the auto-loaded overlay vars-files for
-// a local `mooncake apply` (or `plan`) run, honoring spec-51's --host,
-// $MOONCAKE_HOST, and --overlays=off. The result is meant to be
+// sidecarVarsNames are the auto-loaded playbook-sidecar vars files,
+// checked in order next to the resolved config. `mooncake init`
+// scaffolds mooncake.vars.yml and the unresolved-variable hint names
+// it, so it has to actually load — for months it did neither, and a
+// var defined there was silently invisible unless the operator also
+// passed `--vars mooncake.vars.yml` (#172).
+var sidecarVarsNames = []string{"mooncake.vars.yml", "mooncake.vars.yaml"}
+
+// resolveSidecarVars returns the playbook-sidecar vars file next to
+// configPath, if one exists. At most one is returned: the first name in
+// sidecarVarsNames that resolves to a regular file. Absent is not an
+// error — the sidecar is a convenience, not a requirement.
+func resolveSidecarVars(planDir string) []string {
+	for _, name := range sidecarVarsNames {
+		p := filepath.Join(planDir, name)
+		if st, err := os.Stat(p); err == nil && st.Mode().IsRegular() {
+			return []string{p}
+		}
+	}
+	return nil
+}
+
+// resolveLocalOverlays returns the auto-loaded vars-files for a local
+// `mooncake apply` (or `plan`) run: the playbook sidecar
+// (mooncake.vars.yml) followed by spec-51's by-host overlays, honoring
+// --host, $MOONCAKE_HOST, and --overlays=off. The result is meant to be
 // prepended to any explicit --vars-file args so user flags still win
 // on collision.
+//
+// Precedence, lowest first:
+//
+//  1. mooncake.vars.yml        (sidecar, next to the config)
+//  2. vars/common.yml          (spec-51 overlay)
+//  3. vars/by-host/<host>.yml  (spec-51 overlay)
+//  4. --vars <file>            (explicit; applied by the caller)
+//
+// `--overlays off` disables 1–3 together: it means "no automatic vars
+// loading", not "no by-host overlays only".
 //
 // Hostname source order:
 //
@@ -113,7 +146,8 @@ func resolveLocalOverlays(c *cli.Context, configPath string) ([]string, error) {
 	}
 	planDir := filepath.Dir(absConfig)
 
-	overlays := fleet.ResolveLocalOverlays(planDir, hostname)
+	overlays := append(resolveSidecarVars(planDir),
+		fleet.ResolveLocalOverlays(planDir, hostname)...)
 
 	if hostExplicit {
 		// Operator named a host specifically. A missing by-host file

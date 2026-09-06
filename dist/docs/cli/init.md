@@ -15,7 +15,7 @@ Creates mooncake.yml, mooncake.vars.yml, .gitignore, and .mooncake/ in the worki
 
 | Flag | Type | Default | Description |
 |------|------|---------|-------------|
-| `--template / -t` | string | - | Template to use (dotfiles, server, empty, agent-sandbox) |
+| `--template / -t` | string | - | Template to use (dotfiles, server, empty) |
 | `--non-interactive / -n` | bool | false | Skip prompts; --template is required |
 | `--force / -f` | bool | false | Overwrite existing mooncake.yml / mooncake.vars.yml |
 | `--dir` | string | `.` | Scaffold into this directory (created if missing) |

@@ -1,4 +1,0 @@
-# Mooncake — local state and plan artifacts
-.mooncake/
-*.plan.json
-*.plan.yaml

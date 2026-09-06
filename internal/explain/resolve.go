@@ -9,6 +9,7 @@ import (
 	"github.com/alehatsman/mooncake/internal/config"
 	"github.com/alehatsman/mooncake/internal/ops"
 	"github.com/alehatsman/mooncake/internal/runlog"
+	"github.com/alehatsman/mooncake/internal/utils"
 )
 
 // Options tune the resolver. Zero value is the typical agent call.
@@ -234,9 +235,15 @@ func notFound(noun, reason string, candidates []NotFoundMatch) Result {
 	}
 }
 
-// actionCandidates produces up to 5 nearest-prefix-match action names.
-// Cheap heuristic: prefix match first, then substring. Avoids pulling
-// in a Levenshtein library for a hint.
+// maxNounDistance is the edit-distance ceiling for the fuzzy tier of
+// actionCandidates. Two covers the usual slips without volunteering
+// unrelated verbs for a noun the operator invented.
+const maxNounDistance = 2
+
+// actionCandidates produces up to 5 nearest action names, ranked:
+// exact, then prefix, then substring, then edit distance <=
+// maxNounDistance. The last tier is what makes a transposition like
+// `file.wrte` resolvable — textual matching alone scored it zero.
 func actionCandidates(noun string) []NotFoundMatch {
 	all := actions.List()
 	type scored struct {
@@ -257,6 +264,15 @@ func actionCandidates(noun string) []NotFoundMatch {
 			hits = append(hits, scored{name, 100 - len(name)})
 		case strings.HasPrefix(lower, ln):
 			hits = append(hits, scored{name, 50 - len(name)})
+		default:
+			// Prefix/substring matching can't see a transposition or a
+			// dropped letter — `file.wrte` scored nothing against
+			// `file.write` and the operator got a bare "unknown action
+			// verb" (#174). Edit distance is the last tier, ranked below
+			// every textual match so exact/prefix hits still win.
+			if d := utils.Levenshtein(lower, ln); d <= maxNounDistance {
+				hits = append(hits, scored{name, 10 - d})
+			}
 		}
 	}
 	sort.Slice(hits, func(i, j int) bool { return hits[i].score > hits[j].score })

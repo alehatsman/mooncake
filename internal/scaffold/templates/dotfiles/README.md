@@ -5,7 +5,8 @@ Scaffolded by `mooncake init --template dotfiles`.
 ## Layout
 
 - `mooncake.yml` — main playbook. Edit me.
-- `mooncake.vars.yml` — variables consumed by the playbook.
+- `mooncake.vars.yml` — variables consumed by the playbook. Loaded
+  automatically; no flag needed.
 - `.mooncake/` — local state, plan artifacts. Gitignored.
 
 ## Daily use
@@ -13,10 +14,23 @@ Scaffolded by `mooncake init --template dotfiles`.
 ```bash
 mooncake plan          # preview what would change
 mooncake apply         # run it
-mooncake apply --dry-run   # same as `mooncake plan`
-mooncake last          # what did the most recent run do?
+mooncake history       # what did the most recent run do?
 mooncake actions list  # browse the action vocabulary
 mooncake doctor        # something off? run this
+```
+
+## Reusing other people's config
+
+```bash
+mooncake mod add github.com/owner/repo@v1.0.0
+```
+
+Then reference it from a step:
+
+```yaml
+- use: <alias>
+  props:
+    some_param: value
 ```
 
 ## Template placeholders

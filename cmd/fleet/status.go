@@ -25,7 +25,7 @@ func fleetStatusCommand() *cli.Command {
 		Flags: []cli.Flag{
 			&cli.StringSliceFlag{
 				Name:  "peer",
-				Usage: "Select peers: repeat to UNION. Each value is a name, `key=value` filter, or `@k=v,k2=v2` AND-group. Default: every peer in peers.toml.",
+				Usage: "Select peers: repeat to UNION. Each value is a name, key=value filter, or @k=v,k2=v2 AND-group. Default: every peer in peers.toml.",
 			},
 			&cli.DurationFlag{
 				Name:  "timeout",

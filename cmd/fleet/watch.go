@@ -28,12 +28,12 @@ import (
 func fleetWatchCommand() *cli.Command {
 	return &cli.Command{
 		Name:        "watch",
-		Usage:       "Stream live events from every peer; `tail -f` for the fleet",
+		Usage:       "Stream live events from every peer; tail -f for the fleet",
 		Description: "Subscribes to every selected peer's in-flight runs and surfaces events as they happen. New runs that start later appear without re-running the command. ^C exits cleanly; remote runs continue.",
 		Flags: []cli.Flag{
 			&cli.StringSliceFlag{
 				Name:  "peer",
-				Usage: "Select peers: repeat to UNION. Each value is a name, `key=value` filter (`tag=production`), or `@k=v,k2=v2` AND-group. Default: every peer in peers.toml.",
+				Usage: "Select peers: repeat to UNION. Each value is a name, key=value filter (tag=production), or @k=v,k2=v2 AND-group. Default: every peer in peers.toml.",
 			},
 			&cli.DurationFlag{
 				Name:  "poll-interval",

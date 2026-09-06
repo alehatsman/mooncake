@@ -23,7 +23,7 @@ import (
 func Command() *cli.Command {
 	return &cli.Command{
 		Name:  "tool",
-		Usage: "Inspect tools installed via the `tool` action",
+		Usage: "Inspect tools installed via the tool action",
 		Description: `Read-only inspection of mooncake.lock and the tool install dir.
 
 Tools are installed declaratively via 'mooncake apply' against a config

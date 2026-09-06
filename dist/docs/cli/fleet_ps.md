@@ -15,7 +15,7 @@ Read-only fan-out across all selected peers. Default shows running runs; --all a
 
 | Flag | Type | Default | Description |
 |------|------|---------|-------------|
-| `--peer` | []string | - | Select peers: repeat to UNION. Each value is a name (`main_pc`), `key=value` filter (`tag=production`), or `@k=v,k2=v2` AND-group. Default (no --peer): every peer in peers.toml. |
+| `--peer` | []string | - | Select peers: repeat to UNION. Each value is a name (main_pc), key=value filter (tag=production), or @k=v,k2=v2 AND-group. Default (no --peer): every peer in peers.toml. |
 | `--timeout` | duration | `3s` | Per-peer probe timeout |
 | `--status` | string | - | Comma-separated statuses: running,queued,success,failed,interrupted (default: running unless --all) |
 | `--all` | bool | false | Show recently-completed runs too (no status filter; per-peer limit applies) |

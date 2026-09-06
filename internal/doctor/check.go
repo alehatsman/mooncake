@@ -53,14 +53,14 @@ type Check interface {
 }
 
 // Context bundles shared state passed to every Check.Run call. Heavy
-// resources (facts, preset paths) are collected once at startup and shared
+// resources (facts, the module cache root) are collected once at startup and shared
 // here so individual checks don't re-do work.
 type Context struct {
-	Ctx         context.Context
-	HomeDir     string // absolute path to ~/.mooncake/ (may not exist yet)
-	Cwd         string // absolute path to the directory invocation ran from
-	SkipProject bool
-	PresetPaths []string // ordered preset search paths (see internal/presets)
+	Ctx             context.Context
+	HomeDir         string // absolute path to ~/.mooncake/ (may not exist yet)
+	Cwd             string // absolute path to the directory invocation ran from
+	SkipProject     bool
+	ModuleCacheRoot string // resolved module cache root (see internal/modules)
 }
 
 // PerCheckTimeout caps each check's filesystem / network probe so the global

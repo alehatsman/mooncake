@@ -351,10 +351,30 @@ func formatStrictFieldError(msg string) string {
 		// Drop the leading "field " from the library wording so the
 		// composed sentence reads cleanly.
 		core = strings.TrimPrefix(core, "field ")
-		return "unknown field `" + truncBeforeSpace(core, "not found in type ") +
-			"` (likely a typo or a renamed field — see docs-next/guide/config/actions.md)"
+		field := truncBeforeSpace(core, "not found in type ")
+
+		// A one-character typo should name its own fix rather than send
+		// the operator to the docs (#174). Candidates come from the yaml
+		// tags of whichever struct yaml.v3 was decoding into.
+		hint := "likely a typo or a renamed field — run `mooncake actions list`"
+		if s := suggestField(field, candidatesForType(typeNameFromStrictError(core))); s != "" {
+			hint = "did you mean `" + s + "`?"
+		}
+		return "unknown field `" + field + "` (" + hint + ")"
 	}
 	return "strict-mode validation: " + msg
+}
+
+// typeNameFromStrictError pulls "config.Step" out of the yaml.v3 wording
+// "register not found in type config.Step". Returns "" when the message
+// doesn't carry a type, which candidatesForType handles.
+func typeNameFromStrictError(core string) string {
+	const marker = "not found in type "
+	i := strings.Index(core, marker)
+	if i < 0 {
+		return ""
+	}
+	return strings.TrimSpace(core[i+len(marker):])
 }
 
 // truncBeforeSpace returns the prefix of s up to the first occurrence

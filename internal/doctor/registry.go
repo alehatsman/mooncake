@@ -1,11 +1,11 @@
 package doctor
 
-import "github.com/alehatsman/mooncake/internal/presets"
+import "github.com/alehatsman/mooncake/internal/modules"
 
 // registeredChecks returns the doctor catalogue in deterministic order.
 // Order is the user-facing report order; section grouping in the renderer
 // preserves it. Sections are listed top-to-bottom as they appear in the
-// scannable output: install → system → state → presets → tools → project
+// scannable output: install → system → state → modules → tools → project
 // → services.
 func registeredChecks() []Check {
 	return []Check{
@@ -23,11 +23,11 @@ func registeredChecks() []Check {
 		checkHomeDir{},
 		checkRunsLog{},
 		checkDiskSpace{},
-		// presets
-		checkPresetPaths{},
+		// modules
+		checkModuleCache{},
 		// tools
 		checkTool{name: "git", usedBy: []string{"git.* actions"}},
-		checkTool{name: "sudo", usedBy: []string{"steps with become: true"}, unixOnly: true},
+		checkTool{name: "sudo", usedBy: []string{"steps with as_user:"}, unixOnly: true},
 		// project
 		checkProjectConfig{},
 		checkProjectValidate{},
@@ -39,8 +39,14 @@ func registeredChecks() []Check {
 	}
 }
 
-// presetSearchPaths re-exports the preset loader's paths so doctor can list
-// them without importing internal/presets in every check file.
-func presetSearchPaths() []string {
-	return presets.PresetSearchPaths()
+// moduleCacheRoot re-exports the module fetcher's cache root so doctor can
+// report it without importing internal/modules in every check file. An
+// unresolvable root (no $HOME, no $MOONCAKE_MODULE_CACHE) yields "" and the
+// check reports that rather than failing.
+func moduleCacheRoot() string {
+	root, err := modules.DefaultCacheRoot()
+	if err != nil {
+		return ""
+	}
+	return root
 }

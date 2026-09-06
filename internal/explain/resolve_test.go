@@ -181,3 +181,36 @@ func TestLooksLikeActionVerb(t *testing.T) {
 		}
 	}
 }
+
+// Prefix/substring matching scored a transposition at zero, so
+// `mooncake explain file.wrte` answered "unknown action verb" with no
+// candidates at all (#174).
+func TestActionCandidates_FuzzyTierCatchesTranspositions(t *testing.T) {
+	cases := []struct{ noun, want string }{
+		{"file.wrte", "file.write"},
+		{"os.servcie", "os.service"},
+		{"shel", "shell"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.noun, func(t *testing.T) {
+			got := actionCandidates(tc.noun)
+			if len(got) == 0 {
+				t.Fatalf("no candidates for %q", tc.noun)
+			}
+			for _, c := range got {
+				if c.ID == tc.want {
+					return
+				}
+			}
+			t.Errorf("candidates for %q = %v, want one to be %q", tc.noun, got, tc.want)
+		})
+	}
+}
+
+// A noun nowhere near any verb stays empty rather than volunteering
+// unrelated actions.
+func TestActionCandidates_NoWildGuesses(t *testing.T) {
+	if got := actionCandidates("frobnicate"); len(got) != 0 {
+		t.Errorf("actionCandidates(%q) = %v, want none", "frobnicate", got)
+	}
+}

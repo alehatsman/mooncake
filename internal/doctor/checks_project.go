@@ -123,23 +123,23 @@ func (checkProjectSummary) Run(ctx Context) Result {
 		r.Message = "config unparseable; skipping summary"
 		return r
 	}
-	stepCount, imports, presets := summariseSteps(parsed.Steps)
+	stepCount, imports, uses := summariseSteps(parsed.Steps)
 	r.Status = StatusInfo
-	r.Message = fmt.Sprintf("%d step(s), %d import(s), %d preset use(s)", stepCount, imports, presets)
+	r.Message = fmt.Sprintf("%d step(s), %d import(s), %d module use(s)", stepCount, imports, uses)
 	return r
 }
 
 // summariseSteps counts top-level steps and how many invoke an `import:`
 // (file inclusion) or `use:` (preset invocation). Iteration is shallow —
 // nested imports are followed by the planner, not by doctor.
-func summariseSteps(steps []config.Step) (n, imports, presets int) {
+func summariseSteps(steps []config.Step) (n, imports, uses int) {
 	for _, s := range steps {
 		n++
 		if s.Import != nil && *s.Import != "" {
 			imports++
 		}
 		if s.Use != "" {
-			presets++
+			uses++
 		}
 	}
 	return

@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/alehatsman/mooncake/internal/config"
 )
 
 // scaffoldInto runs a non-interactive Scaffold and returns the dir. Helper
@@ -29,17 +31,17 @@ func scaffoldInto(t *testing.T, tpl, dir string, mutate func(*Options)) {
 	}
 }
 
-// AC1: --list-templates prints exactly four templates in catalogue order.
+// AC1: --list-templates prints every template in catalogue order.
 func TestListTemplates_Order(t *testing.T) {
 	var buf bytes.Buffer
 	if err := ListTemplates(&buf); err != nil {
 		t.Fatalf("ListTemplates: %v", err)
 	}
 	lines := strings.Split(strings.TrimRight(buf.String(), "\n"), "\n")
-	if len(lines) != 4 {
-		t.Fatalf("want 4 templates, got %d: %q", len(lines), buf.String())
+	if len(lines) != len(Templates) {
+		t.Fatalf("want %d templates, got %d: %q", len(Templates), len(lines), buf.String())
 	}
-	wantOrder := []string{"dotfiles", "server", "empty", "agent-sandbox"}
+	wantOrder := []string{"dotfiles", "server", "empty"}
 	for i, want := range wantOrder {
 		if !strings.HasPrefix(lines[i], want) {
 			t.Errorf("line %d: got %q, want prefix %q", i, lines[i], want)
@@ -207,7 +209,7 @@ func TestScaffold_PreservesTemplatePlaceholders(t *testing.T) {
 	}
 }
 
-// All four templates expand to a valid file set.
+// Every template expands to a valid file set.
 func TestScaffold_AllTemplatesProduceFiles(t *testing.T) {
 	for _, tpl := range Templates {
 		t.Run(tpl, func(t *testing.T) {
@@ -215,6 +217,63 @@ func TestScaffold_AllTemplatesProduceFiles(t *testing.T) {
 			scaffoldInto(t, tpl, dir, nil)
 			if _, err := os.Stat(filepath.Join(dir, "mooncake.yml")); err != nil {
 				t.Errorf("template %s: no mooncake.yml: %v", tpl, err)
+			}
+		})
+	}
+}
+
+// Every scaffolded playbook must survive `mooncake validate`. The `server`
+// template shipped `become: true` for months after spec-21 renamed the field
+// to `as_user` — so a fresh `mooncake init --template server` produced a file
+// the very next command rejected. This test is the guard.
+func TestScaffold_AllTemplatesValidate(t *testing.T) {
+	for _, tpl := range Templates {
+		t.Run(tpl, func(t *testing.T) {
+			dir := t.TempDir()
+			scaffoldInto(t, tpl, dir, nil)
+
+			_, diags, err := config.ReadConfigWithValidation(
+				filepath.Join(dir, "mooncake.yml"), nil)
+			if err != nil {
+				t.Fatalf("template %s: read failed: %v", tpl, err)
+			}
+			if config.HasErrors(diags) {
+				t.Errorf("template %s does not validate:\n%s",
+					tpl, config.FormatDiagnostics(diags))
+			}
+		})
+	}
+}
+
+// Templates must not point at surfaces that no longer exist. The four
+// scaffolds each ended with `echo "Browse: ./presets/zsh/"` long after the
+// in-tree preset library was retired, making a dead directory the first
+// thing a new user was told to look at.
+func TestScaffold_TemplatesHaveNoDeadReferences(t *testing.T) {
+	dead := []string{"./presets/", "become:", "mooncake last"}
+	for _, tpl := range Templates {
+		t.Run(tpl, func(t *testing.T) {
+			dir := t.TempDir()
+			scaffoldInto(t, tpl, dir, nil)
+
+			entries, err := os.ReadDir(dir)
+			if err != nil {
+				t.Fatalf("read scaffold dir: %v", err)
+			}
+			for _, e := range entries {
+				if e.IsDir() {
+					continue
+				}
+				body, err := os.ReadFile(filepath.Join(dir, e.Name()))
+				if err != nil {
+					t.Fatalf("read %s: %v", e.Name(), err)
+				}
+				for _, needle := range dead {
+					if strings.Contains(string(body), needle) {
+						t.Errorf("template %s: %s references retired surface %q",
+							tpl, e.Name(), needle)
+					}
+				}
 			}
 		})
 	}

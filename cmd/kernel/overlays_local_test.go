@@ -227,3 +227,78 @@ func slicesEqual(a, b []string) bool {
 	}
 	return true
 }
+
+// `mooncake init` scaffolds mooncake.vars.yml and the unresolved-variable
+// hint names it, but nothing loaded it — a var defined there was invisible
+// unless the operator also passed `--vars mooncake.vars.yml` (#172).
+func TestResolveLocalOverlays_LoadsSidecarVars(t *testing.T) {
+	planDir := t.TempDir()
+	configPath := filepath.Join(planDir, "mooncake.yml")
+	if err := os.WriteFile(configPath, []byte("steps: []\n"), 0o644); err != nil {
+		t.Fatalf("write config: %v", err)
+	}
+	sidecar := filepath.Join(planDir, "mooncake.vars.yml")
+	if err := os.WriteFile(sidecar, []byte("editor: nvim\n"), 0o644); err != nil {
+		t.Fatalf("write sidecar: %v", err)
+	}
+
+	got, gotErr := runWithResolveLocalOverlays(t, configPath)
+	if gotErr != nil {
+		t.Fatalf("unexpected error: %v", gotErr)
+	}
+	if !slicesEqual(got, []string{sidecar}) {
+		t.Fatalf("got %v want %v", got, []string{sidecar})
+	}
+}
+
+// The sidecar is the lowest-precedence source: it must be ordered before
+// the spec-51 overlays so a by-host file still wins on key collision.
+func TestResolveLocalOverlays_SidecarOrdersBeforeOverlays(t *testing.T) {
+	host, err := hostnameForLocalOverlays()
+	if err != nil {
+		t.Fatalf("hostnameForLocalOverlays: %v", err)
+	}
+
+	planDir := t.TempDir()
+	configPath := filepath.Join(planDir, "mooncake.yml")
+	if err := os.WriteFile(configPath, []byte("steps: []\n"), 0o644); err != nil {
+		t.Fatalf("write config: %v", err)
+	}
+	sidecar := filepath.Join(planDir, "mooncake.vars.yml")
+	if err := os.WriteFile(sidecar, []byte("editor: nvim\n"), 0o644); err != nil {
+		t.Fatalf("write sidecar: %v", err)
+	}
+	wantByHost := writeOverlay(t, planDir, "by-host/"+host+".yml")
+
+	got, gotErr := runWithResolveLocalOverlays(t, configPath)
+	if gotErr != nil {
+		t.Fatalf("unexpected error: %v", gotErr)
+	}
+	if !slicesEqual(got, []string{sidecar, wantByHost}) {
+		t.Fatalf("got %v want [sidecar, by-host]: %v", got, []string{sidecar, wantByHost})
+	}
+}
+
+// Absent sidecar is not an error, and --overlays=off disables it along
+// with the by-host overlays: "off" means no automatic vars loading.
+func TestResolveLocalOverlays_SidecarAbsentAndOff(t *testing.T) {
+	planDir := t.TempDir()
+	configPath := filepath.Join(planDir, "mooncake.yml")
+	if err := os.WriteFile(configPath, []byte("steps: []\n"), 0o644); err != nil {
+		t.Fatalf("write config: %v", err)
+	}
+
+	got, gotErr := runWithResolveLocalOverlays(t, configPath)
+	if gotErr != nil || len(got) != 0 {
+		t.Fatalf("absent sidecar: got %v err %v, want empty", got, gotErr)
+	}
+
+	if err := os.WriteFile(filepath.Join(planDir, "mooncake.vars.yml"),
+		[]byte("editor: nvim\n"), 0o644); err != nil {
+		t.Fatalf("write sidecar: %v", err)
+	}
+	got, gotErr = runWithResolveLocalOverlays(t, configPath, "--overlays", "off")
+	if gotErr != nil || len(got) != 0 {
+		t.Fatalf("--overlays off: got %v err %v, want empty", got, gotErr)
+	}
+}

@@ -20,7 +20,7 @@ func Command() *cli.Command {
 	return &cli.Command{
 		Name:  "doctor",
 		Usage: "Check mooncake's installation, state, tools, and project for issues",
-		Description: "Runs a fixed battery of checks across install, system, state, presets, " +
+		Description: "Runs a fixed battery of checks across install, system, state, modules, " +
 			"tools, project, and services. Reports OK/info/warning/error with concrete fix " +
 			"hints. Designed to finish in under a second. Use --format json for CI consumers.",
 		Flags: []cli.Flag{
@@ -36,7 +36,7 @@ func Command() *cli.Command {
 			},
 			&cli.StringSliceFlag{
 				Name:  "section",
-				Usage: "Run only this section (install, system, state, presets, tools, project, services). Repeatable.",
+				Usage: "Run only this section (install, system, state, modules, tools, project, services). Repeatable.",
 			},
 			&cli.BoolFlag{
 				Name:  "skip-project",

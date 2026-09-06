@@ -29,7 +29,7 @@ func fleetPsCommand() *cli.Command {
 		Flags: []cli.Flag{
 			&cli.StringSliceFlag{
 				Name:  "peer",
-				Usage: "Select peers: repeat to UNION. Each value is a name (`main_pc`), `key=value` filter (`tag=production`), or `@k=v,k2=v2` AND-group. Default (no --peer): every peer in peers.toml.",
+				Usage: "Select peers: repeat to UNION. Each value is a name (main_pc), key=value filter (tag=production), or @k=v,k2=v2 AND-group. Default (no --peer): every peer in peers.toml.",
 			},
 			&cli.DurationFlag{Name: "timeout", Usage: "Per-peer probe timeout", Value: 3 * time.Second},
 			&cli.StringFlag{

@@ -256,3 +256,48 @@ func mustJSON(t *testing.T, v interface{}) []byte {
 	}
 	return b
 }
+
+// The MCP surface exposes 19 tools; four of them earned nothing. Two
+// classes, both removed in #177:
+//
+//   - list_presets advertised "built-in, registry-cloned, and local"
+//     presets after the in-tree library was retired and the CLI verb
+//     deleted (2b7eee8e). It described a surface that no longer exists.
+//   - read_file / grep_files / glob_files duplicate what every agent
+//     harness already ships natively, spending tool-description context
+//     in every session that connects the server and competing with the
+//     harness's own tools for the model's attention.
+//
+// Keep them gone.
+func TestToolDefinitions_NoRedundantOrDeadTools(t *testing.T) {
+	removed := map[string]string{
+		"list_presets": "presets were retired; use mod cache list",
+		"read_file":    "every agent harness ships this natively",
+		"grep_files":   "every agent harness ships this natively",
+		"glob_files":   "every agent harness ships this natively",
+	}
+	for _, def := range AllTools() {
+		if why, dead := removed[def.Name]; dead {
+			t.Errorf("tool %q is back on the MCP surface — %s", def.Name, why)
+		}
+	}
+}
+
+// The tools that justify the server's existence must stay wired.
+func TestToolDefinitions_KeepsKernelTools(t *testing.T) {
+	want := []string{
+		"run_plan", "check_plan", "run_plan_inline",
+		"get_facts", "get_snapshot", "get_metrics", "fact_query",
+		"list_actions", "describe_action", "explain", "query_file",
+		"fleet_list_peers", "fleet_run_plan", "fleet_check_plan",
+	}
+	have := make(map[string]bool)
+	for _, def := range AllTools() {
+		have[def.Name] = true
+	}
+	for _, name := range want {
+		if !have[name] {
+			t.Errorf("tool %q is missing from the MCP surface", name)
+		}
+	}
+}

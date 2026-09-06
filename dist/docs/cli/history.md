@@ -19,6 +19,7 @@ Without subcommands, prints the most recent run summary (equivalent to the previ
 
 ## Subcommands
 
+- [gc](history_gc.md) — Prune the run log, keeping recent entries
 - [list](history_list.md) — List recent runs
 - [show](history_show.md) — Show one historical run by index
 

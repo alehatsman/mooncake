@@ -37,7 +37,7 @@ func fleetExecCommand() *cli.Command {
 		Flags: []cli.Flag{
 			&cli.StringSliceFlag{
 				Name:  "peer",
-				Usage: "Select peers: repeat to UNION. Each value is a name, `key=value` filter (`tag=production`), or `@k=v,k2=v2` AND-group. Default: every peer in peers.toml.",
+				Usage: "Select peers: repeat to UNION. Each value is a name, key=value filter (tag=production), or @k=v,k2=v2 AND-group. Default: every peer in peers.toml.",
 			},
 			&cli.StringSliceFlag{Name: "env", Usage: "KEY=VAL forwarded to the shell step (repeatable)"},
 			&cli.StringFlag{Name: "cwd", Usage: "Working directory on the peer"},
