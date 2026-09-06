@@ -1,12 +1,12 @@
 ---
-id: agent-framework
+id: agent-loop
 status: draft
 owners: [aleh]
 covers:
   - internal/agent/**
 ---
 
-# Agent Framework
+# Agent Loop
 
 ## Intent
 

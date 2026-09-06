@@ -83,7 +83,7 @@ gated, reversible, audited — with native-feeling latency.
 ## Non-goals
 
 - The agent loop internals, provider resolution, and confirm/control lifecycle
-  — `internal/agent/**`, owned by the agent-framework spec; the facade only
+  — `internal/agent/**`, owned by the agent-loop spec; the facade only
   re-exports them.
 - The executor, action handlers, transaction rollback, and the typed ABI
   semantics — owned by the kernel specs; the SDK is a stable surface over them.
@@ -92,8 +92,7 @@ gated, reversible, audited — with native-feeling latency.
   there are the wire form of this package's `CodingBackend`, not redefinitions.
 - The agent daemon run store / HTTP lifecycle — `internal/agentd/**`.
 - Runtime plugins / WASM / shared-object loading — extension is Go
-  compile-time only (`reg.Register` + recompile), per the agent-framework
-  non-goals.
+  compile-time only (`reg.Register` + recompile), per non_goals.md #2.
 
 ## Checklist
 
