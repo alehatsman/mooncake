@@ -71,6 +71,6 @@ func FormatUnresolvedTemplates(refs []plan.UnresolvedRef) string {
 		}
 		b.WriteString("\n")
 	}
-	b.WriteString("Fix: define the variable in mooncake.vars.yml, pass it via --vars, or use --allow-undefined to downgrade to a warning.\n")
+	b.WriteString("Fix: define the variable in mooncake.vars.yml next to your config (auto-loaded), pass it via --vars, or use --allow-undefined to downgrade to a warning.\n")
 	return b.String()
 }

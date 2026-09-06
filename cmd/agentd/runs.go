@@ -58,7 +58,7 @@ func RunsCommand() *cli.Command {
 			},
 			{
 				Name:      "follow",
-				Usage:     "Stream events for an existing run, rendered like `apply`",
+				Usage:     "Stream events for an existing run, rendered like apply",
 				ArgsUsage: "<run_id>",
 				Flags: []cli.Flag{
 					&cli.BoolFlag{Name: "system", Usage: "Use the system-mode agentd socket"},

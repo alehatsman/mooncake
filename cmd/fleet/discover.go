@@ -44,7 +44,7 @@ func fleetDiscoverCommand() *cli.Command {
 			},
 			&cli.BoolFlag{
 				Name:  "no-mdns",
-				Usage: "Skip the mDNS browse for `_mooncake._tcp.local`. Useful on captive networks where multicast is unreliable, or when you want a pure peers.toml + ssh_config list.",
+				Usage: "Skip the mDNS browse for _mooncake._tcp.local. Useful on captive networks where multicast is unreliable, or when you want a pure peers.toml + ssh_config list.",
 			},
 			&cli.DurationFlag{
 				Name:  "mdns-timeout",

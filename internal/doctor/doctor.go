@@ -58,11 +58,11 @@ func Run(opts Options) (*Report, int, error) {
 	homeDir := filepath.Join(home, ".mooncake")
 
 	dctx := Context{
-		Ctx:         context.Background(),
-		HomeDir:     homeDir,
-		Cwd:         cwd,
-		SkipProject: opts.SkipProject,
-		PresetPaths: presetSearchPaths(),
+		Ctx:             context.Background(),
+		HomeDir:         homeDir,
+		Cwd:             cwd,
+		SkipProject:     opts.SkipProject,
+		ModuleCacheRoot: moduleCacheRoot(),
 	}
 
 	start := time.Now()

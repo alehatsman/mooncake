@@ -45,13 +45,13 @@ func fleetInitCommand() *cli.Command {
 			&cli.BoolFlag{
 				Name: "dry-run",
 				Usage: "Print the candidate list + planned actions without writing peers.toml " +
-					"and without prompting. Useful for seeing what `fleet init` would do.",
+					"and without prompting. Useful for seeing what fleet init would do.",
 			},
 			&cli.BoolFlag{
 				Name: "accept-all",
 				Usage: "Skip prompts. Every agentd candidate that already has a token (e.g. " +
 					"already in peers.toml) is left alone. Candidates that need a token error " +
-					"out — pair them via `fleet bootstrap` instead.",
+					"out — pair them via fleet bootstrap instead.",
 			},
 		},
 		Action: fleetInitAction,

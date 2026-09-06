@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"github.com/alehatsman/mooncake/internal/actions"
-	"github.com/alehatsman/mooncake/internal/presets"
 	"github.com/alehatsman/mooncake/internal/schemagen"
 )
 
@@ -20,7 +19,6 @@ import (
 //
 //   list_actions       → actions.List()             (≈ mooncake actions list)
 //   describe_action    → registry + schemagen pipeline (≈ mooncake actions show)
-//   list_presets       → presets.DiscoverAllPresets (in-process; no CLI equivalent — the `mooncake presets` CLI was retired in `2b7eee8e`)
 //
 // Returning JSON-as-text matches the rest of the MCP tool surface
 // (the response envelope handles the text wrapping; handlers just
@@ -166,47 +164,6 @@ func HandleDescribeAction(_ context.Context, args json.RawMessage) (string, erro
 		},
 		Schema: def,
 	})
-}
-
-// listPresetsEntry is the wire shape per preset. Mirrors the
-// presets.DiscoverAllPresets in-process surface so MCP clients see a
-// stable record regardless of how the operator browses presets
-// out-of-band (filesystem walk under `./presets/`, or future tooling).
-type listPresetsEntry struct {
-	Name        string `json:"name"`
-	Description string `json:"description,omitempty"`
-	Version     string `json:"version,omitempty"`
-	Source      string `json:"source,omitempty"`
-	Path        string `json:"path,omitempty"`
-}
-
-type listPresetsResult struct {
-	Presets []listPresetsEntry `json:"presets"`
-	Total   int                `json:"total"`
-}
-
-// HandleListPresets returns every discoverable preset: built-ins,
-// registry-cloned, and local. No arguments — the discovery is global.
-// `describe_preset` (the per-preset parameter introspection) is
-// deferred per proposal-01's "What this doesn't address" note.
-func HandleListPresets(_ context.Context, _ json.RawMessage) (string, error) {
-	all, err := presets.DiscoverAllPresets()
-	if err != nil {
-		return "", fmt.Errorf("discover presets: %w", err)
-	}
-	out := make([]listPresetsEntry, 0, len(all))
-	for _, p := range all {
-		out = append(out, listPresetsEntry{
-			Name:        p.Name,
-			Description: p.Description,
-			Version:     p.Version,
-			Source:      p.Source,
-			Path:        p.Path,
-		})
-	}
-	sort.Slice(out, func(i, j int) bool { return out[i].Name < out[j].Name })
-
-	return marshalIndent(listPresetsResult{Presets: out, Total: len(out)})
 }
 
 // marshalIndent is the JSON-as-text encoder shared by the discovery

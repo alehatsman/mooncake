@@ -42,7 +42,7 @@ import (
 func Command() *cli.Command {
 	return &cli.Command{
 		Name:      "task",
-		Usage:     "Run a named task from tasks.yml (or `tasks:` in mooncake.yml)",
+		Usage:     "Run a named task from tasks.yml (or tasks: in mooncake.yml)",
 		ArgsUsage: "[name]",
 		Description: "Without an argument, lists every task defined in the discovered " +
 			"config with its description. With a name, runs that task through the " +

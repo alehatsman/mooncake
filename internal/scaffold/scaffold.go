@@ -23,19 +23,17 @@ import (
 // shipped via go:embed below. The order here also drives the order of
 // --list-templates output.
 const (
-	TemplateDotfiles     = "dotfiles"
-	TemplateServer       = "server"
-	TemplateEmpty        = "empty"
-	TemplateAgentSandbox = "agent-sandbox"
+	TemplateDotfiles = "dotfiles"
+	TemplateServer   = "server"
+	TemplateEmpty    = "empty"
 )
 
-var Templates = []string{TemplateDotfiles, TemplateServer, TemplateEmpty, TemplateAgentSandbox}
+var Templates = []string{TemplateDotfiles, TemplateServer, TemplateEmpty}
 
 var templateDescriptions = map[string]string{
-	TemplateDotfiles:     "Dotfiles / dev box — recommended for solo devs",
-	TemplateServer:       "Server — Linux service host",
-	TemplateEmpty:        "Empty playbook — start from scratch",
-	TemplateAgentSandbox: "Agent sandbox — no shell, only typed actions",
+	TemplateDotfiles: "Dotfiles / dev box — recommended for solo devs",
+	TemplateServer:   "Server — Linux service host",
+	TemplateEmpty:    "Empty playbook — start from scratch",
 }
 
 //go:embed templates/*
@@ -64,7 +62,7 @@ type Options struct {
 	Stderr         io.Writer
 }
 
-// ListTemplates prints the four embedded templates with one-line
+// ListTemplates prints the embedded templates with one-line
 // descriptions in catalogue order.
 func ListTemplates(out io.Writer) error {
 	for _, name := range Templates {

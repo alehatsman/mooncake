@@ -94,11 +94,11 @@ func agentdRunCommand() *cli.Command {
 			},
 			&cli.BoolFlag{
 				Name:  "no-mdns",
-				Usage: "Disable mDNS advertise (`_mooncake._tcp.local`). Default: advertise when --bind is set.",
+				Usage: "Disable mDNS advertise (_mooncake._tcp.local). Default: advertise when --bind is set.",
 			},
 			&cli.StringFlag{
 				Name:  "name",
-				Usage: "Override the mDNS instance name. Defaults to the OS hostname with `.local` stripped. Useful on macOS to dodge Bonjour collision renames.",
+				Usage: "Override the mDNS instance name. Defaults to the OS hostname with .local stripped. Useful on macOS to dodge Bonjour collision renames.",
 			},
 		},
 		Action: agentdRun,

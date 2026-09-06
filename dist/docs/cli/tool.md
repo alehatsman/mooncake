@@ -5,7 +5,7 @@ name: mooncake tool
 
 # mooncake tool
 
-Inspect tools installed via the `tool` action
+Inspect tools installed via the tool action
 
 ## Description
 

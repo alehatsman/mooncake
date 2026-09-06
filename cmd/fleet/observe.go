@@ -33,7 +33,7 @@ func fleetObserveCommand() *cli.Command {
 	commonFlags := []cli.Flag{
 		&cli.StringSliceFlag{
 			Name:  "peer",
-			Usage: "Select peers: repeat to UNION. Each value is a name, `key=value` filter (`tag=production`), or `@k=v,k2=v2` AND-group. Default: every peer in peers.toml.",
+			Usage: "Select peers: repeat to UNION. Each value is a name, key=value filter (tag=production), or @k=v,k2=v2 AND-group. Default: every peer in peers.toml.",
 		},
 		&cli.StringFlag{Name: "format", Usage: "Output format: table (default) or json", Value: "table"},
 	}

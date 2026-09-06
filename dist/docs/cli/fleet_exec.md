@@ -15,7 +15,7 @@ Fan-out a single shell command across selected peers. The command runs through t
 
 | Flag | Type | Default | Description |
 |------|------|---------|-------------|
-| `--peer` | []string | - | Select peers: repeat to UNION. Each value is a name, `key=value` filter (`tag=production`), or `@k=v,k2=v2` AND-group. Default: every peer in peers.toml. |
+| `--peer` | []string | - | Select peers: repeat to UNION. Each value is a name, key=value filter (tag=production), or @k=v,k2=v2 AND-group. Default: every peer in peers.toml. |
 | `--env` | []string | - | KEY=VAL forwarded to the shell step (repeatable) |
 | `--cwd` | string | - | Working directory on the peer |
 | `--timeout` | string | - | Per-peer wall clock (e.g. 30s, 2m); enforced by the kernel |

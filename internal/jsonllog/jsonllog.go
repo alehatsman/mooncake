@@ -29,6 +29,10 @@ func Append(path string, v any) error {
 	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
 		return fmt.Errorf("cannot create log directory: %w", err)
 	}
+	// Roll before writing when the log has reached MaxBytes. A rotation
+	// failure must not cost us the append — the entry is the point, the
+	// rotation is hygiene — so the error is deliberately dropped here.
+	_ = rotateIfNeeded(path)
 	f, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o600) // #nosec G304 -- caller derives path from os.UserHomeDir
 	if err != nil {
 		return fmt.Errorf("cannot open log: %w", err)

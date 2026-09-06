@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/alehatsman/mooncake/internal/runlog"
+	"github.com/alehatsman/mooncake/internal/utils"
 	"github.com/urfave/cli/v2"
 )
 
@@ -40,6 +41,22 @@ func Command() *cli.Command {
 					&cli.StringFlag{Name: "format", Aliases: []string{"f"}, Value: "text", Usage: "Output format: text or json"},
 				},
 				Action: historyListAction,
+			},
+			{
+				Name:  "gc",
+				Usage: "Prune the run log, keeping recent entries",
+				Description: "Rewrites ~/.mooncake/runs.jsonl in place, retaining only " +
+					"the entries that pass the filters. With no flags, keeps the 500 " +
+					"newest runs. Combining --keep and --older-than requires an entry " +
+					"to satisfy both. The log also rolls automatically at 16 MiB; gc " +
+					"is the explicit control on top of that.",
+				Flags: []cli.Flag{
+					&cli.IntFlag{Name: "keep", Aliases: []string{"n"}, Value: 500, Usage: "Number of newest runs to retain (0 = no count limit)"},
+					&cli.DurationFlag{Name: "older-than", Usage: "Drop runs older than this duration (e.g. 90d is 2160h; 0 = no age limit)"},
+					&cli.BoolFlag{Name: "dry-run", Usage: "Report what would be removed without rewriting the log"},
+					&cli.StringFlag{Name: "format", Aliases: []string{"f"}, Value: "text", Usage: "Output format: text or json"},
+				},
+				Action: historyGCAction,
 			},
 			{
 				Name:      "show",
@@ -113,6 +130,58 @@ func historyShowAction(c *cli.Context) error {
 		return err
 	}
 	return printHistoryEntry(entry, c.String("format"))
+}
+
+func historyGCAction(c *cli.Context) error {
+	opts := runlog.PruneOptions{
+		Keep:      c.Int("keep"),
+		OlderThan: c.Duration("older-than"),
+	}
+
+	// --dry-run answers the same question without touching the file:
+	// count what would survive, report, return.
+	if c.Bool("dry-run") {
+		res, err := runlog.PreviewPrune(opts)
+		if errors.Is(err, runlog.ErrNoHistory) {
+			fmt.Println("No run history found (~/.mooncake/runs.jsonl)")
+			return nil
+		}
+		if err != nil {
+			return err
+		}
+		return printPruneResult(res, c.String("format"), true)
+	}
+
+	res, err := runlog.Prune(opts)
+	if errors.Is(err, runlog.ErrNoHistory) {
+		fmt.Println("No run history found (~/.mooncake/runs.jsonl)")
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	return printPruneResult(res, c.String("format"), false)
+}
+
+func printPruneResult(res runlog.PruneResult, format string, dryRun bool) error {
+	if format == outputFormatJSON {
+		enc := json.NewEncoder(os.Stdout)
+		enc.SetIndent("", "  ")
+		return enc.Encode(struct {
+			runlog.PruneResult
+			DryRun bool `json:"dry_run"`
+		}{res, dryRun})
+	}
+	verb := "removed"
+	if dryRun {
+		verb = "would remove"
+	}
+	fmt.Printf("%s %d of %d run(s); %d retained", verb, res.Removed, res.Before, res.After)
+	if !dryRun {
+		fmt.Printf(" (%s)", utils.HumanBytes(res.Bytes))
+	}
+	fmt.Println()
+	return nil
 }
 
 func printHistoryEntry(entry runlog.Entry, format string) error {

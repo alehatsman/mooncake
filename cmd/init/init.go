@@ -20,7 +20,7 @@ func Command() *cli.Command {
 			&cli.StringFlag{
 				Name:    "template",
 				Aliases: []string{"t"},
-				Usage:   "Template to use (dotfiles, server, empty, agent-sandbox)",
+				Usage:   "Template to use (dotfiles, server, empty)",
 			},
 			&cli.BoolFlag{
 				Name:    "non-interactive",

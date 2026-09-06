@@ -9,7 +9,7 @@ Check mooncake's installation, state, tools, and project for issues
 
 ## Description
 
-Runs a fixed battery of checks across install, system, state, presets, tools, project, and services. Reports OK/info/warning/error with concrete fix hints. Designed to finish in under a second. Use --format json for CI consumers.
+Runs a fixed battery of checks across install, system, state, modules, tools, project, and services. Reports OK/info/warning/error with concrete fix hints. Designed to finish in under a second. Use --format json for CI consumers.
 
 ## Flags
 
@@ -17,7 +17,7 @@ Runs a fixed battery of checks across install, system, state, presets, tools, pr
 |------|------|---------|-------------|
 | `--format / -f` | string | `text` | Output format: text or json |
 | `--strict` | bool | false | Exit 1 on warnings, not just errors |
-| `--section` | []string | - | Run only this section (install, system, state, presets, tools, project, services). Repeatable. |
+| `--section` | []string | - | Run only this section (install, system, state, modules, tools, project, services). Repeatable. |
 | `--skip-project` | bool | false | Skip the cwd project-config checks |
 | `--no-color` | bool | false | Disable colour output (NO_COLOR env var also honoured) |
 

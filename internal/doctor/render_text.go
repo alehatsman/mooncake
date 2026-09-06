@@ -14,7 +14,7 @@ var sectionTitle = map[string]string{
 	"install":  "Install",
 	"system":   "System",
 	"state":    "State",
-	"presets":  "Preset search paths",
+	"modules":  "Modules",
 	"tools":    "Tools",
 	"project":  "Project",
 	"services": "Optional services",

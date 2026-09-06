@@ -104,7 +104,7 @@ func fleetBootstrapCommand() *cli.Command {
 					"running as the SSH user (binary in ~/.local/bin, unit in " +
 					"~/.config/systemd/user/, token in ~/.config/mooncake/). " +
 					"Default is a system-scope unit running as root. " +
-					"Implies `loginctl enable-linger` so the unit survives logout.",
+					"Implies loginctl enable-linger so the unit survives logout.",
 			},
 		},
 		Action: fleetBootstrapAction,
@@ -336,7 +336,7 @@ func fleetApplyCommand() *cli.Command {
 		Flags: []cli.Flag{
 			&cli.StringSliceFlag{
 				Name:  "peer",
-				Usage: "Select peers: repeat to UNION. Each value is a name (`main_pc`), `key=value` filter (`tag=production`), or `@k=v,k2=v2` AND-group. Default: every peer in peers.toml (or the machine name when invoked as `fleet apply <machine>`).",
+				Usage: "Select peers: repeat to UNION. Each value is a name (main_pc), key=value filter (tag=production), or @k=v,k2=v2 AND-group. Default: every peer in peers.toml (or the machine name when invoked as fleet apply <machine>).",
 			},
 			&cli.Int64Flag{
 				Name:  "max-sync-size",
@@ -346,7 +346,7 @@ func fleetApplyCommand() *cli.Command {
 			&cli.StringFlag{
 				Name: "plan-dir",
 				Usage: "Root directory to sync to each peer (default: directory of the plan file). " +
-					"Use this when the plan imports siblings via `../` — point at the repo root.",
+					"Use this when the plan imports siblings via ../ — point at the repo root.",
 			},
 			&cli.StringSliceFlag{
 				Name:  "vars-file",
@@ -354,7 +354,7 @@ func fleetApplyCommand() *cli.Command {
 			},
 			&cli.StringSliceFlag{
 				Name: "step-filter",
-				Usage: "Filter steps to run on each peer by `key=value` (v1: tag=<x>); " +
+				Usage: "Filter steps to run on each peer by key=value (v1: tag=<x>); " +
 					"forwarded to daemon. Multiple values OR together. " +
 					"Example: --step-filter tag=deploy",
 			},

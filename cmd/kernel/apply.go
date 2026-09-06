@@ -66,7 +66,7 @@ func applyFlags() []cli.Flag {
 		&cli.BoolFlag{
 			Name:    "dry-run",
 			Aliases: []string{"n"},
-			Usage:   "Preview changes without executing (sugar for `mooncake plan`)",
+			Usage:   "Preview changes without executing (sugar for mooncake plan)",
 		},
 		&cli.BoolFlag{
 			Name:  "keep-going",

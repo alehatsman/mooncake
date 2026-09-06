@@ -46,14 +46,6 @@ func RegisterAllTools(srv *Server) {
 			srv.RegisterTool(def, HandleListActions)
 		case "describe_action":
 			srv.RegisterTool(def, HandleDescribeAction)
-		case "list_presets":
-			srv.RegisterTool(def, HandleListPresets)
-		case "read_file":
-			srv.RegisterTool(def, HandleReadFile)
-		case "grep_files":
-			srv.RegisterTool(def, HandleGrepFiles)
-		case "glob_files":
-			srv.RegisterTool(def, HandleGlobFiles)
 		case "run_plan_inline":
 			srv.RegisterTool(def, HandleRunPlanInline)
 		case "fleet_list_peers":
@@ -217,10 +209,14 @@ func AllTools() []ToolDef {
 		// agent proposal-01: discovery tools. Each is a thin wrapper
 		// over an existing internal API — list_actions over
 		// actions.List(), describe_action over the same Registry +
-		// schemagen pipeline that backs `mooncake actions show`, and
-		// list_presets over presets.DiscoverAllPresets. Together they
-		// close the "agents can't introspect the action surface
+		// schemagen pipeline that backs `mooncake actions show`. Together
+		// they close the "agents can't introspect the action surface
 		// without out-of-band knowledge" gap surfaced in proposal-01.
+		//
+		// list_presets used to sit here too, advertising "built-in"
+		// presets that no longer exist, alongside read_file/grep_files/
+		// glob_files — generic file tools every agent harness already
+		// ships natively. All four were context tax; removed in #177.
 		{
 			Name:        "list_actions",
 			Description: "List every action this mooncake build supports — name, category, platforms, and the spec-22 ABI capability matrix (check/diff/cost/reverse/permissions). Optional `category` filter narrows the result to a single category (e.g. `file`, `system`, `network`). Returns JSON. Read-only.",
@@ -234,42 +230,6 @@ func AllTools() []ToolDef {
 			InputSchema: objSchema(map[string]interface{}{
 				"name": strProp("Action verb (e.g. 'file.copy', 'pkg.install'). See `list_actions` for the full set."),
 			}, []string{"name"}),
-		},
-		{
-			Name:        "list_presets",
-			Description: "List every preset discoverable on this host — built-in, registry-cloned, and local. Each entry carries name + description + version + source + path so an agent can decide which to plan with before running it. Returns JSON. Read-only.",
-			InputSchema: objSchema(nil, nil),
-		},
-		// CodingBackend wire-form tools (#145). These four tools are the JSON-RPC
-		// surface of the sdk.CodingBackend interface — swapping the backend
-		// implementation on the daemon side needs no prompt change.
-		{
-			Name:        "read_file",
-			Description: "Read raw bytes from a file on the daemon host. Returns base64-encoded content in a JSON envelope so binary files round-trip safely. Read-only.",
-			InputSchema: objSchema(map[string]interface{}{
-				"path":   strProp("Absolute or relative path to read"),
-				"offset": map[string]interface{}{"type": "integer", "description": "Byte offset to start from. 0 or omitted means start of file."},
-				"limit":  map[string]interface{}{"type": "integer", "description": "Maximum bytes to return. 0 or omitted means up to 16 MiB."},
-			}, []string{"path"}),
-		},
-		{
-			Name:        "grep_files",
-			Description: "Walk a directory tree and return lines matching a RE2 pattern. Equivalent to sdk.Grep — direct filesystem walk, no executor. Read-only.",
-			InputSchema: objSchema(map[string]interface{}{
-				"pattern":          strProp("RE2 regular expression to match against each line"),
-				"dir":              strProp("Root directory to search. Defaults to the daemon's working directory."),
-				"extensions":       strArrayProp("Only search files with these extensions (without leading dot, e.g. 'go', 'ts'). Empty means all files."),
-				"max_results":      map[string]interface{}{"type": "integer", "description": "Cap on number of matches returned. 0 means no cap."},
-				"case_insensitive": boolProp("Match case-insensitively."),
-			}, []string{"pattern"}),
-		},
-		{
-			Name:        "glob_files",
-			Description: "Return paths matching a glob pattern on the daemon host. Equivalent to sdk.Glob — direct filepath.Glob call, no executor. Read-only.",
-			InputSchema: objSchema(map[string]interface{}{
-				"pattern": strProp("Glob pattern (e.g. '*.go', 'src/**/*.ts')"),
-				"dir":     strProp("Base directory to resolve the pattern against. Omit to use pattern as-is."),
-			}, []string{"pattern"}),
 		},
 		{
 			Name:        "run_plan_inline",

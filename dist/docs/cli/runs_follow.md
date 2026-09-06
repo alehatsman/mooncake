@@ -5,7 +5,7 @@ name: mooncake runs follow
 
 # mooncake runs follow
 
-Stream events for an existing run, rendered like `apply`
+Stream events for an existing run, rendered like apply
 
 ## Flags
 

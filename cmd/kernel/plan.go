@@ -87,7 +87,7 @@ func PlanCommand() *cli.Command {
 			&cli.BoolFlag{
 				Name:  "allow-undefined",
 				Value: false,
-				Usage: "Downgrade unresolved `{{ var }}` references from a fatal error to a warning. By default, plan errors on any root identifier not in initial_vars and not produced by a prior step's `as:` register.",
+				Usage: "Downgrade unresolved {{ var }} references from a fatal error to a warning. By default, plan errors on any root identifier not in initial_vars and not produced by a prior step's as: register.",
 			},
 		},
 		Action: planAction,

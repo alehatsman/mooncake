@@ -117,6 +117,7 @@
     - [fleet.upgrade](cli/fleet_upgrade.md)
     - [fleet.watch](cli/fleet_watch.md)
     - [history](cli/history.md)
+    - [history.gc](cli/history_gc.md)
     - [history.list](cli/history_list.md)
     - [history.show](cli/history_show.md)
     - [init](cli/init.md)
