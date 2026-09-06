@@ -31,14 +31,14 @@ pre-transaction state.
 
 ## Who it's for
 
-- **AI agent developers** — give your agent a typed action vocabulary,
-  dry-run validation, auto-revert on failure, and structured event
-  output. Your agent can't escape the typed ABI; every mutation is
-  observable and reversible.
 - **Solo developers** — manage dotfiles + dev box + a personal fleet
   of 1–10 machines from one terminal, peer-to-peer, no hub.
 - **Platform engineers** — declarative state with `--dry-run`,
   structured Diff output per action, run audit log, secret redaction.
+
+The typed ABI, dry-run validation, and auto-revert above aren't a
+separate pitch to AI agent developers — they're just what makes the
+engine safe for *anything* driving it, human or scripted.
 
 ## Quick start
 

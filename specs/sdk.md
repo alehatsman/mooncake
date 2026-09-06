@@ -14,10 +14,13 @@ The `sdk` package (`package mooncake`) is the one public surface an external
 consumer imports to build on the kernel — it never reaches into `internal/`.
 It re-exports the typed-action ABI, the agent loop, the no-LLM execution
 entries, the event/observability contract, and the custom-action authoring
-helpers as a stable facade, so a downstream agent (openclaw) or a tool-call
-driver (Claude Code over the MCP server, model id `mooncake-agent` over
-`mooncake agent run`) compiles against versioned symbols rather than internal
-churn. The expansion goal is a **coding-execution surface**: the same facade
+helpers as a stable facade, so a tool-call driver (Claude Code over the MCP
+server, model id `mooncake-agent` over `mooncake agent run`) compiles against
+versioned symbols rather than internal churn. (The broader "external agents
+import this to build their own agent" framing — see
+`docs-working/vision/agent_framework.md` — was retired 2026-09-07 for zero
+validated adoption; this facade is kept as an embedding capability, not
+framework infrastructure.) The expansion goal is a **coding-execution surface**: the same facade
 exposes read/search/edit/exec primitives behind a swappable backend, so a
 coding agent runs its everyday tool calls on the mooncake engine — typed,
 gated, reversible, audited — with native-feeling latency.

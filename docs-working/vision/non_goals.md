@@ -61,16 +61,12 @@ Reverse / Cost / Permissions; see [`kernel.md`](./kernel.md)), *not*
 that the set is small.
 
 So there is exactly one sanctioned way to add an action: **implement
-the typed `Handler` ABI.** Two shapes qualify:
-
-- **Built-in** — a real, recurring need lands in-tree via the normal
-  spec path.
-- **Consumer-registered, compile-time** — a consumer (e.g. moongit,
-  `openclaw`) imports Mooncake as a Go library and registers its own
-  typed handlers (`moongit.issue`, …) into the registry, compiling its
-  own agent binary. This is the *agent-framework* path
-  ([`agent_framework.md`](./agent_framework.md)). It does not dilute the
-  moat — it spreads the typed contract to the consumer's actions.
+the typed `Handler` ABI**, in-tree, via the normal spec path, for a
+real recurring need. (The registry API technically allows an external
+Go binary to import mooncake and register its own compile-time typed
+handler — see [`agent_framework.md`](./agent_framework.md) for why
+that was explored and retired as a direction. It stays *possible*
+without being *pursued*.)
 
 Everything else stays out. **No runtime-loaded plugins** (`.so` / WASM /
 subprocess marketplace), **no versioned third-party provider
@@ -187,8 +183,10 @@ invent them:
 - [`action-design-principles.md`](./action-design-principles.md)
   — the 11 design rules for new actions; a per-action restatement of
   many of these non-goals.
-- [`agent_framework.md`](./agent_framework.md) — how #2 is refined for
-  compile-time typed action extension (the agent-framework direction).
+- [`agent_framework.md`](./agent_framework.md) — the compile-time
+  typed extension point #2 allows in principle, and why the broader
+  "mooncake as a framework other agents build on" direction was
+  explored and retired.
 - [`kernel.md`](./kernel.md) — the four typed properties each non-goal
   protects.
 - [`README.md`](./README.md) — stream overview and what's actively

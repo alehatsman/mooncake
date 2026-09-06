@@ -19,9 +19,12 @@ value built on top:
 1. **The kernel** — declarative typed actions, idempotency, planning,
    facts. *(Shipped.)*
 2. **The runtime** — host daemon, fleet orchestration, audit, policy.
-   *(Personal fleet shipped; enterprise hub deferred.)*
-3. **The economy** — preset marketplace, agent SDK, signed plans,
-   integrations. *(Future.)*
+   *(Personal fleet shipped; enterprise hub unvalidated, not planned.)*
+3. **Module distribution** — a Git-native, Go-module-shaped index for
+   discovering and pinning other people's config modules (see
+   [`sharing_and_modules.md`](./sharing_and_modules.md)). *(In design.)*
+   No central marketplace, no registry to run — the Git URL is the
+   identity, same as `go get`.
 
 ## The core insight
 
@@ -55,13 +58,28 @@ idempotency, policy enforcement, reversibility, and agent safety —
 each for free, because the engine guarantees them rather than the
 actor.
 
-That last bullet is the wedge. Nobody else is selling this to AI
-developers.
+That combination is the wedge. It's a property of the engine, useful
+to whatever drives it — a human, a script, or an agent — not a
+business case for a distinct "AI agent developer" market on its own.
 
 ## What "done" looks like, per user
 
-Mooncake serves three audiences with one engine. Each scenario below is
-the success bar for that audience.
+Mooncake serves two validated audiences with one engine. Each
+scenario below is the success bar for that audience.
+
+> **Demoted 2026-09-07:** a third audience used to live here — "AI
+> agent developer / Docker for AI agents" — pitched on policy DSL,
+> plan signing, quotas, egress policy, sandbox mode, deterministic
+> replay. Cut because: zero real users ever asked for it, the gap
+> list (all six items) hadn't moved since it was written, and the
+> premise ("an LLM agent has no shell, no raw file API") is aging
+> badly now that mainstream coding agents get real sandboxed shell +
+> file access gated by harness-level approval, not a mediating typed
+> kernel. The underlying primitives it cited (typed ABI, MCP server,
+> transactions, plan/diff, snapshot, secret redaction) are real,
+> shipped, and stay — see the layered surface and unfair-advantage
+> sections below. What's cut is the standalone audience claim, not
+> the capability. Revisit only if a real external user asks.
 
 ### 1. Solo developer — dotfiles + dev box on autoagent
 
@@ -92,45 +110,24 @@ per-host overlays + tag selectors ✓, mDNS ✓, `fleet apply <machine>`
 ✓, Windows agentd ✓. The "Friday-evening demo" success criteria from
 the personal-fleet epic are all met.
 
-### 3. AI agent developer — Docker for AI agents
-
-An LLM agent has no shell, no raw file API. Only the Mooncake typed
-ABI. Every mutation is dry-runnable, mediated, reversible, audited.
-The agent declares intent ("install postgres, create user, create db")
-as a `transaction:` block — if step 3 fails, steps 1+2 auto-revert.
-Policy DSL says `deny: agent.touches("/etc/passwd")`. Plans are
-signed; daemon refuses unsigned ones in prod. Per-action quotas +
-egress policy. Deterministic replay for debugging.
-
-**State:** ~80% there. MCP server with `run_step`/`get_facts`/
-`get_snapshot`/`check_plan`/`run_plan` ✓, agent loop ✓, structured
-JSONL + structured errors ✓, plan-mode with content diffs ✓, snapshot
-+ diff ✓, run audit trail ✓, SSE event stream ✓, secret redaction ✓,
-four-method ABI (`Permissions`/`Diff`/`Cost`/`Reverse`) declared
-across priority handlers **and wired through MCP** ✓, spec-23
-`on_change` / `!secret` / `try/catch/finally` ✓, spec-30
-`transaction:` with LIFO rollback ✓ (`examples/transactions/
-rollback-demo.yml`). Gap: policy DSL, plan signing, per-action
-quotas, egress policy, sandbox mode, deterministic replay, risk
-scoring on top of `Cost()` — none specced.
-
-### 4. Platform team — fleet control plane with audit by default
-
-Same engine, scaled out. Inventory of hosts, fleet plans with canary/
-wave strategy, signed audit log, RBAC, approval gates, dashboards,
-drift heatmaps. Free CLI; control plane priced per-host or per-run.
-
-**State:** intentionally deferred until a paying user asks. The
-personal-fleet stream proves the wire protocol and agentd shape; the
-enterprise hub is a separate epic that builds on it.
+> **Demoted 2026-09-07:** a "Platform team — fleet control plane with
+> audit by default" audience used to live here (canary/wave rollout,
+> RBAC, approval gates, dashboards, priced control plane). Same
+> problem as the AI-agent-developer ring: zero external users, purely
+> conditional ("deferred until a paying user asks"), no work has ever
+> moved on it. Cut for the same reason — an unvalidated audience
+> doesn't earn a numbered slot next to two that are proven by daily
+> use. The personal-fleet wire protocol and agentd shape it would have
+> built on are real and stay; the enterprise product on top of them
+> is not planned. Revisit only if a real paying user asks.
 
 ## The product surface, layered
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
-│  L5: Marketplace + Agent SDK + integrations (GitHub, IDEs)   │ ← future
+│  L5: Module discovery index (Git-native, no registry)        │ ← in design
 ├──────────────────────────────────────────────────────────────┤
-│  L4: Cloud Hub (SaaS or self-hosted) — fleet, audit, policy  │ ← deferred
+│  L4: Cloud Hub (SaaS or self-hosted) — fleet, audit, policy  │ ← unvalidated, not planned
 ├──────────────────────────────────────────────────────────────┤
 │  L3: Host daemon (agentd) — TCP+SSE, bearer auth, sync       │ ← shipped (personal fleet)
 ├──────────────────────────────────────────────────────────────┤
@@ -141,9 +138,11 @@ enterprise hub is a separate epic that builds on it.
 ```
 
 Each layer is independently usable. A solo dev only ever sees L1+L2.
-An agent developer adds the MCP server (L2) + transactions/secrets.
-The personal fleet uses L3. An enterprise eventually consumes all
-five.
+The personal fleet uses L3. The MCP server + transactions/secrets in
+L2 make the same surface callable by a script or an agent, not just
+a human at the CLI — that's a capability of L2, not a separate
+product tier. L4 stays on the diagram as an honest "not planned"
+marker, not a roadmap commitment.
 
 ## The unfair-advantage statement
 
@@ -163,7 +162,10 @@ do that as a built-in.
 
 ## The strategic constraint
 
-The code is shipping faster than the lighthouse-user funnel can
-absorb. The next bottleneck is **adoption, not engineering** — two or
-three real agent-developer users, written up, would matter more right
-now than another spec landing.
+The validated surface is solo-dev provisioning + the personal fleet —
+both driven by daily real use. Everything past that (enterprise hub,
+marketplace, a distinct agent-developer product) is unvalidated: no
+external user has asked for it yet. The next bottleneck is **staying
+inside what's validated** — sharpening provisioning, modules, and
+fleet management for the audience that actually exists — not
+speccing further out on the strength of a good story.

@@ -236,13 +236,14 @@ answer Diff/Reverse/Cost/Permissions and so collapses to `LLM + shell +
 hope` for those actions.
 
 The sanctioned extension is therefore the typed `Handler` ABI itself,
-in two shapes: **built-in** (recurring need, normal spec path) and
-**consumer-registered, compile-time** (a Go consumer imports Mooncake
-and registers its own typed handlers — the agent-framework path, see
-[`agent_framework.md`](./agent_framework.md)). Both *spread* the typed
-contract; neither dilutes it. A one-off stays in `shell:`. What stays
-forbidden: a runtime-loaded, versioned, untyped plugin marketplace.
-The line is *compile-time + typed*, not *no extension at all*.
+via the normal spec path for a real, recurring need — built-in,
+in-tree. A Go consumer importing mooncake and registering its own
+compile-time typed handler is technically possible through the same
+ABI, but that's not a pursued direction; see
+[`agent_framework.md`](./agent_framework.md) for why it was explored
+and retired. Either way, what stays forbidden is a runtime-loaded,
+versioned, untyped plugin marketplace — the line is *compile-time +
+typed*, not *no extension at all*.
 
 ---
 
@@ -299,9 +300,9 @@ What does *not* update this doc:
   model. Operational complement to this doc.
 - [`non_goals.md`](./non_goals.md) — the seven explicit refusals.
   Each one protects a column of the comparison table above.
-- [`agent_framework.md`](./agent_framework.md) — how the kernel becomes
-  a framework for building agents (compile-time typed action extension)
-  without ceasing to be the kernel. Refines R4 above.
+- [`agent_framework.md`](./agent_framework.md) — the compile-time typed
+  extension point R4 allows in principle, and why the broader "kernel
+  as a framework for building agents" direction was retired.
 - [`good_lessons_from_other_tools.md`](./good_lessons_from_other_tools.md)
   — what 30 years of provisioning tooling got right.
 - [`bad_lessons_from_other_tools.md`](./bad_lessons_from_other_tools.md)
