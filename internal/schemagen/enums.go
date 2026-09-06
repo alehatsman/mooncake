@@ -5,6 +5,7 @@ package schemagen
 var KnownEnums = map[string][]string{
 	// os.service action enums
 	"os.service.state": {"started", "stopped", "restarted", "reloaded"},
+	"os.service.scope": {"system", "user"},
 
 	// file.write action enums
 	"file.write.state": {"file", "present", "absent", "directory", "link", "hardlink", "touch", "perms"},
@@ -67,6 +68,7 @@ var EnhancedDescriptions = map[string]map[string]string{
 		"name":          "Service name (systemd: nginx, launchd: com.example.app)",
 		"state":         "Desired service state",
 		"enabled":       "Enable service to start on boot (systemd: enable/disable, launchd: bootstrap/bootout)",
+		"scope":         "Service scope: system (default, requires root) or user (no root; launchd: ~/Library/LaunchAgents + gui/<uid> domain)",
 		"daemon_reload": "Run 'systemctl daemon-reload' after unit file changes (systemd only)",
 	},
 	"file.write": {
