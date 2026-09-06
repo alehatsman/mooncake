@@ -1413,7 +1413,17 @@ Manage Windows Hyper-V Firewall rules (WSL2 mirrored networking)
 
 Manage Windows registry keys and values
 
-*No properties defined in schema.*
+| Property | Type | Required | Description |
+|----------|------|----------|-------------|
+| `name` | string | No | - |
+| `path` | string | **Yes** | - |
+| `state` | string | No | - |
+| `type` | string | No | - |
+| `value` | string | No | - |
+
+**Metadata:**
+- Category: `system`
+- Version: `1.0.0`
 
 
 ---

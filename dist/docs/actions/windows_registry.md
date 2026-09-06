@@ -18,6 +18,16 @@ capabilities:
 
 Manage Windows registry keys and values
 
+## Properties
+
+| Property | Type | Required | Description |
+|----------|------|----------|-------------|
+| `name` | string | No | - |
+| `path` | string | **Yes** | - |
+| `state` | string | No | - |
+| `type` | string | No | - |
+| `value` | string | No | - |
+
 ## Platform Support
 
 windows

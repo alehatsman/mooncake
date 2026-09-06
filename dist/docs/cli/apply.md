@@ -21,6 +21,7 @@ Apply a playbook or saved plan. Use --dry-run to preview without changes.
 | `--tags / -t` | string | - | Filter steps by tags (comma-separated) |
 | `--skip-tags` | string | - | Exclude steps whose tags appear in this list (comma-separated). Composes with --tags via AND. |
 | `--dry-run / -n` | bool | false | Preview changes without executing (sugar for `mooncake plan`) |
+| `--keep-going` | bool | false | Continue past a failing step and report all failures at the end (still exits non-zero). Steps inside a transaction keep all-or-nothing semantics. |
 | `--tui` | bool | false | Use the animated TUI subscriber (default: raw console output) |
 | `--output-format / -format` | string | `text` | Output format: text or json (json requires not using --tui) |
 | `--artifacts-dir` | string | - | Directory to store run artifacts (e.g., .mooncake) |
