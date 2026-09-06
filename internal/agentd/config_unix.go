@@ -46,10 +46,15 @@ func userConfigDir() (string, error) {
 
 // systemModeDefaults returns the system-mode (root) defaults for this
 // platform. Embedded into Default() when --system is set.
+//
+// The socket lives under systemRunDir, which differs per OS (/run on Linux
+// and the BSDs, /var/run on macOS) — see rundir_*.go. StateDir and TokenPath
+// need no such split: /var and /etc are on the writable data volume on macOS
+// too, so MkdirAll creates them on demand there just as it does on Linux.
 func systemModeDefaults() Config {
 	return Config{
 		SystemMode:   true,
-		SocketPath:   "/run/mooncake/agentd.sock",
+		SocketPath:   filepath.Join(systemRunDir, "mooncake", "agentd.sock"),
 		StateDir:     "/var/lib/mooncake/agentd",
 		LogLevel:     "info",
 		TokenPath:    "/etc/mooncake/agentd.token",

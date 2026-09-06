@@ -65,7 +65,7 @@ func agentdRunCommand() *cli.Command {
 		Flags: []cli.Flag{
 			&cli.BoolFlag{
 				Name:  "system",
-				Usage: "Run in system mode (Unix: /run/mooncake, /var/lib/mooncake. Windows: %ProgramData%\\Mooncake\\). Default: per-user.",
+				Usage: "Run in system mode (Linux: /run/mooncake, macOS: /var/run/mooncake, both with /var/lib/mooncake. Windows: %ProgramData%\\Mooncake\\). Default: per-user.",
 			},
 			&cli.StringFlag{
 				Name:  "socket",
