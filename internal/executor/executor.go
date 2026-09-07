@@ -567,7 +567,7 @@ func emitStepSkipped(step config.Step, ec *ExecutionContext, stepName, skipReaso
 // Two stories live here:
 //
 //   - Proposal-06 / spec-69 finding B0: many handlers (os.user,
-//     os.cron, pkg.upgrade, wait.http, os.mount, os.firewall) return
+//     os.cron, pkg.upgrade, os.mount, os.firewall) return
 //     (Result with Failed=false, err with diagnostic). Pre-proposal
 //     the envelope said success while the run said failure. Sync
 //     Failed / Rc / Error here so handler authors don't have to

@@ -1676,8 +1676,8 @@ type WaitHTTP struct {
 }
 
 // HTTPRequest is the proposal-16 first-class HTTP action. Unlike
-// `file.download` (URL→file+checksum), `observe.http` (single-shot
-// probe), and `wait.http` (poll until ready), HTTPRequest is the
+// `file.download` (URL→file+checksum) and `observe.http` (probe, with an
+// optional `wait:` to poll until ready), HTTPRequest is the
 // general "call an endpoint, capture the response as a fact" primitive
 // — the action `notify` and `llm` will sit on top of.
 //
