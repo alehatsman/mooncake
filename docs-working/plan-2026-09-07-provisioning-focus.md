@@ -10,6 +10,32 @@
 
 ---
 
+## 0. Status (updated 2026-09-07, end of session)
+
+| Phase | Issue | State |
+|---|---|---|
+| 0 — stop the bleeding | — | **done** (`bcfe0819`, merged `ad1b5c2a`) |
+| 1 — one CLI shape | #179 | **done** (`341b5f6f`, merged `aad8d117`) |
+| 3 — module system | #181 | **core done** (`430b37c4`, `c9fc7641`); 3.6/3.7 external |
+| 2 — collapse state vocabulary | #180 | **partly done** (`74cbb58a`, `ab653a64`, `7626a858`); fleet fan-out left |
+| 4 — ABI honesty | #178 | not started |
+| 5 — agent repo split | #182 | not started (needs the GitHub side) |
+
+Corrections to this document, found while executing it:
+
+- **3.4 was already fixed.** #50 landed in PR #22 / `294b076f` before this plan
+  was written; `specs/modules.md:87` carried a stale `[ ] DRIFT` box. Verified
+  `294b076f` is an ancestor of main.
+- **`mooncake step` must not be folded into `apply --step`** (Phase 1). It has
+  an external consumer — moongit's CI runner execs `mooncake step '<yaml>'` —
+  and it deliberately bypasses the planner, so it is not a duplicate path.
+- **3.3 ships `mod tidy`/`verify`/`list`, not `mod init`.** Reading #46, that
+  is a new-project Go skeleton scaffold gated on an external module publishing,
+  unrelated to lock verification.
+- **Phase 2's acceptance was optimistic.** `actions list` drops 4 rows and
+  gains 2, not −4: `wait.file`/`wait.command` had no observe twin, so
+  `observe.file`/`observe.command` were added rather than dropping capability.
+
 ## 1. Where we actually are
 
 | Area | Prod LOC | State |
