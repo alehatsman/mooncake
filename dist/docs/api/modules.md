@@ -10,7 +10,12 @@ Package modules implements the Git\-native module system from spec\-67. A module
 
 ## Index
 
+- [Constants](<#constants>)
+- [Variables](<#variables>)
 - [func DefaultCacheRoot() (string, error)](<#func-defaultcacheroot>)
+- [func FindLock(startDir string) string](<#func-findlock>)
+- [func HashDir(dir string) (string, error)](<#func-hashdir>)
+- [func LockKey(ref Reference) string](<#func-lockkey>)
 - [type Fetcher](<#type-fetcher>)
   - [func (f *Fetcher) CacheDir(ref Reference) (string, error)](<#func-fetcher-cachedir>)
   - [func (f *Fetcher) Fetch(ctx context.Context, ref Reference) (string, error)](<#func-fetcher-fetch>)
@@ -18,6 +23,17 @@ Package modules implements the Git\-native module system from spec\-67. A module
 - [type Index](<#type-index>)
   - [func LoadIndex(moduleRoot string) (*Index, error)](<#func-loadindex>)
   - [func (idx *Index) ResolveExport(moduleRoot, export string) (string, error)](<#func-index-resolveexport>)
+- [type Lock](<#type-lock>)
+  - [func BrokenLock(err error) *Lock](<#func-brokenlock>)
+  - [func LoadLock(path string) (*Lock, error)](<#func-loadlock>)
+  - [func (l *Lock) Empty() bool](<#func-lock-empty>)
+  - [func (l *Lock) Keep(keys map[string]bool)](<#func-lock-keep>)
+  - [func (l *Lock) LookupLock(key string) (LockEntry, bool)](<#func-lock-lookuplock>)
+  - [func (l *Lock) Refs() []string](<#func-lock-refs>)
+  - [func (l *Lock) SaveLock(path string) error](<#func-lock-savelock>)
+  - [func (l *Lock) Set(e LockEntry)](<#func-lock-set>)
+  - [func (l *Lock) VerifyDir(key, dir string) error](<#func-lock-verifydir>)
+- [type LockEntry](<#type-lockentry>)
 - [type Reference](<#type-reference>)
   - [func ParseReference(s string) (Reference, error)](<#func-parsereference>)
   - [func (r Reference) CloneURL() string](<#func-reference-cloneurl>)
@@ -31,6 +47,36 @@ Package modules implements the Git\-native module system from spec\-67. A module
   - [func (r *Resolver) ResolveCached(ctx context.Context, refStr string) (Resolved, error)](<#func-resolver-resolvecached>)
 
 
+## Constants
+
+HashPrefix labels the hash algorithm. Same shape and same algorithm as Go's dirhash "h1:" so the format is familiar rather than novel: the summary is one "\<sha256\-hex\>  \<relpath\>\\n" line per regular file, sorted by path, and the hash is base64\(sha256\(summary\)\).
+
+```go
+const HashPrefix = "h1:"
+```
+
+LockFilename is the module lockfile's name.
+
+Deliberately NOT "mooncake.lock": that name is already owned by the \`tool\` action \(internal/lockfile\) for pinning tool installs. Two unrelated lockfiles under one filename would clobber each other on save, silently, in whichever order the run happened to write them.
+
+```go
+const LockFilename = "mooncake.modules.lock"
+```
+
+LockVersion is the on\-disk schema version. Bumped only for a breaking change to the file's shape; a reader that meets a higher version refuses rather than guessing.
+
+```go
+const LockVersion = 1
+```
+
+## Variables
+
+NowRFC3339 is the clock used for LockedAt. A var so tests can freeze it.
+
+```go
+var NowRFC3339 = defaultNowRFC3339
+```
+
 ## func [DefaultCacheRoot](<https://github.com/alehatsman/mooncake/blob/main/internal/modules/fetch.go#L32>)
 
 ```go
@@ -40,6 +86,32 @@ func DefaultCacheRoot() (string, error)
 DefaultCacheRoot is \~/.cache/mooncake/modules.
 
 Resolved lazily because $HOME may be unset \(tests\) or differ from the user who started the process \(sudo\-driven applies\).
+
+## func [FindLock](<https://github.com/alehatsman/mooncake/blob/main/internal/modules/lock.go#L68>)
+
+```go
+func FindLock(startDir string) string
+```
+
+FindLock walks up from startDir looking for a module lockfile. Returns the absolute path of the nearest one, or "" if none exists before the filesystem root. Stat errors are treated as "not here", same as internal/lockfile.Find.
+
+## func [HashDir](<https://github.com/alehatsman/mooncake/blob/main/internal/modules/hash.go#L44>)
+
+```go
+func HashDir(dir string) (string, error)
+```
+
+HashDir returns the h1: content hash of the module tree rooted at dir.
+
+Covered: every regular file, by slash\-separated path relative to dir. Excluded: the .git directory, and every non\-regular entry \(symlink, device, socket, fifo\) — see the spec's Non\-goals. File modes are not covered.
+
+## func [LockKey](<https://github.com/alehatsman/mooncake/blob/main/internal/modules/lock.go#L61>)
+
+```go
+func LockKey(ref Reference) string
+```
+
+LockKey returns the lockfile key for a reference: the cache\-dir identity, with any subpath dropped. One cached repo, one hash, one entry.
 
 ## type [Fetcher](<https://github.com/alehatsman/mooncake/blob/main/internal/modules/fetch.go#L46-L63>)
 
@@ -134,6 +206,108 @@ otherwise                 → uses the entry named exactly `export`
 
 The returned path is verified to exist on disk before returning.
 
+## type [Lock](<https://github.com/alehatsman/mooncake/blob/main/internal/modules/lock.go#L41-L50>)
+
+Lock is the in\-memory form of mooncake.modules.lock.
+
+```go
+type Lock struct {
+    Version int         `yaml:"version"`
+    Modules []LockEntry `yaml:"modules"`
+    // contains filtered or unexported fields
+}
+```
+
+### func [BrokenLock](<https://github.com/alehatsman/mooncake/blob/main/internal/modules/lock.go#L55>)
+
+```go
+func BrokenLock(err error) *Lock
+```
+
+BrokenLock returns a Lock that fails every verification with err. Used when a lockfile is present on disk but unreadable: "present but broken" must not collapse into "absent", which would run unverified.
+
+### func [LoadLock](<https://github.com/alehatsman/mooncake/blob/main/internal/modules/lock.go#L86>)
+
+```go
+func LoadLock(path string) (*Lock, error)
+```
+
+LoadLock reads the lockfile at path. A missing file is not an error — it returns an empty Lock, which verifies nothing. Other I/O and parse errors are surfaced: a corrupt lockfile must not degrade into "no verification".
+
+### func \(\*Lock\) [Empty](<https://github.com/alehatsman/mooncake/blob/main/internal/modules/lock.go#L117>)
+
+```go
+func (l *Lock) Empty() bool
+```
+
+Empty reports whether the lock pins nothing. An empty lock verifies nothing, which is how a playbook with no lockfile keeps its pre\-lockfile behavior.
+
+### func \(\*Lock\) [Keep](<https://github.com/alehatsman/mooncake/blob/main/internal/modules/lock.go#L156>)
+
+```go
+func (l *Lock) Keep(keys map[string]bool)
+```
+
+Keep drops every entry whose ref is not in keys. This is what makes \`mod tidy\` a tidy: a module removed from the playbook leaves the lockfile too.
+
+### func \(\*Lock\) [LookupLock](<https://github.com/alehatsman/mooncake/blob/main/internal/modules/lock.go#L127>)
+
+```go
+func (l *Lock) LookupLock(key string) (LockEntry, bool)
+```
+
+LookupLock returns the entry for a ref key, if pinned.
+
+### func \(\*Lock\) [Refs](<https://github.com/alehatsman/mooncake/blob/main/internal/modules/lock.go#L169>)
+
+```go
+func (l *Lock) Refs() []string
+```
+
+Refs returns the pinned ref keys, sorted.
+
+### func \(\*Lock\) [SaveLock](<https://github.com/alehatsman/mooncake/blob/main/internal/modules/lock.go#L191>)
+
+```go
+func (l *Lock) SaveLock(path string) error
+```
+
+SaveLock writes the lock to path: entries sorted by ref so the file is byte\-deterministic and a diff is reviewable, written to a temp file and renamed so a crash mid\-write can't leave a half\-lockfile behind.
+
+### func \(\*Lock\) [Set](<https://github.com/alehatsman/mooncake/blob/main/internal/modules/lock.go#L142>)
+
+```go
+func (l *Lock) Set(e LockEntry)
+```
+
+Set adds or replaces the entry for e.Ref.
+
+### func \(\*Lock\) [VerifyDir](<https://github.com/alehatsman/mooncake/blob/main/internal/modules/lock.go#L237>)
+
+```go
+func (l *Lock) VerifyDir(key, dir string) error
+```
+
+VerifyDir checks the tree at dir against the pin for key.
+
+Returns nil when the lock is empty \(nothing is pinned, so nothing is claimed\). Otherwise a ref absent from a non\-empty lockfile is an error: a lockfile that pins some modules but not the one about to run is a lockfile that has drifted from the playbook, and silently trusting the unpinned one is exactly the hole the lockfile exists to close.
+
+## type [LockEntry](<https://github.com/alehatsman/mooncake/blob/main/internal/modules/lock.go#L30-L38>)
+
+LockEntry pins one module reference to the content hash of the tree that reference resolved to.
+
+```go
+type LockEntry struct {
+    // Ref is "<host>/<owner>/<repo>@<version>" — the cache-dir identity, with
+    // any subpath stripped. Several subpath references share one entry.
+    Ref string `yaml:"ref"`
+    // Hash is the h1: tree hash; see HashDir.
+    Hash string `yaml:"hash"`
+    // LockedAt is RFC3339, for the human reading a diff. Not verified.
+    LockedAt string `yaml:"locked_at,omitempty"`
+}
+```
+
 ## type [Reference](<https://github.com/alehatsman/mooncake/blob/main/internal/modules/reference.go#L16-L22>)
 
 Reference is a parsed module reference of the form \<host\>/\<owner\>/\<repo\>\[/\<subpath\>\]@\<version\>.
@@ -190,7 +364,7 @@ func (r Reference) String() string
 
 String returns the canonical "\<path\>@\<version\>" form.
 
-## type [Resolved](<https://github.com/alehatsman/mooncake/blob/main/internal/modules/resolver.go#L29-L32>)
+## type [Resolved](<https://github.com/alehatsman/mooncake/blob/main/internal/modules/resolver.go#L36-L39>)
 
 Resolved is what the resolver returns: the file path to load as a component plus the module root \(needed so further imports inside the component resolve relative to the module, not the playbook\).
 
@@ -201,7 +375,7 @@ type Resolved struct {
 }
 ```
 
-## type [Resolver](<https://github.com/alehatsman/mooncake/blob/main/internal/modules/resolver.go#L15-L18>)
+## type [Resolver](<https://github.com/alehatsman/mooncake/blob/main/internal/modules/resolver.go#L15-L25>)
 
 Resolver turns a use: reference into a concrete component file path. It combines reference parsing, module fetching, and index.yml export lookup.
 
@@ -211,10 +385,17 @@ Aliases are looked up in Modules \(typically the playbook's modules: block\). In
 type Resolver struct {
     Fetcher *Fetcher
     Modules map[string]string
+
+    // Lock, when non-nil and non-empty, is the mooncake.modules.lock pinning
+    // every module this resolver may fetch. Each resolved module is verified
+    // against it before its index.yml is read. nil (or an empty lock) means no
+    // playbook lockfile was found, and resolution behaves exactly as it did
+    // before lockfiles existed.
+    Lock *Lock
 }
 ```
 
-### func [NewResolver](<https://github.com/alehatsman/mooncake/blob/main/internal/modules/resolver.go#L22>)
+### func [NewResolver](<https://github.com/alehatsman/mooncake/blob/main/internal/modules/resolver.go#L29>)
 
 ```go
 func NewResolver(modules map[string]string) *Resolver
@@ -222,7 +403,7 @@ func NewResolver(modules map[string]string) *Resolver
 
 NewResolver constructs a resolver with the default fetcher and the supplied alias map. Passing nil for the map disables alias resolution.
 
-### func \(\*Resolver\) [Resolve](<https://github.com/alehatsman/mooncake/blob/main/internal/modules/resolver.go#L43>)
+### func \(\*Resolver\) [Resolve](<https://github.com/alehatsman/mooncake/blob/main/internal/modules/resolver.go#L50>)
 
 ```go
 func (r *Resolver) Resolve(ctx context.Context, refStr string) (Resolved, error)
@@ -238,7 +419,7 @@ Resolve takes a use: reference string and returns the component file to load. Th
 
 Local paths \(./foo.yml\) are NOT handled here — the executor dispatches those directly without going through the resolver.
 
-### func \(\*Resolver\) [ResolveCached](<https://github.com/alehatsman/mooncake/blob/main/internal/modules/resolver.go#L52>)
+### func \(\*Resolver\) [ResolveCached](<https://github.com/alehatsman/mooncake/blob/main/internal/modules/resolver.go#L59>)
 
 ```go
 func (r *Resolver) ResolveCached(ctx context.Context, refStr string) (Resolved, error)

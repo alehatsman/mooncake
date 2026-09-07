@@ -15,6 +15,13 @@ import (
 type Resolver struct {
 	Fetcher *Fetcher
 	Modules map[string]string
+
+	// Lock, when non-nil and non-empty, is the mooncake.modules.lock pinning
+	// every module this resolver may fetch. Each resolved module is verified
+	// against it before its index.yml is read. nil (or an empty lock) means no
+	// playbook lockfile was found, and resolution behaves exactly as it did
+	// before lockfiles existed.
+	Lock *Lock
 }
 
 // NewResolver constructs a resolver with the default fetcher and the supplied
@@ -95,6 +102,12 @@ func (r *Resolver) resolve(ctx context.Context, refStr string, fetch fetchFunc) 
 func (r *Resolver) resolveRef(ctx context.Context, ref Reference, export string, fetch fetchFunc) (Resolved, error) {
 	moduleRoot, err := fetch(ctx, ref)
 	if err != nil {
+		return Resolved{}, err
+	}
+	// Verify BEFORE narrowing to the subpath and before reading index.yml:
+	// the hash covers the whole cached repo, and an unverified module must not
+	// have its manifest parsed, let alone its components run.
+	if err := r.Lock.VerifyDir(LockKey(ref), moduleRoot); err != nil {
 		return Resolved{}, err
 	}
 	// Subpath: if the reference points at a subdirectory of the repo, the
