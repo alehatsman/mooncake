@@ -14,12 +14,13 @@
 
 | Phase | Issue | State |
 |---|---|---|
-| 0 — stop the bleeding | — | **done** (`bcfe0819`, merged `ad1b5c2a`) |
-| 1 — one CLI shape | #179 | **done** (`341b5f6f`, merged `aad8d117`) |
-| 3 — module system | #181 | **core done** (`430b37c4`, `c9fc7641`); 3.6/3.7 external |
-| 2 — collapse state vocabulary | #180 | **partly done** (`74cbb58a`, `ab653a64`, `7626a858`); fleet fan-out left |
-| 4 — ABI honesty | #178 | not started |
-| 5 — agent repo split | #182 | not started (needs the GitHub side) |
+| 0 — stop the bleeding | #171–#177 | **done** (`bcfe0819`, merged `ad1b5c2a`); issues closed 2026-09-07 after a board audit found them still at todo |
+| 1 — one CLI shape | #179 | **done** (`341b5f6f`, merged `aad8d117`); closed 2026-09-07 |
+| 3 — module system | #181 | **core done** (`430b37c4`, `c9fc7641`); #199–#201 open, 3.6/3.7 external |
+| 2 — collapse state vocabulary | #180 | **partly done** (`74cbb58a`, `ab653a64`, `7626a858`, `1d44f9d7`); fleet fan-out left, post-1.0 |
+| 4 — ABI honesty | #178 | not started; re-measured at 64 actions: 27 no Diff / 26 no Permissions / 31 no Reverse / 19 none |
+| 5 — agent removal | #182 | **done** (`8bd89dff`, merged `652bf9ce..`); deleted from this repo, resurrect into `mooncake-agent` from history later |
+| **1.0.0-pre master plan** | **#203** | coordinates all of the above plus the cleanup children #204–#209, see §4 |
 
 Corrections to this document, found while executing it:
 
@@ -118,6 +119,34 @@ refusal (`internal/plan/plan.go:24`) is that story.
   decision; not filing a feature to change it.
 - `MODULES.md` and `internal/modules/README.md` overlap; fold one into the
   other when Phase 3 closes, not before.
+
+---
+
+## 4. 1.0.0-pre master plan (2026-09-07, third pass) — moongit #203
+
+A review of the two passes above against the tree at `c2d1bc7e` found the
+engine work landed and the *residue* not: Phase 0/1 issues still open on the
+board, the second product still in the tree, strategy docs still pitching the
+cut audiences, tracked junk at the repo root, and specs describing removed
+commands. #203 is the epic that closes that gap; its definition of done is
+"one product, clean tree, honest surface, no dead code, green gate,
+releasable".
+
+| Workstream | Issue | Kind |
+|---|---|---|
+| B — delete the second product (`internal/agent`, `sdk/`, `examples/notify`, agent-evals) | #182 (#5 closed) | **done** (`8bd89dff`, PR #46) — resurrect from history when `mooncake-agent` exists |
+| C — `artifact.*` / `repo.*`: five actions built for the cut agent-developer audience, none with any ABI property | #204 | **done** (`652bf9ce`, PR #48) |
+| D — tree hygiene: `executor_coverage.out`, `github-actions.yml`, `test-repo-ops.yml`, `wait-for-clean.sh`, `mooncake_codes.txt`, `install`, root `llms.txt`, `scripts/migrate`, two orphan scripts, `.codecov.yml`/`.gitleaks.toml` (found while verifying — orphaned by the same cut), `.github/workflows/*.disabled` (kept `release.yml` only, fixed its stale Go pin + `master`→`main` reference) | #205 | **PR #49 up, moongit CI running** |
+| E — retire `VISION.md`, `BOTTLENECK.md`, brainstorm/, positioning.md; fix README/AGENT.md/examples/ROADMAP/CONTRIBUTING/RELEASING dead references | #206 | docs |
+| F — specs still describe `mooncake query` / `mooncake facts` | #207 | specs |
+| G — 29 `deadcode` hits, 12 action packages with v1 names, 247 `//nolint` | #208 | chore, after B and C |
+| H — ABI honesty | #178 | engineering |
+| I / J — modules hardening, agentd token scopes | #199–#201, #198 | engineering |
+| K — open bugs | #188 #189 #191 #196 #202 | engineering |
+| L — release readiness: tag → goreleaser → `install.sh`, `latest` moving tag, CHANGELOG | #209 | last |
+
+Out of scope for the tag: Phase 2 remainder (#180), deferred (#2 #10 #38),
+cancel/stream (#25 #7), the structural-debt files.
 
 ---
 
@@ -225,7 +254,8 @@ lockfile, and the word "preset" appears nowhere in the binary.
 ## Phase 4 — ABI honesty
 
 Of 66 actions: **31 have no `Diff`, 30 no `Permissions`, 24 no `Reverse`, 23
-have none of the three.** The gaps are on load-bearing actions —
+have none of the three.** (Re-measured 2026-09-07 after the `wait.*` collapse:
+64 actions, 27 / 26 / 31, 19 with none — current numbers live on #178.) The gaps are on load-bearing actions —
 `container`, `container.image`, `tool`, all four `windows.*`, `repo.*`,
 `artifact.*`.
 
