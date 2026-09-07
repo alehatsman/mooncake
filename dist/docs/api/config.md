@@ -286,7 +286,6 @@ Config structures are designed to be read\-only after parsing. The executor clon
 - [type Unarchive](<#type-unarchive>)
 - [type ValidationError](<#type-validationerror>)
   - [func (e *ValidationError) Error() string](<#func-validationerror-error>)
-- [type WaitHTTP](<#type-waithttp>)
 - [type WaitSpec](<#type-waitspec>)
 - [type WindowsFirewallRule](<#type-windowsfirewallrule>)
 - [type WindowsHyperVFirewallRule](<#type-windowshypervfirewallrule>)
@@ -323,7 +322,7 @@ var TasksSearchPaths = []string{
 }
 ```
 
-## func [ActionFieldIndices](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2388>)
+## func [ActionFieldIndices](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2374>)
 
 ```go
 func ActionFieldIndices() []int
@@ -493,7 +492,7 @@ type ArtifactCapture struct {
 }
 ```
 
-## type [ArtifactValidate](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1886-L1894>)
+## type [ArtifactValidate](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1872-L1880>)
 
 ArtifactValidate validates artifacts against constraints \(change budgets\). Designed for LLM agent loops to enforce guardrails on file modifications.
 
@@ -941,7 +940,7 @@ type FirewallRule struct {
 }
 ```
 
-## type [ForEachField](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2232-L2238>)
+## type [ForEachField](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2218-L2224>)
 
 ForEachField holds the value of a Step's \`for\_each\` keyword. It supports two YAML forms:
 
@@ -965,7 +964,7 @@ type ForEachField struct {
 }
 ```
 
-### func \(ForEachField\) [MarshalJSON](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2265>)
+### func \(ForEachField\) [MarshalJSON](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2251>)
 
 ```go
 func (f ForEachField) MarshalJSON() ([]byte, error)
@@ -973,7 +972,7 @@ func (f ForEachField) MarshalJSON() ([]byte, error)
 
 MarshalJSON ensures Validate's json.Marshal → unmarshal → schema\-check round\-trip emits the scalar/sequence form rather than a struct shape.
 
-### func \(ForEachField\) [MarshalYAML](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2256>)
+### func \(ForEachField\) [MarshalYAML](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2242>)
 
 ```go
 func (f ForEachField) MarshalYAML() (interface{}, error)
@@ -981,7 +980,7 @@ func (f ForEachField) MarshalYAML() (interface{}, error)
 
 MarshalYAML emits whichever form is populated \(scalar or sequence\).
 
-### func \(\*ForEachField\) [UnmarshalJSON](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2273>)
+### func \(\*ForEachField\) [UnmarshalJSON](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2259>)
 
 ```go
 func (f *ForEachField) UnmarshalJSON(data []byte) error
@@ -989,7 +988,7 @@ func (f *ForEachField) UnmarshalJSON(data []byte) error
 
 UnmarshalJSON parses either a scalar \(string\) or sequence \(array\) form.
 
-### func \(\*ForEachField\) [UnmarshalYAML](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2241>)
+### func \(\*ForEachField\) [UnmarshalYAML](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2227>)
 
 ```go
 func (f *ForEachField) UnmarshalYAML(unmarshal func(interface{}) error) error
@@ -1066,7 +1065,7 @@ type GitCredentials struct {
 }
 ```
 
-## type [HTTPAuth](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1863-L1870>)
+## type [HTTPAuth](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1849-L1856>)
 
 HTTPAuth is the one\-of credential block for HTTPRequest. Set at most one of Bearer/Basic/Header.
 
@@ -1081,7 +1080,7 @@ type HTTPAuth struct {
 }
 ```
 
-## type [HTTPAuthHeader](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1879-L1882>)
+## type [HTTPAuthHeader](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1865-L1868>)
 
 HTTPAuthHeader is an arbitrary auth header.
 
@@ -1092,7 +1091,7 @@ type HTTPAuthHeader struct {
 }
 ```
 
-## type [HTTPBasicAuth](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1873-L1876>)
+## type [HTTPBasicAuth](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1859-L1862>)
 
 HTTPBasicAuth is the user/pass pair for HTTPAuth.Basic.
 
@@ -1103,7 +1102,7 @@ type HTTPBasicAuth struct {
 }
 ```
 
-## type [HTTPRequest](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1701-L1859>)
+## type [HTTPRequest](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1687-L1845>)
 
 HTTPRequest is the proposal\-16 first\-class HTTP action. Unlike \`file.download\` \(URL→file\+checksum\) and \`observe.http\` \(probe, with an optional \`wait:\` to poll until ready\), HTTPRequest is the general "call an endpoint, capture the response as a fact" primitive — the action \`notify\` and \`llm\` will sit on top of.
 
@@ -1329,7 +1328,7 @@ func (lm *LocationMap) Set(path string, line, column int)
 
 Set stores a position for a given JSON pointer path
 
-## type [LoopContext](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2361-L2369>)
+## type [LoopContext](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2347-L2355>)
 
 LoopContext captures loop iteration metadata
 
@@ -1404,7 +1403,7 @@ func (m *ModuleBinding) UnmarshalYAML(unmarshal func(interface{}) error) error
 
 UnmarshalYAML accepts both the bare\-string form \(\`tq: ".../@v"\`\) and the object form \(\`tq: \{ source: ..., props: \{...\} \}\`\).
 
-## type [ObserveCPU](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1571>)
+## type [ObserveCPU](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1580>)
 
 ObserveCPU is the spec\-60 single\-shot read of CPU utilization \+ load averages. Pulls from the shared internal/metrics collector.
 
@@ -1412,7 +1411,7 @@ ObserveCPU is the spec\-60 single\-shot read of CPU utilization \+ load averages
 type ObserveCPU struct{}
 ```
 
-## type [ObserveCommand](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1612-L1619>)
+## type [ObserveCommand](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1621-L1628>)
 
 ObserveCommand runs a command and reports its exit status as an observation. Found means "exited with ExpectExit" \(default 0\).
 
@@ -1429,7 +1428,7 @@ type ObserveCommand struct {
 }
 ```
 
-## type [ObserveDisk](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1581-L1583>)
+## type [ObserveDisk](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1590-L1592>)
 
 ObserveDisk is the spec\-60 single\-shot read of a filesystem path. Path defaults to "/" if unset. ReadOnly and inode counts are best\-effort \(platform\-dependent\).
 
@@ -1439,7 +1438,7 @@ type ObserveDisk struct {
 }
 ```
 
-## type [ObserveFile](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1597-L1603>)
+## type [ObserveFile](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1606-L1612>)
 
 ObserveFile reads whether a filesystem path exists, and optionally whether its contents contain a substring. Found means "exists" — and, where Contains is set, "exists and matches". Successor to wait.file: add \`wait:\` to poll instead of reading once.
 
@@ -1453,7 +1452,7 @@ type ObserveFile struct {
 }
 ```
 
-## type [ObserveGPU](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1589-L1591>)
+## type [ObserveGPU](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1598-L1600>)
 
 ObserveGPU is the spec\-62 single\-shot read of GPU utilization \+ memory. Wraps the shared internal/metrics collector so /v1/metrics and observe.gpu share one nvidia\-smi/powermetrics sample. Index selects one GPU; unset returns all detected with an aggregate view.
 
@@ -1463,7 +1462,7 @@ type ObserveGPU struct {
 }
 ```
 
-## type [ObserveHTTP](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1540-L1559>)
+## type [ObserveHTTP](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1544-L1563>)
 
 ObserveHTTP is the spec\-59 single\-shot HTTP GET observation. Network\-flagged via Permissions\{Network:true\}. Body sample is capped at 2048 bytes; headers are filtered to CaptureHeaders.
 
@@ -1490,7 +1489,7 @@ type ObserveHTTP struct {
 }
 ```
 
-## type [ObserveLogs](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1626-L1647>)
+## type [ObserveLogs](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1635-L1662>)
 
 ObserveLogs is the spec\-61 single\-shot read of a log source within a time / line window. Exactly one of Path / JournalUnit / Container must be set. Patterns are regexes evaluated line\-by\-line; per\-pattern match counts \+ sample lines \(capped\) are returned in the typed LogObservation.
 
@@ -1516,10 +1515,16 @@ type ObserveLogs struct {
 
     // MaxLines caps the total lines scanned. Default 10000.
     MaxLines int `yaml:"max_lines" json:"max_lines,omitempty"`
+
+    // Wait polls until a pattern matches (or stops matching) instead of
+    // reading once. Each attempt re-reads the window, so `since:` should be
+    // at least as long as `interval:` or a match can fall out of the window
+    // between polls.
+    Wait *WaitSpec `yaml:"wait,omitempty" json:"wait,omitempty"`
 }
 ```
 
-## type [ObserveMemory](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1576>)
+## type [ObserveMemory](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1585>)
 
 ObserveMemory is the spec\-60 single\-shot read of RAM / swap state. Total \+ Used \+ Free \+ Available \+ Swap fields are read directly from /proc/meminfo on Linux, sysctl on macOS.
 
@@ -1543,7 +1548,7 @@ type ObservePort struct {
 }
 ```
 
-## type [ObserveProcess](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1532-L1535>)
+## type [ObserveProcess](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1532-L1539>)
 
 ObserveProcess is the spec\-59 single\-shot read of process state. Selector is either Name \(exact match against process basename\) or Pattern \(regex against full argv\). At least one must be set.
 
@@ -1551,10 +1556,14 @@ ObserveProcess is the spec\-59 single\-shot read of process state. Selector is e
 type ObserveProcess struct {
     Name    string `yaml:"name" json:"name,omitempty"`       // Exact match against process basename
     Pattern string `yaml:"pattern" json:"pattern,omitempty"` // Regex against full argv (alternative to name)
+
+    // Wait polls until a process matches (or stops matching) the selector
+    // instead of reading once.
+    Wait *WaitSpec `yaml:"wait,omitempty" json:"wait,omitempty"`
 }
 ```
 
-## type [ObserveService](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1564-L1567>)
+## type [ObserveService](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1568-L1576>)
 
 ObserveService is the spec\-59 single\-shot read of init\-system service state. systemd on Linux, launchd on macOS, sysv fallback elsewhere. Manager defaults to "auto" \(detect from facts\).
 
@@ -1562,10 +1571,15 @@ ObserveService is the spec\-59 single\-shot read of init\-system service state. 
 type ObserveService struct {
     Name    string `yaml:"name" json:"name"`                 // Service unit name (required)
     Manager string `yaml:"manager" json:"manager,omitempty"` // "systemd" | "launchd" | "auto"
+
+    // Wait polls until the service is active (or stopped) instead of
+    // reading once. Note this polls ACTIVE, not installed — see
+    // ServiceObservation for why Found means active.
+    Wait *WaitSpec `yaml:"wait,omitempty" json:"wait,omitempty"`
 }
 ```
 
-## type [Origin](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2353-L2358>)
+## type [Origin](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2339-L2344>)
 
 Origin tracks source location and include chain for plan traceability
 
@@ -1908,7 +1922,7 @@ type PrintAction struct {
 }
 ```
 
-### func \(\*PrintAction\) [UnmarshalYAML](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1898>)
+### func \(\*PrintAction\) [UnmarshalYAML](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1884>)
 
 ```go
 func (p *PrintAction) UnmarshalYAML(unmarshal func(interface{}) error) error
@@ -2061,7 +2075,7 @@ type RepoTree struct {
 }
 ```
 
-## type [RetryPolicy](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2298-L2304>)
+## type [RetryPolicy](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2284-L2290>)
 
 RetryPolicy controls per\-step retry behavior \(spec\-21\). Replaces the legacy flat Retries \+ RetryDelay fields with a single structured block; future\-compat for backoff strategies.
 
@@ -2242,7 +2256,7 @@ func (s *ShellAction) UnmarshalYAML(unmarshal func(interface{}) error) error
 
 UnmarshalYAML implements custom YAML unmarshaling to support both string and object forms. Supports: shell: "command" AND shell: \{ cmd: "command", interpreter: "bash", ... \}
 
-## type [Step](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1941-L2218>)
+## type [Step](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1927-L2204>)
 
 Step represents a single configuration step that can perform various actions.
 
@@ -2531,7 +2545,7 @@ type Step struct {
 }
 ```
 
-### func \(\*Step\) [Clone](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2516>)
+### func \(\*Step\) [Clone](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2502>)
 
 ```go
 func (s *Step) Clone() *Step
@@ -2539,7 +2553,7 @@ func (s *Step) Clone() *Step
 
 Clone creates a shallow copy of the step.
 
-### func \(\*Step\) [DetermineActionType](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2425>)
+### func \(\*Step\) [DetermineActionType](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2411>)
 
 ```go
 func (s *Step) DetermineActionType() string
@@ -2547,7 +2561,7 @@ func (s *Step) DetermineActionType() string
 
 DetermineActionType returns the action type for this step based on which action field is populated. Returned strings are the modern dot\-namespaced YAML keys \(spec\-21\).
 
-### func \(\*Step\) [RetryAttempts](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2308>)
+### func \(\*Step\) [RetryAttempts](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2294>)
 
 ```go
 func (s *Step) RetryAttempts() int
@@ -2555,7 +2569,7 @@ func (s *Step) RetryAttempts() int
 
 RetryAttempts returns the configured retry\-attempt count, or 0 if no retry policy is set. Helper for the post\-spec\-21 Retry struct.
 
-### func \(\*Step\) [RetryBackoffStrategy](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2329>)
+### func \(\*Step\) [RetryBackoffStrategy](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2315>)
 
 ```go
 func (s *Step) RetryBackoffStrategy() string
@@ -2563,7 +2577,7 @@ func (s *Step) RetryBackoffStrategy() string
 
 RetryBackoffStrategy returns the configured backoff strategy, or "fixed" \(the default\) when unset. The Retry.Backoff field was declared in the schema but never read — \`linear\` and \`exponential\` were silently ignored and every retry slept for the bare delay, defeating the point of backoff for external\-API integrations.
 
-### func \(\*Step\) [RetryDelayDuration](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2317>)
+### func \(\*Step\) [RetryDelayDuration](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2303>)
 
 ```go
 func (s *Step) RetryDelayDuration() string
@@ -2571,7 +2585,7 @@ func (s *Step) RetryDelayDuration() string
 
 RetryDelayDuration returns the configured retry delay string, or "" if no retry policy is set. Helper for the post\-spec\-21 Retry struct.
 
-### func \(\*Step\) [ShouldBecome](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2342>)
+### func \(\*Step\) [ShouldBecome](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2328>)
 
 ```go
 func (s *Step) ShouldBecome() bool
@@ -2579,7 +2593,7 @@ func (s *Step) ShouldBecome() bool
 
 ShouldBecome reports whether the step requests privilege escalation. True iff AsUser is non\-empty \(spec\-21 collapsed become/become\_user\) AND the current process is not already running as the target user. When the current euid is 0 and AsUser targets root \("root" or "0"\), no escalation is needed — short\-circuits sudo invocation so components work in minimal containers \(ubuntu:24.04, alpine:3.21\) that don't ship sudo.
 
-### func \(\*Step\) [Validate](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2461>)
+### func \(\*Step\) [Validate](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2447>)
 
 ```go
 func (s *Step) Validate() error
@@ -2587,7 +2601,7 @@ func (s *Step) Validate() error
 
 Validate checks that the step configuration is valid.
 
-### func \(\*Step\) [ValidateHasAction](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2453>)
+### func \(\*Step\) [ValidateHasAction](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2439>)
 
 ```go
 func (s *Step) ValidateHasAction() error
@@ -2595,7 +2609,7 @@ func (s *Step) ValidateHasAction() error
 
 ValidateHasAction checks that the step has at least one action defined.
 
-### func \(\*Step\) [ValidateOneAction](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2445>)
+### func \(\*Step\) [ValidateOneAction](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2431>)
 
 ```go
 func (s *Step) ValidateOneAction() error
@@ -2808,39 +2822,6 @@ func (e *ValidationError) Error() string
 ```
 
 Error implements the error interface
-
-## type [WaitHTTP](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1651-L1676>)
-
-WaitHTTP waits for an HTTP endpoint to return one of the accepted status codes, optionally with a substring match on the body.
-
-```go
-type WaitHTTP struct {
-    URL          string `yaml:"url" json:"url"`                               // Target URL (required)
-    Method       string `yaml:"method" json:"method,omitempty"`               // HTTP method (default: "GET")
-    Status       []int  `yaml:"status" json:"status,omitempty"`               // Accepted status codes (default: [200])
-    BodyContains string `yaml:"body_contains" json:"body_contains,omitempty"` // Optional substring required in body
-    // Body is the optional request payload sent with every poll —
-    // proposal-10's motivating case is "poll POST /v1/embeddings
-    // with a JSON payload because the service has no GET /healthz."
-    // Goes through the template renderer so `{{ var }}` interpolation
-    // works the same way it does for URL / Headers / BodyContains.
-    // Raw-string shape (vs structured) matches what download:/
-    // pkg.repo: do for inline content and keeps the user in charge
-    // of JSON escaping. Caller is responsible for setting an
-    // appropriate Content-Type header — this action is the polling
-    // primitive, not a JSON client.
-    //
-    // Side-effect note: polling a non-GET endpoint hits the handler
-    // every iteration. The embedding case re-runs inference each
-    // poll. The user is expected to know what they're poking.
-    Body         string            `yaml:"body,omitempty" json:"body,omitempty"`
-    Headers      map[string]string `yaml:"headers" json:"headers,omitempty"`             // Optional request headers
-    Timeout      string            `yaml:"timeout" json:"timeout,omitempty"`             // Total timeout duration (default: "60s")
-    PollInterval string            `yaml:"poll_interval" json:"poll_interval,omitempty"` // Time between requests (default: "1s")
-    // Interval is an alias for PollInterval (MT-42). See WaitPort.
-    Interval string `yaml:"interval,omitempty" json:"interval,omitempty"`
-}
-```
 
 ## type [WaitSpec](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1500-L1513>)
 

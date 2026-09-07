@@ -3,6 +3,7 @@ package observe_process
 import (
 	"os"
 	"testing"
+	"time"
 
 	"github.com/alehatsman/mooncake/internal/actions"
 	"github.com/alehatsman/mooncake/internal/config"
@@ -111,8 +112,8 @@ func TestRun_NoMatch_NotFound(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Run: %v", err)
 	}
-	data := res.(*executor.Result).Data
-	if found, _ := data["found"].(bool); found {
+	r := res.(*executor.Result)
+	if found, _ := r.Data["found"].(bool); found {
 		t.Errorf("expected found=false for nonexistent process")
 	}
 	// MT-61: a missing process is the normal "found=false" answer,
@@ -121,8 +122,64 @@ func TestRun_NoMatch_NotFound(t *testing.T) {
 	// unreadable). Pre-fix the "no matching process" sentinel
 	// leaked into Error, so consumers had to parse the message to
 	// distinguish "the process isn't there" from "we couldn't ask".
-	if errMsg, _ := data["error"].(string); errMsg != "" {
-		t.Errorf("MT-61 regression: Error populated for absent process: %q", errMsg)
+	//
+	// Assert on Result.Error, not Data["error"]: PublishObservation
+	// puts the observation error on the Result and never adds an
+	// "error" key to Data, so a Data lookup here passes vacuously.
+	if r.Error != "" {
+		t.Errorf("MT-61 regression: Error populated for absent process: %q", r.Error)
+	}
+	if r.Failed {
+		t.Error("MT-61 regression: absent process marked the step failed")
+	}
+}
+
+// A wait whose condition never holds fails the step, naming the budget, and
+// still publishes the last observation for a downstream `as:` capture.
+func TestRun_Wait_TimesOutOnAbsentProcess(t *testing.T) {
+	h := &Handler{}
+	step := &config.Step{ObserveProcess: &config.ObserveProcess{
+		Name: "definitely-not-a-real-process-name-xyz-12345",
+		Wait: &config.WaitSpec{For: "150ms", Interval: "50ms"},
+	}}
+	res, err := h.Run(newCtx(t, false), step)
+	if err == nil {
+		t.Fatal("expected the wait to fail when the process never appears")
+	}
+	data := res.(*executor.Result).Data
+	if found, _ := data["found"].(bool); found {
+		t.Error("expected found=false on the last observation")
+	}
+	if _, ok := data["value"].(map[string]any); !ok {
+		t.Error("timed-out wait should still publish the last observation")
+	}
+}
+
+// `until: gone` on a process that is absent right now is satisfied by the
+// first probe, so it returns without burning the budget.
+func TestRun_Wait_UntilGone_ReturnsImmediately(t *testing.T) {
+	h := &Handler{}
+	step := &config.Step{ObserveProcess: &config.ObserveProcess{
+		Name: "definitely-not-a-real-process-name-xyz-12345",
+		Wait: &config.WaitSpec{For: "10s", Interval: "50ms", Until: "gone"},
+	}}
+	start := time.Now()
+	if _, err := h.Run(newCtx(t, false), step); err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	if elapsed := time.Since(start); elapsed > 5*time.Second {
+		t.Errorf("until:gone should return on the first probe, took %s", elapsed)
+	}
+}
+
+func TestValidate_RejectsBadWait(t *testing.T) {
+	h := &Handler{}
+	step := &config.Step{ObserveProcess: &config.ObserveProcess{
+		Name: "nginx",
+		Wait: &config.WaitSpec{For: "not-a-duration"},
+	}}
+	if err := h.Validate(step); err == nil {
+		t.Fatal("expected an unparseable wait budget to fail at validate time")
 	}
 }
 

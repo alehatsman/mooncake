@@ -544,6 +544,11 @@ export interface ObserveLogsAction {
   patterns: string[];
   sample_lines?: number;
   since?: string;
+  wait?: {
+    for: string;
+    interval: string;
+    until: string;
+  };
 }
 
 /**
@@ -576,6 +581,11 @@ export interface ObservePortAction {
 export interface ObserveProcessAction {
   name?: string;
   pattern?: string;
+  wait?: {
+    for: string;
+    interval: string;
+    until: string;
+  };
 }
 
 /**
@@ -585,6 +595,11 @@ export interface ObserveProcessAction {
 export interface ObserveServiceAction {
   manager?: string;
   name: string;
+  wait?: {
+    for: string;
+    interval: string;
+    until: string;
+  };
 }
 
 /**

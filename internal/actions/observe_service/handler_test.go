@@ -64,6 +64,63 @@ func TestRun_NonexistentService_NotFound(t *testing.T) {
 	}
 }
 
+// The reason Found tracks Active rather than Exists: an installed unit that
+// is not running is a real, common state, and it is exactly what a
+// `wait: { until: running }` has to keep polling through. If Found meant
+// Exists, that wait would return immediately and report success for a
+// service that never came up.
+func TestSystemdObservation_InstalledButStopped(t *testing.T) {
+	const stopped = "LoadState=loaded\n" +
+		"ActiveState=inactive\n" +
+		"SubState=dead\n" +
+		"UnitFileState=enabled\n"
+	obs := systemdObservation(stopped)
+	if !obs.Exists {
+		t.Error("a loaded unit exists")
+	}
+	if obs.Active {
+		t.Error("an inactive unit is not active")
+	}
+	if !obs.Enabled {
+		t.Error("UnitFileState=enabled means enabled")
+	}
+	if obs.SubState != "dead" {
+		t.Errorf("sub_state = %q, want dead", obs.SubState)
+	}
+}
+
+func TestSystemdObservation_Running(t *testing.T) {
+	const running = "LoadState=loaded\n" +
+		"ActiveState=active\n" +
+		"SubState=running\n" +
+		"UnitFileState=enabled\n"
+	obs := systemdObservation(running)
+	if !obs.Exists || !obs.Active {
+		t.Errorf("expected exists+active, got %+v", obs)
+	}
+}
+
+func TestSystemdObservation_NotFound(t *testing.T) {
+	obs := systemdObservation("LoadState=not-found\nActiveState=inactive\nSubState=dead\n")
+	if obs.Exists {
+		t.Error("LoadState=not-found means the unit does not exist")
+	}
+	if obs.Active {
+		t.Error("a missing unit is not active")
+	}
+}
+
+func TestValidate_RejectsBadWait(t *testing.T) {
+	h := &Handler{}
+	step := &config.Step{ObserveService: &config.ObserveService{
+		Name: "nginx",
+		Wait: &config.WaitSpec{Until: "purple"},
+	}}
+	if err := h.Validate(step); err == nil {
+		t.Fatal("expected an unknown wait condition to fail at validate time")
+	}
+}
+
 func TestRun_PlanMode_Defers(t *testing.T) {
 	h := &Handler{}
 	step := &config.Step{ObserveService: &config.ObserveService{Name: "anything"}}

@@ -21,6 +21,13 @@ const actionName = "observe.service"
 // ServiceObservation is the typed Value payload for observe.service.
 // Active=running now; Enabled=starts at boot. Both are independently
 // useful and frequently differ (e.g. enabled-but-failed-to-start).
+//
+// Found mirrors Active, NOT Exists. Found is the single condition the
+// `wait:` modifier polls, so it has to be the state a user would wait
+// for: `until: running` must not be satisfied by a unit file that is
+// installed and stopped, which is the exact state a wait exists to sit
+// through. Installation is still observable at `value.exists` — that is
+// why the two are separate fields rather than one.
 type ServiceObservation struct {
 	Exists   bool   `json:"exists"`
 	Active   bool   `json:"active"`
@@ -60,7 +67,7 @@ func (h *Handler) Validate(step *config.Step) error {
 	default:
 		return fmt.Errorf("%s: manager must be one of 'systemd', 'launchd', or 'auto'", actionName)
 	}
-	return nil
+	return actions.ValidateWait(actionName, o.Wait)
 }
 
 func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, error) {
@@ -82,28 +89,51 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		return result, nil
 	}
 
+	// Detect once, outside any poll loop: the init system does not appear
+	// halfway through a wait.
 	mgr := o.Manager
 	if mgr == "" || mgr == "auto" {
 		mgr = autodetectManager()
 	}
-	obs := ServiceObservation{Manager: mgr}
-	var err error
-	switch mgr {
-	case "systemd":
-		obs = observeSystemd(o.Name)
-	case "launchd":
-		obs = observeLaunchd(o.Name)
-	default:
-		err = fmt.Errorf("no supported init system detected on %s", runtime.GOOS)
+	if mgr != "systemd" && mgr != "launchd" {
+		// A missing init system is a permanent condition, so short-circuit
+		// ahead of `wait:`. Polling it would burn the whole budget and then
+		// report a timeout, hiding the actual reason.
+		result.PublishObservation(actions.ObserveResult{
+			Found: false,
+			Value: ServiceObservation{Manager: mgr},
+			AsOf:  time.Now(),
+			Error: fmt.Sprintf("no supported init system detected on %s", runtime.GOOS),
+		}, o.Name)
+		return result, nil
 	}
 
-	env := actions.ObserveResult{
-		Found: obs.Exists,
-		Value: obs,
-		AsOf:  time.Now(),
+	// One attempt, shaped as a closure so the `wait:` modifier can poll it.
+	probeOnce := func() actions.ObserveResult {
+		var obs ServiceObservation
+		if mgr == "systemd" {
+			obs = observeSystemd(o.Name)
+		} else {
+			obs = observeLaunchd(o.Name)
+		}
+		return actions.ObserveResult{
+			// Found tracks Active, not Exists — see ServiceObservation.
+			Found: obs.Active,
+			Value: obs,
+			AsOf:  time.Now(),
+		}
 	}
-	if err != nil {
-		env.Error = err.Error()
+
+	env := probeOnce()
+	if o.Wait != nil {
+		var err error
+		// ObserveWait returns the last observation either way, so a timed-out
+		// wait still publishes real data for a downstream `as:` capture.
+		env, err = actions.ObserveWait(ctx, actionName, o.Name, o.Wait, probeOnce)
+		if err != nil {
+			result.PublishObservation(env, o.Name)
+			return result, err
+		}
 	}
 	result.PublishObservation(env, o.Name)
 	return result, nil
@@ -122,7 +152,6 @@ func autodetectManager() string {
 }
 
 func observeSystemd(name string) ServiceObservation {
-	obs := ServiceObservation{Manager: "systemd"}
 	// `systemctl show <name> --no-page --property=...` returns key=value lines.
 	// Properties:
 	//   LoadState   = loaded / not-found
@@ -135,9 +164,17 @@ func observeSystemd(name string) ServiceObservation {
 		"--property=LoadState,ActiveState,SubState,UnitFileState",
 	).Output()
 	if err != nil {
-		return obs
+		return ServiceObservation{Manager: "systemd"}
 	}
-	props := parseProps(string(out))
+	return systemdObservation(string(out))
+}
+
+// systemdObservation maps `systemctl show` output onto the observation.
+// Split from the exec so the mapping — in particular that Exists and Active
+// are independent — is testable without a live init system.
+func systemdObservation(showOutput string) ServiceObservation {
+	obs := ServiceObservation{Manager: "systemd"}
+	props := parseProps(showOutput)
 	if props["LoadState"] != "" && props["LoadState"] != "not-found" {
 		obs.Exists = true
 	}

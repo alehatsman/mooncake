@@ -73,7 +73,7 @@ func (h *Handler) Validate(step *config.Step) error {
 			return fmt.Errorf("%s: invalid pattern regex: %w", actionName, err)
 		}
 	}
-	return nil
+	return actions.ValidateWait(actionName, o.Wait)
 }
 
 func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, error) {
@@ -97,18 +97,34 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		return result, nil
 	}
 
-	obs, err := findProcess(ctx.Ctx(), o)
-	env := actions.ObserveResult{
-		Found: obs.Running,
-		Value: obs,
-		AsOf:  time.Now(),
+	// One attempt, shaped as a closure so the `wait:` modifier can poll it.
+	probeOnce := func() actions.ObserveResult {
+		obs, err := findProcess(ctx.Ctx(), o)
+		env := actions.ObserveResult{
+			Found: obs.Running,
+			Value: obs,
+			AsOf:  time.Now(),
+		}
+		// MT-61: only surface Error for real probe failures (ps fork
+		// failure, /proc unreadable, etc.). errNoMatch means "no process
+		// matched the selector" — that's the normal Found=false answer,
+		// not a failure to observe.
+		if err != nil && !obs.Running && !errors.Is(err, errNoMatch) {
+			env.Error = err.Error()
+		}
+		return env
 	}
-	// MT-61: only surface Error for real probe failures (ps fork
-	// failure, /proc unreadable, etc.). errNoMatch means "no process
-	// matched the selector" — that's the normal Found=false answer,
-	// not a failure to observe.
-	if err != nil && !obs.Running && !errors.Is(err, errNoMatch) {
-		env.Error = err.Error()
+
+	env := probeOnce()
+	if o.Wait != nil {
+		var err error
+		// ObserveWait returns the last observation either way, so a timed-out
+		// wait still publishes real data for a downstream `as:` capture.
+		env, err = actions.ObserveWait(ctx, actionName, target, o.Wait, probeOnce)
+		if err != nil {
+			result.PublishObservation(env, target)
+			return result, err
+		}
 	}
 	result.PublishObservation(env, target)
 	return result, nil

@@ -1458,6 +1458,21 @@
         },
         "since": {
           "type": "string"
+        },
+        "wait": {
+          "type": "object",
+          "properties": {
+            "for": {
+              "type": "string"
+            },
+            "interval": {
+              "type": "string"
+            },
+            "until": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
         }
       },
       "required": [
@@ -1532,6 +1547,21 @@
         },
         "pattern": {
           "type": "string"
+        },
+        "wait": {
+          "type": "object",
+          "properties": {
+            "for": {
+              "type": "string"
+            },
+            "interval": {
+              "type": "string"
+            },
+            "until": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
         }
       },
       "additionalProperties": false,
@@ -1551,6 +1581,21 @@
         "name": {
           "type": "string",
           "minLength": 1
+        },
+        "wait": {
+          "type": "object",
+          "properties": {
+            "for": {
+              "type": "string"
+            },
+            "interval": {
+              "type": "string"
+            },
+            "until": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
         }
       },
       "required": [

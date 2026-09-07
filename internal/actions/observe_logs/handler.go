@@ -103,7 +103,7 @@ func (h *Handler) Validate(step *config.Step) error {
 	if o.SampleLines < 0 {
 		return fmt.Errorf("%s: sample_lines must be >= 0", actionName)
 	}
-	return nil
+	return actions.ValidateWait(actionName, o.Wait)
 }
 
 func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, error) {
@@ -157,31 +157,65 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		patterns = append(patterns, regexp.MustCompile(p))
 	}
 
-	rdrCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-	lines, truncated, err := readSource(rdrCtx, o, since, maxBytes, maxLines)
+	// One attempt, shaped as a closure so the `wait:` modifier can poll it.
+	// Each attempt re-reads the window: `since:` is relative to now, so a
+	// later poll sees a later slice of the same source.
+	probeOnce := func() actions.ObserveResult {
+		// Derive from the run context so SIGINT aborts a hung journalctl
+		// mid-attempt, not just between attempts.
+		rdrCtx, cancel := context.WithTimeout(ctx.Ctx(), 10*time.Second)
+		defer cancel()
+		lines, truncated, err := readSource(rdrCtx, o, since, maxBytes, maxLines)
 
-	obs := LogObservation{
-		Source:     source,
-		Identifier: identifier,
-		Window:     since.String(),
-		LinesRead:  len(lines),
-		Truncated:  truncated,
-	}
-	if err == nil {
+		obs := LogObservation{
+			Source:     source,
+			Identifier: identifier,
+			Window:     since.String(),
+			LinesRead:  len(lines),
+			Truncated:  truncated,
+		}
+		env := actions.ObserveResult{Value: obs, AsOf: time.Now()}
+		if err != nil {
+			// "Could not look" is a probe failure, not an answer — same
+			// split observe.process makes with errNoMatch. Leaving Found
+			// false here is what keeps `until: gone` honest: an
+			// unreadable log must not read as "the pattern is absent".
+			env.Error = err.Error()
+			return env
+		}
 		obs.Matches = matchLines(patterns, o.Patterns, lines, samples)
+		env.Value = obs
+		// Found means at least one pattern matched inside the window. The
+		// old "the read succeeded" is constant for any readable source,
+		// which would make `wait:` instant by construction.
+		env.Found = totalMatches(obs.Matches) > 0
+		return env
 	}
 
-	env := actions.ObserveResult{
-		Found: err == nil,
-		Value: obs,
-		AsOf:  time.Now(),
-	}
-	if err != nil {
-		env.Error = err.Error()
+	env := probeOnce()
+	if o.Wait != nil {
+		var err error
+		// ObserveWait returns the last observation either way, so a timed-out
+		// wait still publishes real data for a downstream `as:` capture.
+		env, err = actions.ObserveWait(ctx, actionName, target, o.Wait, probeOnce)
+		if err != nil {
+			result.PublishObservation(env, target)
+			return result, err
+		}
 	}
 	result.PublishObservation(env, target)
 	return result, nil
+}
+
+// totalMatches sums the per-pattern counts. Any pattern matching is enough
+// to make the observation "found" — patterns are alternatives to look for,
+// not a conjunction to satisfy.
+func totalMatches(groups []LogMatchGroup) int {
+	n := 0
+	for _, g := range groups {
+		n += g.Count
+	}
+	return n
 }
 
 func classifySource(o *config.ObserveLogs) (kind, identifier string) {
