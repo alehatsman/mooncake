@@ -64,8 +64,8 @@ inputs handlers act on, never mutating the system itself.
 - WHEN facts enter execution, the planner and executor scope merge `Facts.ToMap()`
   into the variable namespace alongside user vars and registered results
   (`internal/plan/planner.go:292`, `internal/executor/scope.go:102`).
-- WHERE the operator runs `mooncake facts`, `factsfmt.DisplayFacts` renders the
-  snapshot as a sectioned, human-readable terminal report
+- WHERE the operator runs `mooncake state facts`, `factsfmt.DisplayFacts` renders
+  the snapshot as a sectioned, human-readable terminal report
   (`internal/factsfmt/factsfmt.go:61`).
 
 ## Non-goals

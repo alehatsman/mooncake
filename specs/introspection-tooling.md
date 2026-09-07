@@ -12,7 +12,6 @@ covers:
   - "cmd/doctor/*.go"
   - "cmd/docs/*.go"
   - "cmd/schema/*.go"
-  - "cmd/query/*.go"
   - "cmd/kernel/explain.go"
 ---
 
@@ -25,9 +24,14 @@ mutating anything. `doctor` audits the install/system/state/project; `explain`
 answers typed questions about a noun (action verb, run, resource, op); `docs`
 emits action documentation from the live registry; `schema` exports JSON
 Schema / OpenAPI / TypeScript from the same metadata so editors and validators
-stay in sync; `query` extracts a value from a JSON/YAML file by dotted path with
-agent-friendly exit codes. All of these derive their output from the action
-registry, embedded schema, and on-disk state — never from the network.
+stay in sync. All of these derive their output from the action registry,
+embedded schema, and on-disk state — never from the network.
+
+The dotted-path extraction that used to be a standalone `mooncake query`
+CLI verb was removed in the Phase 1 CLI regroup (`341b5f6f`); the engine
+(`internal/pathquery`, `internal/queryio`) survives as `read.json`/
+`read.yaml` action handlers and the MCP `query_file` tool — see
+`mcp-server.md` for that contract.
 
 ## Behavior
 - WHEN `mooncake doctor` runs, it SHALL execute a fixed catalogue of checks
@@ -59,12 +63,6 @@ registry, embedded schema, and on-disk state — never from the network.
 - WHEN `mooncake schema validate --schema <f>` runs, it SHALL regenerate the
   current schema with the same `--strict`/`--extensions` settings, byte-compare
   via the same writer, and exit 1 when out of date.
-- WHEN `mooncake query <file> <path>` runs, it SHALL auto-detect format from
-  extension (override `--as`), validate the dotted/bracketed path, read within
-  `--max-bytes` (default 4 MiB), and print scalars raw / structured values as
-  JSON (`--pretty` indents).
-- WHEN `query` resolves, it SHALL exit 0 on a found value, 1 on a path miss
-  (file parsed, key absent), and 2 on an unreadable/oversize/parse error.
 
 ## Non-goals
 - Any state mutation — every command here is read-only / generate-to-output;
@@ -73,8 +71,9 @@ registry, embedded schema, and on-disk state — never from the network.
   owned by the actions / config-model specs.
 - `explain` wave-2 run/resource/op resolution and the MCP `explain` tool wiring
   (declared but not the CLI surface here).
-- General dotted-path semantics shared with `read.json`/`read.yaml` action
-  handlers (this spec covers only the `query` CLI over that path engine).
+- The dotted-path engine itself and its `read.json`/`read.yaml` action
+  handlers and MCP `query_file` tool — owned by the actions spec and
+  `mcp-server.md` respectively, not this one.
 
 ## Checklist
 - [x] `doctor` fixed check catalogue across 7 sections with OK/info/warn/error +
@@ -89,6 +88,3 @@ registry, embedded schema, and on-disk state — never from the network.
   `--strict`.
 - [x] `schema validate` regenerate-and-byte-compare with matching flags; exit 1
   out of date.
-- [x] `query` format auto-detect (`--as`), path validation, `--max-bytes` bound,
-  scalar-raw / JSON (`--pretty`) output.
-- [x] `query` agent exit codes: 0 found, 1 path-miss, 2 read/parse error.

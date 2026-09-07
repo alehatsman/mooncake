@@ -114,7 +114,8 @@ would wait for, not the easiest boolean the probe has to hand.
   MUST NOT be satisfied by the second.
 
 ## Non-goals
-- `mooncake facts` / `state` / `metrics` CLI reads, and `fleet observe` fan-out.
+- `mooncake state` / `state facts` / `state metrics` CLI reads, and
+  `fleet observe` fan-out.
   Both should route through these handlers rather than reimplementing them, but
   that is the remainder of #180 and not this spec's contract.
 - Threshold waits (`until: cpu < 50%`). `until:` polls the handler's single

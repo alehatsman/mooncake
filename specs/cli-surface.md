@@ -114,7 +114,7 @@ was wrong on two counts, both found by checking consumers before writing code:
 ## Checklist
 - [ ] Every top-level command declares a `Category`; help renders tiers.
 - [ ] `dev` parent command, `Hidden`, carrying `docs` / `schema` / `selfbuild`.
-- [ ] `apply --dry-run` removed; passing it is a usage error naming `plan`.
+- [x] `apply --dry-run` removed; passing it is a usage error naming `plan`.
 - [ ] `step` retained in the `Run` tier with its flat JSON contract and
       `--dry-run` intact — moongit's CI runner execs it.
 - [ ] `mooncake state` composite snapshot with `--budget` / `--diff` / `--save`.
@@ -123,7 +123,7 @@ was wrong on two counts, both found by checking consumers before writing code:
       `snapshot` top-level commands removed.
 - [ ] `--format json` on `drift inspect`, `tool list`, `mod cache list`,
       `cron list`, `vault list`, `vault recipients list`.
-- [ ] `mooncake query` removed; `internal/pathquery` retained for `read.*`.
+- [x] `mooncake query` removed; `internal/pathquery` retained for `read.*`.
 - [ ] `tasks.yml`, `mgitci.yml`, and `scripts/` updated to the new spellings in
       the same commit — no aliases means no grace period.
 - [ ] A test asserts the top-level command set and their categories, so the
