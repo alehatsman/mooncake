@@ -27,15 +27,20 @@ import (
 	"sort"
 
 	"github.com/urfave/cli/v2"
+
+	"github.com/alehatsman/mooncake/cmd/cmdutil"
 	"gopkg.in/yaml.v3"
 
 	"github.com/alehatsman/mooncake/internal/modules"
+
+	"github.com/alehatsman/mooncake/cmd/kernel"
 )
 
 func Command() *cli.Command {
 	return &cli.Command{
-		Name:  "mod",
-		Usage: "Manage Git-native component modules",
+		Name:     "mod",
+		Category: kernel.CategoryManage,
+		Usage:    "Manage Git-native component modules",
 		Subcommands: []*cli.Command{
 			modAddCommand(),
 			modCacheCommand(),
@@ -70,6 +75,7 @@ func modCacheCommand() *cli.Command {
 			{
 				Name:   "list",
 				Usage:  "List cached modules",
+				Flags:  []cli.Flag{cmdutil.FormatFlag()},
 				Action: runModCacheList,
 			},
 			{
@@ -130,20 +136,45 @@ func runModAdd(c *cli.Context) error {
 	return nil
 }
 
-func runModCacheList(_ *cli.Context) error {
+// modCacheListResult is the JSON shape of `mod cache list --format json`.
+// Root is included because "which cache am I looking at" is the first
+// question when $MOONCAKE_MODULE_CACHE is in play.
+type modCacheListResult struct {
+	Root    string   `json:"root"`
+	Modules []string `json:"modules"`
+	Total   int      `json:"total"`
+}
+
+func runModCacheList(c *cli.Context) error {
+	asJSON, err := cmdutil.WantJSON(c)
+	if err != nil {
+		return err
+	}
 	root, err := cacheRoot()
 	if err != nil {
 		return err
 	}
-	if _, err := os.Stat(root); os.IsNotExist(err) {
-		fmt.Println("(no modules cached)")
-		return nil
-	}
+
 	// Cache layout: <root>/<host>/<owner>/<repo>@<version>/
-	entries, err := walkCache(root)
-	if err != nil {
-		return err
+	var entries []string
+	if _, statErr := os.Stat(root); statErr == nil {
+		entries, err = walkCache(root)
+		if err != nil {
+			return err
+		}
 	}
+
+	if asJSON {
+		// An empty cache is an empty list, never null — a consumer
+		// ranging over it shouldn't have to nil-check.
+		if entries == nil {
+			entries = []string{}
+		}
+		return cmdutil.EmitJSON(modCacheListResult{
+			Root: root, Modules: entries, Total: len(entries),
+		})
+	}
+
 	if len(entries) == 0 {
 		fmt.Println("(no modules cached)")
 		return nil

@@ -212,7 +212,7 @@ func TestCronList_JSON(t *testing.T) {
 	dir := t.TempDir()
 	writeCronFile(t, dir, "backup", "# Managed by mooncake os.cron\n0 2 * * * root /usr/bin/backup.sh\n")
 
-	out, err := run(t, "cron", "list", "--dir", dir, "--json")
+	out, err := run(t, "cron", "list", "--dir", dir, "--format", "json")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -230,7 +230,7 @@ func TestCronList_JSON(t *testing.T) {
 
 func TestCronList_JSONEmpty(t *testing.T) {
 	dir := t.TempDir()
-	out, err := run(t, "cron", "list", "--dir", dir, "--json")
+	out, err := run(t, "cron", "list", "--dir", dir, "--format", "json")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}

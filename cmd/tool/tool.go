@@ -14,6 +14,10 @@ import (
 	"github.com/alehatsman/mooncake/internal/actions/tool/store"
 	"github.com/alehatsman/mooncake/internal/lockfile"
 	"github.com/urfave/cli/v2"
+
+	"github.com/alehatsman/mooncake/cmd/cmdutil"
+
+	"github.com/alehatsman/mooncake/cmd/kernel"
 )
 
 // Command groups the read-only `mooncake tool …` subcommands that
@@ -22,8 +26,9 @@ import (
 // via `mooncake apply` against a config with `tool:` steps.
 func Command() *cli.Command {
 	return &cli.Command{
-		Name:  "tool",
-		Usage: "Inspect tools installed via the tool action",
+		Name:     "tool",
+		Category: kernel.CategoryManage,
+		Usage:    "Inspect tools installed via the tool action",
 		Description: `Read-only inspection of mooncake.lock and the tool install dir.
 
 Tools are installed declaratively via 'mooncake apply' against a config
@@ -62,6 +67,7 @@ func toolListCommand() *cli.Command {
 		Usage: "List tools declared in the nearest mooncake.lock",
 		Description: `Print one row per lock entry: name, version, backend, installed status,
 and absolute bin path. Reads the nearest mooncake.lock (walks up from CWD).`,
+		Flags:  []cli.Flag{cmdutil.FormatFlag()},
 		Action: toolListAction,
 	}
 }
@@ -120,14 +126,31 @@ func toolWhichAction(c *cli.Context) error {
 	return nil
 }
 
+// toolListEntry is one row of `tool list --format json`. It carries the
+// same five columns the text table shows, named so a consumer doesn't
+// have to reverse-engineer the column widths.
+type toolListEntry struct {
+	Name      string `json:"name"`
+	Version   string `json:"version"`
+	Backend   string `json:"backend"`
+	Installed bool   `json:"installed"`
+	Path      string `json:"path,omitempty"`
+}
+
+type toolListResult struct {
+	Lockfile string          `json:"lockfile"`
+	Tools    []toolListEntry `json:"tools"`
+	Total    int             `json:"total"`
+}
+
 func toolListAction(c *cli.Context) error {
-	lock, lockPath, err := loadNearestLockfile()
+	asJSON, err := cmdutil.WantJSON(c)
 	if err != nil {
 		return err
 	}
-	if len(lock.Entries) == 0 {
-		fmt.Fprintln(os.Stderr, "no tools declared in", lockPath)
-		return nil
+	lock, lockPath, err := loadNearestLockfile()
+	if err != nil {
+		return err
 	}
 
 	entries := append([]lockfile.Entry(nil), lock.Entries...)
@@ -138,6 +161,29 @@ func toolListAction(c *cli.Context) error {
 		return entries[i].Version < entries[j].Version
 	})
 
+	if asJSON {
+		out := make([]toolListEntry, 0, len(entries))
+		for _, e := range entries {
+			binPath, _ := locateEntry(c.Context, e)
+			out = append(out, toolListEntry{
+				Name:      e.Name,
+				Version:   e.Version,
+				Backend:   e.Backend,
+				Installed: binPath != "",
+				Path:      binPath,
+			})
+		}
+		return cmdutil.EmitJSON(toolListResult{
+			Lockfile: lockPath, Tools: out, Total: len(out),
+		})
+	}
+
+	// The "nothing declared" notice goes to stderr so the text path
+	// stays greppable too.
+	if len(entries) == 0 {
+		fmt.Fprintln(os.Stderr, "no tools declared in", lockPath)
+		return nil
+	}
 	for _, e := range entries {
 		binPath, _ := locateEntry(c.Context, e)
 		status := "missing"

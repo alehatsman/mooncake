@@ -48,8 +48,9 @@ func runStrictTemplateCheck(configPath string, varsPaths []string) ([]plan.Unres
 // ValidateCommand returns the `mooncake validate` cli.Command.
 func ValidateCommand() *cli.Command {
 	return &cli.Command{
-		Name:  "validate",
-		Usage: "Validate configuration file without executing",
+		Name:     "validate",
+		Category: CategoryInspect,
+		Usage:    "Validate configuration file without executing",
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:    "config",

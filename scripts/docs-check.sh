@@ -20,7 +20,7 @@ DIST="dist/docs"
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 
-"$BIN" docs generate --section all-into-dir --output "$TMP" >/dev/null
+"$BIN" dev docs generate --section all-into-dir --output "$TMP" >/dev/null
 
 if ! diff -r -q "$DIST" "$TMP" >/dev/null 2>&1; then
   echo "✗ Documentation is out of sync!"

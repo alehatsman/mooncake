@@ -15,6 +15,8 @@ import (
 
 	"github.com/urfave/cli/v2"
 
+	"github.com/alehatsman/mooncake/cmd/cmdutil"
+
 	"github.com/alehatsman/mooncake/internal/agentd"
 	"github.com/alehatsman/mooncake/internal/config"
 	"github.com/alehatsman/mooncake/internal/executor"
@@ -22,13 +24,16 @@ import (
 	"github.com/alehatsman/mooncake/internal/pathutil"
 	"github.com/alehatsman/mooncake/internal/plan"
 	"github.com/alehatsman/mooncake/internal/template"
+
+	"github.com/alehatsman/mooncake/cmd/kernel"
 )
 
 // Command returns the top-level `drift` command with its subcommands.
 func Command() *cli.Command {
 	return &cli.Command{
-		Name:  "drift",
-		Usage: "Inspect and report plan-conformance drift (spec-58)",
+		Name:     "drift",
+		Category: kernel.CategoryInspect,
+		Usage:    "Inspect and report plan-conformance drift (spec-58)",
 		Subcommands: []*cli.Command{
 			inspectCommand(),
 		},
@@ -49,10 +54,11 @@ func inspectCommand() *cli.Command {
 				Name:  "state-dir",
 				Usage: "Override agentd state dir (default: platform default)",
 			},
-			&cli.BoolFlag{
-				Name:  "json",
-				Usage: "Emit JSONL (one JSON object per scope) instead of the table",
-			},
+			// `drift inspect` spelled this `--json`; every other read
+			// command uses `--format json` (specs/cli-surface.md). The
+			// JSON body is still JSONL — one object per scope — which
+			// suits a stream of independent verdicts.
+			cmdutil.FormatFlag(),
 		},
 		Action: inspectAction,
 	}
@@ -83,6 +89,10 @@ type scopeVerdict struct {
 }
 
 func inspectAction(c *cli.Context) error {
+	asJSON, err := cmdutil.WantJSON(c)
+	if err != nil {
+		return err
+	}
 	stateDir := c.String("state-dir")
 	if stateDir == "" {
 		cfg, err := agentd.Default(false)
@@ -122,7 +132,7 @@ func inspectAction(c *cli.Context) error {
 		verdicts = append(verdicts, v)
 	}
 
-	if c.Bool("json") {
+	if asJSON {
 		return renderJSON(c, verdicts)
 	}
 	return renderTable(c, verdicts)

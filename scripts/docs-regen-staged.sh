@@ -66,14 +66,14 @@ if ! go build -o "$BIN" ./cmd >/dev/null 2>&1; then
 fi
 
 rm -rf dist/docs && mkdir -p dist/docs
-if ! "$BIN" docs generate --section all-into-dir --output dist/docs >/dev/null 2>&1; then
+if ! "$BIN" dev docs generate --section all-into-dir --output dist/docs >/dev/null 2>&1; then
   echo "  ✗ docs generate failed — fix the generator before committing." >&2
   exit 1
 fi
 
-if ! "$BIN" schema generate --format json       --output internal/config/schema.json --strict >/dev/null 2>&1 || \
-   ! "$BIN" schema generate --format typescript --output internal/config/schema.d            >/dev/null 2>&1 || \
-   ! "$BIN" schema generate --format typescript --output mooncake.d.ts                       >/dev/null 2>&1; then
+if ! "$BIN" dev schema generate --format json       --output internal/config/schema.json --strict >/dev/null 2>&1 || \
+   ! "$BIN" dev schema generate --format typescript --output internal/config/schema.d            >/dev/null 2>&1 || \
+   ! "$BIN" dev schema generate --format typescript --output mooncake.d.ts                       >/dev/null 2>&1; then
   echo "  ✗ schema generate failed — fix the generator before committing." >&2
   exit 1
 fi

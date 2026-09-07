@@ -12,11 +12,13 @@ import (
 	"github.com/alehatsman/mooncake/internal/factsfmt"
 )
 
-// FactsCommand returns the `mooncake facts` cli.Command.
-func FactsCommand() *cli.Command {
+// factsSubcommand returns `mooncake state facts`. It was the top-level
+// `mooncake facts` until the state-noun collapse (specs/cli-surface.md);
+// the flags and the JSON shape are unchanged.
+func factsSubcommand() *cli.Command {
 	return &cli.Command{
 		Name:  "facts",
-		Usage: "Display system facts",
+		Usage: "Display static host facts",
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:    "format",

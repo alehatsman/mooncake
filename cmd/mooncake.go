@@ -10,7 +10,7 @@ import (
 
 	agentdcmd "github.com/alehatsman/mooncake/cmd/agentd"
 	croncmd "github.com/alehatsman/mooncake/cmd/cron"
-	docscmd "github.com/alehatsman/mooncake/cmd/docs"
+	devcmd "github.com/alehatsman/mooncake/cmd/dev"
 	doctorcmd "github.com/alehatsman/mooncake/cmd/doctor"
 	driftcmd "github.com/alehatsman/mooncake/cmd/drift"
 	fleetcmd "github.com/alehatsman/mooncake/cmd/fleet"
@@ -19,10 +19,6 @@ import (
 	kernelcmd "github.com/alehatsman/mooncake/cmd/kernel"
 	mcpcmd "github.com/alehatsman/mooncake/cmd/mcp"
 	modcmd "github.com/alehatsman/mooncake/cmd/mod"
-	querycmd "github.com/alehatsman/mooncake/cmd/query"
-	schemacmd "github.com/alehatsman/mooncake/cmd/schema"
-	selfbuildcmd "github.com/alehatsman/mooncake/cmd/selfbuild"
-	snapshotcmd "github.com/alehatsman/mooncake/cmd/snapshot"
 	stepcmd "github.com/alehatsman/mooncake/cmd/step"
 	taskcmd "github.com/alehatsman/mooncake/cmd/task"
 	toolcmd "github.com/alehatsman/mooncake/cmd/tool"
@@ -33,6 +29,9 @@ import (
 var version = "dev"
 
 func createApp() *cli.App {
+	// Order the help tiers before urfave renders them; see cmd/help.go.
+	installTieredHelp()
+
 	app := &cli.App{
 		Name:                 "mooncake",
 		Usage:                "Space fighters provisioning tool, Chookity!",
@@ -48,34 +47,46 @@ func createApp() *cli.App {
 		// already split on commas themselves.
 		DisableSliceFlagSeparator: true,
 
+		// Ordered by tier, matching the Category each command declares.
+		// urfave/cli groups the help listing by Category, so this order
+		// is what an operator reads top-to-bottom. See
+		// specs/cli-surface.md.
 		Commands: []*cli.Command{
+			// Run — change or preview a machine.
+			kernelcmd.ApplyCommand(),
+			kernelcmd.PlanCommand(),
+			taskcmd.Command(),
+			stepcmd.Command(),
+
+			// Inspect — read-only.
+			kernelcmd.StateCommand(),
+			historycmd.Command(),
+			kernelcmd.ExplainCommand(),
+			kernelcmd.ActionsCommand(),
+			driftcmd.Command(),
+			kernelcmd.ValidateCommand(),
+
+			// Fleet — many machines.
+			fleetcmd.Command(),
+
+			// Manage — project and host setup.
 			initcmd.Command(),
 			doctorcmd.Command(),
 			modcmd.Command(),
-			docscmd.Command(),
-			schemacmd.Command(),
-			selfbuildcmd.Command(),
-			snapshotcmd.Command(),
-			historycmd.Command(),
-			mcpcmd.Command(),
-			agentdcmd.Command(),
-			fleetcmd.Command(),
-			driftcmd.Command(),
-			stepcmd.Command(),
-			taskcmd.Command(),
 			toolcmd.Command(),
-			querycmd.Command(),
-			kernelcmd.ApplyCommand(),
-			kernelcmd.PlanCommand(),
-			kernelcmd.FactsCommand(),
-			kernelcmd.ExplainCommand(),
-			kernelcmd.MetricsCommand(),
-			kernelcmd.ActionsCommand(),
-			agentdcmd.RunsCommand(),
-			kernelcmd.AgentCommand(),
-			kernelcmd.ValidateCommand(),
 			vaultcmd.Command(),
 			croncmd.Command(),
+
+			// Daemon — the host daemon and its clients.
+			agentdcmd.Command(),
+			agentdcmd.RunsCommand(),
+			mcpcmd.Command(),
+
+			// Agent — on its way to its own binary.
+			kernelcmd.AgentCommand(),
+
+			// Hidden: maintainer tooling (docs, schema, selfbuild).
+			devcmd.Command(),
 		},
 	}
 

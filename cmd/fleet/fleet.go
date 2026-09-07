@@ -15,6 +15,8 @@ import (
 
 	"github.com/alehatsman/mooncake/internal/fleet"
 	"github.com/alehatsman/mooncake/internal/fleet/transport"
+
+	"github.com/alehatsman/mooncake/cmd/kernel"
 )
 
 // Version is the binary's controller version, stamped at build time by
@@ -39,8 +41,9 @@ func globalFleetFlags() []cli.Flag {
 
 func Command() *cli.Command {
 	return &cli.Command{
-		Name:  "fleet",
-		Usage: "Manage and operate a personal fleet of mooncake peers (experimental)",
+		Name:     "fleet",
+		Category: kernel.CategoryFleet,
+		Usage:    "Manage and operate a personal fleet of mooncake peers (experimental)",
 		Description: "Drive plans across machines you own: discover peers, " +
 			"sync plan trees, apply with multiplexed logs. Peers are configured in " +
 			"~/.config/mooncake/peers.toml. " +

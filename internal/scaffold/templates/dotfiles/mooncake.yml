@@ -3,7 +3,7 @@
 #
 # Variables in mooncake.vars.yml are loaded automatically — no flag needed.
 # Host facts like {{ os }}, {{ arch }}, {{ home }}, {{ package_manager }}
-# resolve at apply time. Run `mooncake facts` to see all of them.
+# resolve at apply time. Run `mooncake state facts` to see all of them.
 
 - name: Ensure ~/.config exists
   file.write:

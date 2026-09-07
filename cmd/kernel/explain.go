@@ -19,6 +19,7 @@ import (
 func ExplainCommand() *cli.Command {
 	return &cli.Command{
 		Name:      "explain",
+		Category:  CategoryInspect,
 		Usage:     "Look up typed information about a mooncake noun (action verb, run, resource, op)",
 		ArgsUsage: "<noun>",
 		Flags: []cli.Flag{

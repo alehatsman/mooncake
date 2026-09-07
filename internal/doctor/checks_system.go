@@ -28,7 +28,7 @@ func (checkFacts) Run(_ Context) Result {
 	r.Message = fmt.Sprintf("os=%s arch=%s distribution=%s package_manager=%s",
 		valueOr(f.OS, "?"), valueOr(f.Arch, "?"),
 		valueOr(f.Distribution, "-"), valueOr(f.PackageManager, "-"))
-	r.Detail = "Use `mooncake facts` for the full list"
+	r.Detail = "Use `mooncake state facts` for the full list"
 	return r
 }
 

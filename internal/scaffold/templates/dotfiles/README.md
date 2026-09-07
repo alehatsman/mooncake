@@ -40,4 +40,4 @@ Files in this scaffold use mooncake template syntax (`{{ os }}`,
 apply time against the host you're running on — so the same playbook
 behaves differently on Linux vs macOS, Arch vs Debian, etc.
 
-Run `mooncake facts` to see every variable available to your templates.
+Run `mooncake state facts` to see every variable available to your templates.

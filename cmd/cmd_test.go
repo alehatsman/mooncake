@@ -82,8 +82,19 @@ func TestCreateApp(t *testing.T) {
 		t.Errorf("app.EnableBashCompletion = false, expected true")
 	}
 
-	// Test commands exist
-	expectedCommands := []string{"init", "doctor", "mod", "docs", "schema", "selfbuild", "snapshot", "history", "mcp", "step", "task", "tool", "apply", "plan", "facts", "explain", "metrics", "actions", "validate", "agent", "agentd", "fleet", "runs", "query", "drift", "vault", "cron"}
+	// Test commands exist. The authoritative tree — names, tiers, and
+	// what was deliberately removed — is pinned in tree_test.go; this
+	// list is the "did the wiring survive" smoke check. `dev` is the
+	// hidden maintainer tier (docs / schema / selfbuild live under it).
+	expectedCommands := []string{
+		"apply", "plan", "task", "step",
+		"state", "history", "explain", "actions", "drift", "validate",
+		"fleet",
+		"init", "doctor", "mod", "tool", "vault", "cron",
+		"agentd", "runs", "mcp",
+		"agent",
+		"dev",
+	}
 	if len(app.Commands) != len(expectedCommands) {
 		t.Errorf("app.Commands length = %d, expected %d", len(app.Commands), len(expectedCommands))
 	}
@@ -194,21 +205,29 @@ func TestPlanCommandFlags(t *testing.T) {
 	}
 }
 
-// TestFactsCommandFlags tests that facts command has all expected flags
-func TestFactsCommandFlags(t *testing.T) {
+// findStateSubcommand resolves `mooncake state <name>` for the tests
+// that used to look up a top-level command.
+func findStateSubcommand(t *testing.T, name string) *cli.Command {
+	t.Helper()
 	app := createApp()
-
-	var factsCmd *cli.Command
 	for _, cmd := range app.Commands {
-		if cmd.Name == "facts" {
-			factsCmd = cmd
-			break
+		if cmd.Name != "state" {
+			continue
 		}
+		for _, sub := range cmd.Subcommands {
+			if sub.Name == name {
+				return sub
+			}
+		}
+		t.Fatalf("state has no %q subcommand", name)
 	}
+	t.Fatal("state command not found")
+	return nil
+}
 
-	if factsCmd == nil {
-		t.Fatal("facts command not found")
-	}
+// TestFactsCommandFlags tests that `state facts` has all expected flags.
+func TestFactsCommandFlags(t *testing.T) {
+	factsCmd := findStateSubcommand(t, "facts")
 
 	expectedFlags := []string{"format"}
 
@@ -637,43 +656,6 @@ func TestValidateCommandConfigFlag(t *testing.T) {
 	}
 }
 
-// TestApplyCommandDryRunFlag asserts that `apply` exposes a --dry-run flag
-// (spec 40) with an `-n` short alias.
-func TestApplyCommandDryRunFlag(t *testing.T) {
-	app := createApp()
-
-	var applyCmd *cli.Command
-	for _, cmd := range app.Commands {
-		if cmd.Name == "apply" {
-			applyCmd = cmd
-			break
-		}
-	}
-	if applyCmd == nil {
-		t.Fatal("apply command not found")
-	}
-
-	var dryRun *cli.BoolFlag
-	for _, flag := range applyCmd.Flags {
-		if f, ok := flag.(*cli.BoolFlag); ok && f.Name == "dry-run" {
-			dryRun = f
-			break
-		}
-	}
-	if dryRun == nil {
-		t.Fatal("apply is missing --dry-run flag")
-	}
-	hasShort := false
-	for _, a := range dryRun.Aliases {
-		if a == "n" {
-			hasShort = true
-		}
-	}
-	if !hasShort {
-		t.Error("apply --dry-run should have -n short alias")
-	}
-}
-
 // TestAppCommandsUsage tests that all commands have proper usage text
 func TestAppCommandsUsage(t *testing.T) {
 	app := createApp()
@@ -873,21 +855,11 @@ func TestPlanCommandFormatFlag(t *testing.T) {
 	}
 }
 
-// TestFactsCommandFormatFlag tests that facts command has format flag with correct default
+// TestFactsCommandFormatFlag tests that `state facts` has a format flag
+// with the correct default. It was the top-level `facts` command until
+// the state-noun collapse (specs/cli-surface.md).
 func TestFactsCommandFormatFlag(t *testing.T) {
-	app := createApp()
-
-	var factsCmd *cli.Command
-	for _, cmd := range app.Commands {
-		if cmd.Name == "facts" {
-			factsCmd = cmd
-			break
-		}
-	}
-
-	if factsCmd == nil {
-		t.Fatal("facts command not found")
-	}
+	factsCmd := findStateSubcommand(t, "facts")
 
 	hasFormat := false
 	for _, flag := range factsCmd.Flags {

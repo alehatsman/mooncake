@@ -22,8 +22,9 @@ import (
 // `run` subcommand.
 func AgentCommand() *cli.Command {
 	return &cli.Command{
-		Name:  "agent",
-		Usage: "Agent operations",
+		Name:     "agent",
+		Category: CategoryAgent,
+		Usage:    "Agent operations",
 		Subcommands: []*cli.Command{
 			{
 				Name:  "run",

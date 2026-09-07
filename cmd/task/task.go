@@ -42,6 +42,7 @@ import (
 func Command() *cli.Command {
 	return &cli.Command{
 		Name:      "task",
+		Category:  kernel.CategoryRun,
 		Usage:     "Run a named task from tasks.yml (or tasks: in mooncake.yml)",
 		ArgsUsage: "[name]",
 		Description: "Without an argument, lists every task defined in the discovered " +

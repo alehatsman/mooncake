@@ -12,6 +12,10 @@ import (
 	"strings"
 
 	"github.com/urfave/cli/v2"
+
+	"github.com/alehatsman/mooncake/cmd/cmdutil"
+
+	"github.com/alehatsman/mooncake/cmd/kernel"
 )
 
 const (
@@ -22,8 +26,9 @@ const (
 // Command returns the `mooncake cron` command tree.
 func Command() *cli.Command {
 	return &cli.Command{
-		Name:  "cron",
-		Usage: "Inspect and manage cron.d entries",
+		Name:     "cron",
+		Category: kernel.CategoryManage,
+		Usage:    "Inspect and manage cron.d entries",
 		Subcommands: []*cli.Command{
 			listCmd(),
 			removeCmd(),
@@ -52,10 +57,7 @@ Exit codes:
 				Value: defaultCronDir,
 				Usage: "Path to cron.d directory",
 			},
-			&cli.BoolFlag{
-				Name:  "json",
-				Usage: "Output as JSON",
-			},
+			cmdutil.FormatFlag(),
 		},
 		Action: runList,
 	}
@@ -71,11 +73,17 @@ type cronEntry struct {
 }
 
 func runList(c *cli.Context) error {
+	// `cron list` spelled this `--json` while every other read command
+	// used `--format json`; one spelling now (specs/cli-surface.md).
+	asJSON, err := cmdutil.WantJSON(c)
+	if err != nil {
+		return err
+	}
 	entries, err := readCronDir(c.String("dir"), c.Bool("all"))
 	if err != nil {
 		return cli.Exit(fmt.Sprintf("cron list: %v", err), 2)
 	}
-	if c.Bool("json") {
+	if asJSON {
 		return printJSON(c, entries)
 	}
 	return printTable(c, entries)

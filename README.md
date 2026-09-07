@@ -49,7 +49,7 @@ go install github.com/alehatsman/mooncake@latest
 mooncake init --template dotfiles
 
 # Preview changes (typed Diff per action, no side effects).
-mooncake apply --dry-run
+mooncake plan
 
 # Apply.
 mooncake apply
@@ -118,7 +118,7 @@ See the full [actions reference](https://mooncake.alehatsman.com/guide/config/ac
 
 **Auto-detected facts**: `{{os}}`, `{{arch}}`, `{{cpu_cores}}`,
 `{{memory_total_mb}}`, `{{distribution}}`, `{{package_manager}}`.
-Run `mooncake facts` to see all.
+Run `mooncake state facts` to see all.
 
 **Control flow**: `when:`, `for_each:`, `for_each_file:`, `tags:`,
 `as_user:`, `--peer-filter tag=os=darwin` for fleet apply.
