@@ -43,6 +43,9 @@ func Command() *cli.Command {
 		Usage:    "Manage Git-native component modules",
 		Subcommands: []*cli.Command{
 			modAddCommand(),
+			modListCommand(),
+			modTidyCommand(),
+			modVerifyCommand(),
 			modCacheCommand(),
 		},
 	}
@@ -196,7 +199,10 @@ func runModCacheClean(_ *cli.Context) error {
 	return os.RemoveAll(root)
 }
 
-func newCLIFetcher() *modules.Fetcher {
+// newCLIFetcher builds the fetcher every `mod` subcommand uses. A var so tests
+// can inject a fixture CloneURL pointing at a local file:// repo, the same
+// seam internal/actions/preset uses for resolverFor.
+var newCLIFetcher = func() *modules.Fetcher {
 	root := os.Getenv("MOONCAKE_MODULE_CACHE")
 	return &modules.Fetcher{Root: root}
 }

@@ -1456,6 +1456,17 @@ func Start(ctx context.Context, startConfig StartConfig, log logger.Logger, publ
 //
 // ctx is checked between steps — see Start for the cancellation
 // contract.
+// planRootDir returns the directory holding the playbook that produced p —
+// the anchor for resolving the module lockfile. Empty when the plan has no
+// root file (inline plans, tests), which resolves to "no lockfile, verify
+// nothing".
+func planRootDir(p *plan.Plan) string {
+	if p == nil || p.RootFile == "" {
+		return ""
+	}
+	return filepath.Dir(p.RootFile)
+}
+
 func ExecutePlan(ctx context.Context, p *plan.Plan, sudoPass string, mode actions.Mode, log logger.Logger, publisher events.Publisher) error {
 	return executePlanWithCapture(ctx, p, sudoPass, mode, log, publisher, nil, nil, nil, false)
 }
@@ -1599,6 +1610,7 @@ func executePlanWithCapture(ctx context.Context, p *plan.Plan, sudoPass string, 
 		Capture:        capture,
 		Ctx:            ctx,
 		Modules:        p.Modules,
+		RootDir:        planRootDir(p),
 		Policy:         policy,
 		Registry:       registry,
 	}

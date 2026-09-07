@@ -188,6 +188,15 @@ type RunServices struct {
 	// into each `use:` of an alias. Empty when the playbook declares no modules.
 	Modules map[string]config.ModuleBinding
 
+	// RootDir is the directory of the playbook that started this run
+	// (filepath.Dir(Plan.RootFile)). The `use:` handler resolves the module
+	// lockfile (mooncake.modules.lock) upward from here, so verification is
+	// anchored to the consumer's playbook rather than to whichever module-cache
+	// dir the currently-executing step happens to live in. Empty for callers
+	// that construct RunServices directly (tests, inline plans); an empty
+	// RootDir means no lockfile is found and nothing is verified.
+	RootDir string
+
 	// Policy is the per-run permissions-as-contract gate (#11). When
 	// non-nil, dispatchRunner checks every step against it before any
 	// side effect — denying disallowed actions, network egress, or

@@ -264,19 +264,13 @@ DispatchStepAction executes the appropriate handler based on step type. All acti
 
 INTERNAL: This function is exported for testing purposes only and is not part of the public API. It may change or be removed in future versions without notice.
 
-## func [ExecutePlan](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/executor.go#L1459>)
+## func [ExecutePlan](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/executor.go#L1470>)
 
 ```go
 func ExecutePlan(ctx context.Context, p *plan.Plan, sudoPass string, mode actions.Mode, log logger.Logger, publisher events.Publisher) error
 ```
 
-ExecutePlan executes a pre\-compiled plan. Emits events through the provided publisher for all execution progress.
-
-Callers that need the typed \*KernelResult substrate \(R1.1b\) should use ExecutePlanWithCapture or go through executor.Start with StartConfig.Capture set; this entry point does not surface the per\-step records.
-
-ctx is checked between steps — see Start for the cancellation contract.
-
-## func [ExecutePlanFull](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/executor.go#L1486>)
+## func [ExecutePlanFull](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/executor.go#L1497>)
 
 ```go
 func ExecutePlanFull(ctx context.Context, p *plan.Plan, sudoPass string, mode actions.Mode, log logger.Logger, publisher events.Publisher, capture *RunCapture, policy *Policy, registry *actions.Registry) error
@@ -284,7 +278,7 @@ func ExecutePlanFull(ctx context.Context, p *plan.Plan, sudoPass string, mode ac
 
 ExecutePlanFull runs a pre\-compiled plan with the full options set: capture, policy, and registry. All three may be nil \(nil capture disables the kernel\-result substrate; nil policy enforces nothing; nil registry uses the process\-wide global\). Used by the SDK's inline\-input execution path so ApplySteps/ApplyConfig/ApplyBytes thread policy and a consumer\-owned registry through the same funnel as Apply.
 
-## func [ExecutePlanWithCapture](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/executor.go#L1475>)
+## func [ExecutePlanWithCapture](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/executor.go#L1486>)
 
 ```go
 func ExecutePlanWithCapture(ctx context.Context, p *plan.Plan, sudoPass string, mode actions.Mode, log logger.Logger, publisher events.Publisher, capture *RunCapture) error
@@ -719,7 +713,7 @@ func (e *EvaluationError) Error() string
 func (e *EvaluationError) Unwrap() error
 ```
 
-## type [ExecutionContext](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/context.go#L247-L328>)
+## type [ExecutionContext](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/context.go#L256-L337>)
 
 ExecutionContext holds per\-scope state for a step sequence. Cloned when entering nested scopes \(includes, loops\); Svc is shared.
 
@@ -810,7 +804,7 @@ type ExecutionContext struct {
 }
 ```
 
-### func \(\*ExecutionContext\) [ActionRegistry](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/context.go#L223>)
+### func \(\*ExecutionContext\) [ActionRegistry](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/context.go#L232>)
 
 ```go
 func (ec *ExecutionContext) ActionRegistry() *actions.Registry
@@ -818,7 +812,7 @@ func (ec *ExecutionContext) ActionRegistry() *actions.Registry
 
 ActionRegistry resolves the run's registry from the shared services, tolerating the nil\-Svc execution contexts that some tests construct directly \(those fall through to the global, matching prior behavior\).
 
-### func \(\*ExecutionContext\) [Clone](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/context.go#L340>)
+### func \(\*ExecutionContext\) [Clone](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/context.go#L349>)
 
 ```go
 func (ec *ExecutionContext) Clone() ExecutionContext
@@ -826,7 +820,7 @@ func (ec *ExecutionContext) Clone() ExecutionContext
 
 Clone creates a new ExecutionContext for a nested execution scope \(include or loop\). Svc is shared by pointer; Scope is deep\-cloned \(User\+Results\); per\-step fields are reset.
 
-### func \(\*ExecutionContext\) [Ctx](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/context.go#L471>)
+### func \(\*ExecutionContext\) [Ctx](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/context.go#L480>)
 
 ```go
 func (ec *ExecutionContext) Ctx() context.Context
@@ -836,7 +830,7 @@ Ctx returns the run\-wide context \(ec.Svc.Ctx\). Handlers reach through this to
 
 Returns context.Background\(\) when Svc or Svc.Ctx is nil — production paths always populate both, but the guard keeps test\-built contexts that skip RunServices construction from panicking. Returning a live \(non\-nil, non\-cancellable\) ctx is safer than nil for handlers that chain WithTimeout / WithCancel onto it.
 
-### func \(\*ExecutionContext\) [Effects](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/context.go#L375>)
+### func \(\*ExecutionContext\) [Effects](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/context.go#L384>)
 
 ```go
 func (ec *ExecutionContext) Effects() actions.Performer
@@ -844,7 +838,7 @@ func (ec *ExecutionContext) Effects() actions.Performer
 
 Effects returns a Performer pre\-bound to the current step's AsUser. Like ec.Privileged\(\), the per\-step binding means handlers don't have to thread step.AsUser through PerformerOpts — the Performer consults its bound state to decide sudo wrap and post\-write chown.
 
-### func \(\*ExecutionContext\) [EmitEvent](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/context.go#L355>)
+### func \(\*ExecutionContext\) [EmitEvent](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/context.go#L364>)
 
 ```go
 func (ec *ExecutionContext) EmitEvent(eventType events.Type, data interface{})
@@ -852,7 +846,7 @@ func (ec *ExecutionContext) EmitEvent(eventType events.Type, data interface{})
 
 EmitEvent publishes an event to all subscribers
 
-### func \(\*ExecutionContext\) [Evaluator](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/context.go#L403>)
+### func \(\*ExecutionContext\) [Evaluator](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/context.go#L412>)
 
 ```go
 func (ec *ExecutionContext) Evaluator() expression.Evaluator
@@ -860,7 +854,7 @@ func (ec *ExecutionContext) Evaluator() expression.Evaluator
 
 Evaluator returns the expression evaluator.
 
-### func \(\*ExecutionContext\) [EventPublisher](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/context.go#L453>)
+### func \(\*ExecutionContext\) [EventPublisher](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/context.go#L462>)
 
 ```go
 func (ec *ExecutionContext) EventPublisher() events.Publisher
@@ -868,7 +862,7 @@ func (ec *ExecutionContext) EventPublisher() events.Publisher
 
 EventPublisher returns the event publisher.
 
-### func \(\*ExecutionContext\) [Logger](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/context.go#L408>)
+### func \(\*ExecutionContext\) [Logger](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/context.go#L417>)
 
 ```go
 func (ec *ExecutionContext) Logger() logger.Logger
@@ -876,7 +870,7 @@ func (ec *ExecutionContext) Logger() logger.Logger
 
 Logger returns the logger.
 
-### func \(\*ExecutionContext\) [MergeUserVars](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/context.go#L438>)
+### func \(\*ExecutionContext\) [MergeUserVars](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/context.go#L447>)
 
 ```go
 func (ec *ExecutionContext) MergeUserVars(vars map[string]interface{})
@@ -886,7 +880,7 @@ MergeUserVars merges the provided key\-value pairs into the user variable scope.
 
 Drops the \`if ec.Svc \!= nil\` guard the pre\-cleanup version carried — every other accessor on ExecutionContext \(EmitEvent, Mode, Effects, Privileged, Template / Evaluator / Logger / EventPublisher\) derefs ec.Svc unconditionally. Svc is always non\-nil in production paths \(Start / executePlanWithCapture sets it on every constructed context\); a future test that builds an EC without Svc panics here exactly the same way it would in any of the peer accessors. Convention drift closed.
 
-### func \(\*ExecutionContext\) [Mode](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/context.go#L366>)
+### func \(\*ExecutionContext\) [Mode](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/context.go#L375>)
 
 ```go
 func (ec *ExecutionContext) Mode() Mode
@@ -894,7 +888,7 @@ func (ec *ExecutionContext) Mode() Mode
 
 Mode returns the current dispatch mode \(ModeApply or ModePlan\).
 
-### func \(\*ExecutionContext\) [Privileged](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/context.go#L387>)
+### func \(\*ExecutionContext\) [Privileged](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/context.go#L396>)
 
 ```go
 func (ec *ExecutionContext) Privileged() *security.Privileged
@@ -902,7 +896,7 @@ func (ec *ExecutionContext) Privileged() *security.Privileged
 
 Privileged returns the spec\-72 Layer C escalation primitive, pre\-bound to the current step's AsUser. Handlers should call ctx.Privileged\(\).Run\(...\) / .Command\(...\) for shell\-outs and let the primitive decide the sudo wrap from the bound AsUser. No per\-call \`become bool\` plumbing; no per\-handler \`step.ShouldBecome\` reads. dispatchRunner sets ec.CurrentAsUser from step.AsUser before calling Run, so each step sees a primitive bound to its own declared identity.
 
-### func \(\*ExecutionContext\) [RegisterResult](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/context.go#L448>)
+### func \(\*ExecutionContext\) [RegisterResult](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/context.go#L457>)
 
 ```go
 func (ec *ExecutionContext) RegisterResult(r *Result, name string)
@@ -910,7 +904,7 @@ func (ec *ExecutionContext) RegisterResult(r *Result, name string)
 
 RegisterResult registers a Result under the given name for use in subsequent steps.
 
-### func \(\*ExecutionContext\) [StepID](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/context.go#L458>)
+### func \(\*ExecutionContext\) [StepID](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/context.go#L467>)
 
 ```go
 func (ec *ExecutionContext) StepID() string
@@ -918,7 +912,7 @@ func (ec *ExecutionContext) StepID() string
 
 StepID returns the current step ID.
 
-### func \(\*ExecutionContext\) [Template](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/context.go#L398>)
+### func \(\*ExecutionContext\) [Template](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/context.go#L407>)
 
 ```go
 func (ec *ExecutionContext) Template() template.Renderer
@@ -926,7 +920,7 @@ func (ec *ExecutionContext) Template() template.Renderer
 
 Template returns the template renderer.
 
-### func \(\*ExecutionContext\) [Variables](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/context.go#L413>)
+### func \(\*ExecutionContext\) [Variables](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/context.go#L422>)
 
 ```go
 func (ec *ExecutionContext) Variables() map[string]interface{}
@@ -1010,7 +1004,7 @@ func (e *FileOperationError) Error() string
 func (e *FileOperationError) Unwrap() error
 ```
 
-## type [LoopContext](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/context.go#L233-L238>)
+## type [LoopContext](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/context.go#L242-L247>)
 
 LoopContext holds the current loop iteration state for a step executing inside a with\_items or with\_filetree loop. It is stored in VariableScope.Loop so ToMap\(\) can inject item/index/first/last without polluting the User map.
 
@@ -1502,7 +1496,7 @@ func (c *RunCapture) Steps() []StepRecord
 
 Steps returns a snapshot of the per\-step records in execution order. The returned slice is owned by the caller; subsequent appends to the capture will not affect it.
 
-## type [RunServices](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/context.go#L124-L207>)
+## type [RunServices](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/context.go#L124-L216>)
 
 RunServices holds the shared, immutable\-after\-construction services and configuration for a mooncake run. One instance is created per run and referenced by all nested ExecutionContexts via pointer.
 
@@ -1574,6 +1568,15 @@ type RunServices struct {
     // into each `use:` of an alias. Empty when the playbook declares no modules.
     Modules map[string]config.ModuleBinding
 
+    // RootDir is the directory of the playbook that started this run
+    // (filepath.Dir(Plan.RootFile)). The `use:` handler resolves the module
+    // lockfile (mooncake.modules.lock) upward from here, so verification is
+    // anchored to the consumer's playbook rather than to whichever module-cache
+    // dir the currently-executing step happens to live in. Empty for callers
+    // that construct RunServices directly (tests, inline plans); an empty
+    // RootDir means no lockfile is found and nothing is verified.
+    RootDir string
+
     // Policy is the per-run permissions-as-contract gate (#11). When
     // non-nil, dispatchRunner checks every step against it before any
     // side effect — denying disallowed actions, network egress, or
@@ -1593,7 +1596,7 @@ type RunServices struct {
 }
 ```
 
-### func \(\*RunServices\) [ActionRegistry](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/context.go#L213>)
+### func \(\*RunServices\) [ActionRegistry](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/context.go#L222>)
 
 ```go
 func (s *RunServices) ActionRegistry() *actions.Registry
@@ -1729,7 +1732,7 @@ type StepValidationError struct {
 func (e *StepValidationError) Error() string
 ```
 
-## type [TxnCompletedChild](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/context.go#L333-L336>)
+## type [TxnCompletedChild](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/context.go#L342-L345>)
 
 TxnCompletedChild captures one body child's step \+ result for later Reverse\(\) consumption. Stored in ExecutionContext.CompletedByTxn — the \*Result field keeps this type out of internal/control.
 

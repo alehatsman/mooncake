@@ -21,6 +21,13 @@ stay correct. Path semantics are deliberate: a fetched component's own assets
 resolve against its origin dir, while its outputs land in the consumer's
 invocation dir.
 
+A Git tag is a *mutable* pointer: the same `@v1.2.0` can resolve to different
+trees on two machines, or on the same machine a month apart. `mooncake.modules.lock`
+closes that hole. It records a content hash per module reference, and a run that
+finds a lockfile verifies every module it resolves against it. Absent a lockfile
+nothing verifies and behavior is unchanged — the lockfile is opt-in, created by
+`mooncake mod tidy`.
+
 ## Behavior
 - WHEN a reference `<host>/<owner>/<repo>[/<subpath>]@<version>` is parsed, the
   version SHALL be required and a reference without `@<version>`, with an empty
@@ -60,13 +67,57 @@ invocation dir.
   dir, its `file.*` source paths SHALL resolve against the module origin dir,
   and its `file.*` destination paths SHALL resolve against the invocation dir.
 
+### Lockfile
+
+- WHERE a module lockfile is written, its name SHALL be
+  `mooncake.modules.lock`. It SHALL NOT be `mooncake.lock`, which is already
+  owned by the `tool` action (`internal/lockfile`) for tool-install pinning;
+  two unrelated lockfiles sharing one filename would silently clobber each
+  other.
+- WHEN a module tree is hashed, the hash SHALL be `h1:<base64(sha256(summary))>`
+  where the summary is, for every regular file under the cache dir sorted by
+  slash-separated relative path, the line `<sha256-hex>  <relpath>\n`. The
+  `.git` directory SHALL be excluded; non-regular entries (symlinks, devices,
+  sockets) SHALL be excluded.
+- WHERE a reference carries a subpath, the hash SHALL cover the whole cached
+  repo (`<cache>/<host>/<owner>/<repo>@<version>`), not the subpath, and the
+  lock entry SHALL be keyed by `<host>/<owner>/<repo>@<version>` — one cache
+  dir, one hash, one entry, however many subpaths reference it.
+- WHEN the lockfile is saved, entries SHALL be sorted by ref so the file is
+  byte-deterministic and diffs are reviewable, and the write SHALL be atomic
+  (temp file + rename).
+- WHEN a lockfile is present for a run, every module the resolver fetches SHALL
+  be verified: a hash mismatch SHALL abort with both hashes named, and a
+  reference absent from the lockfile SHALL abort telling the operator to run
+  `mooncake mod tidy`.
+- WHERE no lockfile is found, no verification SHALL occur and resolution SHALL
+  behave exactly as it did before the lockfile existed.
+- WHEN `mooncake mod tidy` runs, it SHALL fetch every reference in the
+  playbook's `modules:` block, write their current hashes to
+  `mooncake.modules.lock` next to that playbook, and drop entries no longer
+  referenced.
+- WHEN `mooncake mod verify` runs, it SHALL re-hash every locked module from
+  the local cache without cloning, report each as ok/mismatch/missing, and exit
+  non-zero if any is not ok.
+- WHEN `mooncake mod list` runs, it SHALL print each alias in the playbook with
+  its ref, whether it is cached, and whether it is locked; `--format json` SHALL
+  emit the same as structured data.
+
 ## Non-goals
 - Component execution, the planner's per-step `component_dir`/`invocation_dir`
   overlay, and action semantics — owned by the execution-engine spec.
 - The `modules:`/`use:`/`props:` document grammar — owned by the config-model
   spec.
-- A central registry, version-range resolution, or lockfile pinning beyond an
-  explicit tag (references are exact tags only).
+- A central registry or version-range resolution. References stay exact tags;
+  the lockfile pins the *tree behind* a tag, it does not resolve ranges.
+- File modes in the hash. The `h1:` summary covers path + content only, matching
+  Go's `dirhash`; a module that flips only an executable bit hashes the same.
+  Tracked as a known limitation, not a silent one.
+- Recording the resolved commit SHA. The tree hash is the thing that matters for
+  reproducibility and it works for subpath modules; a SHA would need an extra
+  `git rev-parse` per fetch to buy nothing more.
+- `mooncake mod init` (#46) — a new-project scaffold, gated on an external
+  skeleton module publishing. Unrelated to lock verification.
 - Preserving comments/key order when rewriting the `modules:` block on `add`
   (yaml.v3 round-trip rewrites the file; acceptable for phase 1).
 
@@ -84,7 +135,11 @@ invocation dir.
 - [x] `mooncake mod add` upserts `modules:` block; `cache list`/`cache clean`.
 - [x] Component shell cwd = invocation dir; `file.*` src = origin-relative,
   dest = invocation-relative (M2, #43).
-- [ ] DRIFT (#50): a module component's `file.copy` `dest:` that is RELATIVE and
-  contains a subdir resolves against the module cache/origin dir instead of the
-  invocation dir, despite M2; absolute (`{{ invocation_dir }}/…`) and bare
-  relative dests land correctly.
+- [x] Relative `dest:` containing a subdir resolves against the invocation dir,
+  not the module cache dir (#50, fixed in `294b076f`: `ExpandStepsWithContext`
+  now sets `FromComponent: true` — `internal/plan/planner.go:232,839`).
+- [x] `mooncake.modules.lock`: `h1:` tree hash, sorted deterministic save,
+  atomic write; name guarded against colliding with the `tool` lockfile.
+- [x] Verify-on-resolve when a lockfile is present; no-op when absent; a
+  present-but-corrupt lockfile fails rather than degrading to unverified.
+- [x] `mooncake mod tidy` / `verify` / `list`, each with `--format json`.

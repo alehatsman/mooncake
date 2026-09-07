@@ -233,7 +233,35 @@ var resolverFor = func(ec *executor.ExecutionContext) *modules.Resolver {
 	return &modules.Resolver{
 		Fetcher: &modules.Fetcher{},
 		Modules: sources,
+		Lock:    runLock(ec),
 	}
+}
+
+// runLock loads the module lockfile for this run, anchored at the consumer
+// playbook's dir (never ec.CurrentDir, which is the module-cache dir for a
+// step inside a fetched component). A missing lockfile yields nil and verifies
+// nothing.
+//
+// A malformed lockfile is a hard stop, not a warning: degrading "the lockfile
+// is corrupt" into "run unverified" would defeat the point of having one. The
+// error surfaces on the next Resolve call, which is where the operator can act
+// on it.
+func runLock(ec *executor.ExecutionContext) *modules.Lock {
+	if ec == nil || ec.Svc == nil || ec.Svc.RootDir == "" {
+		return nil
+	}
+	path := modules.FindLock(ec.Svc.RootDir)
+	if path == "" {
+		return nil
+	}
+	lock, err := modules.LoadLock(path)
+	if err != nil {
+		// Surface as a lock that fails every verification, so the operator
+		// gets the parse error at the point of use rather than a silent
+		// unverified run.
+		return modules.BrokenLock(err)
+	}
+	return lock
 }
 
 // resolveAndExpand resolves a remote or alias `use:` reference, then expands
