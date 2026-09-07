@@ -65,6 +65,60 @@ broken.
    docs.
 3. **Full CLI regroup, no deprecation aliases.**
 
+## 3. Triage (2026-09-07, late session) — pipedream vs engineering
+
+A second pass over the gap list, with one test: does a solo operator with a
+personal fleet hit this on a Saturday. Anything that only makes sense with a
+second user, a second module author, or an enterprise hub is not built.
+
+### Cut (closed on moongit, reopen only against a concrete user)
+
+| Idea | Why not | Issue |
+|---|---|---|
+| Fleet-wide desired state + reconcile loop | Kubernetes for five machines. `fleet apply` + cron'd `drift` covers it. | (never filed) |
+| Capability-scoped tokens, expiry, per-caller policy | Enterprise identity layer. The real gap is two scopes, see below. | (never filed) |
+| Component provides/requires contracts, collision detection | A type system for infrastructure; the hardest part of every tool that tried. Cross-module deps stay a hard no. | (never filed) |
+| Approval as a run state over MCP | Harnesses already gate tool calls. A second gate inside mooncake duplicates the harness. | (never filed) |
+| Sandboxed `plan --simulate` | Check paths are cheap. Solves a problem nobody has. | (never filed) |
+| Runtime `plan:` sub-plan step | Composition primitive with no consumer. | #17 closed |
+| `mcp_tool` action (kernel calls MCP) | The "runtime agents live inside" product. Goes with #182 if anywhere. | #12 closed |
+| SDK `Session` handle | Sugar over a surface with one consumer. | #146 closed |
+| `mod init` scaffold | Needs a second module author. | #46 closed |
+| Fleet-level REST hub with plan-first enforcement | agentd already serves HTTP+SSE per peer; the hub is the unvalidated ring. | #152 closed |
+| `mooncake watch` hot-reload | Dev-server pattern; playbooks are run, not watched. | #21 closed |
+
+### Build (cheap, and a real user hits it)
+
+| Work | Why | Issue |
+|---|---|---|
+| ABI honesty | The README lies about half the actions. Correctness, not a feature. | #178 |
+| Two agentd token scopes (read / write) | One leaked observe token is root on every peer. One afternoon. | #198 |
+| `index.yml` `mooncake_version` constraint | The first shared module breaks on the first schema change. | #199 |
+| `mod outdated` / `mod update` | The pin is write-once. | #200 |
+| `mod verify --require-lock` | CI trusts the tag when the lock is missing. Ten lines. | #201 |
+| Cancel + streaming | A run an agent cannot stop is a run it should not start. | #25, #7 |
+| The agent split | Every cut idea above came from the second product still living in the tree. | #182 |
+
+Already shipped, dropped from the wish list: durable plan with a content hash.
+`plan --save` + `apply --from-plan` + `input_files_hash` + stale-plan
+refusal (`internal/plan/plan.go:24`) is that story.
+
+### Deferred (labelled `deferred` on moongit; real, not now)
+
+- Deterministic replay (#10) — right idea, needs a bounded journal first (#176).
+- Fleet drift (#2) — fan-out over per-host `drift` after #180; not a reconcile loop.
+- Module discovery / `share` (#38) — after #199–#201, and after a second author.
+- One event schema across CLI and agentd — do it when a concrete consumer breaks.
+- Fleet plan preview (per-peer would-change) — falls out of drift.
+
+### Decisions recorded, no build
+
+- SSH-transport peers stay bootstrap + diagnostics only (`specs/fleet.md:72`).
+  The half-support banners across exec/ps/watch/logs are the cost of that
+  decision; not filing a feature to change it.
+- `MODULES.md` and `internal/modules/README.md` overlap; fold one into the
+  other when Phase 3 closes, not before.
+
 ---
 
 ## Phase 0 — stop the bleeding
@@ -235,3 +289,13 @@ Phase 0 first and alone — it is all broken promises, and none of it needs a
 spec. Then 1 → 3 → 2 → 4, with 5 running in parallel whenever moongit can take
 the migration. Phase 3 before 2 because module distribution is the validated
 user-facing gap; the observe/wait collapse is internal hygiene.
+
+Revised after the §3 triage (Phases 0, 1 and the core of 3 are done):
+
+1. #178 ABI honesty.
+2. The four cheap ones: #198 token scopes, #199 version constraint,
+   #200 `mod update`, #201 `--require-lock`.
+3. #25 cancel, #7 streaming.
+4. #182 the split.
+5. Phase 2 (state collapse) and the deferred list, in that order, only when
+   something concrete asks for them.

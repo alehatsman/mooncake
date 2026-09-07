@@ -94,7 +94,10 @@ and undoable.
 - [x] `SystemSnapshot` capture + snapshot `Diff`.
 - [x] `retry` / `timeout` / `continue_on_error` execution controls.
 - [x] Saved-plan and in-memory-plan apply paths.
-- [ ] Plan signing (Sigstore) — unbuilt (VISION stream 2).
-- [ ] Policy/egress DSL (`deny:` over Permissions/Diff) — unbuilt (VISION
-  stream 2).
-- [ ] Deterministic replay command — unbuilt (VISION stream 2).
+- Plan signing (Sigstore) — cut 2026-09-07 with the agent-developer
+  audience (`docs-working/vision/goals.md`). Saved-plan integrity is the
+  `input_files_hash` + stale-plan check already shipped; that is enough.
+- Policy/egress DSL (`deny:` over Permissions/Diff) — cut 2026-09-07.
+  Harness-level approval owns this; `run_plan`'s optional `policy` gate stays.
+- [ ] Deterministic replay command — deferred; blocked on runlog rotation
+  (#176), then #10.

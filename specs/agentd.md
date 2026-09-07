@@ -87,3 +87,5 @@ bearer-auth-gated TCP address.
 - [x] Shared append-only runlog `runs.jsonl` (`internal/runlog/**`, `internal/jsonllog/**`)
 - [x] `mooncake agentd run|bootstrap` + `mooncake runs` CLI (`cmd/agentd/**`)
 - [ ] Per-run cancel endpoint to back `fleet kill` (#25)
+- [ ] Read/write bearer-token scopes; one leaked read token must not be RCE
+  on the peer (#198)

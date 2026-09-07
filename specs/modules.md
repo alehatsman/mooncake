@@ -143,3 +143,8 @@ nothing verifies and behavior is unchanged — the lockfile is opt-in, created b
 - [x] Verify-on-resolve when a lockfile is present; no-op when absent; a
   present-but-corrupt lockfile fails rather than degrading to unverified.
 - [x] `mooncake mod tidy` / `verify` / `list`, each with `--format json`.
+- [ ] `index.yml` `mooncake_version` constraint, refused on mismatch (#199).
+- [ ] `mod outdated` / `mod update <alias> [@tag]` — the only way to move a
+  pin today is a hand edit (#200).
+- [ ] `mod verify --require-lock` + `MOONCAKE_REQUIRE_LOCK=1` so CI fails on
+  an absent lockfile instead of trusting the tag (#201).
