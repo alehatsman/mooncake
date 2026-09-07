@@ -7,7 +7,7 @@ on:
       - 'v*'
 
 env:
-  GO_VERSION: '1.26.3'
+  GO_VERSION: '1.26.8'
 
 permissions:
   contents: write
@@ -55,7 +55,7 @@ jobs:
             "version": "$VERSION",
             "date": "$DATE",
             "repository": "https://github.com/$REPO",
-            "install": "curl -sSL https://raw.githubusercontent.com/$REPO/master/install.sh | sh",
+            "install": "curl -sSL https://raw.githubusercontent.com/$REPO/main/install.sh | sh",
             "checksums_url": "$BASE_URL/checksums.txt",
             "assets": {
               "linux/amd64": "$BASE_URL/mooncake_Linux_x86_64.tar.gz",
