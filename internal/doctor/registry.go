@@ -44,7 +44,7 @@ func registeredChecks() []Check {
 // unresolvable root (no $HOME, no $MOONCAKE_MODULE_CACHE) yields "" and the
 // check reports that rather than failing.
 func moduleCacheRoot() string {
-	root, err := modules.DefaultCacheRoot()
+	root, err := modules.CacheRoot()
 	if err != nil {
 		return ""
 	}

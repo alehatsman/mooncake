@@ -203,15 +203,14 @@ func runModCacheClean(_ *cli.Context) error {
 // can inject a fixture CloneURL pointing at a local file:// repo, the same
 // seam internal/actions/component uses for resolverFor.
 var newCLIFetcher = func() *modules.Fetcher {
-	root := os.Getenv("MOONCAKE_MODULE_CACHE")
-	return &modules.Fetcher{Root: root}
+	// Leave Root empty: the fetcher resolves it through modules.CacheRoot(),
+	// which honors $MOONCAKE_MODULE_CACHE. Reading the env here too would be a
+	// second copy of that precedence, and the copies drifted once already (#194).
+	return &modules.Fetcher{}
 }
 
 func cacheRoot() (string, error) {
-	if r := os.Getenv("MOONCAKE_MODULE_CACHE"); r != "" {
-		return r, nil
-	}
-	return modules.DefaultCacheRoot()
+	return modules.CacheRoot()
 }
 
 // walkCache returns "<host>/<owner>/<repo>@<version>" entries for every

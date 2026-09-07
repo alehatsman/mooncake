@@ -136,3 +136,69 @@ func TestCacheDir_DefaultRoot(t *testing.T) {
 		t.Errorf("CacheDir = %q, want %q", dir, want)
 	}
 }
+
+func TestCacheRoot_EnvOverride(t *testing.T) {
+	t.Setenv(CacheRootEnv, "/tmp/mc-override")
+
+	got, err := CacheRoot()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != "/tmp/mc-override" {
+		t.Errorf("CacheRoot = %q, want /tmp/mc-override", got)
+	}
+}
+
+func TestCacheRoot_FallsBackToDefault(t *testing.T) {
+	t.Setenv(CacheRootEnv, "")
+
+	got, err := CacheRoot()
+	if err != nil {
+		t.Fatal(err)
+	}
+	want, err := DefaultCacheRoot()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != want {
+		t.Errorf("CacheRoot = %q, want the default %q", got, want)
+	}
+}
+
+// The #194 regression: a Fetcher with no explicit Root must resolve through
+// CacheRoot(), not straight to $HOME. It used to ignore the env var, so
+// `mooncake mod` (which honored it) could report on a different cache than the
+// one `task`/`apply` actually filled.
+func TestCacheDir_EmptyRootHonorsEnv(t *testing.T) {
+	t.Setenv(CacheRootEnv, "/tmp/mc-from-env")
+
+	f := &Fetcher{}
+	dir, err := f.CacheDir(Reference{
+		Host: "github.com", Owner: "o", Repo: "r", Version: "v1",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := "/tmp/mc-from-env/github.com/o/r@v1"
+	if dir != want {
+		t.Errorf("CacheDir = %q, want %q", dir, want)
+	}
+}
+
+// Precedence, pinned: an explicitly-set Root beats the env var. Callers that
+// pass a Root (tests, embedders) mean it.
+func TestCacheDir_ExplicitRootBeatsEnv(t *testing.T) {
+	t.Setenv(CacheRootEnv, "/tmp/mc-from-env")
+
+	f := &Fetcher{Root: "/tmp/mc-explicit"}
+	dir, err := f.CacheDir(Reference{
+		Host: "github.com", Owner: "o", Repo: "r", Version: "v1",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := "/tmp/mc-explicit/github.com/o/r@v1"
+	if dir != want {
+		t.Errorf("CacheDir = %q, want %q", dir, want)
+	}
+}

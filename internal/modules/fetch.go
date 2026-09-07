@@ -25,7 +25,26 @@ func scrubGitEnv(env []string) []string {
 	return out
 }
 
-// DefaultCacheRoot is ~/.cache/mooncake/modules.
+// CacheRootEnv overrides the module cache root when set.
+const CacheRootEnv = "MOONCAKE_MODULE_CACHE"
+
+// CacheRoot resolves the module cache root: $MOONCAKE_MODULE_CACHE if set,
+// otherwise DefaultCacheRoot().
+//
+// This is the single resolver. The fetcher, `mooncake mod`, and doctor all go
+// through it so they cannot disagree about which cache is in play — they used
+// to, and the fetcher was the one ignoring the env var, so `mod` could report
+// on an empty directory while `task` filled a different one (#194).
+func CacheRoot() (string, error) {
+	if r := os.Getenv(CacheRootEnv); r != "" {
+		return r, nil
+	}
+	return DefaultCacheRoot()
+}
+
+// DefaultCacheRoot is ~/.cache/mooncake/modules — the fallback when
+// $MOONCAKE_MODULE_CACHE is unset. Prefer CacheRoot() unless you specifically
+// want the default while ignoring the override.
 //
 // Resolved lazily because $HOME may be unset (tests) or differ from the user
 // who started the process (sudo-driven applies).
@@ -44,7 +63,8 @@ func DefaultCacheRoot() (string, error) {
 // "rename-into-place" cache: the loser sees a populated cache directory and
 // short-circuits.
 type Fetcher struct {
-	// Root is the cache root directory. If empty, DefaultCacheRoot() is used.
+	// Root is the cache root directory. If empty, CacheRoot() is used — so an
+	// unset Root still honors $MOONCAKE_MODULE_CACHE.
 	Root string
 
 	// Git is the git binary name or path. If empty, "git" is used.
@@ -99,7 +119,7 @@ func (f *Fetcher) cloneURLFor(ref Reference) string {
 func (f *Fetcher) CacheDir(ref Reference) (string, error) {
 	root := f.Root
 	if root == "" {
-		r, err := DefaultCacheRoot()
+		r, err := CacheRoot()
 		if err != nil {
 			return "", err
 		}

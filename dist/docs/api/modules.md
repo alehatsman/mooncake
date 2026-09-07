@@ -12,6 +12,7 @@ Package modules implements the Git\-native module system from spec\-67. A module
 
 - [Constants](<#constants>)
 - [Variables](<#variables>)
+- [func CacheRoot() (string, error)](<#func-cacheroot>)
 - [func DefaultCacheRoot() (string, error)](<#func-defaultcacheroot>)
 - [func FindLock(startDir string) string](<#func-findlock>)
 - [func HashDir(dir string) (string, error)](<#func-hashdir>)
@@ -49,6 +50,12 @@ Package modules implements the Git\-native module system from spec\-67. A module
 
 ## Constants
 
+CacheRootEnv overrides the module cache root when set.
+
+```go
+const CacheRootEnv = "MOONCAKE_MODULE_CACHE"
+```
+
 HashPrefix labels the hash algorithm. Same shape and same algorithm as Go's dirhash "h1:" so the format is familiar rather than novel: the summary is one "\<sha256\-hex\>  \<relpath\>\\n" line per regular file, sorted by path, and the hash is base64\(sha256\(summary\)\).
 
 ```go
@@ -77,13 +84,23 @@ NowRFC3339 is the clock used for LockedAt. A var so tests can freeze it.
 var NowRFC3339 = defaultNowRFC3339
 ```
 
-## func [DefaultCacheRoot](<https://github.com/alehatsman/mooncake/blob/main/internal/modules/fetch.go#L32>)
+## func [CacheRoot](<https://github.com/alehatsman/mooncake/blob/main/internal/modules/fetch.go#L38>)
+
+```go
+func CacheRoot() (string, error)
+```
+
+CacheRoot resolves the module cache root: $MOONCAKE\_MODULE\_CACHE if set, otherwise DefaultCacheRoot\(\).
+
+This is the single resolver. The fetcher, \`mooncake mod\`, and doctor all go through it so they cannot disagree about which cache is in play — they used to, and the fetcher was the one ignoring the env var, so \`mod\` could report on an empty directory while \`task\` filled a different one \(\#194\).
+
+## func [DefaultCacheRoot](<https://github.com/alehatsman/mooncake/blob/main/internal/modules/fetch.go#L51>)
 
 ```go
 func DefaultCacheRoot() (string, error)
 ```
 
-DefaultCacheRoot is \~/.cache/mooncake/modules.
+DefaultCacheRoot is \~/.cache/mooncake/modules — the fallback when $MOONCAKE\_MODULE\_CACHE is unset. Prefer CacheRoot\(\) unless you specifically want the default while ignoring the override.
 
 Resolved lazily because $HOME may be unset \(tests\) or differ from the user who started the process \(sudo\-driven applies\).
 
@@ -113,7 +130,7 @@ func LockKey(ref Reference) string
 
 LockKey returns the lockfile key for a reference: the cache\-dir identity, with any subpath dropped. One cached repo, one hash, one entry.
 
-## type [Fetcher](<https://github.com/alehatsman/mooncake/blob/main/internal/modules/fetch.go#L46-L63>)
+## type [Fetcher](<https://github.com/alehatsman/mooncake/blob/main/internal/modules/fetch.go#L65-L83>)
 
 Fetcher manages the on\-disk module cache. The zero value uses the default cache root and the system \`git\` binary.
 
@@ -121,7 +138,8 @@ Concurrent fetches of the same reference race for the lock\-free "rename\-into\-
 
 ```go
 type Fetcher struct {
-    // Root is the cache root directory. If empty, DefaultCacheRoot() is used.
+    // Root is the cache root directory. If empty, CacheRoot() is used — so an
+    // unset Root still honors $MOONCAKE_MODULE_CACHE.
     Root string
 
     // Git is the git binary name or path. If empty, "git" is used.
@@ -140,7 +158,7 @@ type Fetcher struct {
 }
 ```
 
-### func \(\*Fetcher\) [CacheDir](<https://github.com/alehatsman/mooncake/blob/main/internal/modules/fetch.go#L99>)
+### func \(\*Fetcher\) [CacheDir](<https://github.com/alehatsman/mooncake/blob/main/internal/modules/fetch.go#L119>)
 
 ```go
 func (f *Fetcher) CacheDir(ref Reference) (string, error)
@@ -148,7 +166,7 @@ func (f *Fetcher) CacheDir(ref Reference) (string, error)
 
 CacheDir returns the absolute cache directory for a module reference. The directory may or may not exist.
 
-### func \(\*Fetcher\) [Fetch](<https://github.com/alehatsman/mooncake/blob/main/internal/modules/fetch.go#L130>)
+### func \(\*Fetcher\) [Fetch](<https://github.com/alehatsman/mooncake/blob/main/internal/modules/fetch.go#L150>)
 
 ```go
 func (f *Fetcher) Fetch(ctx context.Context, ref Reference) (string, error)
@@ -156,7 +174,7 @@ func (f *Fetcher) Fetch(ctx context.Context, ref Reference) (string, error)
 
 Fetch ensures the module identified by ref is present in the cache and returns the absolute directory. A cache hit skips the clone entirely.
 
-### func \(\*Fetcher\) [FetchCached](<https://github.com/alehatsman/mooncake/blob/main/internal/modules/fetch.go#L117>)
+### func \(\*Fetcher\) [FetchCached](<https://github.com/alehatsman/mooncake/blob/main/internal/modules/fetch.go#L137>)
 
 ```go
 func (f *Fetcher) FetchCached(_ context.Context, ref Reference) (string, error)
