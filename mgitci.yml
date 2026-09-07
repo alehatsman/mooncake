@@ -1,4 +1,8 @@
-# mooncake CI — runs the pre-push gate (`mooncake task ci`) on every push.
+# mooncake CI — runs the full `mooncake task ci` gate on every push.
+#
+# This is the ONLY place the full gate runs. Both git hooks (pre-commit and
+# pre-push) run `mooncake task ci-fast`, so a green push says nothing about the
+# 11 stages below — check the run.
 #
 # Schema (moongit internal/ci/ci.go): version "1"; `on.push.branches` gates
 # which refs trigger a run; `jobs` is a DAG wired by `needs`. Each job runs in a
@@ -7,7 +11,7 @@
 # on PATH (plus whatever the steps shell out to). See ci/Dockerfile for the
 # image this job uses (mooncake-ci:latest = moongit-ci-dev + gomarkdoc).
 #
-# `mooncake task ci` is the same 11-step gate the local pre-push hook runs:
+# `mooncake task ci` is the 11-step gate:
 # build + cross-build + test + lint + vuln + docs/schema regen-and-verify +
 # mkdocs + arch-snapshot + budget + dupl + escalation-lint. Its go tooling
 # (golangci-lint/govulncheck/gocyclo/dupl) comes from the shared go-quality
@@ -16,10 +20,28 @@
 # container with an empty module cache resolves it on its own. It did not
 # always: the module used to be pinned at this moongit over plain http, which
 # worked only while the image happened to carry a warm cache (#192).
+#
+# Branch coverage: enumerated rather than "*" so a push does not silently cost a
+# full 11-stage container run on refs nobody meant to gate. The list is the set
+# of conventional prefixes this repo actually uses (`git log --all` branch
+# survey) — extend it when a new one appears. It used to be [main, "feat/*"],
+# which left `fix/*` — the single most-used prefix here — with no CI at all, so
+# a fix could only be exercised server-side by merging it to main, i.e. after
+# the gate that was supposed to check it (#195).
 version: "1"
 on:
   push:
-    branches: [main, "feat/*"]
+    branches:
+      - main
+      - "feat/*"
+      - "fix/*"
+      - "refactor/*"
+      - "chore/*"
+      - "docs/*"
+      - "perf/*"
+      - "test/*"
+      - "specs/*"
+      - "dx/*"
 jobs:
   quality:
     image: mooncake-ci:latest
