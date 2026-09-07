@@ -59,7 +59,6 @@ mooncake init --template dotfiles
   `text.*` actions on existing files
 - `global-variables-example.yml` — global variable scoping
 - `json-output-example.md` — structured JSON CLI output
-- `llm-agent-workflow.yml` — agent-loop pattern
 - `repo-apply-patchset-example.yml` — `repo.patch` workflow
 - `wait-example.yml` — `wait.*` actions
 

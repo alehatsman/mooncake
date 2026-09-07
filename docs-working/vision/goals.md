@@ -131,7 +131,7 @@ the personal-fleet epic are all met.
 ├──────────────────────────────────────────────────────────────┤
 │  L3: Host daemon (agentd) — TCP+SSE, bearer auth, sync       │ ← shipped (personal fleet)
 ├──────────────────────────────────────────────────────────────┤
-│  L2: CLI + MCP server + agent loop                           │ ← shipped
+│  L2: CLI + MCP server                                        │ ← shipped
 ├──────────────────────────────────────────────────────────────┤
 │  L1: Kernel — actions, planner, executor, facts, snapshot    │ ← shipped
 └──────────────────────────────────────────────────────────────┘
@@ -169,3 +169,41 @@ external user has asked for it yet. The next bottleneck is **staying
 inside what's validated** — sharpening provisioning, modules, and
 fleet management for the audience that actually exists — not
 speccing further out on the strength of a good story.
+
+## Why the agent-framework idea was cut
+
+*(Folded 2026-09-07 from `docs-working/vision/agent_framework.md`,
+retired the same day — its own detail, kept here so the reasoning
+isn't lost.)*
+
+The framework thesis was "mooncake as a substrate other agents build
+on": external consumers (moongit, a planned `openclaw`) registering
+their own typed Go handlers, a four-layer cognitive architecture
+(L1 registry / L2 kernel / L3 grounding / L4 reasoning), and a fully
+offline general-purpose agent on top. It had a lighthouse-consumer
+test: moongit was to register a `moongit.issue` typed action pack into
+mooncake's registry, so a moongit-driven agent mutated the issue
+tracker through mooncake's typed, reversible, audited ABI instead of
+shell (moongit #107). That attempt closed the other way:
+
+> "Closing as redundant. moongit now exposes its full surface over
+> MCP. Typed moongit.\* mooncake actions are the long way around — #12
+> (mcp_tool) gives the same coverage generically once it lands."
+
+moongit became an MCP **server** that mooncake (or anything) calls
+*into*, rather than a consumer that imports mooncake and registers
+actions *into* it — the opposite integration direction from the one
+the framework proposed. Neither the `openclaw` reference agent nor the
+L3/L4 grounding split it existed to serve was ever built. The whole
+external-framework narrative was speculative from the start.
+
+Two things that were built on the way to it were re-justified on their
+own merits, independent of any framework story: **registry-as-
+dependency** (#105, the action registry as an injectable `*Registry`
+rather than a package global) stays — it's internal hygiene, cleaner
+DI. The public `sdk/` facade (#106) does not — its only real-world
+justification, `internal/agent`'s iterate-plan-apply loop, left this
+repo the same day (#182), and the facade's one other consumer
+(`examples/notify`) was a demo of that same loop. `sdk/` was deleted
+with it; the typed `Handler` ABI remains how mooncake's own action set
+grows, through the normal spec path, same as before.

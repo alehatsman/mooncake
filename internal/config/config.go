@@ -2036,9 +2036,10 @@ type Step struct {
 	// Action + With dispatch a consumer-registered custom typed handler that
 	// has no dedicated typed Step field above. `action:` names the handler
 	// (it must be registered in the run's action registry — see #105 and
-	// agent_framework.md); `with:` carries its parameters, which the handler
-	// reads off step.With in Run. This is the open extension point the
-	// agent-framework registers into; the built-ins keep their typed fields.
+	// docs-working/vision/goals.md); `with:` carries its parameters, which
+	// the handler reads off step.With in Run. This is the open extension
+	// point a compile-time Go consumer registers into; the built-ins keep
+	// their typed fields.
 	//
 	// Deliberately NOT tagged `action:"..."`: the carrier is resolved by
 	// DetermineActionType's explicit fallback (after the typed-field loop),

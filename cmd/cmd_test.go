@@ -92,7 +92,6 @@ func TestCreateApp(t *testing.T) {
 		"fleet",
 		"init", "doctor", "mod", "tool", "vault", "cron",
 		"agentd", "runs", "mcp",
-		"agent",
 		"dev",
 	}
 	if len(app.Commands) != len(expectedCommands) {

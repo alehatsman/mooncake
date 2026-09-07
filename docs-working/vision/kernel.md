@@ -240,8 +240,9 @@ via the normal spec path for a real, recurring need — built-in,
 in-tree. A Go consumer importing mooncake and registering its own
 compile-time typed handler is technically possible through the same
 ABI, but that's not a pursued direction; see
-[`agent_framework.md`](./agent_framework.md) for why it was explored
-and retired. Either way, what stays forbidden is a runtime-loaded,
+[`goals.md`](./goals.md#why-the-agent-framework-idea-was-cut) for why
+it was explored and retired. Either way, what stays forbidden is a
+runtime-loaded,
 versioned, untyped plugin marketplace — the line is *compile-time +
 typed*, not *no extension at all*.
 
@@ -300,9 +301,10 @@ What does *not* update this doc:
   model. Operational complement to this doc.
 - [`non_goals.md`](./non_goals.md) — the seven explicit refusals.
   Each one protects a column of the comparison table above.
-- [`agent_framework.md`](./agent_framework.md) — the compile-time typed
-  extension point R4 allows in principle, and why the broader "kernel
-  as a framework for building agents" direction was retired.
+- [`goals.md`](./goals.md#why-the-agent-framework-idea-was-cut) — the
+  compile-time typed extension point R4 allows in principle, and why
+  the broader "kernel as a framework for building agents" direction
+  was retired.
 - [`good_lessons_from_other_tools.md`](./good_lessons_from_other_tools.md)
   — what 30 years of provisioning tooling got right.
 - [`bad_lessons_from_other_tools.md`](./bad_lessons_from_other_tools.md)

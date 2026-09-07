@@ -10,11 +10,10 @@ import (
 
 // tierOrder is the order categories appear in `mooncake --help`.
 //
-// urfave/cli sorts VisibleCategories alphabetically, which puts `Agent`
-// — the one tier on its way out of this binary — at the top and `Run`
-// — what an operator actually opened the help for — at the bottom. The
-// tiers are the whole point of the regroup, so the order is stated here
-// rather than left to the alphabet.
+// urfave/cli sorts VisibleCategories alphabetically, which would put
+// `Daemon` above `Run` — what an operator actually opened the help for.
+// The tiers are the whole point of the regroup, so the order is stated
+// here rather than left to the alphabet.
 //
 // A category not listed here still renders, after the listed ones, so a
 // new tier can never silently vanish from help.
@@ -24,7 +23,6 @@ var tierOrder = []string{
 	kernelcmd.CategoryFleet,
 	kernelcmd.CategoryManage,
 	kernelcmd.CategoryDaemon,
-	kernelcmd.CategoryAgent,
 }
 
 // orderedCategories returns the app's visible categories in tierOrder,

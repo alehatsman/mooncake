@@ -248,8 +248,7 @@ To stay inside the kernel discipline from `kernel.md`:
 3. **Does `--prune` imply `--yes`?** Today `apply` confirms once at
    the top. Pruning is higher blast-radius than create/update. Worth
    a second confirmation, especially when ≥ N resources would be
-   pruned. (Borrow the threshold from `internal/agent/confirm.go`
-   logic.)
+   pruned.
 4. **What's the migration story for users with months of
    `runs.jsonl`?** Probably nothing: the reducer just works against
    whatever's there. But if `resource` keys evolved over time

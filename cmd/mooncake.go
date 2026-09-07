@@ -82,9 +82,6 @@ func createApp() *cli.App {
 			agentdcmd.RunsCommand(),
 			mcpcmd.Command(),
 
-			// Agent — on its way to its own binary.
-			kernelcmd.AgentCommand(),
-
 			// Hidden: maintainer tooling (docs, schema, selfbuild).
 			devcmd.Command(),
 		},

@@ -87,7 +87,7 @@ func validateAction(c *cli.Context) error {
 	format := c.String("format")
 
 	// F052: return cli.ExitCoder errors instead of calling os.Exit.
-	// Kernel verbs are embeddable (MCP, SDK, agent loop); a hard
+	// Kernel verbs are embeddable (MCP, agentd); a hard
 	// exit would kill the host process. urfave/cli reads the
 	// ExitCoder's code and exits the CLI process with it, so
 	// operator UX is identical.

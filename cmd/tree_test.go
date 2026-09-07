@@ -10,7 +10,7 @@ import (
 	kernelcmd "github.com/alehatsman/mooncake/cmd/kernel"
 )
 
-// The tree regrew to 26 flat top-level commands with no tiers, six ways
+// The tree regrew to 25 flat top-level commands with no tiers, six ways
 // to execute something, and maintainer build tooling sitting next to
 // `apply`. Pin the shape so it can't drift back (specs/cli-surface.md).
 func TestTopLevelCommandTree(t *testing.T) {
@@ -44,9 +44,6 @@ func TestTopLevelCommandTree(t *testing.T) {
 		"agentd": kernelcmd.CategoryDaemon,
 		"runs":   kernelcmd.CategoryDaemon,
 		"mcp":    kernelcmd.CategoryDaemon,
-
-		// Agent — leaves with the Phase 5 repo split.
-		"agent": kernelcmd.CategoryAgent,
 	}
 
 	app := createApp()
@@ -152,7 +149,7 @@ func TestApplyHasNoDryRunFlag(t *testing.T) {
 }
 
 // The tier order in help is stated, not alphabetical — urfave would put
-// `Agent` first and `Run` last.
+// `Daemon` above `Run`.
 func TestHelpTierOrder(t *testing.T) {
 	installTieredHelp()
 	app := createApp()
@@ -169,7 +166,6 @@ func TestHelpTierOrder(t *testing.T) {
 		kernelcmd.CategoryFleet,
 		kernelcmd.CategoryManage,
 		kernelcmd.CategoryDaemon,
-		kernelcmd.CategoryAgent,
 	}
 	if strings.Join(got, ",") != strings.Join(want, ",") {
 		t.Errorf("tier order = %v, want %v", got, want)

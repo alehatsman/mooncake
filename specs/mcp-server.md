@@ -57,15 +57,15 @@ the same typed funnel as the CLI.
 
 ## Non-goals
 
-- The agent loop that drives an LLM to produce plans — `internal/agent/**`.
+- The agent loop that drives an LLM to produce plans — deleted from this repo
+  (#182), resurfaces in `mooncake-agent` if that split lands.
 - The agent daemon and its run store/HTTP lifecycle — `internal/agentd/**`.
 - The executor, action handlers, and transaction semantics the tools invoke —
   owned by the kernel specs; tools are a thin typed surface over them.
-- The SDK coding-execution surface — the `CodingBackend` interface and its
-  read/write semantics (`Read`/`Grep`/`Glob`/`Edit`/`Write`/`Exec`) are owned by
-  the sdk spec (`specs/sdk.md`, #145). When this server exposes
-  coding-execution tools, they are the JSON-RPC **wire form** of that interface
-  — the same seam serialized over the transport, not a redefinition.
+- A coding-execution surface (`Read`/`Grep`/`Glob`/`Edit`/`Write`/`Exec` over an
+  arbitrary repo) — that was the SDK's `CodingBackend`, deleted with `sdk/`
+  (#182). This server's tools are provisioning verbs, not a general coding
+  agent's file API.
 
 ## Checklist
 

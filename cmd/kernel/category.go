@@ -24,9 +24,4 @@ const (
 
 	// CategoryDaemon holds the long-running host daemon and its clients.
 	CategoryDaemon = "Daemon"
-
-	// CategoryAgent is the LLM agent loop. One command, its own tier,
-	// because it is on its way out of this binary entirely — see the
-	// Phase 5 split in docs-working/plan-2026-09-07-provisioning-focus.md.
-	CategoryAgent = "Agent"
 )

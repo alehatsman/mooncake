@@ -64,9 +64,9 @@ So there is exactly one sanctioned way to add an action: **implement
 the typed `Handler` ABI**, in-tree, via the normal spec path, for a
 real recurring need. (The registry API technically allows an external
 Go binary to import mooncake and register its own compile-time typed
-handler — see [`agent_framework.md`](./agent_framework.md) for why
-that was explored and retired as a direction. It stays *possible*
-without being *pursued*.)
+handler — see [`goals.md`](./goals.md#why-the-agent-framework-idea-was-cut)
+for why that was explored and retired as a direction. It stays
+*possible* without being *pursued*.)
 
 Everything else stays out. **No runtime-loaded plugins** (`.so` / WASM /
 subprocess marketplace), **no versioned third-party provider
@@ -145,7 +145,7 @@ historical referent for each:
 | Never build | Because (which system died from it) |
 |---|---|
 | Manifest compilation layer | Puppet's path to complexity |
-| Runtime plugin marketplace (`.so`/WASM/downloaded) | Terraform provider ecosystem trap — note: *compile-time, typed* `Handler` extension is allowed (see #2 + [`agent_framework.md`](./agent_framework.md)) |
+| Runtime plugin marketplace (`.so`/WASM/downloaded) | Terraform provider ecosystem trap — note: *compile-time, typed* `Handler` extension is allowed (see #2 + [`goals.md`](./goals.md#why-the-agent-framework-idea-was-cut)) |
 | CRD-shaped controller architecture | Kubernetes sprawl |
 | Pure-functional system semantics | Nix usability cliff |
 | Jinja-as-programming-language | Ansible YAML decay |
@@ -183,10 +183,10 @@ invent them:
 - [`action-design-principles.md`](./action-design-principles.md)
   — the 11 design rules for new actions; a per-action restatement of
   many of these non-goals.
-- [`agent_framework.md`](./agent_framework.md) — the compile-time
-  typed extension point #2 allows in principle, and why the broader
-  "mooncake as a framework other agents build on" direction was
-  explored and retired.
+- [`goals.md`](./goals.md#why-the-agent-framework-idea-was-cut) — the
+  compile-time typed extension point #2 allows in principle, and why
+  the broader "mooncake as a framework other agents build on"
+  direction was explored and retired.
 - [`kernel.md`](./kernel.md) — the four typed properties each non-goal
   protects.
 - [`README.md`](./README.md) — stream overview and what's actively

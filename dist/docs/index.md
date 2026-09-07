@@ -87,8 +87,6 @@ Reference for every `mooncake` subcommand and its flags.
 - [actions](cli/actions.md)
 - [actions.list](cli/actions_list.md)
 - [actions.show](cli/actions_show.md)
-- [agent](cli/agent.md)
-- [agent.run](cli/agent_run.md)
 - [agentd](cli/agentd.md)
 - [agentd.bootstrap](cli/agentd_bootstrap.md)
 - [agentd.run](cli/agentd_run.md)

@@ -186,8 +186,8 @@ func run(c *cli.Context) error {
 
 	// R1.1a: orchestration lives in internal/apply. cmd.run is now a
 	// flag-parse + Config-construct + Runner.Run shim. The kernel's
-	// Apply() entry point is callable directly from MCP / agent loop /
-	// future SDK without going through CLI parsing. See
+	// Apply() entry point is callable directly from MCP / agentd
+	// without going through CLI parsing. See
 	// docs-working/vision/kernel.md for the kernel framing.
 	cfg := &apply.Config{
 		ConfigPath:        configPath,
@@ -254,8 +254,8 @@ func mapCancelExit(kr *apply.KernelResult, runErr error) error {
 // runWithSignalCtx wires SIGINT/SIGTERM handling for CLI-launched
 // applies and translates a received signal into the standard exit code
 // (130 for SIGINT, 143 for SIGTERM). Signal handling lives at the CLI
-// layer rather than in apply.Runner — embedded callers (agentd, MCP,
-// future SDK) call apply.Runner directly and drive their own shutdown.
+// layer rather than in apply.Runner — embedded callers (agentd, MCP)
+// call apply.Runner directly and drive their own shutdown.
 //
 // On signal the goroutine cancels the run-wide ctx with
 // executor.ErrCancelSignal (F4) so any in-flight child process gets
