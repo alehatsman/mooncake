@@ -11,10 +11,11 @@
 # build + cross-build + test + lint + vuln + docs/schema regen-and-verify +
 # mkdocs + arch-snapshot + budget + dupl + escalation-lint. Its go tooling
 # (golangci-lint/govulncheck/gocyclo/dupl) comes from the shared go-quality
-# module, fetched from this moongit over plain http; MOONCAKE_MODULE_INSECURE
-# marks the host trusted for that fetch, and tasks.yml pins the module at
-# host.docker.internal:8080 so it resolves from inside the container (127.0.0.1
-# there would mean the container itself).
+# module, fetched from github.com over https (see tasks.yml). The job therefore
+# needs no host trust and no route back to the moongit host — a throwaway
+# container with an empty module cache resolves it on its own. It did not
+# always: the module used to be pinned at this moongit over plain http, which
+# worked only while the image happened to carry a warm cache (#192).
 version: "1"
 on:
   push:
@@ -25,5 +26,3 @@ jobs:
     steps:
       - shell:
           cmd: mooncake task ci
-        env:
-          MOONCAKE_MODULE_INSECURE: host.docker.internal:8080

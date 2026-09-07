@@ -31,14 +31,19 @@ so they are intentionally left out. If you want CI to build the docs site too,
 derive a further image that installs them and point `mgitci.yml`'s `image:` at
 it.
 
-## Module fetch over http
+## Module fetch
 
-`mooncake task ci` pulls the shared `go-quality` module from this moongit over
-plain http. Two things make that work from inside the container, both already
-wired:
+`mooncake task ci` pulls the shared `go-quality` module from
+`github.com/alehatsman/go-quality` over https (pinned in `tasks.yml`). Nothing
+else is wired for it: the job needs no host trust, no `--add-host`, and no route
+back to the moongit host, so a throwaway container with an empty module cache
+resolves it on its own.
 
-- `tasks.yml` pins the module at `host.docker.internal:8080` (not `127.0.0.1`,
-  which in a container is the container itself). The runner adds
-  `--add-host host.docker.internal:host-gateway`, so it resolves to the host.
-- `mgitci.yml` sets `MOONCAKE_MODULE_INSECURE=host.docker.internal:8080` to
-  trust that host for the http clone.
+It used to be pinned at `host.docker.internal:8080/alehatsman/go-quality` and
+fetched from this moongit over plain http, with
+`MOONCAKE_MODULE_INSECURE=host.docker.internal:8080` in `mgitci.yml` to trust
+the host. That only ever worked because the image carried a warm module cache —
+moongit's git endpoints require auth, and a CI container has no credentials to
+answer the challenge with. Rebuilding the image emptied the cache and the gate
+died at stage 1 of 11 (#192). go-quality is mirrored public on GitHub, so
+pinning there removes the dependency instead of re-warming the cache.
