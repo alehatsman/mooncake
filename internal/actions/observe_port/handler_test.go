@@ -189,8 +189,8 @@ func TestCost_ReadOnly(t *testing.T) {
 	if cost.Risk != 1 {
 		t.Errorf("Risk = %d, want 1 (read-only)", cost.Risk)
 	}
-	if !cost.Reversible {
-		t.Errorf("Reversible should be true for observations")
+	if cost.Reversible {
+		t.Errorf("Reversible should be false for observations — a read has nothing to undo")
 	}
 }
 
@@ -205,14 +205,14 @@ func TestPermissions_Network(t *testing.T) {
 	}
 }
 
-func TestReverse_Noop(t *testing.T) {
-	h := &Handler{}
-	step, err := h.Reverse(nil, &config.Step{}, nil)
-	if err != nil {
-		t.Fatalf("Reverse: %v", err)
-	}
-	if step != nil {
-		t.Errorf("expected nil Step (no reverse needed); got %v", step)
+// observe.port must NOT satisfy actions.Reverser. A no-op `return nil, nil`
+// still satisfies the interface, and the registry derives ImplementsReverse
+// from that assertion — which made `actions list` report REVERSE=yes for a
+// pure read. A read has nothing to undo; that is not the same as undoable.
+func TestHandlerIsNotAReverser(t *testing.T) {
+	var h any = &Handler{}
+	if _, ok := h.(actions.Reverser); ok {
+		t.Error("observe.port implements actions.Reverser; it must not")
 	}
 }
 

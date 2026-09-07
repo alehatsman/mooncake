@@ -135,9 +135,20 @@ type CostEstimate struct {
 	// mutated by this step. -1 = unknown / not applicable.
 	Bytes int64 `json:"bytes"`
 
-	// Reversible reports whether the handler implements Reverser
-	// (and would therefore return a non-nil Step from Reverse).
-	// Mirrors what `(h, ok := h.(Reverser)); ok` would report.
+	// Reversible reports whether reversing this step would do something
+	// useful — the signal plan output and transaction tooling want.
+	//
+	// It is NOT the Reverser type assertion, and the two deliberately
+	// disagree in both directions:
+	//
+	//   - git.clone and pkg.upgrade implement Reverser in order to REFUSE
+	//     with an explanatory error, so callers get "this handler declines"
+	//     rather than "this handler is unknown to the ABI". Both report
+	//     Reversible=false.
+	//   - observe.* handlers do not implement Reverser at all — a read has
+	//     nothing to undo — and also report Reversible=false.
+	//
+	// ActionMetadata.ImplementsReverse carries the raw type assertion.
 	Reversible bool `json:"reversible"`
 
 	// Risk is a 1..10 informational band:

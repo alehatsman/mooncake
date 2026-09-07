@@ -173,13 +173,17 @@ func resolveHost(ctx actions.Context, host string) (string, error) {
 
 // --- Spec-22 ABI sub-interfaces (no-mutation specialization) -----------------
 
-// Cost: every observe.* handler reports Risk=1, Reversible=true,
+// Cost: every observe.* handler reports Risk=1, Reversible=false,
 // Resources=0, Bytes=0. Pure read.
+//
+// Reversible mirrors the Reverser type assertion, and observe handlers
+// deliberately do not implement Reverser: a read has nothing to undo, which
+// is not the same as being undoable.
 func (h *Handler) Cost(_ actions.Context, _ *config.Step) (actions.CostEstimate, error) {
 	return actions.CostEstimate{
 		Resources:  0,
 		Bytes:      0,
-		Reversible: true,
+		Reversible: false,
 		Risk:       1,
 	}, nil
 }
@@ -218,10 +222,4 @@ func (h *Handler) Diff(_ actions.Context, step *config.Step) (actions.Diff, erro
 		},
 		Operation: actions.OpNoop,
 	}, nil
-}
-
-// Reverse: pure observation has no inverse. Return (nil, nil) per the
-// Reverser contract for "no reverse needed."
-func (h *Handler) Reverse(_ actions.Context, _ *config.Step, _ actions.Result) (*config.Step, error) {
-	return nil, nil
 }

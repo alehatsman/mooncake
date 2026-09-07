@@ -336,7 +336,7 @@ ObserveValueToMap converts an observe handler's typed Value struct into a map\[s
 
 On marshal failure \(e.g. value contains an unmarshallable type\) returns the original value unchanged. Defensive — observe handlers control their own Value types, so this path should never fire in practice.
 
-## func [PathNeedsSudo](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/handler_abi.go#L272>)
+## func [PathNeedsSudo](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/handler_abi.go#L283>)
 
 ```go
 func PathNeedsSudo(p string) bool
@@ -754,7 +754,7 @@ type Context interface {
 }
 ```
 
-## type [CostEstimate](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/handler_abi.go#L128-L150>)
+## type [CostEstimate](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/handler_abi.go#L128-L161>)
 
 CostEstimate is a coarse, pre\-execution signal of a step's blast radius. Consumed by run\-recap \(averaged risk \+ summed resources\), JSON plan output \(per\-step\), and future policy layers. Not a hard gate — informational unless something downstream chooses to enforce.
 
@@ -769,9 +769,20 @@ type CostEstimate struct {
     // mutated by this step. -1 = unknown / not applicable.
     Bytes int64 `json:"bytes"`
 
-    // Reversible reports whether the handler implements Reverser
-    // (and would therefore return a non-nil Step from Reverse).
-    // Mirrors what `(h, ok := h.(Reverser)); ok` would report.
+    // Reversible reports whether reversing this step would do something
+    // useful — the signal plan output and transaction tooling want.
+    //
+    // It is NOT the Reverser type assertion, and the two deliberately
+    // disagree in both directions:
+    //
+    //   - git.clone and pkg.upgrade implement Reverser in order to REFUSE
+    //     with an explanatory error, so callers get "this handler declines"
+    //     rather than "this handler is unknown to the ABI". Both report
+    //     Reversible=false.
+    //   - observe.* handlers do not implement Reverser at all — a read has
+    //     nothing to undo — and also report Reversible=false.
+    //
+    // ActionMetadata.ImplementsReverse carries the raw type assertion.
     Reversible bool `json:"reversible"`
 
     // Risk is a 1..10 informational band:
@@ -784,7 +795,7 @@ type CostEstimate struct {
 }
 ```
 
-## type [Coster](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/handler_abi.go#L216-L218>)
+## type [Coster](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/handler_abi.go#L227-L229>)
 
 Coster is the optional interface for pre\-execution blast\-radius signal. Handlers that don't implement it get a neutral default of Risk=5 with Reversible inferred from whether Reverser is implemented.
 
@@ -890,7 +901,7 @@ const (
 )
 ```
 
-## type [Differ](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/handler_abi.go#L190-L192>)
+## type [Differ](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/handler_abi.go#L201-L203>)
 
 Differ is the optional interface handlers implement to produce a structured per\-step Diff. Called in plan mode by the planner; consumed by JSON plan output, the agent SDK, and any UI past \`mooncake plan\`.
 
@@ -1378,7 +1389,7 @@ type PerformerOpts struct {
 }
 ```
 
-## type [PermissionSet](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/handler_abi.go#L159-L179>)
+## type [PermissionSet](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/handler_abi.go#L170-L190>)
 
 PermissionSet declares the privileges and external dependencies a step needs to run. Consumed by executor preflight \(fail\-fast if a required binary is missing or Sudo is required and we're not elevated\), plan output \(surface \`requires:\` lines per step\), and the future policy DSL.
 
@@ -1406,7 +1417,7 @@ type PermissionSet struct {
 }
 ```
 
-## type [Permitter](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/handler_abi.go#L223-L225>)
+## type [Permitter](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/handler_abi.go#L234-L236>)
 
 Permitter is the optional interface for declaring required privileges. Cheap to implement \(often a static return\) and high\-leverage: surfaces permission requirements at plan time instead of as runtime failures.
 
@@ -1738,7 +1749,7 @@ type Retryable interface {
 }
 ```
 
-## type [Reverser](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/handler_abi.go#L209-L211>)
+## type [Reverser](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/handler_abi.go#L220-L222>)
 
 Reverser is the optional interface handlers implement to declare how their effect is undone. Spec\-30 \(\`transaction:\` blocks\) is the primary consumer: on transaction failure the executor walks completed steps in reverse order and applies the Step each Reverser returns.
 

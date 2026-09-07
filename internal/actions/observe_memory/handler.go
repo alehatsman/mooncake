@@ -225,7 +225,7 @@ func sysctlInt64(name string) (int64, error) {
 // --- Spec-22 ABI no-mutation specialization ---------------------------------
 
 func (h *Handler) Cost(_ actions.Context, _ *config.Step) (actions.CostEstimate, error) {
-	return actions.CostEstimate{Resources: 0, Bytes: 0, Reversible: true, Risk: 1}, nil
+	return actions.CostEstimate{Resources: 0, Bytes: 0, Reversible: false, Risk: 1}, nil
 }
 
 func (h *Handler) Permissions(_ *config.Step) actions.PermissionSet {
@@ -248,8 +248,4 @@ func (h *Handler) Diff(_ actions.Context, _ *config.Step) (actions.Diff, error) 
 		},
 		Operation: actions.OpNoop,
 	}, nil
-}
-
-func (h *Handler) Reverse(_ actions.Context, _ *config.Step, _ actions.Result) (*config.Step, error) {
-	return nil, nil
 }
