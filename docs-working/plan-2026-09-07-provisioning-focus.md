@@ -136,10 +136,10 @@ releasable".
 |---|---|---|
 | B — delete the second product (`internal/agent`, `sdk/`, `examples/notify`, agent-evals) | #182 (#5 closed) | **done** (`8bd89dff`, PR #46) — resurrect from history when `mooncake-agent` exists |
 | C — `artifact.*` / `repo.*`: five actions built for the cut agent-developer audience, none with any ABI property | #204 | **done** (`652bf9ce`, PR #48) |
-| D — tree hygiene: `executor_coverage.out`, `github-actions.yml`, `test-repo-ops.yml`, `wait-for-clean.sh`, `mooncake_codes.txt`, `install`, root `llms.txt`, `scripts/migrate`, two orphan scripts, `.codecov.yml`/`.gitleaks.toml` (found while verifying — orphaned by the same cut), `.github/workflows/*.disabled` (kept `release.yml` only, fixed its stale Go pin + `master`→`main` reference) | #205 | **PR #49 up, moongit CI running** |
-| E — retire `VISION.md`, `BOTTLENECK.md`, brainstorm/, positioning.md; fix README/AGENT.md/examples/ROADMAP/CONTRIBUTING/RELEASING dead references | #206 | docs |
-| F — specs still describe `mooncake query` / `mooncake facts` | #207 | specs |
-| G — 29 `deadcode` hits, 12 action packages with v1 names, 247 `//nolint` | #208 | chore, after B and C |
+| D — tree hygiene: `executor_coverage.out`, `github-actions.yml`, `test-repo-ops.yml`, `wait-for-clean.sh`, `mooncake_codes.txt`, `install`, root `llms.txt`, `scripts/migrate`, two orphan scripts, `.codecov.yml`/`.gitleaks.toml` (found while verifying — orphaned by the same cut), `.github/workflows/*.disabled` (kept `release.yml` only, fixed its stale Go pin + `master`→`main` reference) | #205 | **done** (`ccc7bf1e`, PR #49) |
+| E — retire `VISION.md`, `BOTTLENECK.md`, brainstorm/, positioning.md; fix README/AGENT.md/examples/ROADMAP/CONTRIBUTING/RELEASING dead references | #206 | **done** (`998b79a1`, PR #51) |
+| F — specs still describe `mooncake query` / `mooncake facts` | #207 | **done** (`16eecae6`, PR #50) |
+| G — 29 `deadcode` hits, 14 action packages with v1 names, 247 `//nolint` | #208 | **PR #52 up, moongit CI running** |
 | H — ABI honesty | #178 | engineering |
 | I / J — modules hardening, agentd token scopes | #199–#201, #198 | engineering |
 | K — open bugs | #188 #189 #191 #196 #202 | engineering |
