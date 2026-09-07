@@ -19,16 +19,23 @@
 #   docker build -t mooncake-ci:latest ci/
 #
 # Go toolchain: the base (moongit-ci-dev:latest) ships go1.26.3 with
-# GOTOOLCHAIN=local, which hard-errors against go.mod's `go 1.26.4` directive
-# (bumped for the GO-2026-5037/5039 stdlib fixes that govulncheck, step 5/11,
-# enforces). The base has no curl/wget to fetch a tarball, so we overlay GOROOT
-# from the official golang:1.26.4 image. When the moongit-ci-dev base itself
-# moves to >=1.26.4, this overlay becomes a redundant no-op and can be dropped.
-FROM golang:1.26.4 AS gotoolchain
+# GOTOOLCHAIN=local, which hard-errors against go.mod's `go 1.26.4` directive.
+# The base has no curl/wget to fetch a tarball, so we overlay GOROOT from the
+# official golang image. When the moongit-ci-dev base itself moves to >= the
+# version below, this overlay becomes a redundant no-op and can be dropped.
+#
+# This pin is a govulncheck input, not just a build detail: step 5/11 reads
+# THIS GOROOT's stdlib version, so a stale pin fails the gate on stdlib
+# advisories that the developer's own machine does not see. It was 1.26.4,
+# which the host had long outgrown — CI run 117 reported 6 stdlib
+# vulnerabilities (net/url, crypto/tls ×2, net/http, encoding/asn1) that were
+# invisible locally on go1.26.8. Keep this at or above the newest Go the team
+# builds with, and re-pin it whenever govulncheck flags `Found in: …@goX.Y.Z`.
+FROM golang:1.26.8 AS gotoolchain
 
 FROM moongit-ci-dev:latest
 
-# Overlay go1.26.4 over the base's go1.26.3 GOROOT (see header). go-quality
+# Overlay the pinned go over the base's go1.26.3 GOROOT (see header). go-quality
 # binaries (golangci-lint/govulncheck/…) live outside GOROOT and are untouched;
 # govulncheck reads this GOROOT's stdlib version, so the fixes are picked up.
 COPY --from=gotoolchain /usr/local/go /usr/local/go
