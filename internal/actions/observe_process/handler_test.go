@@ -2,6 +2,7 @@ package observe_process
 
 import (
 	"os"
+	"runtime"
 	"testing"
 	"time"
 
@@ -213,5 +214,40 @@ func TestPermissions_ReadOnly(t *testing.T) {
 	}
 	if p.Network {
 		t.Errorf("observe.process should not flag Network")
+	}
+}
+
+// The container regression (moongit CI run 114): on Linux, a completed /proc
+// walk that matched nothing returns errNoMatch, which used to fall through to
+// ps. Where ps is absent — containers, minimal images — the missing binary
+// surfaced as ObserveResult.Error, so "not running" was reported as "could not
+// look". That makes `wait: { until: gone }` unsatisfiable: Found stays false
+// but the step errors out every poll.
+//
+// Emptying PATH reproduces the container on a normal host.
+func TestRun_NoMatch_NoPs_StillNotAProbeFailure(t *testing.T) {
+	if runtime.GOOS != "linux" {
+		t.Skip("the /proc fast path this guards is linux-only")
+	}
+	t.Setenv("PATH", "")
+
+	h := &Handler{}
+	step := &config.Step{ObserveProcess: &config.ObserveProcess{
+		Name: "definitely-not-a-real-process-name-xyz-12345",
+	}}
+	res, err := h.Run(newCtx(t, false), step)
+	if err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	r := res.(*executor.Result)
+
+	if found, _ := r.Data["found"].(bool); found {
+		t.Error("expected found=false for a nonexistent process")
+	}
+	if r.Error != "" {
+		t.Errorf("absent process reported as a probe failure: %q", r.Error)
+	}
+	if r.Failed {
+		t.Error("absent process marked the step failed")
 	}
 }

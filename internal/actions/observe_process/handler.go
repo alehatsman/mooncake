@@ -134,10 +134,19 @@ func findProcess(ctx context.Context, o *config.ObserveProcess) (ProcessObservat
 	// Linux fast path: walk /proc. Falls back to ps on macOS/BSD/Solaris.
 	if runtime.GOOS == "linux" {
 		obs, err := findProcessLinux(o)
-		if obs.Running || err == nil {
+		// A completed /proc walk is authoritative, including when it matched
+		// nothing: errNoMatch is the answer "absent", not a probe failure, so
+		// it must NOT fall through to ps. It used to, and on a host without ps
+		// (containers, minimal images) the missing binary then surfaced as
+		// ObserveResult.Error — reporting "could not look" for a process that
+		// simply is not running, which makes `wait: { until: gone }`
+		// unsatisfiable.
+		//
+		// Only an unreadable /proc justifies the fallback, which is what the
+		// fallback was always for.
+		if obs.Running || err == nil || errors.Is(err, errNoMatch) {
 			return obs, err
 		}
-		// Linux without /proc (e.g. some containers) — try ps too.
 	}
 	return findProcessPs(ctx, o)
 }
