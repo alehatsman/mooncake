@@ -10,10 +10,10 @@ import (
 // checkModuleCache reports the Git-native module cache: where it is, how
 // many modules are resolved into it, and whether it's readable.
 //
-// This replaced a "preset search paths" check that outlived its subject.
-// The in-tree preset library was retired in favour of module distribution,
-// but doctor kept listing four preset directories and calling a stale
-// symlink "21 presets across 4 search path(s)" — teaching operators a
+// This replaced a "component search paths" check that outlived its subject.
+// The in-tree component library was retired in favour of module distribution,
+// but doctor kept listing four component directories and calling a stale
+// symlink "21 components across 4 search path(s)" — teaching operators a
 // concept the tool no longer has (#175).
 type checkModuleCache struct{}
 

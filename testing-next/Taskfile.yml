@@ -63,17 +63,17 @@ tasks:
     desc: Run tests on Ubuntu amd64
     deps: [build-ubuntu-amd64]
     cmds:
-      - echo "Running preset tests on Ubuntu amd64..."
+      - echo "Running component tests on Ubuntu amd64..."
       - mkdir -p {{.ARTIFACTS_DIR}}/ubuntu-amd64
-      - docker run --rm --platform linux/amd64 --entrypoint /bin/sh -v {{.ARTIFACTS_DIR}}/ubuntu-amd64:/artifacts -v {{.TASKFILE_DIR}}:/testing {{.IMAGE_PREFIX}}:ubuntu-amd64 -c "/bin/bash /testing/test-presets.sh --os ubuntu --artifacts /artifacts"
+      - docker run --rm --platform linux/amd64 --entrypoint /bin/sh -v {{.ARTIFACTS_DIR}}/ubuntu-amd64:/artifacts -v {{.TASKFILE_DIR}}:/testing {{.IMAGE_PREFIX}}:ubuntu-amd64 -c "/bin/bash /testing/test-components.sh --os ubuntu --artifacts /artifacts"
 
   test-ubuntu-arm64:
     desc: Run tests on Ubuntu arm64
     deps: [build-ubuntu-arm64]
     cmds:
-      - echo "Running preset tests on Ubuntu arm64..."
+      - echo "Running component tests on Ubuntu arm64..."
       - mkdir -p {{.ARTIFACTS_DIR}}/ubuntu-arm64
-      - docker run --rm --platform linux/arm64 --entrypoint /bin/sh -v {{.ARTIFACTS_DIR}}/ubuntu-arm64:/artifacts -v {{.TASKFILE_DIR}}:/testing {{.IMAGE_PREFIX}}:ubuntu-arm64 -c "/bin/bash /testing/test-presets.sh --os ubuntu --artifacts /artifacts"
+      - docker run --rm --platform linux/arm64 --entrypoint /bin/sh -v {{.ARTIFACTS_DIR}}/ubuntu-arm64:/artifacts -v {{.TASKFILE_DIR}}:/testing {{.IMAGE_PREFIX}}:ubuntu-arm64 -c "/bin/bash /testing/test-components.sh --os ubuntu --artifacts /artifacts"
 
   test-ubuntu:
     desc: Run tests on Ubuntu (native architecture — auto-detects amd64/arm64)
@@ -86,37 +86,37 @@ tasks:
           *) task test-ubuntu-amd64 ;;
         esac
 
-  test-preset-amd64:
-    desc: "Test specific preset on amd64 — usage: task test-preset-amd64 PRESET=nginx"
+  test-component-amd64:
+    desc: "Test specific component on amd64 — usage: task test-component-amd64 COMPONENT=nginx"
     deps: [build-ubuntu-amd64]
     vars:
-      PRESET: '{{.PRESET | default "jq"}}'
+      COMPONENT: '{{.COMPONENT | default "jq"}}'
     cmds:
-      - echo "Testing preset '{{.PRESET}}' on Ubuntu amd64..."
+      - echo "Testing component '{{.COMPONENT}}' on Ubuntu amd64..."
       - mkdir -p {{.ARTIFACTS_DIR}}/ubuntu-amd64
-      - docker run --rm --platform linux/amd64 --entrypoint /bin/sh -v {{.ARTIFACTS_DIR}}/ubuntu-amd64:/artifacts -v {{.TASKFILE_DIR}}:/testing {{.IMAGE_PREFIX}}:ubuntu-amd64 -c "/bin/bash /testing/test-presets.sh --os ubuntu --preset {{.PRESET}} --artifacts /artifacts"
+      - docker run --rm --platform linux/amd64 --entrypoint /bin/sh -v {{.ARTIFACTS_DIR}}/ubuntu-amd64:/artifacts -v {{.TASKFILE_DIR}}:/testing {{.IMAGE_PREFIX}}:ubuntu-amd64 -c "/bin/bash /testing/test-components.sh --os ubuntu --component {{.COMPONENT}} --artifacts /artifacts"
 
-  test-preset-arm64:
-    desc: "Test specific preset on arm64 — usage: task test-preset-arm64 PRESET=nginx"
+  test-component-arm64:
+    desc: "Test specific component on arm64 — usage: task test-component-arm64 COMPONENT=nginx"
     deps: [build-ubuntu-arm64]
     vars:
-      PRESET: '{{.PRESET | default "jq"}}'
+      COMPONENT: '{{.COMPONENT | default "jq"}}'
     cmds:
-      - echo "Testing preset '{{.PRESET}}' on Ubuntu arm64..."
+      - echo "Testing component '{{.COMPONENT}}' on Ubuntu arm64..."
       - mkdir -p {{.ARTIFACTS_DIR}}/ubuntu-arm64
-      - docker run --rm --platform linux/arm64 --entrypoint /bin/sh -v {{.ARTIFACTS_DIR}}/ubuntu-arm64:/artifacts -v {{.TASKFILE_DIR}}:/testing {{.IMAGE_PREFIX}}:ubuntu-arm64 -c "/bin/bash /testing/test-presets.sh --os ubuntu --preset {{.PRESET}} --artifacts /artifacts"
+      - docker run --rm --platform linux/arm64 --entrypoint /bin/sh -v {{.ARTIFACTS_DIR}}/ubuntu-arm64:/artifacts -v {{.TASKFILE_DIR}}:/testing {{.IMAGE_PREFIX}}:ubuntu-arm64 -c "/bin/bash /testing/test-components.sh --os ubuntu --component {{.COMPONENT}} --artifacts /artifacts"
 
-  test-preset:
-    desc: "Test specific preset (native arch) — usage: task test-preset PRESET=nginx"
+  test-component:
+    desc: "Test specific component (native arch) — usage: task test-component COMPONENT=nginx"
     vars:
-      PRESET: '{{.PRESET | default "jq"}}'
+      COMPONENT: '{{.COMPONENT | default "jq"}}'
     cmds:
       - |
         arch=$(uname -m)
         case "$arch" in
-          x86_64)  task test-preset-amd64 PRESET={{.PRESET}} ;;
-          arm64|aarch64) task test-preset-arm64 PRESET={{.PRESET}} ;;
-          *) task test-preset-amd64 PRESET={{.PRESET}} ;;
+          x86_64)  task test-component-amd64 COMPONENT={{.COMPONENT}} ;;
+          arm64|aarch64) task test-component-arm64 COMPONENT={{.COMPONENT}} ;;
+          *) task test-component-amd64 COMPONENT={{.COMPONENT}} ;;
         esac
 
   clean-binaries:

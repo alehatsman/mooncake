@@ -1,7 +1,7 @@
 // Package mod implements the `mooncake mod` CLI tree — fetch, cache,
 // and register modules (Git repositories that export reusable
 // components, spec-67). Successor to the marketplace surface in
-// cmd/presets.go.
+// cmd/components.go.
 //
 // Three subcommands ship in phase 1:
 //
@@ -201,7 +201,7 @@ func runModCacheClean(_ *cli.Context) error {
 
 // newCLIFetcher builds the fetcher every `mod` subcommand uses. A var so tests
 // can inject a fixture CloneURL pointing at a local file:// repo, the same
-// seam internal/actions/preset uses for resolverFor.
+// seam internal/actions/component uses for resolverFor.
 var newCLIFetcher = func() *modules.Fetcher {
 	root := os.Getenv("MOONCAKE_MODULE_CACHE")
 	return &modules.Fetcher{Root: root}

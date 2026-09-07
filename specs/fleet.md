@@ -92,4 +92,4 @@ daemon bootstrap/install, and fleet-wide apply/status.
 - [ ] Hoist `--no-color`/`--json`/`--peers-file`/`--parallel`/`--timeout` to global fleet flags (#27)
 - [ ] `fleet shell <peer>` + `fleet cp` over the audited agentd channel (#26)
 - [ ] `fleet kill <peer> <run-id>` to cancel an in-flight run (#25)
-- [ ] macOS agentd preset coverage parity with Linux (#36)
+- [ ] macOS agentd component coverage parity with Linux (#36)

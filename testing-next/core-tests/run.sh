@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Mooncake Core Functionality Tests
-# Tests mooncake binary itself (not presets)
+# Tests mooncake binary itself (not components)
 
 set -euo pipefail
 
@@ -47,8 +47,8 @@ run_test "help-command" "mooncake --help"
 # Test 4: Facts command works
 run_test "facts-command" "mooncake facts"
 
-# Test 5: Presets list works
-run_test "presets-list" "mooncake presets list"
+# Test 5: Components list works
+run_test "components-list" "mooncake components list"
 
 # Test 6: Run simple config
 cat > /tmp/test-simple.yml <<'EOF'

@@ -21,9 +21,9 @@ type DistOptions struct {
 	// when fresh state is desired — GenerateDist does not prune.
 	OutDir string
 
-	// PresetsDir is the directory containing preset.yml files for the
-	// preset-examples section. Defaults to "presets" when empty.
-	PresetsDir string
+	// ComponentsDir is the directory containing component.yml files for the
+	// component-examples section. Defaults to "components" when empty.
+	ComponentsDir string
 
 	// CLIRoot, when non-nil, drives generation of dist/docs/cli/<command>.md
 	// pages by walking the urfave/cli command tree.
@@ -50,8 +50,8 @@ func (g *Generator) GenerateDist(opts DistOptions) ([]string, error) {
 	if opts.OutDir == "" {
 		return nil, fmt.Errorf("DistOptions.OutDir is required")
 	}
-	if opts.PresetsDir == "" {
-		opts.PresetsDir = "presets"
+	if opts.ComponentsDir == "" {
+		opts.ComponentsDir = "components"
 	}
 	if err := os.MkdirAll(opts.OutDir, 0o755); err != nil {
 		return nil, fmt.Errorf("mkdir %s: %w", opts.OutDir, err)
@@ -94,18 +94,18 @@ func (g *Generator) GenerateDist(opts DistOptions) ([]string, error) {
 	}
 	written = append(written, p)
 
-	// 6. Preset examples — only when PresetsDir exists. The bare-repo
-	// `mooncake presets` CLI was retired (commit eee2c15f) and the
-	// presets/ directory is gone from this checkout; the single-section
+	// 6. Component examples — only when ComponentsDir exists. The bare-repo
+	// `mooncake components` CLI was retired (commit eee2c15f) and the
+	// components/ directory is gone from this checkout; the single-section
 	// generator stays available for downstream consumers that still
-	// curate their own presets tree, but the dist tree skips this page
+	// curate their own components tree, but the dist tree skips this page
 	// when there's nothing to render.
-	if _, statErr := os.Stat(opts.PresetsDir); statErr == nil {
-		p, err = g.writeSingleFile(opts.OutDir, "presets.md", func(w io.Writer) error {
-			return g.generatePresetExamples(w, opts.PresetsDir)
+	if _, statErr := os.Stat(opts.ComponentsDir); statErr == nil {
+		p, err = g.writeSingleFile(opts.OutDir, "components.md", func(w io.Writer) error {
+			return g.generateComponentExamples(w, opts.ComponentsDir)
 		})
 		if err != nil {
-			return nil, fmt.Errorf("presets: %w", err)
+			return nil, fmt.Errorf("components: %w", err)
 		}
 		written = append(written, p)
 	}

@@ -79,7 +79,7 @@ Existing actions are being migrated incrementally:
 ```
 - Phase 1: Create Handler implementations for simple actions (print, vars)
 - Phase 2: Migrate complex actions (shell, file, template)
-- Phase 3: Migrate specialized actions (service, assert, preset)
+- Phase 3: Migrate specialized actions (service, assert, component)
 - Phase 4: Remove legacy code paths
 ```
 
@@ -433,7 +433,7 @@ const (
     // CategoryFile represents actions that manipulate files (file, template, copy, download)
     CategoryFile ActionCategory = "file"
 
-    // CategorySystem represents system-level actions (service, assert, preset)
+    // CategorySystem represents system-level actions (service, assert, component)
     CategorySystem ActionCategory = "system"
 
     // CategoryData represents data manipulation actions (vars, include_vars)

@@ -33,8 +33,8 @@ the same typed funnel as the CLI.
   tools.
 - WHEN an agent inspects the host, `get_facts`, `get_snapshot`, `fact_query`,
   `get_metrics`, and `query_file` return read-only JSON.
-- WHEN an agent introspects the action ABI, `list_actions`, `describe_action`,
-  and `list_presets` return the typed contract and capability matrix
+- WHEN an agent introspects the action ABI, `list_actions` and `describe_action`
+  return the typed contract and capability matrix
   (check/diff/cost/reverse/permissions) without shelling out.
 - WHEN an agent previews a config, `check_plan` returns per-step inspections
   (would-change, aggregated permissions, cost summary) with no side effects.
@@ -73,7 +73,7 @@ the same typed funnel as the CLI.
 - [x] Notification suppression + parse/method/tool error codes
 - [x] `DispatchBytes` shared with the daemon `/v1/mcp` HTTP transport
 - [x] Read-only tools: get_facts, get_snapshot, fact_query, get_metrics, query_file
-- [x] ABI introspection: list_actions, describe_action, list_presets
+- [x] ABI introspection: list_actions, describe_action
 - [x] `check_plan` structural preview (per-step inspections, permissions, cost)
 - [x] `run_plan` apply with optional `policy` gate (#11)
 - [ ] `run_plan` incremental event streaming (#7 — todo, not built)

@@ -173,6 +173,7 @@ Reference for every `mooncake` subcommand and its flags.
 Go package reference generated from godoc.
 
 - [actions](api/actions.md)
+- [components](api/components.md)
 - [config](api/config.md)
 - [effects](api/effects.md)
 - [events](api/events.md)
@@ -181,7 +182,6 @@ Go package reference generated from godoc.
 - [logger](api/logger.md)
 - [modules](api/modules.md)
 - [plan](api/plan.md)
-- [presets](api/presets.md)
 - [schemagen](api/schemagen.md)
 
 ## Reference

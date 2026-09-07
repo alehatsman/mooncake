@@ -18,15 +18,15 @@ func (g *Generator) generateSchemaDoc(w io.Writer) error {
 	write(w, "The following schemas are generated from Go struct definitions.\n")
 	write(w, "All field names and types are guaranteed to match the implementation.\n\n")
 
-	// Generate preset definition schema
-	if err := g.generateStructSchema(w, "PresetDefinition", reflect.TypeOf(config.PresetDefinition{})); err != nil {
+	// Generate component definition schema
+	if err := g.generateStructSchema(w, "ComponentDefinition", reflect.TypeOf(config.ComponentDefinition{})); err != nil {
 		return err
 	}
 
 	write(w, "\n---\n\n")
 
-	// Generate preset parameter schema
-	return g.generateStructSchema(w, "PresetParameter", reflect.TypeOf(config.PresetParameter{}))
+	// Generate component parameter schema
+	return g.generateStructSchema(w, "ComponentProp", reflect.TypeOf(config.ComponentProp{}))
 }
 
 // generateStructSchema generates schema documentation for a single struct.
@@ -35,12 +35,12 @@ func (g *Generator) generateStructSchema(w io.Writer, structName string, t refle
 
 	// Get struct documentation from comments (if available)
 	switch structName {
-	case "PresetDefinition":
-		write(w, "Defines a reusable preset with parameters and steps.\n\n")
-	case "PresetParameter":
-		write(w, "Defines a parameter that can be passed to a preset.\n\n")
-	case "PresetInvocation":
-		write(w, "Invokes a preset in a playbook (user-facing syntax).\n\n")
+	case "ComponentDefinition":
+		write(w, "Defines a reusable component with parameters and steps.\n\n")
+	case "ComponentProp":
+		write(w, "Defines a parameter that can be passed to a component.\n\n")
+	case "ComponentInvocation":
+		write(w, "Invokes a component in a playbook (user-facing syntax).\n\n")
 	}
 
 	// Generate fields table
@@ -135,7 +135,7 @@ func (g *Generator) generateYAMLExample(w io.Writer, structName string, t reflec
 		}
 
 		// Special handling for Parameters map
-		if field.Name == "Parameters" && structName == "PresetDefinition" {
+		if field.Name == "Parameters" && structName == "ComponentDefinition" {
 			write(w, "%s%s:\n", indentStr, yamlName)
 			write(w, "%s  param_name:\n", indentStr)
 			write(w, "%s    type: string\n", indentStr)
@@ -145,7 +145,7 @@ func (g *Generator) generateYAMLExample(w io.Writer, structName string, t reflec
 		}
 
 		// Special handling for With map
-		if field.Name == "With" && structName == "PresetInvocation" {
+		if field.Name == "With" && structName == "ComponentInvocation" {
 			write(w, "%s%s:\n", indentStr, yamlName)
 			write(w, "%s  param1: value1\n", indentStr)
 			write(w, "%s  param2: value2\n", indentStr)
@@ -188,24 +188,24 @@ func formatFieldType(t reflect.Type) string {
 // getFieldDescription returns a description for a field.
 func getFieldDescription(structName, fieldName string) string {
 	descriptions := map[string]map[string]string{
-		"PresetDefinition": {
-			"Name":        "Unique preset identifier",
-			"Description": "Human-readable description of what the preset does",
+		"ComponentDefinition": {
+			"Name":        "Unique component identifier",
+			"Description": "Human-readable description of what the component does",
 			"Version":     "Semantic version (e.g., 1.0.0)",
 			"Parameters":  "Map of parameter definitions",
 			"Steps":       "Array of steps to execute",
 			"BaseDir":     "Base directory for path resolution (set by loader)",
 		},
-		"PresetParameter": {
+		"ComponentProp": {
 			"Type":        "Parameter type (string, bool, array, object)",
 			"Required":    "Whether the parameter must be provided",
 			"Default":     "Default value if not provided",
 			"Enum":        "List of valid values (if restricted)",
 			"Description": "Human-readable parameter description",
 		},
-		"PresetInvocation": {
-			"Name": "Name of the preset to invoke",
-			"With": "Map of parameter values to pass to preset",
+		"ComponentInvocation": {
+			"Name": "Name of the component to invoke",
+			"With": "Map of parameter values to pass to component",
 		},
 	}
 
@@ -221,18 +221,18 @@ func getFieldDescription(structName, fieldName string) string {
 // getExampleValue returns an example value for a field.
 func getExampleValue(structName, fieldName string, fieldType reflect.Type) string {
 	examples := map[string]map[string]string{
-		"PresetDefinition": {
-			"Name":        "my-preset",
-			"Description": "Description of what this preset does",
+		"ComponentDefinition": {
+			"Name":        "my-component",
+			"Description": "Description of what this component does",
 			"Version":     "1.0.0",
 		},
-		"PresetParameter": {
+		"ComponentProp": {
 			"Type":        "string",
 			"Required":    "true",
 			"Description": "Description of the parameter",
 		},
-		"PresetInvocation": {
-			"Name": "my-preset",
+		"ComponentInvocation": {
+			"Name": "my-component",
 		},
 	}
 

@@ -72,7 +72,7 @@ steps:
 // Issue #50: ExpandStepsWithContext is the apply-time path for remote/alias use: modules.
 // It must mark the expansion as FromComponent=true so plan:"outpath" fields (e.g.
 // file.copy dest with a subdir like "web/biome.json") resolve against invocation_dir,
-// not the module-cache dir (presetBaseDir / CurrentDir).
+// not the module-cache dir (componentBaseDir / CurrentDir).
 func TestExpandStepsWithContext_OutpathResolvesAgainstInvocationDir(t *testing.T) {
 	tmp := t.TempDir()
 

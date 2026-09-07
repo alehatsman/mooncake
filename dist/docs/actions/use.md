@@ -15,7 +15,7 @@ capabilities:
 
 # use
 
-Execute a preset by expanding it into steps
+Execute a component by expanding it into steps
 
 ## Platform Support
 

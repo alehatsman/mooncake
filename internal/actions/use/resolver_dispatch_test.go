@@ -1,4 +1,4 @@
-package preset
+package use
 
 import (
 	"context"
@@ -8,9 +8,9 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/alehatsman/mooncake/internal/components"
 	"github.com/alehatsman/mooncake/internal/config"
 	"github.com/alehatsman/mooncake/internal/modules"
-	"github.com/alehatsman/mooncake/internal/presets"
 )
 
 // makeFixtureModule builds a bare git repo containing a tiny module with one
@@ -103,9 +103,9 @@ func TestResolverDispatch_InlineRemote(t *testing.T) {
 	if err != nil {
 		t.Fatalf("resolver.Resolve: %v", err)
 	}
-	steps, ns, _, err := presets.ExpandPresetFromPath(name, props, resolved.ComponentPath)
+	steps, ns, _, err := components.ExpandComponentFromPath(name, props, resolved.ComponentPath)
 	if err != nil {
-		t.Fatalf("ExpandPresetFromPath: %v", err)
+		t.Fatalf("ExpandComponentFromPath: %v", err)
 	}
 	if len(steps) != 1 {
 		t.Errorf("expected 1 step, got %d", len(steps))
@@ -135,9 +135,9 @@ func TestResolverDispatch_Alias(t *testing.T) {
 	if !strings.HasSuffix(resolved.ComponentPath, "/components/install.yml") {
 		t.Errorf("ComponentPath = %q", resolved.ComponentPath)
 	}
-	_, ns, _, err := presets.ExpandPresetFromPath(name, props, resolved.ComponentPath)
+	_, ns, _, err := components.ExpandComponentFromPath(name, props, resolved.ComponentPath)
 	if err != nil {
-		t.Fatalf("ExpandPresetFromPath: %v", err)
+		t.Fatalf("ExpandComponentFromPath: %v", err)
 	}
 	if ns["props"].(map[string]interface{})["message"] != "via-alias" {
 		t.Errorf("props.message wrong: %v", ns["props"])

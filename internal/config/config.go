@@ -65,7 +65,7 @@
 //   - Download: Download files (url, dest, checksum, timeout, retries)
 //   - Unarchive: Extract archives (src, dest, format, strip_components)
 //   - PrintAction: Output messages (msg)
-//   - PresetInvocation: Invoke presets (name, with parameters)
+//   - ComponentInvocation: Invoke components (name, with parameters)
 //
 // # Validation
 //
@@ -1189,59 +1189,43 @@ type AssertGitDiff struct {
 	Files        *string `yaml:"files" json:"files,omitempty"`       // Limit diff to specific files/paths (optional)
 }
 
-// PresetDefinition represents a reusable preset loaded from a YAML file.
-// Presets are parameterized collections of steps that can be invoked as a single action.
-//
-// Either `props:` (preferred, spec-67) or `parameters:` (deprecated) may declare the
-// inputs. Both unmarshal into the Parameters field; UsedParametersKey records which
-// form the source file used so the loader can emit a deprecation warning.
-type PresetDefinition struct {
-	Name        string                     `yaml:"name" json:"name"`                         // Preset name (required)
-	Description string                     `yaml:"description" json:"description,omitempty"` // Human-readable description
-	Version     string                     `yaml:"version" json:"version,omitempty"`         // Semantic version
-	Parameters  map[string]PresetParameter `yaml:"-" json:"parameters,omitempty"`            // Parameter/prop definitions (parsed from `props:` or `parameters:`)
-	Steps       []Step                     `yaml:"steps" json:"steps"`                       // Steps to execute
-	BaseDir     string                     `yaml:"-" json:"-"`                               // Base directory for relative paths (set by loader)
-	// UsedParametersKey is true when the source file declared inputs under
-	// `parameters:` rather than `props:`. Set by UnmarshalYAML; the loader
-	// uses it to emit a one-time deprecation warning.
-	UsedParametersKey bool `yaml:"-" json:"-"`
+// ComponentDefinition represents a reusable component loaded from a YAML file.
+// Components are collections of steps, parameterized by `props:`, that can be
+// invoked as a single action.
+type ComponentDefinition struct {
+	Name        string                   `yaml:"name" json:"name"`                         // Component name (required)
+	Description string                   `yaml:"description" json:"description,omitempty"` // Human-readable description
+	Version     string                   `yaml:"version" json:"version,omitempty"`         // Semantic version
+	Props       map[string]ComponentProp `yaml:"props" json:"props,omitempty"`             // Prop definitions
+	Steps       []Step                   `yaml:"steps" json:"steps"`                       // Steps to execute
+	BaseDir     string                   `yaml:"-" json:"-"`                               // Base directory for relative paths (set by loader)
 }
 
-// UnmarshalYAML accepts both `props:` (preferred) and `parameters:` (deprecated)
-// keys for the parameter map. If both are present, `props:` wins and the conflict
-// is reported as an error.
-func (p *PresetDefinition) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	type raw struct {
-		Name        string                     `yaml:"name"`
-		Description string                     `yaml:"description"`
-		Version     string                     `yaml:"version"`
-		Props       map[string]PresetParameter `yaml:"props"`
-		Parameters  map[string]PresetParameter `yaml:"parameters"`
-		Steps       []Step                     `yaml:"steps"`
-	}
+// UnmarshalYAML decodes a component definition and rejects the retired
+// `parameters:` key explicitly.
+//
+// Without this the key would simply be ignored, leaving Props empty and
+// failing later with "unknown prop 'x'" at the point of use — a confusing
+// error a long way from its cause. Naming the retired key at parse time
+// costs a few lines and points straight at the fix.
+func (p *ComponentDefinition) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	type raw ComponentDefinition
 	var r raw
 	if err := unmarshal(&r); err != nil {
 		return err
 	}
-	p.Name = r.Name
-	p.Description = r.Description
-	p.Version = r.Version
-	p.Steps = r.Steps
-	switch {
-	case r.Props != nil && r.Parameters != nil:
-		return fmt.Errorf("preset declares both `props:` and `parameters:` — use `props:` only (`parameters:` is deprecated)")
-	case r.Props != nil:
-		p.Parameters = r.Props
-	case r.Parameters != nil:
-		p.Parameters = r.Parameters
-		p.UsedParametersKey = true
+	var legacy struct {
+		Parameters map[string]ComponentProp `yaml:"parameters"`
 	}
+	if err := unmarshal(&legacy); err == nil && legacy.Parameters != nil {
+		return fmt.Errorf("component declares `parameters:` — renamed to `props:`")
+	}
+	*p = ComponentDefinition(r)
 	return nil
 }
 
-// PresetParameter defines a parameter that can be passed to a preset.
-type PresetParameter struct {
+// ComponentProp defines a prop that can be passed to a component.
+type ComponentProp struct {
 	Type        string        `yaml:"type" json:"type"`                         // string|bool|array|object
 	Required    bool          `yaml:"required" json:"required,omitempty"`       // Whether parameter is required
 	Default     interface{}   `yaml:"default" json:"default,omitempty"`         // Default value if not provided
@@ -1253,9 +1237,9 @@ type PresetParameter struct {
 type ComponentRefKind int
 
 const (
-	// ComponentRefPreset is a bare name with no slash and no scheme — looked up
-	// in the preset search paths (legacy behavior).
-	ComponentRefPreset ComponentRefKind = iota
+	// ComponentRefBareName is a bare name with no slash and no scheme — looked up
+	// in the component search paths (legacy behavior).
+	ComponentRefBareName ComponentRefKind = iota
 	// ComponentRefLocalPath is a filesystem path: starts with "./", "../", or "/".
 	ComponentRefLocalPath
 	// ComponentRefRemote is a fully qualified module reference: contains "@".
@@ -1266,11 +1250,11 @@ const (
 )
 
 // ComponentRefKindOf classifies the reference form. Purely syntactic;
-// alias-vs-preset disambiguation requires the playbook's modules: map and is
+// alias-vs-component disambiguation requires the playbook's modules: map and is
 // done by the executor, not here.
 func ComponentRefKindOf(ref string) ComponentRefKind {
 	if ref == "" {
-		return ComponentRefPreset
+		return ComponentRefBareName
 	}
 	if strings.Contains(ref, "@") {
 		return ComponentRefRemote
@@ -1281,7 +1265,7 @@ func ComponentRefKindOf(ref string) ComponentRefKind {
 	if strings.Contains(ref, "/") {
 		return ComponentRefAlias
 	}
-	return ComponentRefPreset
+	return ComponentRefBareName
 }
 
 // SplitComponentAlias decomposes an alias-form reference into (alias, export).
@@ -1293,7 +1277,7 @@ func SplitComponentAlias(ref string) (alias, export string) {
 		return "", ""
 	}
 	k := ComponentRefKindOf(ref)
-	if k != ComponentRefAlias && k != ComponentRefPreset {
+	if k != ComponentRefAlias && k != ComponentRefBareName {
 		return "", ""
 	}
 	if i := strings.Index(ref, "/"); i >= 0 {
@@ -2329,7 +2313,7 @@ func (s *Step) RetryBackoffStrategy() string {
 // True iff AsUser is non-empty (spec-21 collapsed become/become_user) AND
 // the current process is not already running as the target user. When the
 // current euid is 0 and AsUser targets root ("root" or "0"), no escalation
-// is needed — short-circuits sudo invocation so presets work in minimal
+// is needed — short-circuits sudo invocation so components work in minimal
 // containers (ubuntu:24.04, alpine:3.21) that don't ship sudo.
 func (s *Step) ShouldBecome() bool {
 	if s.AsUser == "" {

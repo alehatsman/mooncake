@@ -4,7 +4,7 @@ action: use
 <!-- mooncake:stub -->
 # use
 
-Execute a preset by expanding it into steps
+Execute a component by expanding it into steps
 
 See generated reference: `dist/docs/actions/use.md`
 

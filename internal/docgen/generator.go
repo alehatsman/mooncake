@@ -20,8 +20,8 @@ func NewGenerator(version string) *Generator {
 }
 
 // GenerateSection generates a specific documentation section.
-// presetsDir is optional and only used for preset-examples section.
-func (g *Generator) GenerateSection(section string, w io.Writer, presetsDir string) error {
+// componentsDir is optional and only used for component-examples section.
+func (g *Generator) GenerateSection(section string, w io.Writer, componentsDir string) error {
 	switch section {
 	case "platform-matrix":
 		return g.generatePlatformMatrix(w)
@@ -31,17 +31,17 @@ func (g *Generator) GenerateSection(section string, w io.Writer, presetsDir stri
 		return g.generateActionSummary(w)
 	case "action-properties":
 		return g.generateActionProperties(w)
-	case "preset-examples":
-		if presetsDir == "" {
-			presetsDir = "presets"
+	case "component-examples":
+		if componentsDir == "" {
+			componentsDir = "components"
 		}
-		return g.generatePresetExamples(w, presetsDir)
+		return g.generateComponentExamples(w, componentsDir)
 	case "schema":
 		return g.generateSchemaDoc(w)
 	case "all":
 		return g.generateAll(w)
 	default:
-		return fmt.Errorf("unknown section: %s (valid: platform-matrix, capabilities, action-summary, action-properties, preset-examples, schema, all)", section)
+		return fmt.Errorf("unknown section: %s (valid: platform-matrix, capabilities, action-summary, action-properties, component-examples, schema, all)", section)
 	}
 }
 

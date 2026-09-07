@@ -70,7 +70,7 @@ Each action type has its own struct defining required and optional fields:
 - Download: Download files (url, dest, checksum, timeout, retries)
 - Unarchive: Extract archives (src, dest, format, strip_components)
 - PrintAction: Output messages (msg)
-- PresetInvocation: Invoke presets (name, with parameters)
+- ComponentInvocation: Invoke components (name, with parameters)
 ```
 
 \# Validation
@@ -160,6 +160,9 @@ Config structures are designed to be read\-only after parsing. The executor clon
 - [type AssertGitDiff](<#type-assertgitdiff>)
 - [type AssertHTTP](<#type-asserthttp>)
 - [type CommandAction](<#type-commandaction>)
+- [type ComponentDefinition](<#type-componentdefinition>)
+  - [func (p *ComponentDefinition) UnmarshalYAML(unmarshal func(interface{}) error) error](<#func-componentdefinition-unmarshalyaml>)
+- [type ComponentProp](<#type-componentprop>)
 - [type ComponentRefKind](<#type-componentrefkind>)
   - [func ComponentRefKindOf(ref string) ComponentRefKind](<#func-componentrefkindof>)
 - [type Container](<#type-container>)
@@ -232,9 +235,6 @@ Config structures are designed to be read\-only after parsing. The executor clon
 - [type PkgRepoDnf](<#type-pkgrepodnf>)
 - [type PkgUpgrade](<#type-pkgupgrade>)
 - [type Position](<#type-position>)
-- [type PresetDefinition](<#type-presetdefinition>)
-  - [func (p *PresetDefinition) UnmarshalYAML(unmarshal func(interface{}) error) error](<#func-presetdefinition-unmarshalyaml>)
-- [type PresetParameter](<#type-presetparameter>)
 - [type PrintAction](<#type-printaction>)
   - [func (p *PrintAction) UnmarshalYAML(unmarshal func(interface{}) error) error](<#func-printaction-unmarshalyaml>)
 - [type ProcessAction](<#type-processaction>)
@@ -323,7 +323,7 @@ var TasksSearchPaths = []string{
 }
 ```
 
-## func [ActionFieldIndices](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2380>)
+## func [ActionFieldIndices](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2364>)
 
 ```go
 func ActionFieldIndices() []int
@@ -467,7 +467,7 @@ func SchemaJSON() []byte
 
 SchemaJSON returns the embedded JSON schema as a byte slice. This is used by documentation generators to parse action properties.
 
-## func [SplitComponentAlias](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1291>)
+## func [SplitComponentAlias](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1275>)
 
 ```go
 func SplitComponentAlias(ref string) (alias, export string)
@@ -475,7 +475,7 @@ func SplitComponentAlias(ref string) (alias, export string)
 
 SplitComponentAlias decomposes an alias\-form reference into \(alias, export\). "postgres" → \("postgres", "default"\); "postgres/backup" → \("postgres", "backup"\). Returns \("", ""\) if the reference is empty or not in alias form \(local paths and remote refs are excluded\).
 
-## type [ArtifactCapture](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1492-L1502>)
+## type [ArtifactCapture](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1476-L1486>)
 
 ArtifactCapture wraps steps and captures all file changes with enhanced metadata. Designed for LLM agent loops to provide structured output for decision\-making.
 
@@ -493,7 +493,7 @@ type ArtifactCapture struct {
 }
 ```
 
-## type [ArtifactValidate](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1876-L1884>)
+## type [ArtifactValidate](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1860-L1868>)
 
 ArtifactValidate validates artifacts against constraints \(change budgets\). Designed for LLM agent loops to enforce guardrails on file modifications.
 
@@ -655,7 +655,46 @@ type CommandAction struct {
 }
 ```
 
-## type [ComponentRefKind](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1253>)
+## type [ComponentDefinition](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1195-L1202>)
+
+ComponentDefinition represents a reusable component loaded from a YAML file. Components are collections of steps, parameterized by \`props:\`, that can be invoked as a single action.
+
+```go
+type ComponentDefinition struct {
+    Name        string                   `yaml:"name" json:"name"`                         // Component name (required)
+    Description string                   `yaml:"description" json:"description,omitempty"` // Human-readable description
+    Version     string                   `yaml:"version" json:"version,omitempty"`         // Semantic version
+    Props       map[string]ComponentProp `yaml:"props" json:"props,omitempty"`             // Prop definitions
+    Steps       []Step                   `yaml:"steps" json:"steps"`                       // Steps to execute
+    BaseDir     string                   `yaml:"-" json:"-"`                               // Base directory for relative paths (set by loader)
+}
+```
+
+### func \(\*ComponentDefinition\) [UnmarshalYAML](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1211>)
+
+```go
+func (p *ComponentDefinition) UnmarshalYAML(unmarshal func(interface{}) error) error
+```
+
+UnmarshalYAML decodes a component definition and rejects the retired \`parameters:\` key explicitly.
+
+Without this the key would simply be ignored, leaving Props empty and failing later with "unknown prop 'x'" at the point of use — a confusing error a long way from its cause. Naming the retired key at parse time costs a few lines and points straight at the fix.
+
+## type [ComponentProp](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1228-L1234>)
+
+ComponentProp defines a prop that can be passed to a component.
+
+```go
+type ComponentProp struct {
+    Type        string        `yaml:"type" json:"type"`                         // string|bool|array|object
+    Required    bool          `yaml:"required" json:"required,omitempty"`       // Whether parameter is required
+    Default     interface{}   `yaml:"default" json:"default,omitempty"`         // Default value if not provided
+    Enum        []interface{} `yaml:"enum" json:"enum,omitempty"`               // Valid values (if restricted)
+    Description string        `yaml:"description" json:"description,omitempty"` // Human-readable description
+}
+```
+
+## type [ComponentRefKind](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1237>)
 
 ComponentRefKind identifies which dispatch path a use: reference takes.
 
@@ -665,9 +704,9 @@ type ComponentRefKind int
 
 ```go
 const (
-    // ComponentRefPreset is a bare name with no slash and no scheme — looked up
-    // in the preset search paths (legacy behavior).
-    ComponentRefPreset ComponentRefKind = iota
+    // ComponentRefBareName is a bare name with no slash and no scheme — looked up
+    // in the component search paths (legacy behavior).
+    ComponentRefBareName ComponentRefKind = iota
     // ComponentRefLocalPath is a filesystem path: starts with "./", "../", or "/".
     ComponentRefLocalPath
     // ComponentRefRemote is a fully qualified module reference: contains "@".
@@ -678,13 +717,13 @@ const (
 )
 ```
 
-### func [ComponentRefKindOf](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1271>)
+### func [ComponentRefKindOf](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1255>)
 
 ```go
 func ComponentRefKindOf(ref string) ComponentRefKind
 ```
 
-ComponentRefKindOf classifies the reference form. Purely syntactic; alias\-vs\-preset disambiguation requires the playbook's modules: map and is done by the executor, not here.
+ComponentRefKindOf classifies the reference form. Purely syntactic; alias\-vs\-component disambiguation requires the playbook's modules: map and is done by the executor, not here.
 
 ## type [Container](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1044-L1057>)
 
@@ -825,7 +864,7 @@ type File struct {
 }
 ```
 
-## type [FileDeleteRange](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1360-L1367>)
+## type [FileDeleteRange](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1344-L1351>)
 
 FileDeleteRange represents a range deletion operation between two anchor patterns. Deletes all lines between \(and optionally including\) start and end anchors.
 
@@ -840,7 +879,7 @@ type FileDeleteRange struct {
 }
 ```
 
-## type [FileInsert](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1348-L1356>)
+## type [FileInsert](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1332-L1340>)
 
 FileInsert represents an anchor\-based text insertion operation in a file. Inserts content before or after a matched anchor pattern.
 
@@ -856,7 +895,7 @@ type FileInsert struct {
 }
 ```
 
-## type [FilePatchApply](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1435-L1443>)
+## type [FilePatchApply](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1419-L1427>)
 
 FilePatchApply represents a unified diff patch application operation. Applies a unified diff patch to a file with validation and safety checks.
 
@@ -872,7 +911,7 @@ type FilePatchApply struct {
 }
 ```
 
-## type [FileReplace](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1329-L1337>)
+## type [FileReplace](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1313-L1321>)
 
 FileReplace represents an in\-place text replacement operation in a file. Supports both literal and regex\-based search\-and\-replace patterns.
 
@@ -902,7 +941,7 @@ type FirewallRule struct {
 }
 ```
 
-## type [ForEachField](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2224-L2230>)
+## type [ForEachField](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2208-L2214>)
 
 ForEachField holds the value of a Step's \`for\_each\` keyword. It supports two YAML forms:
 
@@ -926,7 +965,7 @@ type ForEachField struct {
 }
 ```
 
-### func \(ForEachField\) [MarshalJSON](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2257>)
+### func \(ForEachField\) [MarshalJSON](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2241>)
 
 ```go
 func (f ForEachField) MarshalJSON() ([]byte, error)
@@ -934,7 +973,7 @@ func (f ForEachField) MarshalJSON() ([]byte, error)
 
 MarshalJSON ensures Validate's json.Marshal → unmarshal → schema\-check round\-trip emits the scalar/sequence form rather than a struct shape.
 
-### func \(ForEachField\) [MarshalYAML](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2248>)
+### func \(ForEachField\) [MarshalYAML](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2232>)
 
 ```go
 func (f ForEachField) MarshalYAML() (interface{}, error)
@@ -942,7 +981,7 @@ func (f ForEachField) MarshalYAML() (interface{}, error)
 
 MarshalYAML emits whichever form is populated \(scalar or sequence\).
 
-### func \(\*ForEachField\) [UnmarshalJSON](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2265>)
+### func \(\*ForEachField\) [UnmarshalJSON](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2249>)
 
 ```go
 func (f *ForEachField) UnmarshalJSON(data []byte) error
@@ -950,7 +989,7 @@ func (f *ForEachField) UnmarshalJSON(data []byte) error
 
 UnmarshalJSON parses either a scalar \(string\) or sequence \(array\) form.
 
-### func \(\*ForEachField\) [UnmarshalYAML](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2233>)
+### func \(\*ForEachField\) [UnmarshalYAML](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2217>)
 
 ```go
 func (f *ForEachField) UnmarshalYAML(unmarshal func(interface{}) error) error
@@ -1027,7 +1066,7 @@ type GitCredentials struct {
 }
 ```
 
-## type [HTTPAuth](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1832-L1839>)
+## type [HTTPAuth](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1816-L1823>)
 
 HTTPAuth is the one\-of credential block for HTTPRequest. Set at most one of Bearer/Basic/Header.
 
@@ -1042,7 +1081,7 @@ type HTTPAuth struct {
 }
 ```
 
-## type [HTTPAuthHeader](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1848-L1851>)
+## type [HTTPAuthHeader](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1832-L1835>)
 
 HTTPAuthHeader is an arbitrary auth header.
 
@@ -1053,7 +1092,7 @@ type HTTPAuthHeader struct {
 }
 ```
 
-## type [HTTPBasicAuth](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1842-L1845>)
+## type [HTTPBasicAuth](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1826-L1829>)
 
 HTTPBasicAuth is the user/pass pair for HTTPAuth.Basic.
 
@@ -1064,7 +1103,7 @@ type HTTPBasicAuth struct {
 }
 ```
 
-## type [HTTPRequest](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1670-L1828>)
+## type [HTTPRequest](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1654-L1812>)
 
 HTTPRequest is the proposal\-16 first\-class HTTP action. Unlike \`file.download\` \(URL→file\+checksum\), \`observe.http\` \(single\-shot probe\), and \`wait.http\` \(poll until ready\), HTTPRequest is the general "call an endpoint, capture the response as a fact" primitive — the action \`notify\` and \`llm\` will sit on top of.
 
@@ -1290,7 +1329,7 @@ func (lm *LocationMap) Set(path string, line, column int)
 
 Set stores a position for a given JSON pointer path
 
-## type [LoopContext](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2353-L2361>)
+## type [LoopContext](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2337-L2345>)
 
 LoopContext captures loop iteration metadata
 
@@ -1365,7 +1404,7 @@ func (m *ModuleBinding) UnmarshalYAML(unmarshal func(interface{}) error) error
 
 UnmarshalYAML accepts both the bare\-string form \(\`tq: ".../@v"\`\) and the object form \(\`tq: \{ source: ..., props: \{...\} \}\`\).
 
-## type [ObserveCPU](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1554>)
+## type [ObserveCPU](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1538>)
 
 ObserveCPU is the spec\-60 single\-shot read of CPU utilization \+ load averages. Pulls from the shared internal/metrics collector.
 
@@ -1373,7 +1412,7 @@ ObserveCPU is the spec\-60 single\-shot read of CPU utilization \+ load averages
 type ObserveCPU struct{}
 ```
 
-## type [ObserveDisk](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1564-L1566>)
+## type [ObserveDisk](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1548-L1550>)
 
 ObserveDisk is the spec\-60 single\-shot read of a filesystem path. Path defaults to "/" if unset. ReadOnly and inode counts are best\-effort \(platform\-dependent\).
 
@@ -1383,7 +1422,7 @@ type ObserveDisk struct {
 }
 ```
 
-## type [ObserveGPU](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1572-L1574>)
+## type [ObserveGPU](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1556-L1558>)
 
 ObserveGPU is the spec\-62 single\-shot read of GPU utilization \+ memory. Wraps the shared internal/metrics collector so /v1/metrics and observe.gpu share one nvidia\-smi/powermetrics sample. Index selects one GPU; unset returns all detected with an aggregate view.
 
@@ -1393,7 +1432,7 @@ type ObserveGPU struct {
 }
 ```
 
-## type [ObserveHTTP](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1527-L1542>)
+## type [ObserveHTTP](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1511-L1526>)
 
 ObserveHTTP is the spec\-59 single\-shot HTTP GET observation. Network\-flagged via Permissions\{Network:true\}. Body sample is capped at 2048 bytes; headers are filtered to CaptureHeaders.
 
@@ -1416,7 +1455,7 @@ type ObserveHTTP struct {
 }
 ```
 
-## type [ObserveLogs](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1581-L1602>)
+## type [ObserveLogs](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1565-L1586>)
 
 ObserveLogs is the spec\-61 single\-shot read of a log source within a time / line window. Exactly one of Path / JournalUnit / Container must be set. Patterns are regexes evaluated line\-by\-line; per\-pattern match counts \+ sample lines \(capped\) are returned in the typed LogObservation.
 
@@ -1445,7 +1484,7 @@ type ObserveLogs struct {
 }
 ```
 
-## type [ObserveMemory](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1559>)
+## type [ObserveMemory](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1543>)
 
 ObserveMemory is the spec\-60 single\-shot read of RAM / swap state. Total \+ Used \+ Free \+ Available \+ Swap fields are read directly from /proc/meminfo on Linux, sysctl on macOS.
 
@@ -1453,7 +1492,7 @@ ObserveMemory is the spec\-60 single\-shot read of RAM / swap state. Total \+ Us
 type ObserveMemory struct{}
 ```
 
-## type [ObservePort](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1509-L1514>)
+## type [ObservePort](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1493-L1498>)
 
 ObservePort is the spec\-59 single\-shot read of TCP/UDP port state. The polling cousin is wait.port; observe.port returns the current state once and lets the next step branch on it via spec\-37 \`as:\` capture. Read\-only by contract — Changed=false, empty Diff, nil Reverse, Cost\{Risk:1, Reversible:true\}.
 
@@ -1466,7 +1505,7 @@ type ObservePort struct {
 }
 ```
 
-## type [ObserveProcess](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1519-L1522>)
+## type [ObserveProcess](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1503-L1506>)
 
 ObserveProcess is the spec\-59 single\-shot read of process state. Selector is either Name \(exact match against process basename\) or Pattern \(regex against full argv\). At least one must be set.
 
@@ -1477,7 +1516,7 @@ type ObserveProcess struct {
 }
 ```
 
-## type [ObserveService](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1547-L1550>)
+## type [ObserveService](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1531-L1534>)
 
 ObserveService is the spec\-59 single\-shot read of init\-system service state. systemd on Linux, launchd on macOS, sysv fallback elsewhere. Manager defaults to "auto" \(detect from facts\).
 
@@ -1488,7 +1527,7 @@ type ObserveService struct {
 }
 ```
 
-## type [Origin](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2345-L2350>)
+## type [Origin](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2329-L2334>)
 
 Origin tracks source location and include chain for plan traceability
 
@@ -1805,50 +1844,7 @@ type Position struct {
 }
 ```
 
-## type [PresetDefinition](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1198-L1209>)
-
-PresetDefinition represents a reusable preset loaded from a YAML file. Presets are parameterized collections of steps that can be invoked as a single action.
-
-Either \`props:\` \(preferred, spec\-67\) or \`parameters:\` \(deprecated\) may declare the inputs. Both unmarshal into the Parameters field; UsedParametersKey records which form the source file used so the loader can emit a deprecation warning.
-
-```go
-type PresetDefinition struct {
-    Name        string                     `yaml:"name" json:"name"`                         // Preset name (required)
-    Description string                     `yaml:"description" json:"description,omitempty"` // Human-readable description
-    Version     string                     `yaml:"version" json:"version,omitempty"`         // Semantic version
-    Parameters  map[string]PresetParameter `yaml:"-" json:"parameters,omitempty"`            // Parameter/prop definitions (parsed from `props:` or `parameters:`)
-    Steps       []Step                     `yaml:"steps" json:"steps"`                       // Steps to execute
-    BaseDir     string                     `yaml:"-" json:"-"`                               // Base directory for relative paths (set by loader)
-    // UsedParametersKey is true when the source file declared inputs under
-    // `parameters:` rather than `props:`. Set by UnmarshalYAML; the loader
-    // uses it to emit a one-time deprecation warning.
-    UsedParametersKey bool `yaml:"-" json:"-"`
-}
-```
-
-### func \(\*PresetDefinition\) [UnmarshalYAML](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1214>)
-
-```go
-func (p *PresetDefinition) UnmarshalYAML(unmarshal func(interface{}) error) error
-```
-
-UnmarshalYAML accepts both \`props:\` \(preferred\) and \`parameters:\` \(deprecated\) keys for the parameter map. If both are present, \`props:\` wins and the conflict is reported as an error.
-
-## type [PresetParameter](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1244-L1250>)
-
-PresetParameter defines a parameter that can be passed to a preset.
-
-```go
-type PresetParameter struct {
-    Type        string        `yaml:"type" json:"type"`                         // string|bool|array|object
-    Required    bool          `yaml:"required" json:"required,omitempty"`       // Whether parameter is required
-    Default     interface{}   `yaml:"default" json:"default,omitempty"`         // Default value if not provided
-    Enum        []interface{} `yaml:"enum" json:"enum,omitempty"`               // Valid values (if restricted)
-    Description string        `yaml:"description" json:"description,omitempty"` // Human-readable description
-}
-```
-
-## type [PrintAction](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1319-L1325>)
+## type [PrintAction](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1303-L1309>)
 
 PrintAction represents a print/output action for displaying messages.
 
@@ -1874,7 +1870,7 @@ type PrintAction struct {
 }
 ```
 
-### func \(\*PrintAction\) [UnmarshalYAML](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1888>)
+### func \(\*PrintAction\) [UnmarshalYAML](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1872>)
 
 ```go
 func (p *PrintAction) UnmarshalYAML(unmarshal func(interface{}) error) error
@@ -1937,7 +1933,7 @@ type ProcessRestart struct {
 }
 ```
 
-## type [ReadFile](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1449-L1454>)
+## type [ReadFile](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1433-L1438>)
 
 ReadFile is the shared shape for \`read.json\` and \`read.yaml\` \(spec\-38\). Read\-only by contract: parses the file, optionally extracts a value by pathquery path, optionally applies redaction patterns to string leaves in the parsed value before publishing it.
 
@@ -1969,7 +1965,7 @@ func NewYAMLConfigReader() Reader
 
 NewYAMLConfigReader creates a new YAMLConfigReader
 
-## type [ReplaceFlags](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1340-L1344>)
+## type [ReplaceFlags](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1324-L1328>)
 
 ReplaceFlags configures text replacement behavior.
 
@@ -1981,7 +1977,7 @@ type ReplaceFlags struct {
 }
 ```
 
-## type [RepoApplyPatchset](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1480-L1488>)
+## type [RepoApplyPatchset](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1464-L1472>)
 
 RepoApplyPatchset represents a multi\-file patch application operation. Applies multiple patches to multiple files in a single atomic operation.
 
@@ -1997,7 +1993,7 @@ type RepoApplyPatchset struct {
 }
 ```
 
-## type [RepoSearch](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1458-L1466>)
+## type [RepoSearch](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1442-L1450>)
 
 RepoSearch represents a codebase search operation. Searches files for patterns and outputs results in JSON format.
 
@@ -2013,7 +2009,7 @@ type RepoSearch struct {
 }
 ```
 
-## type [RepoTree](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1470-L1476>)
+## type [RepoTree](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1454-L1460>)
 
 RepoTree represents a repository tree generation operation. Generates a JSON representation of the directory structure.
 
@@ -2027,7 +2023,7 @@ type RepoTree struct {
 }
 ```
 
-## type [RetryPolicy](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2290-L2296>)
+## type [RetryPolicy](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2274-L2280>)
 
 RetryPolicy controls per\-step retry behavior \(spec\-21\). Replaces the legacy flat Retries \+ RetryDelay fields with a single structured block; future\-compat for backoff strategies.
 
@@ -2208,7 +2204,7 @@ func (s *ShellAction) UnmarshalYAML(unmarshal func(interface{}) error) error
 
 UnmarshalYAML implements custom YAML unmarshaling to support both string and object forms. Supports: shell: "command" AND shell: \{ cmd: "command", interpreter: "bash", ... \}
 
-## type [Step](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1931-L2210>)
+## type [Step](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1915-L2194>)
 
 Step represents a single configuration step that can perform various actions.
 
@@ -2499,7 +2495,7 @@ type Step struct {
 }
 ```
 
-### func \(\*Step\) [Clone](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2508>)
+### func \(\*Step\) [Clone](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2492>)
 
 ```go
 func (s *Step) Clone() *Step
@@ -2507,7 +2503,7 @@ func (s *Step) Clone() *Step
 
 Clone creates a shallow copy of the step.
 
-### func \(\*Step\) [DetermineActionType](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2417>)
+### func \(\*Step\) [DetermineActionType](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2401>)
 
 ```go
 func (s *Step) DetermineActionType() string
@@ -2515,7 +2511,7 @@ func (s *Step) DetermineActionType() string
 
 DetermineActionType returns the action type for this step based on which action field is populated. Returned strings are the modern dot\-namespaced YAML keys \(spec\-21\).
 
-### func \(\*Step\) [RetryAttempts](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2300>)
+### func \(\*Step\) [RetryAttempts](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2284>)
 
 ```go
 func (s *Step) RetryAttempts() int
@@ -2523,7 +2519,7 @@ func (s *Step) RetryAttempts() int
 
 RetryAttempts returns the configured retry\-attempt count, or 0 if no retry policy is set. Helper for the post\-spec\-21 Retry struct.
 
-### func \(\*Step\) [RetryBackoffStrategy](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2321>)
+### func \(\*Step\) [RetryBackoffStrategy](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2305>)
 
 ```go
 func (s *Step) RetryBackoffStrategy() string
@@ -2531,7 +2527,7 @@ func (s *Step) RetryBackoffStrategy() string
 
 RetryBackoffStrategy returns the configured backoff strategy, or "fixed" \(the default\) when unset. The Retry.Backoff field was declared in the schema but never read — \`linear\` and \`exponential\` were silently ignored and every retry slept for the bare delay, defeating the point of backoff for external\-API integrations.
 
-### func \(\*Step\) [RetryDelayDuration](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2309>)
+### func \(\*Step\) [RetryDelayDuration](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2293>)
 
 ```go
 func (s *Step) RetryDelayDuration() string
@@ -2539,15 +2535,15 @@ func (s *Step) RetryDelayDuration() string
 
 RetryDelayDuration returns the configured retry delay string, or "" if no retry policy is set. Helper for the post\-spec\-21 Retry struct.
 
-### func \(\*Step\) [ShouldBecome](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2334>)
+### func \(\*Step\) [ShouldBecome](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2318>)
 
 ```go
 func (s *Step) ShouldBecome() bool
 ```
 
-ShouldBecome reports whether the step requests privilege escalation. True iff AsUser is non\-empty \(spec\-21 collapsed become/become\_user\) AND the current process is not already running as the target user. When the current euid is 0 and AsUser targets root \("root" or "0"\), no escalation is needed — short\-circuits sudo invocation so presets work in minimal containers \(ubuntu:24.04, alpine:3.21\) that don't ship sudo.
+ShouldBecome reports whether the step requests privilege escalation. True iff AsUser is non\-empty \(spec\-21 collapsed become/become\_user\) AND the current process is not already running as the target user. When the current euid is 0 and AsUser targets root \("root" or "0"\), no escalation is needed — short\-circuits sudo invocation so components work in minimal containers \(ubuntu:24.04, alpine:3.21\) that don't ship sudo.
 
-### func \(\*Step\) [Validate](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2453>)
+### func \(\*Step\) [Validate](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2437>)
 
 ```go
 func (s *Step) Validate() error
@@ -2555,7 +2551,7 @@ func (s *Step) Validate() error
 
 Validate checks that the step configuration is valid.
 
-### func \(\*Step\) [ValidateHasAction](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2445>)
+### func \(\*Step\) [ValidateHasAction](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2429>)
 
 ```go
 func (s *Step) ValidateHasAction() error
@@ -2563,7 +2559,7 @@ func (s *Step) ValidateHasAction() error
 
 ValidateHasAction checks that the step has at least one action defined.
 
-### func \(\*Step\) [ValidateOneAction](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2437>)
+### func \(\*Step\) [ValidateOneAction](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2421>)
 
 ```go
 func (s *Step) ValidateOneAction() error
@@ -2656,7 +2652,7 @@ func (v *TemplateValidator) ValidateSyntax(template string) error
 
 ValidateSyntax checks if a template string has valid pongo2 syntax Returns an error if the syntax is invalid
 
-## type [TextLine](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1373-L1381>)
+## type [TextLine](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1357-L1365>)
 
 TextLine represents an "ensure this line is present/absent in this file" operation, optionally anchored by regex and/or positioned with insert\_after / insert\_before. Idempotent: a second run produces a byte\-identical file.
 
@@ -2672,7 +2668,7 @@ type TextLine struct {
 }
 ```
 
-## type [TextPatchINI](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1391-L1396>)
+## type [TextPatchINI](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1375-L1380>)
 
 TextPatchINI represents structural section/key edits to an INI\-style configuration file \(php.ini, systemd unit files, ssh\_config, ...\). Keys take the form "Section.key" for \`\[Section\]\` files; a bare key \(no dot\) targets the top level for sectionless variants. Set values are written as\-is; delete removes matching key lines. Comments, blank lines, section ordering, indentation of untouched keys, and line endings \(LF vs CRLF\) are preserved across edits, so a second run with the same desired state is byte\-identical.
 
@@ -2685,7 +2681,7 @@ type TextPatchINI struct {
 }
 ```
 
-## type [TextPatchJSON](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1406-L1413>)
+## type [TextPatchJSON](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1390-L1397>)
 
 TextPatchJSON represents structural edits to a JSON file via a JSONPath\-lite subset \(\`a.b.c\`, \`a\[0\]\`, \`a.b\[3\].c\`\). Three operations are supported and applied in order: \`set\` upserts a value at a path; \`delete\` removes keys/elements at the listed paths; \`merge\` applies object/array merges \(arrays follow the chosen \`merge\_strategy\`\). Key order, indentation, and the trailing newline of the source file are preserved so a second run with byte\-identical desired state is a true no\-op \(Changed=false, no write\).
 
@@ -2700,7 +2696,7 @@ type TextPatchJSON struct {
 }
 ```
 
-## type [TextPatchYAML](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1424-L1431>)
+## type [TextPatchYAML](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1408-L1415>)
 
 TextPatchYAML represents structural edits to a YAML file via a small dotted \+ indexed path subset \(\`a.b.c\`, \`a\[0\]\`, \`a.b\[3\].c\`\). Three operations are supported and applied in order: \`set\` upserts a value at a path; \`delete\` removes keys/elements at the listed paths; \`merge\` deep\-merges objects \(non\-destructive on existing keys\) or arrays \(per \`merge\_strategy\`\). Edits go through gopkg.in/yaml.v3's node API to preserve key order and comments adjacent to unchanged nodes. Idempotent: a second run with byte\-identical desired state writes nothing.
 
@@ -2777,7 +2773,7 @@ func (e *ValidationError) Error() string
 
 Error implements the error interface
 
-## type [WaitCommand](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1865-L1872>)
+## type [WaitCommand](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1849-L1856>)
 
 WaitCommand waits for a shell command to exit with the expected code.
 
@@ -2792,7 +2788,7 @@ type WaitCommand struct {
 }
 ```
 
-## type [WaitFile](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1855-L1862>)
+## type [WaitFile](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1839-L1846>)
 
 WaitFile waits for a filesystem path to exist, optionally containing a substring in its contents.
 
@@ -2807,7 +2803,7 @@ type WaitFile struct {
 }
 ```
 
-## type [WaitHTTP](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1620-L1645>)
+## type [WaitHTTP](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1604-L1629>)
 
 WaitHTTP waits for an HTTP endpoint to return one of the accepted status codes, optionally with a substring match on the body.
 
@@ -2840,7 +2836,7 @@ type WaitHTTP struct {
 }
 ```
 
-## type [WaitPort](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1606-L1616>)
+## type [WaitPort](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1590-L1600>)
 
 WaitPort waits for a TCP port to accept connections. Useful for orchestrating service start → port open → next step.
 

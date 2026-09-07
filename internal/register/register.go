@@ -70,10 +70,10 @@ import (
 	// Runtime / execution
 	_ "github.com/alehatsman/mooncake/internal/actions/assert"
 	_ "github.com/alehatsman/mooncake/internal/actions/command"
-	_ "github.com/alehatsman/mooncake/internal/actions/preset"
 	_ "github.com/alehatsman/mooncake/internal/actions/process"
 	_ "github.com/alehatsman/mooncake/internal/actions/shell"
 	_ "github.com/alehatsman/mooncake/internal/actions/tool"
+	_ "github.com/alehatsman/mooncake/internal/actions/use"
 
 	// Text patching
 	_ "github.com/alehatsman/mooncake/internal/actions/text_line"

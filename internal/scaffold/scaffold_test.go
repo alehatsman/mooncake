@@ -246,11 +246,11 @@ func TestScaffold_AllTemplatesValidate(t *testing.T) {
 }
 
 // Templates must not point at surfaces that no longer exist. The four
-// scaffolds each ended with `echo "Browse: ./presets/zsh/"` long after the
-// in-tree preset library was retired, making a dead directory the first
+// scaffolds each ended with `echo "Browse: ./components/zsh/"` long after the
+// in-tree component library was retired, making a dead directory the first
 // thing a new user was told to look at.
 func TestScaffold_TemplatesHaveNoDeadReferences(t *testing.T) {
-	dead := []string{"./presets/", "become:", "mooncake last"}
+	dead := []string{"./components/", "become:", "mooncake last"}
 	for _, tpl := range Templates {
 		t.Run(tpl, func(t *testing.T) {
 			dir := t.TempDir()

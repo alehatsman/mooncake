@@ -322,8 +322,8 @@ func TestPongo2Renderer_RenderPreserving(t *testing.T) {
 		},
 		{
 			name: "mixed: defined renders, undefined preserved",
-			tmpl: "{{ preset_dir }}/{{ registered_result.path }}/config.j2",
-			vars: map[string]interface{}{"preset_dir": "/home/user/.mooncake"},
+			tmpl: "{{ component_dir }}/{{ registered_result.path }}/config.j2",
+			vars: map[string]interface{}{"component_dir": "/home/user/.mooncake"},
 			want: "/home/user/.mooncake/{{ registered_result.path }}/config.j2",
 		},
 		{

@@ -1057,7 +1057,7 @@ Execute shell commands
 | `unless` | string | No | Skip step if this command succeeds (universal alias of unless_command) |
 | `unless_command` | string | No | Skip step if this command succeeds (exit code 0). Useful for idempotency (universal) |
 | `unless_exists` | string | No | Skip step if this file path exists. Useful for idempotency (universal) |
-| `use` | any | No | Execute a preset by expanding it into steps |
+| `use` | any | No | Execute a component by expanding it into steps |
 | `vars` | any | No | Set variables for use in subsequent steps |
 | `vars.load` | any | No | Load variables from YAML files |
 | `wait.command` | any | No | Wait for a shell command to exit with the expected code |

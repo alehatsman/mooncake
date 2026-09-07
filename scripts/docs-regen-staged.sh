@@ -51,7 +51,7 @@ gated=$(git diff --cached --name-only --diff-filter=ACMR \
      'internal/logger/*.go' \
      'internal/modules/*.go' \
      'internal/plan/*.go' \
-     'internal/presets/*.go' \
+     'internal/components/*.go' \
      'internal/schemagen/*.go' \
      'cmd/*.go' 2>/dev/null || true)
 

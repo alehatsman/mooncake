@@ -31,7 +31,7 @@ registry, embedded schema, and on-disk state — never from the network.
 
 ## Behavior
 - WHEN `mooncake doctor` runs, it SHALL execute a fixed catalogue of checks
-  (install, system, state, presets, tools, project, services) and report each as
+  (install, system, state, components, tools, project, services) and report each as
   OK / info / warning / error with a concrete fix hint, in deterministic order.
 - WHERE `--section` is given it SHALL restrict to those sections (repeatable);
   `--skip-project` SHALL omit the cwd project checks; `--no-color` (or
@@ -47,12 +47,12 @@ registry, embedded schema, and on-disk state — never from the network.
   in-tree `examples/`; a `not_found` result SHALL exit non-zero on the CLI.
 - WHEN `mooncake docs generate --section <s>` runs, it SHALL emit a single
   markdown section (platform-matrix, capabilities, action-summary,
-  action-properties, preset-examples, schema, all) to `--output` or stdout, and
+  action-properties, component-examples, schema, all) to `--output` or stdout, and
   SHALL skip the write when the existing file is byte-equal ignoring the
   generated header.
 - WHEN `--section all-into-dir` runs, `--output` SHALL be a required directory
   and the generator SHALL write a per-topic file tree (action cards, schema,
-  properties, matrices, preset examples) ready for MkDocs / llms.txt.
+  properties, matrices, component examples) ready for MkDocs / llms.txt.
 - WHEN `mooncake schema generate` runs, it SHALL emit JSON Schema (default),
   YAML, OpenAPI 3.0, or TypeScript `.d.ts` from the action registry and Go
   structs, honouring `--extensions`/`--examples`/`--strict`.

@@ -54,7 +54,7 @@ the specs stay short.
   structured.
 - WHILE the system grows, scope stays inside three rings — (1) kernel:
   declarative actions, idempotency, planning, facts; (2) runtime: host daemon,
-  fleet, audit, policy; (3) economy: preset marketplace, agent SDK, signed plans
+  fleet, audit, policy; (3) economy: component marketplace, agent SDK, signed plans
   — each ring built on the one below and independently usable, so a solo dev
   never pays for the fleet and an enterprise reuses the same kernel.
 - WHILE mooncake is developed, simplicity wins: boring, explicit mechanisms are

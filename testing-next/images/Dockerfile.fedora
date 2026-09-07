@@ -19,8 +19,8 @@ RUN chmod +x /usr/local/bin/mooncake
 # Verify binary works
 RUN mooncake help > /dev/null || (echo "ERROR: mooncake binary failed to execute" && exit 1)
 
-# Copy presets
-COPY presets /mooncake/presets
+# Copy components
+COPY components /mooncake/components
 
 # Create artifacts directory
 RUN mkdir -p /artifacts

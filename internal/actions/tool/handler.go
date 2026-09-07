@@ -93,7 +93,7 @@ func (h *Handler) applyTool(ctx actions.Context, step *config.Step) (actions.Res
 	}
 
 	// Render template strings against the full execution context (vars,
-	// facts, preset parameters). The backend then receives concrete
+	// facts, component parameters). The backend then receives concrete
 	// values and only does its narrow {{ version }}/{{ os }}/{{ arch }}
 	// substitution if any literals remain.
 	renderedTool, err := renderToolTemplates(t, ctx)
@@ -225,7 +225,7 @@ func specFromConfig(t *config.Tool) Spec {
 }
 
 // renderToolTemplates returns a copy of t with all templatable string
-// fields rendered against ctx.Variables(). This bridges preset
+// fields rendered against ctx.Variables(). This bridges component
 // parameters ({{ parameters.version }}) and vars: blocks ({{ mise_os }})
 // to the backend, which otherwise only handles {{ version }}/{{ os }}/
 // {{ arch }} via a string replacer.
@@ -280,9 +280,9 @@ func factsFromVars(vars map[string]interface{}) FactSnapshot {
 // mirrors npm/cargo behavior: nearest lockfile wins.
 //
 // Callers should pass the user-facing project directory, NOT
-// ec.CurrentDir — the latter can be temporarily set to a preset's base
-// directory during preset expansion, which would land the lockfile
-// inside the preset rather than the user's project. See toolLockBaseDir().
+// ec.CurrentDir — the latter can be temporarily set to a component's base
+// directory during component expansion, which would land the lockfile
+// inside the component rather than the user's project. See toolLockBaseDir().
 func resolveLockfilePath(startDir string) string {
 	dir := startDir
 	for {
@@ -301,7 +301,7 @@ func resolveLockfilePath(startDir string) string {
 
 // toolLockBaseDir returns the directory to start searching for the
 // lockfile from. Process working directory is the source of truth —
-// it's stable across preset expansion and include traversal, and it's
+// it's stable across component expansion and include traversal, and it's
 // where users actually run `mooncake apply` from. Falls back to
 // ec.CurrentDir if os.Getwd fails (e.g. CWD was deleted).
 func toolLockBaseDir(ec *executor.ExecutionContext) string {

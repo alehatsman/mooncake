@@ -1,4 +1,4 @@
-package presets
+package components
 
 import (
 	"fmt"
@@ -14,18 +14,18 @@ const (
 	paramTypeObject = "object"
 )
 
-// ValidateParameters validates user-provided parameters against preset parameter definitions.
+// ValidateProps validates user-provided parameters against component parameter definitions.
 // It checks required parameters, validates types, checks enum constraints, and applies defaults.
 // Returns a validated parameter map ready for use in template expansion.
-func ValidateParameters(definition *config.PresetDefinition, userParams map[string]interface{}) (map[string]interface{}, error) {
+func ValidateProps(definition *config.ComponentDefinition, userParams map[string]interface{}) (map[string]interface{}, error) {
 	if definition == nil {
-		return nil, fmt.Errorf("preset definition is nil")
+		return nil, fmt.Errorf("component definition is nil")
 	}
 
 	validated := make(map[string]interface{})
 
 	// Check all defined parameters
-	for paramName, paramDef := range definition.Parameters {
+	for paramName, paramDef := range definition.Props {
 		userValue, provided := userParams[paramName]
 
 		// Check required parameters
@@ -58,8 +58,8 @@ func ValidateParameters(definition *config.PresetDefinition, userParams map[stri
 
 	// Check for unknown parameters
 	for userParam := range userParams {
-		if _, defined := definition.Parameters[userParam]; !defined {
-			return nil, fmt.Errorf("unknown parameter '%s' (preset '%s' does not define this parameter)", userParam, definition.Name)
+		if _, defined := definition.Props[userParam]; !defined {
+			return nil, fmt.Errorf("unknown parameter '%s' (component '%s' does not define this parameter)", userParam, definition.Name)
 		}
 	}
 

@@ -62,7 +62,7 @@ func (miseBackend) Validate(t *config.Tool) error {
 		return fmt.Errorf("mise backend: write_tool_versions is not supported (mise manages .tool-versions itself)")
 	}
 	if err := defaultMiseRunner.lookPath(); err != nil {
-		return fmt.Errorf("mise backend: %w; install mise first via the `mise-bootstrap` preset, the upstream installer (https://mise.jdx.dev/getting-started.html), or use the archive-url backend", err)
+		return fmt.Errorf("mise backend: %w; install mise first via the `mise-bootstrap` component, the upstream installer (https://mise.jdx.dev/getting-started.html), or use the archive-url backend", err)
 	}
 	return nil
 }
@@ -102,7 +102,7 @@ func miseToolID(spec Spec) string {
 //     PATH via `mooncake tool env`)
 //  2. The mooncake tool store — `<store>/mise/<version>/bin/mise`
 //     for any installed version. This is what makes the
-//     `mise-bootstrap` preset (Spec 19 E8.7) work in a single apply:
+//     `mise-bootstrap` component (Spec 19 E8.7) work in a single apply:
 //     after the bootstrap step installs mise into mooncake's tree,
 //     the next `backend: mise` step finds it here without any PATH
 //     manipulation.

@@ -2,7 +2,7 @@
 //
 // All packages that fetch over HTTP must route through this package
 // rather than reaching for net/http directly. Direct net/http use in
-// handler / preset / cmd code is a layering violation. The point is
+// handler / component / cmd code is a layering violation. The point is
 // not to hide net/http (the types are still net/http types) but to
 // ensure every outbound call has:
 //

@@ -224,7 +224,7 @@ BuildPlanFromConfig generates a plan from an already\-parsed RunConfig, skipping
 func (p *Planner) ExpandStepsWithContext(steps []config.Step, variables map[string]interface{}, currentDir string) ([]config.Step, error)
 ```
 
-ExpandStepsWithContext expands a list of steps with the given context. This is useful for expanding preset steps which may contain includes, loops, etc. Returns the expanded steps ready for execution.
+ExpandStepsWithContext expands a list of steps with the given context. This is useful for expanding component steps which may contain includes, loops, etc. Returns the expanded steps ready for execution.
 
 ## type [PlannerConfig](<https://github.com/alehatsman/mooncake/blob/main/internal/plan/planner.go#L177-L201>)
 

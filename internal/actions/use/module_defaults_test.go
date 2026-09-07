@@ -1,4 +1,4 @@
-package preset
+package use
 
 import (
 	"strings"
@@ -17,10 +17,10 @@ func testRender(vars map[string]string) func(string) (string, error) {
 	}
 }
 
-func declared(names ...string) map[string]config.PresetParameter {
-	m := make(map[string]config.PresetParameter, len(names))
+func declared(names ...string) map[string]config.ComponentProp {
+	m := make(map[string]config.ComponentProp, len(names))
 	for _, n := range names {
-		m[n] = config.PresetParameter{}
+		m[n] = config.ComponentProp{}
 	}
 	return m
 }

@@ -8,9 +8,9 @@ func TestComponentRefKindOf(t *testing.T) {
 		ref  string
 		want ComponentRefKind
 	}{
-		{"empty", "", ComponentRefPreset},
-		{"bare preset", "ollama", ComponentRefPreset},
-		{"alias single", "postgres", ComponentRefPreset}, // syntactic; alias-vs-preset decided at runtime
+		{"empty", "", ComponentRefBareName},
+		{"bare component", "ollama", ComponentRefBareName},
+		{"alias single", "postgres", ComponentRefBareName}, // syntactic; alias-vs-component decided at runtime
 		{"alias with export", "postgres/backup", ComponentRefAlias},
 		{"relative path", "./components/foo.yml", ComponentRefLocalPath},
 		{"parent relative", "../shared/foo.yml", ComponentRefLocalPath},

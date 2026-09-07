@@ -27,7 +27,7 @@ type FirstRunHintSubscriber struct {
 
 const firstRunHint = "" +
 	"\n★ First run — nice. Try `mooncake plan` to preview changes before `apply`.\n" +
-	"  Browse 330+ built-in components under ./presets/ (use them with `use:`).\n"
+	"  Browse 330+ built-in components under ./components/ (use them with `use:`).\n"
 
 // NewFirstRunHintSubscriber returns a subscriber that prints the hint to out
 // (typically os.Stdout) on the first successful run. outputFormat is the

@@ -1,34 +1,34 @@
 # ============================================================================
-# Preset Action - Comprehensive Examples
+# Component Action - Comprehensive Examples
 # ============================================================================
-# Use reusable, parameterized presets for complex workflows.
+# Use reusable, parameterized components for complex workflows.
 #
 # Run this file:
-#   mooncake run --config examples/actions/preset.yml
+#   mooncake run --config examples/actions/component.yml
 #
-# Note: The ollama preset requires sudo for system-wide installation
+# Note: The ollama component requires sudo for system-wide installation
 # ============================================================================
 
 # =============================================================================
-# Basic Preset Usage
+# Basic Component Usage
 # =============================================================================
 
-- name: "Example 1: Simple preset invocation (string form)"
+- name: "Example 1: Simple component invocation (string form)"
   log: |
-    Using preset with string form:
+    Using component with string form:
     - use: ollama
   tags: [basics]
 
-- name: "Example 2: Preset with parameters"
+- name: "Example 2: Component with parameters"
   log: |
-    Using preset with parameters:
+    Using component with parameters:
     - use: ollama
       props:
         state: present
         service: true
   tags: [basics]
 
-- name: "Example 3: Preset with list parameter"
+- name: "Example 3: Component with list parameter"
   log: |
     Using a list-typed prop:
     - use: ollama
@@ -39,7 +39,7 @@
   tags: [basics]
 
 # =============================================================================
-# Ollama Preset Examples
+# Ollama Component Examples
 # =============================================================================
 
 - name: "Example 4: Install Ollama (demo)"
@@ -125,7 +125,7 @@
   tags: [ollama]
 
 # =============================================================================
-# Preset with Variables
+# Component with Variables
 # =============================================================================
 
 - vars:
@@ -135,7 +135,7 @@
     ollama_host: "localhost:11434"
     environment: "development"
 
-- name: "Example 10: Preset with template variables"
+- name: "Example 10: Component with template variables"
   log: |
     Using variables:
     - use: ollama
@@ -148,7 +148,7 @@
   tags: [variables]
 
 # =============================================================================
-# Conditional Preset Execution
+# Conditional Component Execution
 # =============================================================================
 
 - name: "Example 11: Conditional on OS"
@@ -177,10 +177,10 @@
   tags: [conditional]
 
 # =============================================================================
-# Preset with Registration
+# Component with Registration
 # =============================================================================
 
-- name: "Example 13: Register preset result"
+- name: "Example 13: Register component result"
   log: |
     Register and use result:
     - name: Install Ollama
@@ -199,10 +199,10 @@
   tags: [register]
 
 # =============================================================================
-# Preset with Tags
+# Component with Tags
 # =============================================================================
 
-- name: "Example 14: Preset with tags"
+- name: "Example 14: Component with tags"
   log: |
     Using tags:
     - name: Setup ML environment
@@ -218,7 +218,7 @@
   tags: [tagging]
 
 # =============================================================================
-# Combining Presets with Other Actions
+# Combining Components with Other Actions
 # =============================================================================
 
 - name: "Example 15: Integration workflow"
@@ -366,9 +366,9 @@
 # Error Handling
 # =============================================================================
 
-- name: "Example 18: Preset with error handling"
+- name: "Example 18: Component with error handling"
   log: |
-    Handle preset errors:
+    Handle component errors:
 
     - name: Try to install Ollama
       use: ollama
@@ -389,10 +389,10 @@
   tags: [error-handling]
 
 # =============================================================================
-# Preset Parameters Reference
+# Component Parameters Reference
 # =============================================================================
 
-- name: "Example 19: All ollama preset parameters"
+- name: "Example 19: All ollama component parameters"
   log: |
     Complete parameter reference:
 
@@ -415,17 +415,17 @@
   tags: [reference]
 
 # =============================================================================
-# Custom Preset Creation (Conceptual)
+# Custom Component Creation (Conceptual)
 # =============================================================================
 
-- name: "Example 20: Creating custom presets"
+- name: "Example 20: Creating custom components"
   log: |
-    Create your own presets in:
-      • ./presets/          (playbook directory)
-      • ~/.mooncake/presets/  (user directory)
-      • /usr/share/mooncake/presets/  (system directory)
+    Create your own components in:
+      • ./components/          (playbook directory)
+      • ~/.mooncake/components/  (user directory)
+      • /usr/share/mooncake/components/  (system directory)
 
-    Example preset file (presets/hello.yml):
+    Example component file (components/hello.yml):
     ```yaml
     name: hello
     description: Print a greeting
@@ -455,7 +455,7 @@
         excited: true
     ```
 
-    See docs/guide/preset-authoring.md for more details.
+    See docs/guide/component-authoring.md for more details.
   tags: [custom]
 
 # =============================================================================
@@ -465,23 +465,23 @@
 - name: "Summary"
   log: |2
 
-    Preset action examples completed!
+    Component action examples completed!
     Covered:
-      • Basic preset invocation
-      • Ollama preset (install, configure, models)
+      • Basic component invocation
+      • Ollama component (install, configure, models)
       • Parameters and variables
       • Conditional execution
       • Registration and result handling
       • Integration with other actions
       • Development and production patterns
       • Error handling
-      • Custom preset creation
+      • Custom component creation
 
-    Available presets:
+    Available components:
       • ollama - Install and manage Ollama LLM runtime
 
     For more information:
-      • docs/guide/presets.md
-      • docs/guide/preset-authoring.md
+      • docs/guide/components.md
+      • docs/guide/component-authoring.md
       • examples/ollama/
   tags: [always]

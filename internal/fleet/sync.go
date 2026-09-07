@@ -55,7 +55,7 @@ type SyncStats struct {
 //
 // Top-level `.git` and `.DS_Store` are skipped. Everything else — including
 // dotfiles, nested `.git` dirs (don't put one in your plan tree), and
-// `presets/`-style subdirectories — is included verbatim.
+// `components/`-style subdirectories — is included verbatim.
 func Walk(planDir string, maxBytes int64) ([]FileEntry, int64, error) {
 	planDir = filepath.Clean(planDir)
 	info, err := os.Lstat(planDir)
