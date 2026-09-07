@@ -8,6 +8,8 @@ import (
 
 	"github.com/alehatsman/mooncake/internal/doctor"
 	"github.com/urfave/cli/v2"
+
+	"github.com/alehatsman/mooncake/cmd/kernel"
 )
 
 // Version is the binary's version, stamped at build time by goreleaser
@@ -18,8 +20,9 @@ var Version = "dev"
 
 func Command() *cli.Command {
 	return &cli.Command{
-		Name:  "doctor",
-		Usage: "Check mooncake's installation, state, tools, and project for issues",
+		Name:     "doctor",
+		Category: kernel.CategoryManage,
+		Usage:    "Check mooncake's installation, state, tools, and project for issues",
 		Description: "Runs a fixed battery of checks across install, system, state, modules, " +
 			"tools, project, and services. Reports OK/info/warning/error with concrete fix " +
 			"hints. Designed to finish in under a second. Use --format json for CI consumers.",

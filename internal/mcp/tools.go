@@ -144,7 +144,7 @@ func AllTools() []ToolDef {
 		},
 		{
 			Name:        "get_snapshot",
-			Description: "One-glance summary of the user's machine state — same view a human sees from `mooncake snapshot`. Use it to orient yourself before proposing changes. Read-only.",
+			Description: "One-glance summary of the user's machine state — same view a human sees from `mooncake state`. Use it to orient yourself before proposing changes. Read-only.",
 			InputSchema: objSchema(map[string]interface{}{
 				"format": strProp("Output format: 'text' (default) or 'json'"),
 			}, nil),

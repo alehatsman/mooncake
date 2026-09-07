@@ -12,8 +12,10 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-// MetricsCommand returns the `mooncake metrics` cli.Command.
-func MetricsCommand() *cli.Command {
+// metricsSubcommand returns `mooncake state metrics`. It was the
+// top-level `mooncake metrics` until the state-noun collapse
+// (specs/cli-surface.md); the flags and the JSON shape are unchanged.
+func metricsSubcommand() *cli.Command {
 	return &cli.Command{
 		Name:  "metrics",
 		Usage: "Display live system metrics (CPU/GPU/memory/load/network)",

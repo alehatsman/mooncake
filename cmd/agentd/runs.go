@@ -18,6 +18,8 @@ import (
 
 	"github.com/alehatsman/mooncake/cmd/cmdutil"
 	"github.com/alehatsman/mooncake/internal/agentd"
+
+	"github.com/alehatsman/mooncake/cmd/kernel"
 )
 
 // agentdHTTPClient returns an http.Client wired to the local agentd's unix
@@ -40,8 +42,9 @@ func agentdHTTPClient(systemMode bool) (*http.Client, string, error) {
 // daemon-facing subcommands (apply / follow / get / list).
 func RunsCommand() *cli.Command {
 	return &cli.Command{
-		Name:  "runs",
-		Usage: "Submit and follow runs on the local agentd daemon",
+		Name:     "runs",
+		Category: kernel.CategoryDaemon,
+		Usage:    "Submit and follow runs on the local agentd daemon",
 		Subcommands: []*cli.Command{
 			{
 				Name:  "apply",

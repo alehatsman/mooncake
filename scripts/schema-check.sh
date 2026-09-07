@@ -13,7 +13,7 @@ TMP=".tmp/schema-check"
 mkdir -p "$TMP"
 trap 'rm -rf "$TMP"' EXIT
 
-"$BIN" schema generate --format json --output "$TMP/schema.json" --strict >/dev/null
+"$BIN" dev schema generate --format json --output "$TMP/schema.json" --strict >/dev/null
 
 if diff -q internal/config/schema.json "$TMP/schema.json" >/dev/null 2>&1; then
   echo "✓ Schema is up to date"

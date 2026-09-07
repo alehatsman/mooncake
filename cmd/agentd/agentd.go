@@ -20,6 +20,8 @@ import (
 	"github.com/alehatsman/mooncake/internal/agentd"
 	"github.com/alehatsman/mooncake/internal/envpath"
 	"github.com/alehatsman/mooncake/internal/fleet/install"
+
+	"github.com/alehatsman/mooncake/cmd/kernel"
 )
 
 // Version is the binary's controller/agentd version stamped at build
@@ -43,8 +45,9 @@ var Version = "dev"
 // re-render the unit with the new `agentd run` form.
 func Command() *cli.Command {
 	return &cli.Command{
-		Name:  "agentd",
-		Usage: "Mooncake host daemon (run / install) (experimental)",
+		Name:     "agentd",
+		Category: kernel.CategoryDaemon,
+		Usage:    "Mooncake host daemon (run / install) (experimental)",
 		Description: "Subcommands:\n" +
 			" run        — run the daemon (foreground; what systemd / launchd execs).\n" +
 			" bootstrap  — install agentd on this machine and print the bearer token.",

@@ -7,12 +7,15 @@ import (
 
 	"github.com/alehatsman/mooncake/internal/scaffold"
 	"github.com/urfave/cli/v2"
+
+	"github.com/alehatsman/mooncake/cmd/kernel"
 )
 
 func Command() *cli.Command {
 	return &cli.Command{
-		Name:  "init",
-		Usage: "Scaffold a new mooncake project in the current directory",
+		Name:     "init",
+		Category: kernel.CategoryManage,
+		Usage:    "Scaffold a new mooncake project in the current directory",
 		Description: "Creates mooncake.yml, mooncake.vars.yml, .gitignore, and .mooncake/ " +
 			"in the working directory (or --dir). Picks a template interactively unless " +
 			"--non-interactive --template <name> is given.",

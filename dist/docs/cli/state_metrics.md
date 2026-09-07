@@ -1,9 +1,9 @@
 ---
 type: command
-name: mooncake metrics
+name: mooncake state metrics
 ---
 
-# mooncake metrics
+# mooncake state metrics
 
 Display live system metrics (CPU/GPU/memory/load/network)
 

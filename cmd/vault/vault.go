@@ -15,7 +15,11 @@ import (
 	"filippo.io/age"
 	"github.com/alehatsman/mooncake/internal/security"
 	"github.com/urfave/cli/v2"
+
+	"github.com/alehatsman/mooncake/cmd/cmdutil"
 	"golang.org/x/term"
+
+	"github.com/alehatsman/mooncake/cmd/kernel"
 )
 
 // recipientsFile is the name of the committable recipients list inside the vault dir.
@@ -24,8 +28,9 @@ const recipientsFile = "recipients.txt"
 // Command returns the `mooncake vault` command tree.
 func Command() *cli.Command {
 	return &cli.Command{
-		Name:  "vault",
-		Usage: "Manage Age-encrypted secrets stored in a vault directory",
+		Name:     "vault",
+		Category: kernel.CategoryManage,
+		Usage:    "Manage Age-encrypted secrets stored in a vault directory",
 		Description: "Store secrets encrypted at rest in your config repo.\n\n" +
 			"Quick start:\n" +
 			"  mooncake vault init                    # generate identity (once per machine)\n" +
@@ -317,7 +322,12 @@ func recipientsListCmd() *cli.Command {
 	return &cli.Command{
 		Name:  "list",
 		Usage: "List registered recipients",
+		Flags: []cli.Flag{cmdutil.FormatFlag()},
 		Action: func(c *cli.Context) error {
+			asJSON, err := cmdutil.WantJSON(c)
+			if err != nil {
+				return err
+			}
 			dir, err := vaultDir()
 			if err != nil {
 				return err
@@ -325,6 +335,15 @@ func recipientsListCmd() *cli.Command {
 			recs, err := readRecipientsFile(dir)
 			if err != nil {
 				return err
+			}
+			if asJSON {
+				out := make([]recipientJSON, 0, len(recs))
+				for _, r := range recs {
+					out = append(out, recipientJSON{Name: r.name, Pubkey: r.pubkey})
+				}
+				return cmdutil.EmitJSON(recipientsListResult{
+					Recipients: out, Total: len(out),
+				})
 			}
 			if len(recs) == 0 {
 				fmt.Fprintln(c.App.Writer, "(no recipients registered)")
@@ -389,37 +408,84 @@ func listCmd() *cli.Command {
 	return &cli.Command{
 		Name:  "list",
 		Usage: "List secrets in the vault directory",
+		Flags: []cli.Flag{cmdutil.FormatFlag()},
 		Action: func(c *cli.Context) error {
+			asJSON, err := cmdutil.WantJSON(c)
+			if err != nil {
+				return err
+			}
 			dir, err := vaultDir()
 			if err != nil {
 				return err
 			}
-			if _, err := os.Stat(dir); os.IsNotExist(err) {
-				fmt.Fprintln(c.App.Writer, "(vault directory is empty or does not exist)")
-				return nil
-			}
-			var count int
-			err = filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
-				if err != nil {
-					return err
-				}
-				if info.IsDir() || !strings.HasSuffix(path, ".age") {
-					return nil
-				}
-				rel, _ := filepath.Rel(dir, path)
-				fmt.Fprintln(c.App.Writer, strings.TrimSuffix(rel, ".age"))
-				count++
-				return nil
-			})
+			names, err := listSecretNames(dir)
 			if err != nil {
 				return err
 			}
-			if count == 0 {
-				fmt.Fprintln(c.App.Writer, "(no secrets found)")
+			if asJSON {
+				// Names only — the point of a vault is that the
+				// values never leave it in plaintext.
+				return cmdutil.EmitJSON(secretsListResult{
+					Dir: dir, Secrets: names, Total: len(names),
+				})
+			}
+			if len(names) == 0 {
+				if _, statErr := os.Stat(dir); os.IsNotExist(statErr) {
+					fmt.Fprintln(c.App.Writer, "(vault directory is empty or does not exist)")
+				} else {
+					fmt.Fprintln(c.App.Writer, "(no secrets found)")
+				}
+				return nil
+			}
+			for _, n := range names {
+				fmt.Fprintln(c.App.Writer, n)
 			}
 			return nil
 		},
 	}
+}
+
+// recipientJSON / recipientsListResult are the wire shape of
+// `vault recipients list --format json`.
+type recipientJSON struct {
+	Name   string `json:"name,omitempty"`
+	Pubkey string `json:"pubkey"`
+}
+
+type recipientsListResult struct {
+	Recipients []recipientJSON `json:"recipients"`
+	Total      int             `json:"total"`
+}
+
+// secretsListResult is the wire shape of `vault list --format json`.
+// It carries names only; a vault that printed values would defeat itself.
+type secretsListResult struct {
+	Dir     string   `json:"dir"`
+	Secrets []string `json:"secrets"`
+	Total   int      `json:"total"`
+}
+
+// listSecretNames walks the vault dir and returns each *.age entry's
+// name with the extension stripped, in walk order. A missing directory
+// yields no names and no error — an un-initialised vault is empty, not
+// broken.
+func listSecretNames(dir string) ([]string, error) {
+	names := []string{}
+	if _, err := os.Stat(dir); os.IsNotExist(err) {
+		return names, nil
+	}
+	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if info.IsDir() || !strings.HasSuffix(path, ".age") {
+			return nil
+		}
+		rel, _ := filepath.Rel(dir, path)
+		names = append(names, strings.TrimSuffix(rel, ".age"))
+		return nil
+	})
+	return names, err
 }
 
 // pubkeyCmd prints the public key (recipient) of the current identity.

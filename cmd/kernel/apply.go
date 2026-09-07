@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 
 	"github.com/urfave/cli/v2"
@@ -17,9 +18,23 @@ import (
 // ApplyCommand returns the `mooncake apply` cli.Command.
 func ApplyCommand() *cli.Command {
 	return &cli.Command{
-		Name:   "apply",
-		Usage:  "Apply a playbook or saved plan. Use --dry-run to preview without changes.",
-		Flags:  applyFlags(),
+		Name:     "apply",
+		Category: CategoryRun,
+		Usage:    "Apply a playbook, a saved plan, or an inline step",
+		Description: "Executes the resolved step list. To preview without " +
+			"changing anything, run `mooncake plan` — it takes the same " +
+			"--config / --step / --vars inputs.",
+		Flags: applyFlags(),
+		// `apply --dry-run` used to be sugar for `mooncake plan`, which
+		// meant two spellings for one behavior. The flag is gone; a user
+		// who types it gets pointed at the one preview path rather than
+		// a bare "flag provided but not defined" (specs/cli-surface.md).
+		OnUsageError: func(_ *cli.Context, err error, _ bool) error {
+			if err != nil && strings.Contains(err.Error(), "dry-run") {
+				return fmt.Errorf("%w — for a preview use: mooncake plan (same --config / --step / --vars flags)", err)
+			}
+			return err
+		},
 		Action: run,
 	}
 }
@@ -62,11 +77,6 @@ func applyFlags() []cli.Flag {
 		&cli.StringFlag{
 			Name:  "skip-tags",
 			Usage: "Exclude steps whose tags appear in this list (comma-separated). Composes with --tags via AND.",
-		},
-		&cli.BoolFlag{
-			Name:    "dry-run",
-			Aliases: []string{"n"},
-			Usage:   "Preview changes without executing (sugar for mooncake plan)",
 		},
 		&cli.BoolFlag{
 			Name:  "keep-going",
@@ -145,14 +155,6 @@ func run(c *cli.Context) error {
 		if c.IsSet("max-output-lines") {
 			return fmt.Errorf("--max-output-lines requires --artifacts-dir (the truncation limit only applies to the artifact bundle's stdout.log/stderr.log)")
 		}
-	}
-
-	// --dry-run short-circuits to the plan path. Sugar over `mooncake plan`.
-	if c.Bool("dry-run") {
-		if c.String("from-plan") != "" {
-			return fmt.Errorf("--dry-run is incompatible with --from-plan: the plan was already produced; just run `mooncake apply --from-plan <file>` to apply it, or `mooncake plan -c <config>` to re-preview")
-		}
-		return planAction(c)
 	}
 
 	// Check if running from plan

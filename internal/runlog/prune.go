@@ -134,12 +134,14 @@ func writeEntriesAtomic(path string, entries []Entry) (int64, error) {
 		return 0, fmt.Errorf("cannot create temp log: %w", err)
 	}
 	tmpName := tmp.Name()
-	defer os.Remove(tmpName) // no-op once the rename succeeds
+	// No-op once the rename succeeds; the error is uninteresting either
+	// way (the temp file is already orphaned if we get here).
+	defer func() { _ = os.Remove(tmpName) }()
 
 	enc := json.NewEncoder(tmp)
 	for _, e := range entries {
 		if err := enc.Encode(e); err != nil {
-			tmp.Close()
+			_ = tmp.Close()
 			return 0, fmt.Errorf("cannot write log entry: %w", err)
 		}
 	}

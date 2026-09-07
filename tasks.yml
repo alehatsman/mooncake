@@ -154,7 +154,7 @@ tasks:
     steps:
       - shell: { cmd: "go build -o {{ BIN }} ./cmd" }
       - shell: { cmd: "rm -rf dist/docs && mkdir -p dist/docs" }
-      - shell: { cmd: "{{ BIN }} docs generate --section all-into-dir --output dist/docs" }
+      - shell: { cmd: "{{ BIN }} dev docs generate --section all-into-dir --output dist/docs" }
       - log: { msg: "regenerated dist/docs/ from code" }
 
   docs-check:
@@ -182,9 +182,9 @@ tasks:
     desc: Generate JSON Schema + TypeScript types from code
     steps:
       - shell: { cmd: "go build -o {{ BIN }} ./cmd" }
-      - shell: { cmd: "{{ BIN }} schema generate --format json       --output internal/config/schema.json --strict" }
-      - shell: { cmd: "{{ BIN }} schema generate --format typescript --output internal/config/schema.d" }
-      - shell: { cmd: "{{ BIN }} schema generate --format typescript --output mooncake.d.ts" }
+      - shell: { cmd: "{{ BIN }} dev schema generate --format json       --output internal/config/schema.json --strict" }
+      - shell: { cmd: "{{ BIN }} dev schema generate --format typescript --output internal/config/schema.d" }
+      - shell: { cmd: "{{ BIN }} dev schema generate --format typescript --output mooncake.d.ts" }
       - log: { msg: "generated internal/config/schema.json + schema.d + mooncake.d.ts" }
 
   schema-check:
@@ -301,10 +301,10 @@ tasks:
         shell:
           cmd: |
             rm -rf dist/docs && mkdir -p dist/docs
-            {{ BIN }} docs generate --section all-into-dir --output dist/docs                           >/dev/null
-            {{ BIN }} schema generate --format json       --output internal/config/schema.json --strict >/dev/null
-            {{ BIN }} schema generate --format typescript --output internal/config/schema.d             >/dev/null
-            {{ BIN }} schema generate --format typescript --output mooncake.d.ts                         >/dev/null
+            {{ BIN }} dev docs generate --section all-into-dir --output dist/docs                           >/dev/null
+            {{ BIN }} dev schema generate --format json       --output internal/config/schema.json --strict >/dev/null
+            {{ BIN }} dev schema generate --format typescript --output internal/config/schema.d             >/dev/null
+            {{ BIN }} dev schema generate --format typescript --output mooncake.d.ts                         >/dev/null
             BIN={{ BIN }} bash ./scripts/docs-check.sh
             BIN={{ BIN }} bash ./scripts/schema-check.sh
       - name: "[7/11] mkdocs build --strict (skipped when pipenv/mkdocs absent)"

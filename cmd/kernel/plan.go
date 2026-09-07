@@ -22,8 +22,9 @@ import (
 // PlanCommand returns the `mooncake plan` cli.Command.
 func PlanCommand() *cli.Command {
 	return &cli.Command{
-		Name:  "plan",
-		Usage: "Generate and display execution plan (dry-run)",
+		Name:     "plan",
+		Category: CategoryRun,
+		Usage:    "Generate and display execution plan (dry-run)",
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:    "config",

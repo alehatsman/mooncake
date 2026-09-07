@@ -19,8 +19,9 @@ import (
 // list / show subcommands.
 func ActionsCommand() *cli.Command {
 	return &cli.Command{
-		Name:  "actions",
-		Usage: "Manage and inspect actions",
+		Name:     "actions",
+		Category: CategoryInspect,
+		Usage:    "Manage and inspect actions",
 		Subcommands: []*cli.Command{
 			{
 				Name:  "list",

@@ -13,6 +13,8 @@ import (
 	"github.com/alehatsman/mooncake/internal/runlog"
 	"github.com/alehatsman/mooncake/internal/utils"
 	"github.com/urfave/cli/v2"
+
+	"github.com/alehatsman/mooncake/cmd/kernel"
 )
 
 const outputFormatJSON = "json"
@@ -22,8 +24,9 @@ const outputFormatJSON = "json"
 // add `list` and `show <index>` for browsing the full log.
 func Command() *cli.Command {
 	return &cli.Command{
-		Name:  "history",
-		Usage: "Inspect past mooncake runs",
+		Name:     "history",
+		Category: kernel.CategoryInspect,
+		Usage:    "Inspect past mooncake runs",
 		Description: "Without subcommands, prints the most recent run summary " +
 			"(equivalent to the previous `mooncake last`). Use `history list` " +
 			"to browse multiple recent runs and `history show <N>` to view a " +

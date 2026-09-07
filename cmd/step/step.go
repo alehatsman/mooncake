@@ -21,6 +21,8 @@ import (
 	"github.com/alehatsman/mooncake/internal/security"
 	"github.com/alehatsman/mooncake/internal/template"
 	"github.com/urfave/cli/v2"
+
+	"github.com/alehatsman/mooncake/cmd/kernel"
 )
 
 // buildStepJSON assembles the JSON payload for `mooncake step`. Mirrors
@@ -60,6 +62,7 @@ func buildStepJSON(actionType string, result *executor.Result, execErr error) ma
 func Command() *cli.Command {
 	return &cli.Command{
 		Name:      "step",
+		Category:  kernel.CategoryRun,
 		Usage:     "Execute a single inline step and return JSON result",
 		ArgsUsage: "<yaml-step>",
 		Flags: []cli.Flag{

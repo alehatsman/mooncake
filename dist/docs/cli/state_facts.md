@@ -1,11 +1,11 @@
 ---
 type: command
-name: mooncake facts
+name: mooncake state facts
 ---
 
-# mooncake facts
+# mooncake state facts
 
-Display system facts
+Display static host facts
 
 ## Flags
 
