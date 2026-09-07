@@ -403,8 +403,8 @@ func (r RegisteredResult) ToMap() map[string]interface{} {
 // add Reason/Duration/AppliedDiff after construction.
 
 // QueryResult builds a read-only observation result (observe.*, read.*,
-// repo.search/tree, wait.* on success). Changed=false, Failed=false,
-// Error="" — per proposal-06, "absent" / "not matching" is success.
+// wait.* on success). Changed=false, Failed=false, Error="" — per
+// proposal-06, "absent" / "not matching" is success.
 func QueryResult(target string, data map[string]interface{}) *Result {
 	return &Result{
 		Operation: OpQuery,

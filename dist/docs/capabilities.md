@@ -2,8 +2,6 @@
 
 | Action | Category | Dry-Run | Become | Check Mode |
 |--------|----------|---------|--------|------------|
-| artifact.capture | system | Yes | No | No |
-| artifact.validate | system | Yes | No | No |
 | assert | system | Yes | No | No |
 | cmd | command | Yes | Yes | No |
 | container | system | Yes | No | Yes |
@@ -46,9 +44,6 @@
 | process | command | Yes | No | Yes |
 | read.json | data | Yes | No | No |
 | read.yaml | data | Yes | No | No |
-| repo.patch | file | Yes | Yes | Yes |
-| repo.search | file | Yes | No | No |
-| repo.tree | file | Yes | No | No |
 | shell | command | Yes | Yes | No |
 | text.delete_range | file | Yes | Yes | Yes |
 | text.insert | file | Yes | Yes | Yes |

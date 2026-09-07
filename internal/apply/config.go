@@ -73,13 +73,6 @@ type Config struct {
 	// the value; JSON is incompatible with TUI.
 	OutputFormat string
 
-	// Artifact-capture configuration. All four are no-ops when
-	// ArtifactsDir is empty.
-	ArtifactsDir      string
-	CaptureFullOutput bool
-	MaxOutputBytes    int
-	MaxOutputLines    int
-
 	// FactsJSONPath, when non-empty, requests an early facts-snapshot
 	// write before the plan starts running. Best-effort: failure is
 	// logged but does not abort the run.

@@ -2,8 +2,6 @@
 
 | Action | Linux | macOS | Windows | FreeBSD |
 |--------|-------|-------|-------|-------|
-| artifact.capture | ✓ | ✓ | ✓ | ✓ |
-| artifact.validate | ✓ | ✓ | ✓ | ✓ |
 | assert | ✓ | ✓ | ✓ | ✓ |
 | cmd | ✓ | ✓ | ✓ | ✓ |
 | container | ✓ | ✓ | ✓ | ✗ |
@@ -46,9 +44,6 @@
 | process | ✓ | ✓ | ✓ | ✓ |
 | read.json | ✓ | ✓ | ✓ | ✓ |
 | read.yaml | ✓ | ✓ | ✓ | ✓ |
-| repo.patch | ✓ | ✓ | ✓ | ✓ |
-| repo.search | ✓ | ✓ | ✓ | ✓ |
-| repo.tree | ✓ | ✓ | ✓ | ✓ |
 | shell | ✓ | ✓ | ✓ | ✓ |
 | text.delete_range | ✓ | ✓ | ✓ | ✓ |
 | text.insert | ✓ | ✓ | ✓ | ✓ |

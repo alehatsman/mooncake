@@ -93,10 +93,6 @@ func applyFlags() []cli.Flag {
 			Value:   "text",
 			Usage:   "Output format: text or json (json requires not using --tui)",
 		},
-		&cli.StringFlag{Name: "artifacts-dir", Value: "", Usage: "Directory to store run artifacts (e.g., .mooncake)"},
-		&cli.BoolFlag{Name: "capture-full-output", Value: false, Usage: "Capture full stdout/stderr to artifacts (requires --artifacts-dir)"},
-		&cli.IntFlag{Name: "max-output-bytes", Value: defaultMaxOutputBytes, Usage: "Max bytes of step output captured to the artifacts bundle (stdout.log/stderr.log)"},
-		&cli.IntFlag{Name: "max-output-lines", Value: defaultMaxOutputLines, Usage: "Max lines of step output captured to the artifacts bundle (stdout.log/stderr.log)"},
 		&cli.StringFlag{Name: "from-plan", Usage: "Apply from saved plan file (JSON or YAML)"},
 		&cli.StringFlag{Name: "facts-json", Usage: "Path to write collected facts as JSON"},
 
@@ -132,31 +128,6 @@ func applyFlags() []cli.Flag {
 }
 
 func run(c *cli.Context) error {
-	// MT-76: --capture-full-output is a no-op without --artifacts-dir
-	// because there's no bundle to write to. The flag's help text says
-	// "requires --artifacts-dir"; honor that instead of silently
-	// dropping the capture and leaving the user wondering where their
-	// logs went. Check before --dry-run / --from-plan so the validation
-	// fires consistently regardless of mode.
-	if c.Bool("capture-full-output") && c.String("artifacts-dir") == "" {
-		return fmt.Errorf("--capture-full-output requires --artifacts-dir (the captured logs need a directory to land in)")
-	}
-
-	// MT-86: --max-output-bytes / --max-output-lines only affect the
-	// artifact bundle (stdout.log / stderr.log). Without --artifacts-dir
-	// they're silently ignored — and the truncation never reaches the
-	// step.completed JSON either. Hard-error when the user explicitly
-	// sets either flag without the partner. c.IsSet skips the case
-	// where the default-valued flag is silently in scope.
-	if c.String("artifacts-dir") == "" {
-		if c.IsSet("max-output-bytes") {
-			return fmt.Errorf("--max-output-bytes requires --artifacts-dir (the truncation limit only applies to the artifact bundle's stdout.log/stderr.log)")
-		}
-		if c.IsSet("max-output-lines") {
-			return fmt.Errorf("--max-output-lines requires --artifacts-dir (the truncation limit only applies to the artifact bundle's stdout.log/stderr.log)")
-		}
-	}
-
 	// Check if running from plan
 	fromPlan := c.String("from-plan")
 	if fromPlan != "" {
@@ -190,25 +161,21 @@ func run(c *cli.Context) error {
 	// without going through CLI parsing. See
 	// docs-working/vision/kernel.md for the kernel framing.
 	cfg := &apply.Config{
-		ConfigPath:        configPath,
-		VarsFiles:         resolvedVars,
-		Tags:              cmdutil.ParseTags(c.String("tags")),
-		SkipTags:          cmdutil.ParseTags(c.String("skip-tags")),
-		SudoPass:          c.String("sudo-pass"),
-		SudoPassFile:      c.String("sudo-pass-file"),
-		AskBecomePass:     c.Bool("ask-become-pass"),
-		InsecureSudoPass:  c.Bool("insecure-sudo-pass"),
-		TUI:               c.Bool("tui"),
-		LogLevel:          c.String("log-level"),
-		OutputFormat:      c.String("output-format"),
-		ArtifactsDir:      c.String("artifacts-dir"),
-		CaptureFullOutput: c.Bool("capture-full-output"),
-		MaxOutputBytes:    c.Int("max-output-bytes"),
-		MaxOutputLines:    c.Int("max-output-lines"),
-		FactsJSONPath:     c.String("facts-json"),
-		OpID:              recordOp("apply", configPath, false),
-		StreamStepOutput:  !c.Bool("no-stream-output"),
-		KeepGoing:         c.Bool("keep-going"),
+		ConfigPath:       configPath,
+		VarsFiles:        resolvedVars,
+		Tags:             cmdutil.ParseTags(c.String("tags")),
+		SkipTags:         cmdutil.ParseTags(c.String("skip-tags")),
+		SudoPass:         c.String("sudo-pass"),
+		SudoPassFile:     c.String("sudo-pass-file"),
+		AskBecomePass:    c.Bool("ask-become-pass"),
+		InsecureSudoPass: c.Bool("insecure-sudo-pass"),
+		TUI:              c.Bool("tui"),
+		LogLevel:         c.String("log-level"),
+		OutputFormat:     c.String("output-format"),
+		FactsJSONPath:    c.String("facts-json"),
+		OpID:             recordOp("apply", configPath, false),
+		StreamStepOutput: !c.Bool("no-stream-output"),
+		KeepGoing:        c.Bool("keep-going"),
 	}
 	return runWithSignalCtx(c.Context, func(ctx context.Context) error {
 		kr, runErr := apply.NewRunner(cfg).Run(ctx)

@@ -11,7 +11,7 @@ import (
 // action but uses an unknown sub-property, the validator was emitting
 // TWO diagnostics for the same line — the precise "unknown field
 // 'content'" message AND the misleading "Step must have exactly one
-// action (artifact.capture, …, file.template, …)" message. The
+// action (file.write, …, file.template, …)" message. The
 // second was confusing because the step DID have file.template.
 // The dedup pass now suppresses the generic oneOf message at any
 // line that already has an unknown-field diagnostic.

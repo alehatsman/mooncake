@@ -3,7 +3,6 @@ package config
 import (
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 )
 
@@ -115,31 +114,16 @@ func TestReadConfig_TypedKeyInsideTransaction(t *testing.T) {
 
 // Folding follows a deliberate boundary: a Step's own control-flow compounds
 // (transaction/try/…) are folded, but steps nested inside a typed sub-struct
-// like artifact.capture are NOT. Such a typed-key custom there is not silently
-// dropped — it surfaces a clear unknown-field error, and the carrier remains
-// available as the escape hatch. This test pins that contract.
-func TestReadConfig_TypedKeyInArtifactCaptureRejected(t *testing.T) {
-	p := writeTemp(t, `
-- name: cap
-  artifact.capture:
-    name: snap
-    steps:
-      - name: notify
-        notify.webhook:
-          url: https://hooks.example.com/deploy
-`)
-	_, diags, err := ReadConfigWithValidation(p, notifyOnly)
-	if err != nil {
-		t.Fatalf("read: %v", err)
-	}
-	errs := filterErrors(diags)
-	if len(errs) == 0 {
-		t.Fatalf("expected an unknown-field error for notify.webhook nested in artifact.capture")
-	}
-	if !strings.Contains(errs[0].Message, "notify.webhook") {
-		t.Errorf("error should name the unfolded key, got: %s", errs[0].Message)
-	}
-}
+// with its own `steps:` field are NOT — such a typed-key custom there is not
+// silently dropped, it surfaces a clear unknown-field error, and the carrier
+// remains available as the escape hatch.
+//
+// This used to be pinned by TestReadConfig_TypedKeyInArtifactCaptureRejected,
+// using `artifact.capture` (a typed struct with a nested `steps:` field) as
+// its fixture. `artifact.capture` was cut (#204); no other action currently
+// wraps a typed sub-struct around a `steps:` list, so the contract has no
+// live fixture to exercise it against. Re-add a case here if a future action
+// reintroduces that shape.
 
 // Long-form `action: shell` + `with: {cmd: …}` parses into step.Shell — the
 // same result as the short-form `shell: {cmd: …}`.

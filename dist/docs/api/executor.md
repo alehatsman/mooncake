@@ -246,7 +246,7 @@ var (
 )
 ```
 
-## func [AddGlobalVariables](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/executor.go#L165>)
+## func [AddGlobalVariables](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/executor.go#L164>)
 
 ```go
 func AddGlobalVariables(scope *VariableScope)
@@ -254,7 +254,7 @@ func AddGlobalVariables(scope *VariableScope)
 
 AddGlobalVariables populates scope.Facts, scope.Metrics, and scope.Env from the system. Facts \(capabilities, configuration\) come from facts.Collect; metrics \(live CPU/GPU/memory/load/network\) come from metrics.Collect with per\-metric TTL caching; env is a snapshot of the parent process environment exposed to templates as \`env.\*\` so users can reference \`\{\{ env.HOME \}\}\`, \`\{\{ env.MY\_API\_KEY \}\}\`, etc. Keys across facts and metrics are disjoint by contract — see metrics.disjoint\_test.go.
 
-## func [DispatchStepAction](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/executor.go#L444>)
+## func [DispatchStepAction](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/executor.go#L443>)
 
 ```go
 func DispatchStepAction(step config.Step, ec *ExecutionContext) error
@@ -264,13 +264,13 @@ DispatchStepAction executes the appropriate handler based on step type. All acti
 
 INTERNAL: This function is exported for testing purposes only and is not part of the public API. It may change or be removed in future versions without notice.
 
-## func [ExecutePlan](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/executor.go#L1470>)
+## func [ExecutePlan](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/executor.go#L1425>)
 
 ```go
 func ExecutePlan(ctx context.Context, p *plan.Plan, sudoPass string, mode actions.Mode, log logger.Logger, publisher events.Publisher) error
 ```
 
-## func [ExecutePlanFull](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/executor.go#L1503>)
+## func [ExecutePlanFull](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/executor.go#L1458>)
 
 ```go
 func ExecutePlanFull(ctx context.Context, p *plan.Plan, sudoPass string, mode actions.Mode, log logger.Logger, publisher events.Publisher, capture *RunCapture, policy *Policy, registry *actions.Registry, keepGoing bool) error
@@ -280,7 +280,7 @@ ExecutePlanFull runs a pre\-compiled plan with the full options set: capture, po
 
 keepGoing mirrors StartConfig.KeepGoing: a failing step is recorded and the run continues, with every failure reported together at the end as a DeferredFailuresError. The run still fails — it just fails with the whole picture instead of the first item of it. Steps inside a transaction are exempt \(all\-or\-nothing wins\).
 
-## func [ExecutePlanWithCapture](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/executor.go#L1486>)
+## func [ExecutePlanWithCapture](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/executor.go#L1441>)
 
 ```go
 func ExecutePlanWithCapture(ctx context.Context, p *plan.Plan, sudoPass string, mode actions.Mode, log logger.Logger, publisher events.Publisher, capture *RunCapture) error
@@ -292,7 +292,7 @@ This is the from\-saved\-plan analog of executor.Start with Capture set. Used by
 
 ctx is checked between steps — see Start for the cancellation contract.
 
-## func [ExecuteStep](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/executor.go#L927>)
+## func [ExecuteStep](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/executor.go#L926>)
 
 ```go
 func ExecuteStep(step config.Step, ec *ExecutionContext) error
@@ -300,7 +300,7 @@ func ExecuteStep(step config.Step, ec *ExecutionContext) error
 
 ExecuteStep executes a single configuration step within the given execution context.
 
-## func [ExecuteSteps](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/executor.go#L1113>)
+## func [ExecuteSteps](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/executor.go#L1112>)
 
 ```go
 func ExecuteSteps(steps []config.Step, ec *ExecutionContext) error
@@ -342,7 +342,7 @@ Panics on duplicate registration — silent overwrite would let a later handler 
 
 Called from each handler package's init\(\) alongside actions.Register. The wire round\-trip is the contract this registry implements: see Result.MarshalJSON / UnmarshalJSON \(spec R2.1c phase 2\).
 
-## func [Start](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/executor.go#L1302>)
+## func [Start](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/executor.go#L1295>)
 
 ```go
 func Start(ctx context.Context, startConfig StartConfig, log logger.Logger, publisher events.Publisher) error
@@ -1342,7 +1342,7 @@ NoopResult builds an idempotent "already at target state" result. Changed=false,
 func QueryResult(target string, data map[string]interface{}) *Result
 ```
 
-QueryResult builds a read\-only observation result \(observe.\*, read.\*, repo.search/tree, wait.\* on success\). Changed=false, Failed=false, Error="" — per proposal\-06, "absent" / "not matching" is success.
+QueryResult builds a read\-only observation result \(observe.\*, read.\*, wait.\* on success\). Changed=false, Failed=false, Error="" — per proposal\-06, "absent" / "not matching" is success.
 
 ### func \(\*Result\) [MarshalJSON](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/result.go#L570>)
 
@@ -1630,7 +1630,7 @@ func (e *SetupError) Error() string
 func (e *SetupError) Unwrap() error
 ```
 
-## type [StartConfig](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/executor.go#L1238-L1291>)
+## type [StartConfig](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/executor.go#L1237-L1284>)
 
 StartConfig contains configuration for starting a mooncake execution.
 
@@ -1654,12 +1654,6 @@ type StartConfig struct {
     // Names is the spec-50 step-name filter (`--step-filter name=<x>`).
     // AND'd with Tags at plan-build time: a step must pass both.
     Names []string
-
-    // Artifact configuration
-    ArtifactsDir      string
-    CaptureFullOutput bool
-    MaxOutputBytes    int
-    MaxOutputLines    int
 
     // KeepGoing continues the run past a failing step, collecting the
     // failures and returning them together at the end (still a

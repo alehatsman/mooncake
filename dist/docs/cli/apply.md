@@ -27,10 +27,6 @@ Executes the resolved step list. To preview without changing anything, run `moon
 | `--keep-going` | bool | false | Continue past a failing step and report all failures at the end (still exits non-zero). Steps inside a transaction keep all-or-nothing semantics. |
 | `--tui` | bool | false | Use the animated TUI subscriber (default: raw console output) |
 | `--output-format / -format` | string | `text` | Output format: text or json (json requires not using --tui) |
-| `--artifacts-dir` | string | - | Directory to store run artifacts (e.g., .mooncake) |
-| `--capture-full-output` | bool | false | Capture full stdout/stderr to artifacts (requires --artifacts-dir) |
-| `--max-output-bytes` | int | `1048576` | Max bytes of step output captured to the artifacts bundle (stdout.log/stderr.log) |
-| `--max-output-lines` | int | `1000` | Max lines of step output captured to the artifacts bundle (stdout.log/stderr.log) |
 | `--from-plan` | string | - | Apply from saved plan file (JSON or YAML) |
 | `--facts-json` | string | - | Path to write collected facts as JSON |
 | `--host` | string | - | Override the auto-detected hostname for overlay lookup (vars/by-host/<host>.yml). Also honors $MOONCAKE_HOST. An explicit name whose by-host file is missing is an error. |

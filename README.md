@@ -110,7 +110,6 @@ Highlights:
 | `os.user` · `os.group` · `os.ssh_key` | Identity management |
 | `git.clone` · `git.checkout` · `git.config` | Repository setup with credentials + submodules |
 | `container.image` · `container` | Container build / run |
-| `repo.search` · `repo.tree` · `repo.patch` | Code-scoped operations for agents |
 | `wait.{port,http,file,command}` | Synchronization primitives |
 | `shell` · `cmd` · `assert` · `log` | Escape hatches + control |
 

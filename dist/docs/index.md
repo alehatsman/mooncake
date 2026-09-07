@@ -8,8 +8,6 @@ This site is fully generated from code — every page is derived from a Go sourc
 
 One page per registered action: properties, examples, capabilities.
 
-- [artifact.capture](actions/artifact_capture.md)
-- [artifact.validate](actions/artifact_validate.md)
 - [assert](actions/assert.md)
 - [cmd](actions/cmd.md)
 - [container](actions/container.md)
@@ -52,9 +50,6 @@ One page per registered action: properties, examples, capabilities.
 - [process](actions/process.md)
 - [read.json](actions/read_json.md)
 - [read.yaml](actions/read_yaml.md)
-- [repo.patch](actions/repo_patch.md)
-- [repo.search](actions/repo_search.md)
-- [repo.tree](actions/repo_tree.md)
 - [shell](actions/shell.md)
 - [text.delete.range](actions/text_delete_range.md)
 - [text.insert](actions/text_insert.md)

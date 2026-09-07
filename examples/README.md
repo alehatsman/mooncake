@@ -51,15 +51,12 @@ mooncake init --template dotfiles
 - `scenarios/` — end-to-end realistic configs
 
 **Single-file recipes**
-- `artifact-capture-example.yml`, `artifact-plan-embedding-example.yml`,
-  `ARTIFACTS_README.md` — `artifact.capture` action
 - `assert-enhanced-example.yml` — `assert:` action
 - `file-delete-range-example.yml`, `file-insert-example.yml`,
   `file-patch-apply-example.yml`, `file-replace-example.yml` —
   `text.*` actions on existing files
 - `global-variables-example.yml` — global variable scoping
 - `json-output-example.md` — structured JSON CLI output
-- `repo-apply-patchset-example.yml` — `repo.patch` workflow
 - `wait-example.yml` — `wait.*` actions
 
 ## See also

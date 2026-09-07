@@ -9,10 +9,6 @@
 package register
 
 import (
-	// Artifact
-	_ "github.com/alehatsman/mooncake/internal/actions/artifact_capture"
-	_ "github.com/alehatsman/mooncake/internal/actions/artifact_validate"
-
 	// Container
 	_ "github.com/alehatsman/mooncake/internal/actions/container_image"
 	_ "github.com/alehatsman/mooncake/internal/actions/container_run"
@@ -63,11 +59,6 @@ import (
 	_ "github.com/alehatsman/mooncake/internal/actions/pkg_list"
 	_ "github.com/alehatsman/mooncake/internal/actions/pkg_repo"
 	_ "github.com/alehatsman/mooncake/internal/actions/pkg_upgrade"
-
-	// Repository
-	_ "github.com/alehatsman/mooncake/internal/actions/repo_apply_patchset"
-	_ "github.com/alehatsman/mooncake/internal/actions/repo_search"
-	_ "github.com/alehatsman/mooncake/internal/actions/repo_tree"
 
 	// Runtime / execution
 	_ "github.com/alehatsman/mooncake/internal/actions/assert"

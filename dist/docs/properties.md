@@ -5,48 +5,6 @@
 This document is auto-generated from `internal/config/schema.json`.
 Properties are guaranteed to match the schema definition.
 
-## Artifact.capture
-
-Capture file changes with enhanced metadata for LLM agents
-
-| Property | Type | Required | Description |
-|----------|------|----------|-------------|
-| `capture_content` | boolean | No | Capture full file content before/after |
-| `embed_plan` | boolean | No | Embed full plan in artifact for LLM context |
-| `format` | string | No | Output format (allowed: `json, markdown, both`) |
-| `include_checksums` | boolean | No | Include SHA256 checksums |
-| `max_diff_size` | integer | No | Maximum diff size in bytes per file |
-| `max_plan_steps` | integer | No | Don't embed plan if exceeds this many steps |
-| `name` | string | **Yes** | Name of the artifact (used for output directory) |
-| `output_dir` | string | No | Base directory for artifacts (default: './artifacts') |
-| `steps` | array | **Yes** | Steps to execute while capturing changes |
-
-**Metadata:**
-- Category: `system`
-
-
----
-
-## Artifact.validate
-
-Validate artifacts against constraints (change budgets)
-
-| Property | Type | Required | Description |
-|----------|------|----------|-------------|
-| `allowed_paths` | array | No | Glob patterns for allowed file paths |
-| `artifact_file` | string | **Yes** | Path to artifact metadata JSON file |
-| `forbidden_paths` | array | No | Glob patterns for forbidden file paths |
-| `max_file_size` | integer | No | Maximum file size in bytes after changes |
-| `max_files` | integer | No | Maximum number of files allowed to change |
-| `max_lines_changed` | integer | No | Maximum total lines changed |
-| `require_tests` | boolean | No | Require test file changes when code files change |
-
-**Metadata:**
-- Category: `system`
-
-
----
-
 ## Assert
 
 Verify conditions without changing system state
@@ -882,67 +840,6 @@ Read a YAML file and optionally extract a value by path
 
 ---
 
-## Repo.patch
-
-Apply multiple patches to multiple files atomically
-
-| Property | Type | Required | Description |
-|----------|------|----------|-------------|
-| `backup` | boolean | No | - |
-| `base_dir` | string | No | - |
-| `dry_run` | boolean | No | - |
-| `output_file` | string | No | - |
-| `patchset` | string | No | - |
-| `patchset_file` | string | No | - |
-| `strict` | boolean | No | - |
-
-**Metadata:**
-- Category: `file`
-- Version: `1.0.0`
-
-
----
-
-## Repo.search
-
-Search codebase for patterns and output results in JSON format
-
-| Property | Type | Required | Description |
-|----------|------|----------|-------------|
-| `glob` | string | No | - |
-| `ignore_dirs` | array | No | - |
-| `max_results` | integer | No | - |
-| `output_file` | string | No | - |
-| `path` | string | No | - |
-| `pattern` | string | **Yes** | - |
-| `regex` | boolean | No | - |
-
-**Metadata:**
-- Category: `file`
-- Version: `1.0.0`
-
-
----
-
-## Repo.tree
-
-Generate a JSON representation of directory structure
-
-| Property | Type | Required | Description |
-|----------|------|----------|-------------|
-| `exclude_dirs` | array | No | - |
-| `include_files` | boolean | No | - |
-| `max_depth` | integer | No | - |
-| `output_file` | string | No | - |
-| `path` | string | No | - |
-
-**Metadata:**
-- Category: `file`
-- Version: `1.0.0`
-
-
----
-
 ## RunConfig
 
 Structured configuration with version, global variables, steps, and/or named tasks
@@ -1008,8 +905,6 @@ Execute shell commands
 |----------|------|----------|-------------|
 | `action` | string | No | Name of a registered custom action handler (generic carrier; pair with with:). Built-in actions use their own typed field instead. |
 | `allow_irreversible` | boolean | No | Allow a transaction to include steps without Reverser support (spec-30) |
-| `artifact.capture` | any | No | Capture file changes with enhanced metadata for LLM agents |
-| `artifact.validate` | any | No | Validate artifacts against constraints (change budgets) |
 | `as` | string | No | Variable name to store step execution outputs (universal) |
 | `as_user` | string | No | Run as this user (empty = current user, 'root' = sudo to root, '<name>' = sudo to user). Works with: shell, cmd, file.write, file.template |
 | `assert` | any | No | Verify conditions without changing system state |
@@ -1071,9 +966,6 @@ Execute shell commands
 | `props` | object | No | Parameter values passed to the component invoked by `use:`. |
 | `read.json` | any | No | Read a JSON file and optionally extract a value by path |
 | `read.yaml` | any | No | Read a YAML file and optionally extract a value by path |
-| `repo.patch` | any | No | Apply multiple patches to multiple files atomically |
-| `repo.search` | any | No | Search codebase for patterns and output results in JSON format |
-| `repo.tree` | any | No | Generate a JSON representation of directory structure |
 | `retry` | object | No | Retry policy: { attempts: int, delay: string, backoff: string } |
 | `shell` | any | No | Execute shell commands |
 | `tags` | array | No | Tags for filtering step execution (universal) |

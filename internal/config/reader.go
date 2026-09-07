@@ -200,7 +200,7 @@ func (r *YAMLConfigReader) parseConfigData(data []byte, path string, isCustom Is
 	// MT-4: when validateKnownFields already pinpoints a typo'd
 	// step-level or action-level field (e.g. `file.template.content`),
 	// the schema validator's generic "Step must have exactly one
-	// action (artifact.capture, …, file.template, …)" diagnostic
+	// action (file.write, …, file.template, …)" diagnostic
 	// fires alongside it for the same line — misleading because the
 	// step DOES name a valid action; the action just has an unknown
 	// sub-property. Drop the second message when a sharper unknown-

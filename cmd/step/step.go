@@ -31,8 +31,8 @@ import (
 // action-specific key the handler called SetData() with. MT-22: prior to
 // this generalization the output was a hard-coded subset (changed,
 // action, stdout, stderr, error, duration_ms), which silently dropped
-// typed actions' payloads — `repo.search` results, `read.json` value,
-// etc. — and made `step` useless for agents that need the structured
+// typed actions' payloads — `read.json` value, `observe.port` state,
+// etc. — and made `step` useless for a caller that needs the structured
 // output, while shell still worked by accident because stdout is in the
 // subset.
 func buildStepJSON(actionType string, result *executor.Result, execErr error) map[string]any {

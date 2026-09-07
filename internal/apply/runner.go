@@ -216,12 +216,6 @@ func (r *Runner) Run(ctx context.Context) (*KernelResult, error) {
 		SkipTags:         r.cfg.SkipTags,
 		Names:            r.cfg.Names,
 
-		// Artifact configuration.
-		ArtifactsDir:      r.cfg.ArtifactsDir,
-		CaptureFullOutput: r.cfg.CaptureFullOutput,
-		MaxOutputBytes:    r.cfg.MaxOutputBytes,
-		MaxOutputLines:    r.cfg.MaxOutputLines,
-
 		KeepGoing: r.cfg.KeepGoing,
 
 		Capture:  capture,

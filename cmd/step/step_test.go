@@ -12,9 +12,9 @@ import (
 
 // MT-22 regression tests: `mooncake step` must surface the full
 // RegisteredResult.ToMap() payload, not a hardcoded subset. Typed
-// actions (`repo.search`, `read.json`, `repo.tree`, …) populate
-// `Result.Data` via `SetData`; the prior step JSON dropped Data
-// entirely so agents got no way to consume what the action found.
+// actions (`read.json`, `observe.port`, …) populate `Result.Data` via
+// `SetData`; the prior step JSON dropped Data entirely so a caller had
+// no way to consume what the action found.
 //
 // Proposal-01: Data lives nested under the top-level `data` key
 // rather than being flattened into the envelope. The MT-22 contract
@@ -22,9 +22,9 @@ import (
 // deeper.
 
 // makeResultWithData returns a *executor.Result mimicking what a typed
-// handler builds. Mirrors the repo.search shape from the manual-test
-// repro: top-level result map carrying total_files / total_matches /
-// results.
+// handler builds. Mirrors a search-style result shape from the
+// manual-test repro: top-level result map carrying total_files /
+// total_matches / results.
 func makeResultWithData() *executor.Result {
 	r := executor.NewResult()
 	r.Changed = false
@@ -41,9 +41,9 @@ func makeResultWithData() *executor.Result {
 
 func TestBuildStepJSON_SurfacesActionDataMap(t *testing.T) {
 	res := makeResultWithData()
-	payload := buildStepJSON("repo.search", res, nil)
+	payload := buildStepJSON("search.probe", res, nil)
 
-	if payload["action"] != "repo.search" {
+	if payload["action"] != "search.probe" {
 		t.Errorf("action = %v", payload["action"])
 	}
 	// The headline assertion: action-specific Data must round-trip

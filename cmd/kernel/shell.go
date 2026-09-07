@@ -32,13 +32,6 @@ const (
 	outputFormatQuiet = "quiet"
 )
 
-// Artifact default limits. Surfaced through `apply --max-output-bytes`
-// / `--max-output-lines`.
-const (
-	defaultMaxOutputBytes = 1048576 // 1 MiB
-	defaultMaxOutputLines = 1000
-)
-
 // yamlIndentSpaces is the indent yaml.NewEncoder uses across the
 // kernel verbs' YAML output paths.
 const yamlIndentSpaces = 2

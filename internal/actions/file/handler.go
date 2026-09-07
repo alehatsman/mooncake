@@ -27,12 +27,10 @@ import (
 )
 
 // snapshotMaxBytes caps the in-memory head sample captured for event
-// payloads. Slightly above artifact_capture's defaultMaxDiffSize (1 MB)
-// so consumers with a custom MaxDiffSize between 1 MB and 8 MB still get
-// the full content. Files larger than this are SHA-hashed in full but
-// only the head sample lands in the event — consumers downstream of
-// artifact_capture already truncate to MaxDiffSize, so the cap here
-// trades unbounded handler RSS for a documented-truncation contract.
+// payloads (8 MB), generous enough for a subscriber that wants the full
+// content of most config-sized files. Files larger than this are
+// SHA-hashed in full but only the head sample lands in the event — the
+// cap trades unbounded handler RSS for a documented-truncation contract.
 //
 // F026: pre-fix the handler called os.ReadFile on the target path,
 // allocating len(file) bytes per call (up to 3× per Run on a single
@@ -324,8 +322,8 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		result.ReverseData = CaptureReverseInfo(renderedPath, state)
 	}
 
-	// Issue #27: capture pre-write bytes for downstream consumers
-	// (artifact.capture's size/checksum/content fields). Only meaningful
+	// Issue #27: capture pre-write bytes for a downstream event
+	// subscriber's size/checksum/content fields. Only meaningful
 	// for the file-write case in Apply mode. If the file doesn't exist,
 	// snapshotFile returns the not-exist error and beforeHead stays nil
 	// — `created` operations then report a 0/empty before-state, which
@@ -519,9 +517,9 @@ func (h *Handler) checkHardlinkForce(path, desiredTarget string, force bool) err
 // head bytes (full content for small files, head sample for big ones).
 // beforeSize / beforeSum are the FULL file size and SHA-256, computed
 // streaming so a 10 GB target doesn't allocate 10 GB. The event's
-// ContentBefore/After fields carry the head sample (artifact_capture
-// consumers truncate to MaxDiffSize anyway); SizeBefore/After carry
-// ground truth. F026.
+// ContentBefore/After fields carry the head sample (a subscriber
+// wanting the full diff truncates to its own budget anyway);
+// SizeBefore/After carry ground truth. F026.
 func emitFileEvent(ctx actions.Context, state string, eff actions.Effect, path string, mode os.FileMode, formatMode func(os.FileMode) string, beforeHead []byte, beforeSize int64, beforeSum string) {
 	pub := ctx.EventPublisher()
 	if pub == nil {

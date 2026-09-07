@@ -129,12 +129,6 @@ const (
 	EventAgentLoopComplete     Type = "agent.loop.complete"
 )
 
-// Event types for artifact capture
-const (
-	EventArtifactCaptureStart    Type = "artifact_capture.start"
-	EventArtifactCaptureComplete Type = "artifact_capture.complete"
-)
-
 // Event types for print
 const (
 	EventPrintMessage Type = "print.message"
@@ -351,10 +345,10 @@ type FileOperationData struct {
 	DryRun         bool   `json:"dry_run"`
 	ChecksumBefore string `json:"checksum_before,omitempty"` // SHA256 before modification (empty for new files)
 	ChecksumAfter  string `json:"checksum_after,omitempty"`  // SHA256 after modification
-	// ContentBefore carries the pre-write bytes for downstream consumers
-	// (e.g. artifact.capture with capture_content:true) that want before/
-	// after diffs without re-reading the file off disk. Not serialised into
-	// the JSON event stream — too bulky and only useful in-process.
+	// ContentBefore carries the pre-write bytes for an in-process
+	// subscriber that wants before/after diffs without re-reading the
+	// file off disk. Not serialised into the JSON event stream — too
+	// bulky and only useful in-process.
 	ContentBefore []byte `json:"-"`
 	// ContentAfter mirrors ContentBefore for symmetry. Same JSON-omit reasoning.
 	ContentAfter []byte `json:"-"`
@@ -484,15 +478,6 @@ type ComponentData struct {
 	Parameters map[string]interface{} `json:"parameters,omitempty"` // Parameters passed to component
 	StepsCount int                    `json:"steps_count"`          // Number of steps in component
 	Changed    bool                   `json:"changed,omitempty"`    // Whether any step changed (only in completed event)
-}
-
-// ArtifactCaptureData contains data for artifact_capture events
-type ArtifactCaptureData struct {
-	Name         string `json:"name"`                    // Artifact name
-	OutputDir    string `json:"output_dir"`              // Output directory path
-	StepsCount   int    `json:"steps_count"`             // Number of steps executed
-	FilesChanged int    `json:"files_changed,omitempty"` // Number of files changed (only in complete event)
-	DurationMs   int64  `json:"duration_ms,omitempty"`   // Duration in milliseconds (only in complete event)
 }
 
 // PrintData contains data for print.message events.

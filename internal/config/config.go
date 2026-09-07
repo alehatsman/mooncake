@@ -1437,54 +1437,6 @@ type ReadFile struct {
 	Redact   []string `yaml:"redact"    json:"redact,omitempty"`                  // regex patterns applied to string leaves
 }
 
-// RepoSearch represents a codebase search operation.
-// Searches files for patterns and outputs results in JSON format.
-type RepoSearch struct {
-	Pattern    string   `yaml:"pattern" json:"pattern"`                               // Search pattern (required)
-	Regex      bool     `yaml:"regex" json:"regex,omitempty"`                         // Use regex mode (default: true)
-	Glob       string   `yaml:"glob" json:"glob,omitempty"`                           // File glob pattern (e.g., "**/*.{ts,js}")
-	Path       string   `yaml:"path" json:"path,omitempty" plan:"path"`               // Search path (default: current directory)
-	OutputFile string   `yaml:"output_file" json:"output_file,omitempty" plan:"path"` // Output JSON file path
-	MaxResults *int     `yaml:"max_results" json:"max_results,omitempty"`             // Maximum number of results (null = unlimited)
-	IgnoreDirs []string `yaml:"ignore_dirs" json:"ignore_dirs,omitempty"`             // Directories to ignore (e.g., [".git", "node_modules"])
-}
-
-// RepoTree represents a repository tree generation operation.
-// Generates a JSON representation of the directory structure.
-type RepoTree struct {
-	Path         string   `yaml:"path" json:"path,omitempty" plan:"path"`               // Root path (default: current directory)
-	MaxDepth     *int     `yaml:"max_depth" json:"max_depth,omitempty"`                 // Maximum directory depth (null = unlimited)
-	ExcludeDirs  []string `yaml:"exclude_dirs" json:"exclude_dirs,omitempty"`           // Directories to exclude (e.g., ["node_modules", ".git"])
-	OutputFile   string   `yaml:"output_file" json:"output_file,omitempty" plan:"path"` // Output JSON file path
-	IncludeFiles *bool    `yaml:"include_files" json:"include_files,omitempty"`         // Include files in tree (default: true; explicit false opts out)
-}
-
-// RepoApplyPatchset represents a multi-file patch application operation.
-// Applies multiple patches to multiple files in a single atomic operation.
-type RepoApplyPatchset struct {
-	Patchset     string `yaml:"patchset" json:"patchset,omitempty"`                       // Inline patchset content (patchset or patchset_file required)
-	PatchsetFile string `yaml:"patchset_file" json:"patchset_file,omitempty" plan:"path"` // Path to patchset file (patchset or patchset_file required)
-	BaseDir      string `yaml:"base_dir" json:"base_dir,omitempty" plan:"path"`           // Base directory for relative paths (default: current directory)
-	Backup       bool   `yaml:"backup" json:"backup,omitempty"`                           // Create .bak files before modifications
-	Strict       bool   `yaml:"strict" json:"strict,omitempty"`                           // Strict mode: rollback all if any file fails (default: true)
-	DryRun       bool   `yaml:"dry_run" json:"dry_run,omitempty"`                         // Test patchset without applying
-	OutputFile   string `yaml:"output_file" json:"output_file,omitempty" plan:"path"`     // Output JSON file with results
-}
-
-// ArtifactCapture wraps steps and captures all file changes with enhanced metadata.
-// Designed for LLM agent loops to provide structured output for decision-making.
-type ArtifactCapture struct {
-	Name             string `yaml:"name" json:"name"`                                     // Artifact name (required)
-	OutputDir        string `yaml:"output_dir" json:"output_dir,omitempty" plan:"path"`   // Output directory (default: "./artifacts")
-	Format           string `yaml:"format" json:"format,omitempty"`                       // Output format: "json", "markdown", "both" (default: "both")
-	CaptureContent   bool   `yaml:"capture_content" json:"capture_content,omitempty"`     // Include before/after file content (default: false)
-	MaxDiffSize      int    `yaml:"max_diff_size" json:"max_diff_size,omitempty"`         // Max diff size in bytes (default: 1MB)
-	IncludeChecksums bool   `yaml:"include_checksums" json:"include_checksums,omitempty"` // Include file checksums (default: true)
-	EmbedPlan        *bool  `yaml:"embed_plan" json:"embed_plan,omitempty"`               // Embed full plan in artifact (default: true if steps <= max_plan_steps)
-	MaxPlanSteps     int    `yaml:"max_plan_steps" json:"max_plan_steps,omitempty"`       // Don't embed if plan exceeds this many steps (default: 20)
-	Steps            []Step `yaml:"steps" json:"steps"`                                   // Steps to execute and capture (required)
-}
-
 // WaitSpec is the `wait:` modifier shared by every observe.* action whose
 // Found flag is meaningful. It turns a single-shot read into "read until",
 // replacing the retired wait.* action family — those were a poll loop wrapped
@@ -1867,18 +1819,6 @@ type HTTPAuthHeader struct {
 	Value string `yaml:"value" json:"value"`
 }
 
-// ArtifactValidate validates artifacts against constraints (change budgets).
-// Designed for LLM agent loops to enforce guardrails on file modifications.
-type ArtifactValidate struct {
-	ArtifactFile    string   `yaml:"artifact_file" json:"artifact_file" plan:"path"`       // Path to artifact JSON file (required)
-	MaxFiles        *int     `yaml:"max_files" json:"max_files,omitempty"`                 // Maximum number of files changed
-	MaxLinesChanged *int     `yaml:"max_lines_changed" json:"max_lines_changed,omitempty"` // Maximum total lines changed
-	MaxFileSize     *int     `yaml:"max_file_size" json:"max_file_size,omitempty"`         // Maximum individual file size in bytes
-	RequireTests    bool     `yaml:"require_tests" json:"require_tests,omitempty"`         // Require test file changes if code files changed
-	AllowedPaths    []string `yaml:"allowed_paths" json:"allowed_paths,omitempty"`         // Glob patterns for allowed paths
-	ForbiddenPaths  []string `yaml:"forbidden_paths" json:"forbidden_paths,omitempty"`     // Glob patterns for forbidden paths
-}
-
 // UnmarshalYAML implements custom YAML unmarshaling to support both string and object forms.
 // Supports: print: "message" AND print: { msg: "message" }
 func (p *PrintAction) UnmarshalYAML(unmarshal func(interface{}) error) error {
@@ -2001,16 +1941,11 @@ type Step struct {
 	ContainerImage            *ContainerImage            `yaml:"container.image,omitempty"   json:"container.image,omitempty"   action:"container.image"`
 	Container                 *Container                 `yaml:"container,omitempty"         json:"container,omitempty"         action:"container"`
 	Cmd                       *CommandAction             `yaml:"cmd,omitempty"               json:"cmd,omitempty"               action:"cmd"`
-	RepoSearch                *RepoSearch                `yaml:"repo.search,omitempty"       json:"repo.search,omitempty"       action:"repo.search"`
-	RepoTree                  *RepoTree                  `yaml:"repo.tree,omitempty"         json:"repo.tree,omitempty"         action:"repo.tree"`
 	ReadJSON                  *ReadFile                  `yaml:"read.json,omitempty"         json:"read.json,omitempty"         action:"read.json"`
 	ReadYAML                  *ReadFile                  `yaml:"read.yaml,omitempty"         json:"read.yaml,omitempty"         action:"read.yaml"`
-	RepoPatch                 *RepoApplyPatchset         `yaml:"repo.patch,omitempty"        json:"repo.patch,omitempty"        action:"repo.patch"`
 	GitClone                  *GitClone                  `yaml:"git.clone,omitempty"         json:"git.clone,omitempty"         action:"git.clone"`
 	GitCheckout               *GitCheckout               `yaml:"git.checkout,omitempty"      json:"git.checkout,omitempty"      action:"git.checkout"`
 	GitConfig                 *GitConfig                 `yaml:"git.config,omitempty"        json:"git.config,omitempty"        action:"git.config"`
-	ArtifactCapture           *ArtifactCapture           `yaml:"artifact.capture,omitempty"  json:"artifact.capture,omitempty"  action:"artifact.capture"`
-	ArtifactValidate          *ArtifactValidate          `yaml:"artifact.validate,omitempty" json:"artifact.validate,omitempty" action:"artifact.validate"`
 	Shell                     *ShellAction               `yaml:"shell,omitempty"             json:"shell,omitempty"             action:"shell"`
 	Assert                    *Assert                    `yaml:"assert,omitempty"            json:"assert,omitempty"            action:"assert"`
 	ObservePort               *ObservePort               `yaml:"observe.port,omitempty"      json:"observe.port,omitempty"      action:"observe.port"`
@@ -2544,16 +2479,11 @@ func (s *Step) Clone() *Step {
 		ContainerImage:            s.ContainerImage,
 		Container:                 s.Container,
 		Cmd:                       s.Cmd,
-		RepoSearch:                s.RepoSearch,
-		RepoTree:                  s.RepoTree,
 		ReadJSON:                  s.ReadJSON,
 		ReadYAML:                  s.ReadYAML,
-		RepoPatch:                 s.RepoPatch,
 		GitClone:                  s.GitClone,
 		GitCheckout:               s.GitCheckout,
 		GitConfig:                 s.GitConfig,
-		ArtifactCapture:           s.ArtifactCapture,
-		ArtifactValidate:          s.ArtifactValidate,
 		Shell:                     s.Shell,
 		Assert:                    s.Assert,
 		ObservePort:               s.ObservePort,

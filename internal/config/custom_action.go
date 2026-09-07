@@ -273,12 +273,12 @@ var stepFieldNames = func() map[string]bool {
 // Custom actions can appear inside these, so normalization recurses into them.
 //
 // The boundary is deliberate: folding follows the control-flow compounds a
-// Step holds DIRECTLY ([]Step fields). It does not descend into typed
-// sub-structs that happen to carry steps (e.g. artifact.capture) — a
-// typed-key custom there is not silently dropped but surfaces a clear
-// unknown-field error, with the carrier available as the escape hatch. This
-// keeps the rule simple and free of false positives inside opaque `with:`
-// params, which a key-name-matching walk would risk.
+// Step holds DIRECTLY ([]Step fields). It does not descend into a typed
+// sub-struct that happens to carry its own `steps:` field — a typed-key
+// custom there is not silently dropped but surfaces a clear unknown-field
+// error, with the carrier available as the escape hatch. This keeps the
+// rule simple and free of false positives inside opaque `with:` params,
+// which a key-name-matching walk would risk.
 var stepListFields = func() map[string]bool {
 	sliceOfStep := reflect.TypeOf([]Step(nil))
 	m := make(map[string]bool)

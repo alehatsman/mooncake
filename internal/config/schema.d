@@ -6,86 +6,6 @@
  */
 
 /**
- * Capture file changes with enhanced metadata for LLM agents
- * @category system
- */
-export interface ArtifactCaptureAction {
-  /**
-   * Capture full file content before/after
-   */
-  capture_content?: boolean;
-  /**
-   * Embed full plan in artifact for LLM context
-   */
-  embed_plan?: boolean;
-  /**
-   * Output format
-   * 
-   * @values json | markdown | both
-   */
-  format?: "json" | "markdown" | "both";
-  /**
-   * Include SHA256 checksums
-   */
-  include_checksums?: boolean;
-  /**
-   * Maximum diff size in bytes per file
-   */
-  max_diff_size?: number;
-  /**
-   * Don't embed plan if exceeds this many steps
-   */
-  max_plan_steps?: number;
-  /**
-   * Name of the artifact (used for output directory)
-   */
-  name: string;
-  /**
-   * Base directory for artifacts (default: './artifacts')
-   */
-  output_dir?: string;
-  /**
-   * Steps to execute while capturing changes
-   */
-  steps: StepAction[];
-}
-
-/**
- * Validate artifacts against constraints (change budgets)
- * @category system
- */
-export interface ArtifactValidateAction {
-  /**
-   * Glob patterns for allowed file paths
-   */
-  allowed_paths?: string[];
-  /**
-   * Path to artifact metadata JSON file
-   */
-  artifact_file: string;
-  /**
-   * Glob patterns for forbidden file paths
-   */
-  forbidden_paths?: string[];
-  /**
-   * Maximum file size in bytes after changes
-   */
-  max_file_size?: number;
-  /**
-   * Maximum number of files allowed to change
-   */
-  max_files?: number;
-  /**
-   * Maximum total lines changed
-   */
-  max_lines_changed?: number;
-  /**
-   * Require test file changes when code files change
-   */
-  require_tests?: boolean;
-}
-
-/**
  * Verify conditions without changing system state
  * @category system
  */
@@ -979,46 +899,6 @@ export interface ReadYamlAction {
 }
 
 /**
- * Apply multiple patches to multiple files atomically
- * @category file
- */
-export interface RepoPatchAction {
-  backup?: boolean;
-  base_dir?: string;
-  dry_run?: boolean;
-  output_file?: string;
-  patchset?: string;
-  patchset_file?: string;
-  strict?: boolean;
-}
-
-/**
- * Search codebase for patterns and output results in JSON format
- * @category file
- */
-export interface RepoSearchAction {
-  glob?: string;
-  ignore_dirs?: string[];
-  max_results?: number;
-  output_file?: string;
-  path?: string;
-  pattern: string;
-  regex?: boolean;
-}
-
-/**
- * Generate a JSON representation of directory structure
- * @category file
- */
-export interface RepoTreeAction {
-  exclude_dirs?: string[];
-  include_files?: boolean;
-  max_depth?: number;
-  output_file?: string;
-  path?: string;
-}
-
-/**
  * Structured configuration with version, global variables, steps, and/or named tasks
  */
 export interface RunConfigAction {
@@ -1480,14 +1360,6 @@ export interface Step {
 
   // Action fields (exactly one must be specified)
   /**
-   * Capture file changes with enhanced metadata for LLM agents
-   */
-  "artifact.capture"?: ArtifactCaptureAction;
-  /**
-   * Validate artifacts against constraints (change budgets)
-   */
-  "artifact.validate"?: ArtifactValidateAction;
-  /**
    * Verify conditions without changing system state
    */
   assert?: AssertAction;
@@ -1663,18 +1535,6 @@ export interface Step {
    * Read a YAML file and optionally extract a value by path
    */
   "read.yaml"?: ReadYamlAction;
-  /**
-   * Apply multiple patches to multiple files atomically
-   */
-  "repo.patch"?: RepoPatchAction;
-  /**
-   * Search codebase for patterns and output results in JSON format
-   */
-  "repo.search"?: RepoSearchAction;
-  /**
-   * Generate a JSON representation of directory structure
-   */
-  "repo.tree"?: RepoTreeAction;
   /**
    * Execute shell commands
    */

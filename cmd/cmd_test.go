@@ -136,8 +136,7 @@ func TestRunCommandFlags(t *testing.T) {
 	expectedFlags := []string{
 		"config", "vars", "log-level", "sudo-pass", "ask-become-pass",
 		"sudo-pass-file", "insecure-sudo-pass", "tags", "tui",
-		"output-format", "artifacts-dir", "capture-full-output",
-		"max-output-bytes", "max-output-lines", "from-plan", "facts-json",
+		"output-format", "from-plan", "facts-json",
 		"allow-stale", "max-plan-age",
 	}
 
@@ -415,139 +414,6 @@ func TestRunCommandOutputFormatValidation(t *testing.T) {
 }
 
 // TestRunCommandArtifactsFlags tests run command artifacts-related flags
-func TestRunCommandArtifactsFlags(t *testing.T) {
-	app := createApp()
-
-	var runCmd *cli.Command
-	for _, cmd := range app.Commands {
-		if cmd.Name == "apply" {
-			runCmd = cmd
-			break
-		}
-	}
-
-	if runCmd == nil {
-		t.Fatal("run command not found")
-	}
-
-	// MT-76: --capture-full-output alone (without --artifacts-dir)
-	// must hard-error instead of silently no-opping. Pinned here so a
-	// future refactor that drops the early-return slips the test.
-	t.Run("MT-76 capture-full-output requires artifacts-dir", func(t *testing.T) {
-		app := createApp()
-		err := app.Run([]string{"mooncake", "apply", "--capture-full-output"})
-		if err == nil {
-			t.Fatal("expected error when --capture-full-output is set without --artifacts-dir")
-		}
-		if !contains(err.Error(), "--capture-full-output") || !contains(err.Error(), "--artifacts-dir") {
-			t.Errorf("error should name both flags; got: %v", err)
-		}
-	})
-
-	// MT-76: setting both flags must NOT trigger the validation (it's
-	// the partnership the help text promises).
-	t.Run("MT-76 capture-full-output + artifacts-dir is valid", func(t *testing.T) {
-		app := createApp()
-		// Use a guaranteed-nonexistent config path so the run aborts
-		// after our validation passes but before any real apply work.
-		err := app.Run([]string{
-			"mooncake", "apply",
-			"--capture-full-output",
-			"--artifacts-dir", "/tmp/mooncake-mt76-test",
-			"--config", "/tmp/this-config-does-not-exist-mt76.yml",
-		})
-		if err == nil {
-			// We expect the config-not-found error, not nil.
-			return
-		}
-		// Whatever error fires, it must NOT be the MT-76 partnership
-		// check — that one would carry the "--capture-full-output requires"
-		// phrasing.
-		if contains(err.Error(), "--capture-full-output requires") {
-			t.Errorf("validation should pass when both flags set; got: %v", err)
-		}
-	})
-
-	// MT-86: same shape for --max-output-bytes / --max-output-lines.
-	// They only affect the artifact bundle; without --artifacts-dir
-	// the truncation is silently ignored.
-	t.Run("MT-86 max-output-bytes requires artifacts-dir", func(t *testing.T) {
-		app := createApp()
-		err := app.Run([]string{"mooncake", "apply", "--max-output-bytes", "100"})
-		if err == nil {
-			t.Fatal("expected error when --max-output-bytes is set without --artifacts-dir")
-		}
-		if !contains(err.Error(), "--max-output-bytes") || !contains(err.Error(), "--artifacts-dir") {
-			t.Errorf("error should name both flags; got: %v", err)
-		}
-	})
-
-	t.Run("MT-86 max-output-lines requires artifacts-dir", func(t *testing.T) {
-		app := createApp()
-		err := app.Run([]string{"mooncake", "apply", "--max-output-lines", "5"})
-		if err == nil {
-			t.Fatal("expected error when --max-output-lines is set without --artifacts-dir")
-		}
-		if !contains(err.Error(), "--max-output-lines") || !contains(err.Error(), "--artifacts-dir") {
-			t.Errorf("error should name both flags; got: %v", err)
-		}
-	})
-
-	// MT-86: a default-valued (unset) flag must NOT trip the
-	// validation — only explicit user-supplied overrides do. Otherwise
-	// every plain `mooncake apply` would fail.
-	t.Run("MT-86 max-output-* unset is fine", func(t *testing.T) {
-		app := createApp()
-		err := app.Run([]string{"mooncake", "apply", "--config", "/tmp/this-config-does-not-exist-mt86.yml"})
-		if err != nil && (contains(err.Error(), "--max-output-bytes requires") ||
-			contains(err.Error(), "--max-output-lines requires")) {
-			t.Errorf("validation should not fire when flags are unset; got: %v", err)
-		}
-	})
-
-	// Check for artifacts flags
-	artifactsFlags := map[string]bool{
-		"artifacts-dir":       false,
-		"capture-full-output": false,
-		"max-output-bytes":    false,
-		"max-output-lines":    false,
-	}
-
-	for _, flag := range runCmd.Flags {
-		switch f := flag.(type) {
-		case *cli.StringFlag:
-			if _, exists := artifactsFlags[f.Name]; exists {
-				artifactsFlags[f.Name] = true
-			}
-		case *cli.BoolFlag:
-			if _, exists := artifactsFlags[f.Name]; exists {
-				artifactsFlags[f.Name] = true
-			}
-		case *cli.IntFlag:
-			if _, exists := artifactsFlags[f.Name]; exists {
-				artifactsFlags[f.Name] = true
-				// Check default values
-				// Defaults are pinned in cmd/kernel/shell.go
-				// (defaultMaxOutputBytes, defaultMaxOutputLines).
-				const wantBytes = 1048576
-				const wantLines = 1000
-				if f.Name == "max-output-bytes" && f.Value != wantBytes {
-					t.Errorf("max-output-bytes default should be %d, got %d", wantBytes, f.Value)
-				}
-				if f.Name == "max-output-lines" && f.Value != wantLines {
-					t.Errorf("max-output-lines default should be %d, got %d", wantLines, f.Value)
-				}
-			}
-		}
-	}
-
-	for flag, found := range artifactsFlags {
-		if !found {
-			t.Errorf("run command missing artifacts flag: %s", flag)
-		}
-	}
-}
-
 // TestRunCommandPasswordFlags tests run command password-related flags
 func TestRunCommandPasswordFlags(t *testing.T) {
 	app := createApp()

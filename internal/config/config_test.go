@@ -802,7 +802,8 @@ func TestStep_DetermineActionType(t *testing.T) {
 
 // TestStep_DetermineActionType_AllFields verifies that every action field
 // tagged with `action:` returns the correct type string and that countActions
-// returns 1 for each. This is the compile-time-checked table of all 28 actions.
+// returns 1 for each. This is a compile-time-checked table of a
+// representative sample of actions, not every one registered.
 func TestStep_DetermineActionType_AllFields(t *testing.T) {
 	strEmpty := ""
 	emptyVars := map[string]interface{}{}
@@ -826,11 +827,6 @@ func TestStep_DetermineActionType_AllFields(t *testing.T) {
 		{"container.image", Step{ContainerImage: &ContainerImage{Name: "ubuntu"}}},
 		{"container", Step{Container: &Container{Image: "ubuntu"}}},
 		{"cmd", Step{Cmd: &CommandAction{Argv: []string{"ls"}}}},
-		{"repo.search", Step{RepoSearch: &RepoSearch{Pattern: "foo"}}},
-		{"repo.tree", Step{RepoTree: &RepoTree{}}},
-		{"repo.patch", Step{RepoPatch: &RepoApplyPatchset{Patchset: "diff"}}},
-		{"artifact.capture", Step{ArtifactCapture: &ArtifactCapture{Name: "cap"}}},
-		{"artifact.validate", Step{ArtifactValidate: &ArtifactValidate{ArtifactFile: "/f"}}},
 		{"shell", Step{Shell: shellActionPtr("echo")}},
 		{"assert", Step{Assert: &Assert{Command: &AssertCommand{Cmd: "true"}}}},
 		{"observe.file", Step{ObserveFile: &ObserveFile{Path: "/tmp/ready"}}},

@@ -15,109 +15,6 @@
     }
   ],
   "definitions": {
-    "artifact.capture": {
-      "type": "object",
-      "description": "Capture file changes with enhanced metadata for LLM agents",
-      "properties": {
-        "capture_content": {
-          "type": "boolean",
-          "description": "Capture full file content before/after"
-        },
-        "embed_plan": {
-          "type": "boolean",
-          "description": "Embed full plan in artifact for LLM context"
-        },
-        "format": {
-          "type": "string",
-          "description": "Output format",
-          "enum": [
-            "json",
-            "markdown",
-            "both"
-          ]
-        },
-        "include_checksums": {
-          "type": "boolean",
-          "description": "Include SHA256 checksums"
-        },
-        "max_diff_size": {
-          "type": "integer",
-          "description": "Maximum diff size in bytes per file"
-        },
-        "max_plan_steps": {
-          "type": "integer",
-          "description": "Don't embed plan if exceeds this many steps"
-        },
-        "name": {
-          "type": "string",
-          "description": "Name of the artifact (used for output directory)"
-        },
-        "output_dir": {
-          "type": "string",
-          "description": "Base directory for artifacts (default: './artifacts')"
-        },
-        "steps": {
-          "type": "array",
-          "description": "Steps to execute while capturing changes",
-          "items": {
-            "$ref": "#/definitions/step"
-          }
-        }
-      },
-      "required": [
-        "name",
-        "steps"
-      ],
-      "additionalProperties": false,
-      "x-category": "system",
-      "x-supports-dry-run": true
-    },
-    "artifact.validate": {
-      "type": "object",
-      "description": "Validate artifacts against constraints (change budgets)",
-      "properties": {
-        "allowed_paths": {
-          "type": "array",
-          "description": "Glob patterns for allowed file paths",
-          "items": {
-            "type": "string"
-          }
-        },
-        "artifact_file": {
-          "type": "string",
-          "description": "Path to artifact metadata JSON file"
-        },
-        "forbidden_paths": {
-          "type": "array",
-          "description": "Glob patterns for forbidden file paths",
-          "items": {
-            "type": "string"
-          }
-        },
-        "max_file_size": {
-          "type": "integer",
-          "description": "Maximum file size in bytes after changes"
-        },
-        "max_files": {
-          "type": "integer",
-          "description": "Maximum number of files allowed to change"
-        },
-        "max_lines_changed": {
-          "type": "integer",
-          "description": "Maximum total lines changed"
-        },
-        "require_tests": {
-          "type": "boolean",
-          "description": "Require test file changes when code files change"
-        }
-      },
-      "required": [
-        "artifact_file"
-      ],
-      "additionalProperties": false,
-      "x-category": "system",
-      "x-supports-dry-run": true
-    },
     "assert": {
       "type": "object",
       "description": "Verify conditions without changing system state",
@@ -2610,108 +2507,6 @@
       "x-supports-dry-run": true,
       "x-version": "1.0.0"
     },
-    "repo.patch": {
-      "type": "object",
-      "description": "Apply multiple patches to multiple files atomically",
-      "properties": {
-        "backup": {
-          "type": "boolean"
-        },
-        "base_dir": {
-          "type": "string"
-        },
-        "dry_run": {
-          "type": "boolean"
-        },
-        "output_file": {
-          "type": "string"
-        },
-        "patchset": {
-          "type": "string"
-        },
-        "patchset_file": {
-          "type": "string"
-        },
-        "strict": {
-          "type": "boolean"
-        }
-      },
-      "additionalProperties": false,
-      "x-implements-check": true,
-      "x-category": "file",
-      "x-supports-dry-run": true,
-      "x-supports-become": true,
-      "x-version": "1.0.0",
-      "x-emits-events": [
-        "file.updated"
-      ]
-    },
-    "repo.search": {
-      "type": "object",
-      "description": "Search codebase for patterns and output results in JSON format",
-      "properties": {
-        "glob": {
-          "type": "string"
-        },
-        "ignore_dirs": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
-        "max_results": {
-          "type": "integer"
-        },
-        "output_file": {
-          "type": "string"
-        },
-        "path": {
-          "type": "string"
-        },
-        "pattern": {
-          "type": "string",
-          "minLength": 1
-        },
-        "regex": {
-          "type": "boolean"
-        }
-      },
-      "required": [
-        "pattern"
-      ],
-      "additionalProperties": false,
-      "x-category": "file",
-      "x-supports-dry-run": true,
-      "x-version": "1.0.0"
-    },
-    "repo.tree": {
-      "type": "object",
-      "description": "Generate a JSON representation of directory structure",
-      "properties": {
-        "exclude_dirs": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
-        "include_files": {
-          "type": "boolean"
-        },
-        "max_depth": {
-          "type": "integer"
-        },
-        "output_file": {
-          "type": "string"
-        },
-        "path": {
-          "type": "string"
-        }
-      },
-      "additionalProperties": false,
-      "x-category": "file",
-      "x-supports-dry-run": true,
-      "x-version": "1.0.0"
-    },
     "runConfig": {
       "type": "object",
       "description": "Structured configuration with version, global variables, steps, and/or named tasks",
@@ -2857,14 +2652,6 @@
         "allow_irreversible": {
           "type": "boolean",
           "description": "Allow a transaction to include steps without Reverser support (spec-30)"
-        },
-        "artifact.capture": {
-          "description": "Capture file changes with enhanced metadata for LLM agents",
-          "$ref": "#/definitions/artifact.capture"
-        },
-        "artifact.validate": {
-          "description": "Validate artifacts against constraints (change budgets)",
-          "$ref": "#/definitions/artifact.validate"
         },
         "as": {
           "type": "string",
@@ -3137,18 +2924,6 @@
           "description": "Read a YAML file and optionally extract a value by path",
           "$ref": "#/definitions/read.yaml"
         },
-        "repo.patch": {
-          "description": "Apply multiple patches to multiple files atomically",
-          "$ref": "#/definitions/repo.patch"
-        },
-        "repo.search": {
-          "description": "Search codebase for patterns and output results in JSON format",
-          "$ref": "#/definitions/repo.search"
-        },
-        "repo.tree": {
-          "description": "Generate a JSON representation of directory structure",
-          "$ref": "#/definitions/repo.tree"
-        },
         "retry": {
           "type": "object",
           "description": "Retry policy: { attempts: int, delay: string, backoff: string }"
@@ -3312,16 +3087,6 @@
             "anyOf": [
               {
                 "required": [
-                  "artifact.capture"
-                ]
-              },
-              {
-                "required": [
-                  "artifact.validate"
-                ]
-              },
-              {
-                "required": [
                   "assert"
                 ]
               },
@@ -3533,719 +3298,6 @@
               {
                 "required": [
                   "read.yaml"
-                ]
-              },
-              {
-                "required": [
-                  "repo.patch"
-                ]
-              },
-              {
-                "required": [
-                  "repo.search"
-                ]
-              },
-              {
-                "required": [
-                  "repo.tree"
-                ]
-              },
-              {
-                "required": [
-                  "shell"
-                ]
-              },
-              {
-                "required": [
-                  "text.delete_range"
-                ]
-              },
-              {
-                "required": [
-                  "text.insert"
-                ]
-              },
-              {
-                "required": [
-                  "text.line"
-                ]
-              },
-              {
-                "required": [
-                  "text.patch"
-                ]
-              },
-              {
-                "required": [
-                  "text.patch.ini"
-                ]
-              },
-              {
-                "required": [
-                  "text.patch.json"
-                ]
-              },
-              {
-                "required": [
-                  "text.patch.yaml"
-                ]
-              },
-              {
-                "required": [
-                  "text.replace"
-                ]
-              },
-              {
-                "required": [
-                  "tool"
-                ]
-              },
-              {
-                "required": [
-                  "transaction"
-                ]
-              },
-              {
-                "required": [
-                  "try"
-                ]
-              },
-              {
-                "required": [
-                  "use"
-                ]
-              },
-              {
-                "required": [
-                  "vars"
-                ]
-              },
-              {
-                "required": [
-                  "vars.load"
-                ]
-              },
-              {
-                "required": [
-                  "windows.firewall_rule"
-                ]
-              },
-              {
-                "required": [
-                  "windows.hyperv_firewall_rule"
-                ]
-              },
-              {
-                "required": [
-                  "windows.registry"
-                ]
-              },
-              {
-                "required": [
-                  "windows.scheduled_task"
-                ]
-              }
-            ]
-          }
-        },
-        {
-          "required": [
-            "artifact.capture"
-          ],
-          "properties": {
-            "artifact.capture": {
-              "$ref": "#/definitions/artifact.capture"
-            }
-          },
-          "not": {
-            "anyOf": [
-              {
-                "required": [
-                  "action"
-                ]
-              },
-              {
-                "required": [
-                  "artifact.validate"
-                ]
-              },
-              {
-                "required": [
-                  "assert"
-                ]
-              },
-              {
-                "required": [
-                  "cmd"
-                ]
-              },
-              {
-                "required": [
-                  "container"
-                ]
-              },
-              {
-                "required": [
-                  "container.image"
-                ]
-              },
-              {
-                "required": [
-                  "file.copy"
-                ]
-              },
-              {
-                "required": [
-                  "file.download"
-                ]
-              },
-              {
-                "required": [
-                  "file.template"
-                ]
-              },
-              {
-                "required": [
-                  "file.unarchive"
-                ]
-              },
-              {
-                "required": [
-                  "file.write"
-                ]
-              },
-              {
-                "required": [
-                  "git.checkout"
-                ]
-              },
-              {
-                "required": [
-                  "git.clone"
-                ]
-              },
-              {
-                "required": [
-                  "git.config"
-                ]
-              },
-              {
-                "required": [
-                  "http.request"
-                ]
-              },
-              {
-                "required": [
-                  "import"
-                ]
-              },
-              {
-                "required": [
-                  "log"
-                ]
-              },
-              {
-                "required": [
-                  "observe.command"
-                ]
-              },
-              {
-                "required": [
-                  "observe.cpu"
-                ]
-              },
-              {
-                "required": [
-                  "observe.disk"
-                ]
-              },
-              {
-                "required": [
-                  "observe.file"
-                ]
-              },
-              {
-                "required": [
-                  "observe.gpu"
-                ]
-              },
-              {
-                "required": [
-                  "observe.http"
-                ]
-              },
-              {
-                "required": [
-                  "observe.logs"
-                ]
-              },
-              {
-                "required": [
-                  "observe.memory"
-                ]
-              },
-              {
-                "required": [
-                  "observe.port"
-                ]
-              },
-              {
-                "required": [
-                  "observe.process"
-                ]
-              },
-              {
-                "required": [
-                  "observe.service"
-                ]
-              },
-              {
-                "required": [
-                  "os.cron"
-                ]
-              },
-              {
-                "required": [
-                  "os.firewall"
-                ]
-              },
-              {
-                "required": [
-                  "os.group"
-                ]
-              },
-              {
-                "required": [
-                  "os.mount"
-                ]
-              },
-              {
-                "required": [
-                  "os.service"
-                ]
-              },
-              {
-                "required": [
-                  "os.ssh_key"
-                ]
-              },
-              {
-                "required": [
-                  "os.sysctl"
-                ]
-              },
-              {
-                "required": [
-                  "os.systemd"
-                ]
-              },
-              {
-                "required": [
-                  "os.user"
-                ]
-              },
-              {
-                "required": [
-                  "pkg"
-                ]
-              },
-              {
-                "required": [
-                  "pkg.hold"
-                ]
-              },
-              {
-                "required": [
-                  "pkg.list"
-                ]
-              },
-              {
-                "required": [
-                  "pkg.repo"
-                ]
-              },
-              {
-                "required": [
-                  "pkg.upgrade"
-                ]
-              },
-              {
-                "required": [
-                  "process"
-                ]
-              },
-              {
-                "required": [
-                  "read.json"
-                ]
-              },
-              {
-                "required": [
-                  "read.yaml"
-                ]
-              },
-              {
-                "required": [
-                  "repo.patch"
-                ]
-              },
-              {
-                "required": [
-                  "repo.search"
-                ]
-              },
-              {
-                "required": [
-                  "repo.tree"
-                ]
-              },
-              {
-                "required": [
-                  "shell"
-                ]
-              },
-              {
-                "required": [
-                  "text.delete_range"
-                ]
-              },
-              {
-                "required": [
-                  "text.insert"
-                ]
-              },
-              {
-                "required": [
-                  "text.line"
-                ]
-              },
-              {
-                "required": [
-                  "text.patch"
-                ]
-              },
-              {
-                "required": [
-                  "text.patch.ini"
-                ]
-              },
-              {
-                "required": [
-                  "text.patch.json"
-                ]
-              },
-              {
-                "required": [
-                  "text.patch.yaml"
-                ]
-              },
-              {
-                "required": [
-                  "text.replace"
-                ]
-              },
-              {
-                "required": [
-                  "tool"
-                ]
-              },
-              {
-                "required": [
-                  "transaction"
-                ]
-              },
-              {
-                "required": [
-                  "try"
-                ]
-              },
-              {
-                "required": [
-                  "use"
-                ]
-              },
-              {
-                "required": [
-                  "vars"
-                ]
-              },
-              {
-                "required": [
-                  "vars.load"
-                ]
-              },
-              {
-                "required": [
-                  "windows.firewall_rule"
-                ]
-              },
-              {
-                "required": [
-                  "windows.hyperv_firewall_rule"
-                ]
-              },
-              {
-                "required": [
-                  "windows.registry"
-                ]
-              },
-              {
-                "required": [
-                  "windows.scheduled_task"
-                ]
-              }
-            ]
-          }
-        },
-        {
-          "required": [
-            "artifact.validate"
-          ],
-          "properties": {
-            "artifact.validate": {
-              "$ref": "#/definitions/artifact.validate"
-            }
-          },
-          "not": {
-            "anyOf": [
-              {
-                "required": [
-                  "action"
-                ]
-              },
-              {
-                "required": [
-                  "artifact.capture"
-                ]
-              },
-              {
-                "required": [
-                  "assert"
-                ]
-              },
-              {
-                "required": [
-                  "cmd"
-                ]
-              },
-              {
-                "required": [
-                  "container"
-                ]
-              },
-              {
-                "required": [
-                  "container.image"
-                ]
-              },
-              {
-                "required": [
-                  "file.copy"
-                ]
-              },
-              {
-                "required": [
-                  "file.download"
-                ]
-              },
-              {
-                "required": [
-                  "file.template"
-                ]
-              },
-              {
-                "required": [
-                  "file.unarchive"
-                ]
-              },
-              {
-                "required": [
-                  "file.write"
-                ]
-              },
-              {
-                "required": [
-                  "git.checkout"
-                ]
-              },
-              {
-                "required": [
-                  "git.clone"
-                ]
-              },
-              {
-                "required": [
-                  "git.config"
-                ]
-              },
-              {
-                "required": [
-                  "http.request"
-                ]
-              },
-              {
-                "required": [
-                  "import"
-                ]
-              },
-              {
-                "required": [
-                  "log"
-                ]
-              },
-              {
-                "required": [
-                  "observe.command"
-                ]
-              },
-              {
-                "required": [
-                  "observe.cpu"
-                ]
-              },
-              {
-                "required": [
-                  "observe.disk"
-                ]
-              },
-              {
-                "required": [
-                  "observe.file"
-                ]
-              },
-              {
-                "required": [
-                  "observe.gpu"
-                ]
-              },
-              {
-                "required": [
-                  "observe.http"
-                ]
-              },
-              {
-                "required": [
-                  "observe.logs"
-                ]
-              },
-              {
-                "required": [
-                  "observe.memory"
-                ]
-              },
-              {
-                "required": [
-                  "observe.port"
-                ]
-              },
-              {
-                "required": [
-                  "observe.process"
-                ]
-              },
-              {
-                "required": [
-                  "observe.service"
-                ]
-              },
-              {
-                "required": [
-                  "os.cron"
-                ]
-              },
-              {
-                "required": [
-                  "os.firewall"
-                ]
-              },
-              {
-                "required": [
-                  "os.group"
-                ]
-              },
-              {
-                "required": [
-                  "os.mount"
-                ]
-              },
-              {
-                "required": [
-                  "os.service"
-                ]
-              },
-              {
-                "required": [
-                  "os.ssh_key"
-                ]
-              },
-              {
-                "required": [
-                  "os.sysctl"
-                ]
-              },
-              {
-                "required": [
-                  "os.systemd"
-                ]
-              },
-              {
-                "required": [
-                  "os.user"
-                ]
-              },
-              {
-                "required": [
-                  "pkg"
-                ]
-              },
-              {
-                "required": [
-                  "pkg.hold"
-                ]
-              },
-              {
-                "required": [
-                  "pkg.list"
-                ]
-              },
-              {
-                "required": [
-                  "pkg.repo"
-                ]
-              },
-              {
-                "required": [
-                  "pkg.upgrade"
-                ]
-              },
-              {
-                "required": [
-                  "process"
-                ]
-              },
-              {
-                "required": [
-                  "read.json"
-                ]
-              },
-              {
-                "required": [
-                  "read.yaml"
-                ]
-              },
-              {
-                "required": [
-                  "repo.patch"
-                ]
-              },
-              {
-                "required": [
-                  "repo.search"
-                ]
-              },
-              {
-                "required": [
-                  "repo.tree"
                 ]
               },
               {
@@ -4364,16 +3416,6 @@
               },
               {
                 "required": [
-                  "artifact.capture"
-                ]
-              },
-              {
-                "required": [
-                  "artifact.validate"
-                ]
-              },
-              {
-                "required": [
                   "cmd"
                 ]
               },
@@ -4580,21 +3622,6 @@
               {
                 "required": [
                   "read.yaml"
-                ]
-              },
-              {
-                "required": [
-                  "repo.patch"
-                ]
-              },
-              {
-                "required": [
-                  "repo.search"
-                ]
-              },
-              {
-                "required": [
-                  "repo.tree"
                 ]
               },
               {
@@ -4713,16 +3740,6 @@
               },
               {
                 "required": [
-                  "artifact.capture"
-                ]
-              },
-              {
-                "required": [
-                  "artifact.validate"
-                ]
-              },
-              {
-                "required": [
                   "assert"
                 ]
               },
@@ -4929,21 +3946,6 @@
               {
                 "required": [
                   "read.yaml"
-                ]
-              },
-              {
-                "required": [
-                  "repo.patch"
-                ]
-              },
-              {
-                "required": [
-                  "repo.search"
-                ]
-              },
-              {
-                "required": [
-                  "repo.tree"
                 ]
               },
               {
@@ -5062,16 +4064,6 @@
               },
               {
                 "required": [
-                  "artifact.capture"
-                ]
-              },
-              {
-                "required": [
-                  "artifact.validate"
-                ]
-              },
-              {
-                "required": [
                   "assert"
                 ]
               },
@@ -5278,21 +4270,6 @@
               {
                 "required": [
                   "read.yaml"
-                ]
-              },
-              {
-                "required": [
-                  "repo.patch"
-                ]
-              },
-              {
-                "required": [
-                  "repo.search"
-                ]
-              },
-              {
-                "required": [
-                  "repo.tree"
                 ]
               },
               {
@@ -5411,16 +4388,6 @@
               },
               {
                 "required": [
-                  "artifact.capture"
-                ]
-              },
-              {
-                "required": [
-                  "artifact.validate"
-                ]
-              },
-              {
-                "required": [
                   "assert"
                 ]
               },
@@ -5627,21 +4594,6 @@
               {
                 "required": [
                   "read.yaml"
-                ]
-              },
-              {
-                "required": [
-                  "repo.patch"
-                ]
-              },
-              {
-                "required": [
-                  "repo.search"
-                ]
-              },
-              {
-                "required": [
-                  "repo.tree"
                 ]
               },
               {
@@ -5760,16 +4712,6 @@
               },
               {
                 "required": [
-                  "artifact.capture"
-                ]
-              },
-              {
-                "required": [
-                  "artifact.validate"
-                ]
-              },
-              {
-                "required": [
                   "assert"
                 ]
               },
@@ -5976,21 +4918,6 @@
               {
                 "required": [
                   "read.yaml"
-                ]
-              },
-              {
-                "required": [
-                  "repo.patch"
-                ]
-              },
-              {
-                "required": [
-                  "repo.search"
-                ]
-              },
-              {
-                "required": [
-                  "repo.tree"
                 ]
               },
               {
@@ -6109,16 +5036,6 @@
               },
               {
                 "required": [
-                  "artifact.capture"
-                ]
-              },
-              {
-                "required": [
-                  "artifact.validate"
-                ]
-              },
-              {
-                "required": [
                   "assert"
                 ]
               },
@@ -6325,21 +5242,6 @@
               {
                 "required": [
                   "read.yaml"
-                ]
-              },
-              {
-                "required": [
-                  "repo.patch"
-                ]
-              },
-              {
-                "required": [
-                  "repo.search"
-                ]
-              },
-              {
-                "required": [
-                  "repo.tree"
                 ]
               },
               {
@@ -6458,16 +5360,6 @@
               },
               {
                 "required": [
-                  "artifact.capture"
-                ]
-              },
-              {
-                "required": [
-                  "artifact.validate"
-                ]
-              },
-              {
-                "required": [
                   "assert"
                 ]
               },
@@ -6674,21 +5566,6 @@
               {
                 "required": [
                   "read.yaml"
-                ]
-              },
-              {
-                "required": [
-                  "repo.patch"
-                ]
-              },
-              {
-                "required": [
-                  "repo.search"
-                ]
-              },
-              {
-                "required": [
-                  "repo.tree"
                 ]
               },
               {
@@ -6807,16 +5684,6 @@
               },
               {
                 "required": [
-                  "artifact.capture"
-                ]
-              },
-              {
-                "required": [
-                  "artifact.validate"
-                ]
-              },
-              {
-                "required": [
                   "assert"
                 ]
               },
@@ -7023,21 +5890,6 @@
               {
                 "required": [
                   "read.yaml"
-                ]
-              },
-              {
-                "required": [
-                  "repo.patch"
-                ]
-              },
-              {
-                "required": [
-                  "repo.search"
-                ]
-              },
-              {
-                "required": [
-                  "repo.tree"
                 ]
               },
               {
@@ -7156,16 +6008,6 @@
               },
               {
                 "required": [
-                  "artifact.capture"
-                ]
-              },
-              {
-                "required": [
-                  "artifact.validate"
-                ]
-              },
-              {
-                "required": [
                   "assert"
                 ]
               },
@@ -7372,21 +6214,6 @@
               {
                 "required": [
                   "read.yaml"
-                ]
-              },
-              {
-                "required": [
-                  "repo.patch"
-                ]
-              },
-              {
-                "required": [
-                  "repo.search"
-                ]
-              },
-              {
-                "required": [
-                  "repo.tree"
                 ]
               },
               {
@@ -7505,16 +6332,6 @@
               },
               {
                 "required": [
-                  "artifact.capture"
-                ]
-              },
-              {
-                "required": [
-                  "artifact.validate"
-                ]
-              },
-              {
-                "required": [
                   "assert"
                 ]
               },
@@ -7721,21 +6538,6 @@
               {
                 "required": [
                   "read.yaml"
-                ]
-              },
-              {
-                "required": [
-                  "repo.patch"
-                ]
-              },
-              {
-                "required": [
-                  "repo.search"
-                ]
-              },
-              {
-                "required": [
-                  "repo.tree"
                 ]
               },
               {
@@ -7854,16 +6656,6 @@
               },
               {
                 "required": [
-                  "artifact.capture"
-                ]
-              },
-              {
-                "required": [
-                  "artifact.validate"
-                ]
-              },
-              {
-                "required": [
                   "assert"
                 ]
               },
@@ -8070,21 +6862,6 @@
               {
                 "required": [
                   "read.yaml"
-                ]
-              },
-              {
-                "required": [
-                  "repo.patch"
-                ]
-              },
-              {
-                "required": [
-                  "repo.search"
-                ]
-              },
-              {
-                "required": [
-                  "repo.tree"
                 ]
               },
               {
@@ -8203,16 +6980,6 @@
               },
               {
                 "required": [
-                  "artifact.capture"
-                ]
-              },
-              {
-                "required": [
-                  "artifact.validate"
-                ]
-              },
-              {
-                "required": [
                   "assert"
                 ]
               },
@@ -8419,21 +7186,6 @@
               {
                 "required": [
                   "read.yaml"
-                ]
-              },
-              {
-                "required": [
-                  "repo.patch"
-                ]
-              },
-              {
-                "required": [
-                  "repo.search"
-                ]
-              },
-              {
-                "required": [
-                  "repo.tree"
                 ]
               },
               {
@@ -8552,16 +7304,6 @@
               },
               {
                 "required": [
-                  "artifact.capture"
-                ]
-              },
-              {
-                "required": [
-                  "artifact.validate"
-                ]
-              },
-              {
-                "required": [
                   "assert"
                 ]
               },
@@ -8768,21 +7510,6 @@
               {
                 "required": [
                   "read.yaml"
-                ]
-              },
-              {
-                "required": [
-                  "repo.patch"
-                ]
-              },
-              {
-                "required": [
-                  "repo.search"
-                ]
-              },
-              {
-                "required": [
-                  "repo.tree"
                 ]
               },
               {
@@ -8901,16 +7628,6 @@
               },
               {
                 "required": [
-                  "artifact.capture"
-                ]
-              },
-              {
-                "required": [
-                  "artifact.validate"
-                ]
-              },
-              {
-                "required": [
                   "assert"
                 ]
               },
@@ -9117,21 +7834,6 @@
               {
                 "required": [
                   "read.yaml"
-                ]
-              },
-              {
-                "required": [
-                  "repo.patch"
-                ]
-              },
-              {
-                "required": [
-                  "repo.search"
-                ]
-              },
-              {
-                "required": [
-                  "repo.tree"
                 ]
               },
               {
@@ -9250,16 +7952,6 @@
               },
               {
                 "required": [
-                  "artifact.capture"
-                ]
-              },
-              {
-                "required": [
-                  "artifact.validate"
-                ]
-              },
-              {
-                "required": [
                   "assert"
                 ]
               },
@@ -9466,21 +8158,6 @@
               {
                 "required": [
                   "read.yaml"
-                ]
-              },
-              {
-                "required": [
-                  "repo.patch"
-                ]
-              },
-              {
-                "required": [
-                  "repo.search"
-                ]
-              },
-              {
-                "required": [
-                  "repo.tree"
                 ]
               },
               {
@@ -9599,16 +8276,6 @@
               },
               {
                 "required": [
-                  "artifact.capture"
-                ]
-              },
-              {
-                "required": [
-                  "artifact.validate"
-                ]
-              },
-              {
-                "required": [
                   "assert"
                 ]
               },
@@ -9815,21 +8482,6 @@
               {
                 "required": [
                   "read.yaml"
-                ]
-              },
-              {
-                "required": [
-                  "repo.patch"
-                ]
-              },
-              {
-                "required": [
-                  "repo.search"
-                ]
-              },
-              {
-                "required": [
-                  "repo.tree"
                 ]
               },
               {
@@ -9948,16 +8600,6 @@
               },
               {
                 "required": [
-                  "artifact.capture"
-                ]
-              },
-              {
-                "required": [
-                  "artifact.validate"
-                ]
-              },
-              {
-                "required": [
                   "assert"
                 ]
               },
@@ -10164,21 +8806,6 @@
               {
                 "required": [
                   "read.yaml"
-                ]
-              },
-              {
-                "required": [
-                  "repo.patch"
-                ]
-              },
-              {
-                "required": [
-                  "repo.search"
-                ]
-              },
-              {
-                "required": [
-                  "repo.tree"
                 ]
               },
               {
@@ -10297,16 +8924,6 @@
               },
               {
                 "required": [
-                  "artifact.capture"
-                ]
-              },
-              {
-                "required": [
-                  "artifact.validate"
-                ]
-              },
-              {
-                "required": [
                   "assert"
                 ]
               },
@@ -10513,21 +9130,6 @@
               {
                 "required": [
                   "read.yaml"
-                ]
-              },
-              {
-                "required": [
-                  "repo.patch"
-                ]
-              },
-              {
-                "required": [
-                  "repo.search"
-                ]
-              },
-              {
-                "required": [
-                  "repo.tree"
                 ]
               },
               {
@@ -10646,16 +9248,6 @@
               },
               {
                 "required": [
-                  "artifact.capture"
-                ]
-              },
-              {
-                "required": [
-                  "artifact.validate"
-                ]
-              },
-              {
-                "required": [
                   "assert"
                 ]
               },
@@ -10862,21 +9454,6 @@
               {
                 "required": [
                   "read.yaml"
-                ]
-              },
-              {
-                "required": [
-                  "repo.patch"
-                ]
-              },
-              {
-                "required": [
-                  "repo.search"
-                ]
-              },
-              {
-                "required": [
-                  "repo.tree"
                 ]
               },
               {
@@ -10995,16 +9572,6 @@
               },
               {
                 "required": [
-                  "artifact.capture"
-                ]
-              },
-              {
-                "required": [
-                  "artifact.validate"
-                ]
-              },
-              {
-                "required": [
                   "assert"
                 ]
               },
@@ -11211,21 +9778,6 @@
               {
                 "required": [
                   "read.yaml"
-                ]
-              },
-              {
-                "required": [
-                  "repo.patch"
-                ]
-              },
-              {
-                "required": [
-                  "repo.search"
-                ]
-              },
-              {
-                "required": [
-                  "repo.tree"
                 ]
               },
               {
@@ -11344,16 +9896,6 @@
               },
               {
                 "required": [
-                  "artifact.capture"
-                ]
-              },
-              {
-                "required": [
-                  "artifact.validate"
-                ]
-              },
-              {
-                "required": [
                   "assert"
                 ]
               },
@@ -11560,21 +10102,6 @@
               {
                 "required": [
                   "read.yaml"
-                ]
-              },
-              {
-                "required": [
-                  "repo.patch"
-                ]
-              },
-              {
-                "required": [
-                  "repo.search"
-                ]
-              },
-              {
-                "required": [
-                  "repo.tree"
                 ]
               },
               {
@@ -11693,16 +10220,6 @@
               },
               {
                 "required": [
-                  "artifact.capture"
-                ]
-              },
-              {
-                "required": [
-                  "artifact.validate"
-                ]
-              },
-              {
-                "required": [
                   "assert"
                 ]
               },
@@ -11909,21 +10426,6 @@
               {
                 "required": [
                   "read.yaml"
-                ]
-              },
-              {
-                "required": [
-                  "repo.patch"
-                ]
-              },
-              {
-                "required": [
-                  "repo.search"
-                ]
-              },
-              {
-                "required": [
-                  "repo.tree"
                 ]
               },
               {
@@ -12042,16 +10544,6 @@
               },
               {
                 "required": [
-                  "artifact.capture"
-                ]
-              },
-              {
-                "required": [
-                  "artifact.validate"
-                ]
-              },
-              {
-                "required": [
                   "assert"
                 ]
               },
@@ -12258,21 +10750,6 @@
               {
                 "required": [
                   "read.yaml"
-                ]
-              },
-              {
-                "required": [
-                  "repo.patch"
-                ]
-              },
-              {
-                "required": [
-                  "repo.search"
-                ]
-              },
-              {
-                "required": [
-                  "repo.tree"
                 ]
               },
               {
@@ -12391,16 +10868,6 @@
               },
               {
                 "required": [
-                  "artifact.capture"
-                ]
-              },
-              {
-                "required": [
-                  "artifact.validate"
-                ]
-              },
-              {
-                "required": [
                   "assert"
                 ]
               },
@@ -12607,21 +11074,6 @@
               {
                 "required": [
                   "read.yaml"
-                ]
-              },
-              {
-                "required": [
-                  "repo.patch"
-                ]
-              },
-              {
-                "required": [
-                  "repo.search"
-                ]
-              },
-              {
-                "required": [
-                  "repo.tree"
                 ]
               },
               {
@@ -12740,16 +11192,6 @@
               },
               {
                 "required": [
-                  "artifact.capture"
-                ]
-              },
-              {
-                "required": [
-                  "artifact.validate"
-                ]
-              },
-              {
-                "required": [
                   "assert"
                 ]
               },
@@ -12956,21 +11398,6 @@
               {
                 "required": [
                   "read.yaml"
-                ]
-              },
-              {
-                "required": [
-                  "repo.patch"
-                ]
-              },
-              {
-                "required": [
-                  "repo.search"
-                ]
-              },
-              {
-                "required": [
-                  "repo.tree"
                 ]
               },
               {
@@ -13089,16 +11516,6 @@
               },
               {
                 "required": [
-                  "artifact.capture"
-                ]
-              },
-              {
-                "required": [
-                  "artifact.validate"
-                ]
-              },
-              {
-                "required": [
                   "assert"
                 ]
               },
@@ -13305,21 +11722,6 @@
               {
                 "required": [
                   "read.yaml"
-                ]
-              },
-              {
-                "required": [
-                  "repo.patch"
-                ]
-              },
-              {
-                "required": [
-                  "repo.search"
-                ]
-              },
-              {
-                "required": [
-                  "repo.tree"
                 ]
               },
               {
@@ -13438,16 +11840,6 @@
               },
               {
                 "required": [
-                  "artifact.capture"
-                ]
-              },
-              {
-                "required": [
-                  "artifact.validate"
-                ]
-              },
-              {
-                "required": [
                   "assert"
                 ]
               },
@@ -13654,21 +12046,6 @@
               {
                 "required": [
                   "read.yaml"
-                ]
-              },
-              {
-                "required": [
-                  "repo.patch"
-                ]
-              },
-              {
-                "required": [
-                  "repo.search"
-                ]
-              },
-              {
-                "required": [
-                  "repo.tree"
                 ]
               },
               {
@@ -13787,16 +12164,6 @@
               },
               {
                 "required": [
-                  "artifact.capture"
-                ]
-              },
-              {
-                "required": [
-                  "artifact.validate"
-                ]
-              },
-              {
-                "required": [
                   "assert"
                 ]
               },
@@ -14003,21 +12370,6 @@
               {
                 "required": [
                   "read.yaml"
-                ]
-              },
-              {
-                "required": [
-                  "repo.patch"
-                ]
-              },
-              {
-                "required": [
-                  "repo.search"
-                ]
-              },
-              {
-                "required": [
-                  "repo.tree"
                 ]
               },
               {
@@ -14136,16 +12488,6 @@
               },
               {
                 "required": [
-                  "artifact.capture"
-                ]
-              },
-              {
-                "required": [
-                  "artifact.validate"
-                ]
-              },
-              {
-                "required": [
                   "assert"
                 ]
               },
@@ -14352,21 +12694,6 @@
               {
                 "required": [
                   "read.yaml"
-                ]
-              },
-              {
-                "required": [
-                  "repo.patch"
-                ]
-              },
-              {
-                "required": [
-                  "repo.search"
-                ]
-              },
-              {
-                "required": [
-                  "repo.tree"
                 ]
               },
               {
@@ -14485,16 +12812,6 @@
               },
               {
                 "required": [
-                  "artifact.capture"
-                ]
-              },
-              {
-                "required": [
-                  "artifact.validate"
-                ]
-              },
-              {
-                "required": [
                   "assert"
                 ]
               },
@@ -14701,21 +13018,6 @@
               {
                 "required": [
                   "read.yaml"
-                ]
-              },
-              {
-                "required": [
-                  "repo.patch"
-                ]
-              },
-              {
-                "required": [
-                  "repo.search"
-                ]
-              },
-              {
-                "required": [
-                  "repo.tree"
                 ]
               },
               {
@@ -14834,16 +13136,6 @@
               },
               {
                 "required": [
-                  "artifact.capture"
-                ]
-              },
-              {
-                "required": [
-                  "artifact.validate"
-                ]
-              },
-              {
-                "required": [
                   "assert"
                 ]
               },
@@ -15050,21 +13342,6 @@
               {
                 "required": [
                   "read.yaml"
-                ]
-              },
-              {
-                "required": [
-                  "repo.patch"
-                ]
-              },
-              {
-                "required": [
-                  "repo.search"
-                ]
-              },
-              {
-                "required": [
-                  "repo.tree"
                 ]
               },
               {
@@ -15183,16 +13460,6 @@
               },
               {
                 "required": [
-                  "artifact.capture"
-                ]
-              },
-              {
-                "required": [
-                  "artifact.validate"
-                ]
-              },
-              {
-                "required": [
                   "assert"
                 ]
               },
@@ -15399,21 +13666,6 @@
               {
                 "required": [
                   "read.yaml"
-                ]
-              },
-              {
-                "required": [
-                  "repo.patch"
-                ]
-              },
-              {
-                "required": [
-                  "repo.search"
-                ]
-              },
-              {
-                "required": [
-                  "repo.tree"
                 ]
               },
               {
@@ -15532,16 +13784,6 @@
               },
               {
                 "required": [
-                  "artifact.capture"
-                ]
-              },
-              {
-                "required": [
-                  "artifact.validate"
-                ]
-              },
-              {
-                "required": [
                   "assert"
                 ]
               },
@@ -15748,21 +13990,6 @@
               {
                 "required": [
                   "read.yaml"
-                ]
-              },
-              {
-                "required": [
-                  "repo.patch"
-                ]
-              },
-              {
-                "required": [
-                  "repo.search"
-                ]
-              },
-              {
-                "required": [
-                  "repo.tree"
                 ]
               },
               {
@@ -15881,16 +14108,6 @@
               },
               {
                 "required": [
-                  "artifact.capture"
-                ]
-              },
-              {
-                "required": [
-                  "artifact.validate"
-                ]
-              },
-              {
-                "required": [
                   "assert"
                 ]
               },
@@ -16097,21 +14314,6 @@
               {
                 "required": [
                   "read.yaml"
-                ]
-              },
-              {
-                "required": [
-                  "repo.patch"
-                ]
-              },
-              {
-                "required": [
-                  "repo.search"
-                ]
-              },
-              {
-                "required": [
-                  "repo.tree"
                 ]
               },
               {
@@ -16230,16 +14432,6 @@
               },
               {
                 "required": [
-                  "artifact.capture"
-                ]
-              },
-              {
-                "required": [
-                  "artifact.validate"
-                ]
-              },
-              {
-                "required": [
                   "assert"
                 ]
               },
@@ -16446,21 +14638,6 @@
               {
                 "required": [
                   "read.yaml"
-                ]
-              },
-              {
-                "required": [
-                  "repo.patch"
-                ]
-              },
-              {
-                "required": [
-                  "repo.search"
-                ]
-              },
-              {
-                "required": [
-                  "repo.tree"
                 ]
               },
               {
@@ -16579,16 +14756,6 @@
               },
               {
                 "required": [
-                  "artifact.capture"
-                ]
-              },
-              {
-                "required": [
-                  "artifact.validate"
-                ]
-              },
-              {
-                "required": [
                   "assert"
                 ]
               },
@@ -16795,21 +14962,6 @@
               {
                 "required": [
                   "read.yaml"
-                ]
-              },
-              {
-                "required": [
-                  "repo.patch"
-                ]
-              },
-              {
-                "required": [
-                  "repo.search"
-                ]
-              },
-              {
-                "required": [
-                  "repo.tree"
                 ]
               },
               {
@@ -16928,16 +15080,6 @@
               },
               {
                 "required": [
-                  "artifact.capture"
-                ]
-              },
-              {
-                "required": [
-                  "artifact.validate"
-                ]
-              },
-              {
-                "required": [
                   "assert"
                 ]
               },
@@ -17144,21 +15286,6 @@
               {
                 "required": [
                   "read.yaml"
-                ]
-              },
-              {
-                "required": [
-                  "repo.patch"
-                ]
-              },
-              {
-                "required": [
-                  "repo.search"
-                ]
-              },
-              {
-                "required": [
-                  "repo.tree"
                 ]
               },
               {
@@ -17277,16 +15404,6 @@
               },
               {
                 "required": [
-                  "artifact.capture"
-                ]
-              },
-              {
-                "required": [
-                  "artifact.validate"
-                ]
-              },
-              {
-                "required": [
                   "assert"
                 ]
               },
@@ -17493,21 +15610,6 @@
               {
                 "required": [
                   "read.yaml"
-                ]
-              },
-              {
-                "required": [
-                  "repo.patch"
-                ]
-              },
-              {
-                "required": [
-                  "repo.search"
-                ]
-              },
-              {
-                "required": [
-                  "repo.tree"
                 ]
               },
               {
@@ -17626,16 +15728,6 @@
               },
               {
                 "required": [
-                  "artifact.capture"
-                ]
-              },
-              {
-                "required": [
-                  "artifact.validate"
-                ]
-              },
-              {
-                "required": [
                   "assert"
                 ]
               },
@@ -17842,21 +15934,6 @@
               {
                 "required": [
                   "read.yaml"
-                ]
-              },
-              {
-                "required": [
-                  "repo.patch"
-                ]
-              },
-              {
-                "required": [
-                  "repo.search"
-                ]
-              },
-              {
-                "required": [
-                  "repo.tree"
                 ]
               },
               {
@@ -17975,16 +16052,6 @@
               },
               {
                 "required": [
-                  "artifact.capture"
-                ]
-              },
-              {
-                "required": [
-                  "artifact.validate"
-                ]
-              },
-              {
-                "required": [
                   "assert"
                 ]
               },
@@ -18191,21 +16258,6 @@
               {
                 "required": [
                   "read.yaml"
-                ]
-              },
-              {
-                "required": [
-                  "repo.patch"
-                ]
-              },
-              {
-                "required": [
-                  "repo.search"
-                ]
-              },
-              {
-                "required": [
-                  "repo.tree"
                 ]
               },
               {
@@ -18324,16 +16376,6 @@
               },
               {
                 "required": [
-                  "artifact.capture"
-                ]
-              },
-              {
-                "required": [
-                  "artifact.validate"
-                ]
-              },
-              {
-                "required": [
                   "assert"
                 ]
               },
@@ -18540,21 +16582,6 @@
               {
                 "required": [
                   "read.yaml"
-                ]
-              },
-              {
-                "required": [
-                  "repo.patch"
-                ]
-              },
-              {
-                "required": [
-                  "repo.search"
-                ]
-              },
-              {
-                "required": [
-                  "repo.tree"
                 ]
               },
               {
@@ -18673,16 +16700,6 @@
               },
               {
                 "required": [
-                  "artifact.capture"
-                ]
-              },
-              {
-                "required": [
-                  "artifact.validate"
-                ]
-              },
-              {
-                "required": [
                   "assert"
                 ]
               },
@@ -18889,21 +16906,6 @@
               {
                 "required": [
                   "read.yaml"
-                ]
-              },
-              {
-                "required": [
-                  "repo.patch"
-                ]
-              },
-              {
-                "required": [
-                  "repo.search"
-                ]
-              },
-              {
-                "required": [
-                  "repo.tree"
                 ]
               },
               {
@@ -19022,16 +17024,6 @@
               },
               {
                 "required": [
-                  "artifact.capture"
-                ]
-              },
-              {
-                "required": [
-                  "artifact.validate"
-                ]
-              },
-              {
-                "required": [
                   "assert"
                 ]
               },
@@ -19238,1068 +17230,6 @@
               {
                 "required": [
                   "read.json"
-                ]
-              },
-              {
-                "required": [
-                  "repo.patch"
-                ]
-              },
-              {
-                "required": [
-                  "repo.search"
-                ]
-              },
-              {
-                "required": [
-                  "repo.tree"
-                ]
-              },
-              {
-                "required": [
-                  "shell"
-                ]
-              },
-              {
-                "required": [
-                  "text.delete_range"
-                ]
-              },
-              {
-                "required": [
-                  "text.insert"
-                ]
-              },
-              {
-                "required": [
-                  "text.line"
-                ]
-              },
-              {
-                "required": [
-                  "text.patch"
-                ]
-              },
-              {
-                "required": [
-                  "text.patch.ini"
-                ]
-              },
-              {
-                "required": [
-                  "text.patch.json"
-                ]
-              },
-              {
-                "required": [
-                  "text.patch.yaml"
-                ]
-              },
-              {
-                "required": [
-                  "text.replace"
-                ]
-              },
-              {
-                "required": [
-                  "tool"
-                ]
-              },
-              {
-                "required": [
-                  "transaction"
-                ]
-              },
-              {
-                "required": [
-                  "try"
-                ]
-              },
-              {
-                "required": [
-                  "use"
-                ]
-              },
-              {
-                "required": [
-                  "vars"
-                ]
-              },
-              {
-                "required": [
-                  "vars.load"
-                ]
-              },
-              {
-                "required": [
-                  "windows.firewall_rule"
-                ]
-              },
-              {
-                "required": [
-                  "windows.hyperv_firewall_rule"
-                ]
-              },
-              {
-                "required": [
-                  "windows.registry"
-                ]
-              },
-              {
-                "required": [
-                  "windows.scheduled_task"
-                ]
-              }
-            ]
-          }
-        },
-        {
-          "required": [
-            "repo.patch"
-          ],
-          "properties": {
-            "repo.patch": {
-              "$ref": "#/definitions/repo.patch"
-            }
-          },
-          "not": {
-            "anyOf": [
-              {
-                "required": [
-                  "action"
-                ]
-              },
-              {
-                "required": [
-                  "artifact.capture"
-                ]
-              },
-              {
-                "required": [
-                  "artifact.validate"
-                ]
-              },
-              {
-                "required": [
-                  "assert"
-                ]
-              },
-              {
-                "required": [
-                  "cmd"
-                ]
-              },
-              {
-                "required": [
-                  "container"
-                ]
-              },
-              {
-                "required": [
-                  "container.image"
-                ]
-              },
-              {
-                "required": [
-                  "file.copy"
-                ]
-              },
-              {
-                "required": [
-                  "file.download"
-                ]
-              },
-              {
-                "required": [
-                  "file.template"
-                ]
-              },
-              {
-                "required": [
-                  "file.unarchive"
-                ]
-              },
-              {
-                "required": [
-                  "file.write"
-                ]
-              },
-              {
-                "required": [
-                  "git.checkout"
-                ]
-              },
-              {
-                "required": [
-                  "git.clone"
-                ]
-              },
-              {
-                "required": [
-                  "git.config"
-                ]
-              },
-              {
-                "required": [
-                  "http.request"
-                ]
-              },
-              {
-                "required": [
-                  "import"
-                ]
-              },
-              {
-                "required": [
-                  "log"
-                ]
-              },
-              {
-                "required": [
-                  "observe.command"
-                ]
-              },
-              {
-                "required": [
-                  "observe.cpu"
-                ]
-              },
-              {
-                "required": [
-                  "observe.disk"
-                ]
-              },
-              {
-                "required": [
-                  "observe.file"
-                ]
-              },
-              {
-                "required": [
-                  "observe.gpu"
-                ]
-              },
-              {
-                "required": [
-                  "observe.http"
-                ]
-              },
-              {
-                "required": [
-                  "observe.logs"
-                ]
-              },
-              {
-                "required": [
-                  "observe.memory"
-                ]
-              },
-              {
-                "required": [
-                  "observe.port"
-                ]
-              },
-              {
-                "required": [
-                  "observe.process"
-                ]
-              },
-              {
-                "required": [
-                  "observe.service"
-                ]
-              },
-              {
-                "required": [
-                  "os.cron"
-                ]
-              },
-              {
-                "required": [
-                  "os.firewall"
-                ]
-              },
-              {
-                "required": [
-                  "os.group"
-                ]
-              },
-              {
-                "required": [
-                  "os.mount"
-                ]
-              },
-              {
-                "required": [
-                  "os.service"
-                ]
-              },
-              {
-                "required": [
-                  "os.ssh_key"
-                ]
-              },
-              {
-                "required": [
-                  "os.sysctl"
-                ]
-              },
-              {
-                "required": [
-                  "os.systemd"
-                ]
-              },
-              {
-                "required": [
-                  "os.user"
-                ]
-              },
-              {
-                "required": [
-                  "pkg"
-                ]
-              },
-              {
-                "required": [
-                  "pkg.hold"
-                ]
-              },
-              {
-                "required": [
-                  "pkg.list"
-                ]
-              },
-              {
-                "required": [
-                  "pkg.repo"
-                ]
-              },
-              {
-                "required": [
-                  "pkg.upgrade"
-                ]
-              },
-              {
-                "required": [
-                  "process"
-                ]
-              },
-              {
-                "required": [
-                  "read.json"
-                ]
-              },
-              {
-                "required": [
-                  "read.yaml"
-                ]
-              },
-              {
-                "required": [
-                  "repo.search"
-                ]
-              },
-              {
-                "required": [
-                  "repo.tree"
-                ]
-              },
-              {
-                "required": [
-                  "shell"
-                ]
-              },
-              {
-                "required": [
-                  "text.delete_range"
-                ]
-              },
-              {
-                "required": [
-                  "text.insert"
-                ]
-              },
-              {
-                "required": [
-                  "text.line"
-                ]
-              },
-              {
-                "required": [
-                  "text.patch"
-                ]
-              },
-              {
-                "required": [
-                  "text.patch.ini"
-                ]
-              },
-              {
-                "required": [
-                  "text.patch.json"
-                ]
-              },
-              {
-                "required": [
-                  "text.patch.yaml"
-                ]
-              },
-              {
-                "required": [
-                  "text.replace"
-                ]
-              },
-              {
-                "required": [
-                  "tool"
-                ]
-              },
-              {
-                "required": [
-                  "transaction"
-                ]
-              },
-              {
-                "required": [
-                  "try"
-                ]
-              },
-              {
-                "required": [
-                  "use"
-                ]
-              },
-              {
-                "required": [
-                  "vars"
-                ]
-              },
-              {
-                "required": [
-                  "vars.load"
-                ]
-              },
-              {
-                "required": [
-                  "windows.firewall_rule"
-                ]
-              },
-              {
-                "required": [
-                  "windows.hyperv_firewall_rule"
-                ]
-              },
-              {
-                "required": [
-                  "windows.registry"
-                ]
-              },
-              {
-                "required": [
-                  "windows.scheduled_task"
-                ]
-              }
-            ]
-          }
-        },
-        {
-          "required": [
-            "repo.search"
-          ],
-          "properties": {
-            "repo.search": {
-              "$ref": "#/definitions/repo.search"
-            }
-          },
-          "not": {
-            "anyOf": [
-              {
-                "required": [
-                  "action"
-                ]
-              },
-              {
-                "required": [
-                  "artifact.capture"
-                ]
-              },
-              {
-                "required": [
-                  "artifact.validate"
-                ]
-              },
-              {
-                "required": [
-                  "assert"
-                ]
-              },
-              {
-                "required": [
-                  "cmd"
-                ]
-              },
-              {
-                "required": [
-                  "container"
-                ]
-              },
-              {
-                "required": [
-                  "container.image"
-                ]
-              },
-              {
-                "required": [
-                  "file.copy"
-                ]
-              },
-              {
-                "required": [
-                  "file.download"
-                ]
-              },
-              {
-                "required": [
-                  "file.template"
-                ]
-              },
-              {
-                "required": [
-                  "file.unarchive"
-                ]
-              },
-              {
-                "required": [
-                  "file.write"
-                ]
-              },
-              {
-                "required": [
-                  "git.checkout"
-                ]
-              },
-              {
-                "required": [
-                  "git.clone"
-                ]
-              },
-              {
-                "required": [
-                  "git.config"
-                ]
-              },
-              {
-                "required": [
-                  "http.request"
-                ]
-              },
-              {
-                "required": [
-                  "import"
-                ]
-              },
-              {
-                "required": [
-                  "log"
-                ]
-              },
-              {
-                "required": [
-                  "observe.command"
-                ]
-              },
-              {
-                "required": [
-                  "observe.cpu"
-                ]
-              },
-              {
-                "required": [
-                  "observe.disk"
-                ]
-              },
-              {
-                "required": [
-                  "observe.file"
-                ]
-              },
-              {
-                "required": [
-                  "observe.gpu"
-                ]
-              },
-              {
-                "required": [
-                  "observe.http"
-                ]
-              },
-              {
-                "required": [
-                  "observe.logs"
-                ]
-              },
-              {
-                "required": [
-                  "observe.memory"
-                ]
-              },
-              {
-                "required": [
-                  "observe.port"
-                ]
-              },
-              {
-                "required": [
-                  "observe.process"
-                ]
-              },
-              {
-                "required": [
-                  "observe.service"
-                ]
-              },
-              {
-                "required": [
-                  "os.cron"
-                ]
-              },
-              {
-                "required": [
-                  "os.firewall"
-                ]
-              },
-              {
-                "required": [
-                  "os.group"
-                ]
-              },
-              {
-                "required": [
-                  "os.mount"
-                ]
-              },
-              {
-                "required": [
-                  "os.service"
-                ]
-              },
-              {
-                "required": [
-                  "os.ssh_key"
-                ]
-              },
-              {
-                "required": [
-                  "os.sysctl"
-                ]
-              },
-              {
-                "required": [
-                  "os.systemd"
-                ]
-              },
-              {
-                "required": [
-                  "os.user"
-                ]
-              },
-              {
-                "required": [
-                  "pkg"
-                ]
-              },
-              {
-                "required": [
-                  "pkg.hold"
-                ]
-              },
-              {
-                "required": [
-                  "pkg.list"
-                ]
-              },
-              {
-                "required": [
-                  "pkg.repo"
-                ]
-              },
-              {
-                "required": [
-                  "pkg.upgrade"
-                ]
-              },
-              {
-                "required": [
-                  "process"
-                ]
-              },
-              {
-                "required": [
-                  "read.json"
-                ]
-              },
-              {
-                "required": [
-                  "read.yaml"
-                ]
-              },
-              {
-                "required": [
-                  "repo.patch"
-                ]
-              },
-              {
-                "required": [
-                  "repo.tree"
-                ]
-              },
-              {
-                "required": [
-                  "shell"
-                ]
-              },
-              {
-                "required": [
-                  "text.delete_range"
-                ]
-              },
-              {
-                "required": [
-                  "text.insert"
-                ]
-              },
-              {
-                "required": [
-                  "text.line"
-                ]
-              },
-              {
-                "required": [
-                  "text.patch"
-                ]
-              },
-              {
-                "required": [
-                  "text.patch.ini"
-                ]
-              },
-              {
-                "required": [
-                  "text.patch.json"
-                ]
-              },
-              {
-                "required": [
-                  "text.patch.yaml"
-                ]
-              },
-              {
-                "required": [
-                  "text.replace"
-                ]
-              },
-              {
-                "required": [
-                  "tool"
-                ]
-              },
-              {
-                "required": [
-                  "transaction"
-                ]
-              },
-              {
-                "required": [
-                  "try"
-                ]
-              },
-              {
-                "required": [
-                  "use"
-                ]
-              },
-              {
-                "required": [
-                  "vars"
-                ]
-              },
-              {
-                "required": [
-                  "vars.load"
-                ]
-              },
-              {
-                "required": [
-                  "windows.firewall_rule"
-                ]
-              },
-              {
-                "required": [
-                  "windows.hyperv_firewall_rule"
-                ]
-              },
-              {
-                "required": [
-                  "windows.registry"
-                ]
-              },
-              {
-                "required": [
-                  "windows.scheduled_task"
-                ]
-              }
-            ]
-          }
-        },
-        {
-          "required": [
-            "repo.tree"
-          ],
-          "properties": {
-            "repo.tree": {
-              "$ref": "#/definitions/repo.tree"
-            }
-          },
-          "not": {
-            "anyOf": [
-              {
-                "required": [
-                  "action"
-                ]
-              },
-              {
-                "required": [
-                  "artifact.capture"
-                ]
-              },
-              {
-                "required": [
-                  "artifact.validate"
-                ]
-              },
-              {
-                "required": [
-                  "assert"
-                ]
-              },
-              {
-                "required": [
-                  "cmd"
-                ]
-              },
-              {
-                "required": [
-                  "container"
-                ]
-              },
-              {
-                "required": [
-                  "container.image"
-                ]
-              },
-              {
-                "required": [
-                  "file.copy"
-                ]
-              },
-              {
-                "required": [
-                  "file.download"
-                ]
-              },
-              {
-                "required": [
-                  "file.template"
-                ]
-              },
-              {
-                "required": [
-                  "file.unarchive"
-                ]
-              },
-              {
-                "required": [
-                  "file.write"
-                ]
-              },
-              {
-                "required": [
-                  "git.checkout"
-                ]
-              },
-              {
-                "required": [
-                  "git.clone"
-                ]
-              },
-              {
-                "required": [
-                  "git.config"
-                ]
-              },
-              {
-                "required": [
-                  "http.request"
-                ]
-              },
-              {
-                "required": [
-                  "import"
-                ]
-              },
-              {
-                "required": [
-                  "log"
-                ]
-              },
-              {
-                "required": [
-                  "observe.command"
-                ]
-              },
-              {
-                "required": [
-                  "observe.cpu"
-                ]
-              },
-              {
-                "required": [
-                  "observe.disk"
-                ]
-              },
-              {
-                "required": [
-                  "observe.file"
-                ]
-              },
-              {
-                "required": [
-                  "observe.gpu"
-                ]
-              },
-              {
-                "required": [
-                  "observe.http"
-                ]
-              },
-              {
-                "required": [
-                  "observe.logs"
-                ]
-              },
-              {
-                "required": [
-                  "observe.memory"
-                ]
-              },
-              {
-                "required": [
-                  "observe.port"
-                ]
-              },
-              {
-                "required": [
-                  "observe.process"
-                ]
-              },
-              {
-                "required": [
-                  "observe.service"
-                ]
-              },
-              {
-                "required": [
-                  "os.cron"
-                ]
-              },
-              {
-                "required": [
-                  "os.firewall"
-                ]
-              },
-              {
-                "required": [
-                  "os.group"
-                ]
-              },
-              {
-                "required": [
-                  "os.mount"
-                ]
-              },
-              {
-                "required": [
-                  "os.service"
-                ]
-              },
-              {
-                "required": [
-                  "os.ssh_key"
-                ]
-              },
-              {
-                "required": [
-                  "os.sysctl"
-                ]
-              },
-              {
-                "required": [
-                  "os.systemd"
-                ]
-              },
-              {
-                "required": [
-                  "os.user"
-                ]
-              },
-              {
-                "required": [
-                  "pkg"
-                ]
-              },
-              {
-                "required": [
-                  "pkg.hold"
-                ]
-              },
-              {
-                "required": [
-                  "pkg.list"
-                ]
-              },
-              {
-                "required": [
-                  "pkg.repo"
-                ]
-              },
-              {
-                "required": [
-                  "pkg.upgrade"
-                ]
-              },
-              {
-                "required": [
-                  "process"
-                ]
-              },
-              {
-                "required": [
-                  "read.json"
-                ]
-              },
-              {
-                "required": [
-                  "read.yaml"
-                ]
-              },
-              {
-                "required": [
-                  "repo.patch"
-                ]
-              },
-              {
-                "required": [
-                  "repo.search"
                 ]
               },
               {
@@ -20425,16 +17355,6 @@
               },
               {
                 "required": [
-                  "artifact.capture"
-                ]
-              },
-              {
-                "required": [
-                  "artifact.validate"
-                ]
-              },
-              {
-                "required": [
                   "assert"
                 ]
               },
@@ -20646,21 +17566,6 @@
               {
                 "required": [
                   "read.yaml"
-                ]
-              },
-              {
-                "required": [
-                  "repo.patch"
-                ]
-              },
-              {
-                "required": [
-                  "repo.search"
-                ]
-              },
-              {
-                "required": [
-                  "repo.tree"
                 ]
               },
               {
@@ -20774,16 +17679,6 @@
               },
               {
                 "required": [
-                  "artifact.capture"
-                ]
-              },
-              {
-                "required": [
-                  "artifact.validate"
-                ]
-              },
-              {
-                "required": [
                   "assert"
                 ]
               },
@@ -20995,21 +17890,6 @@
               {
                 "required": [
                   "read.yaml"
-                ]
-              },
-              {
-                "required": [
-                  "repo.patch"
-                ]
-              },
-              {
-                "required": [
-                  "repo.search"
-                ]
-              },
-              {
-                "required": [
-                  "repo.tree"
                 ]
               },
               {
@@ -21123,16 +18003,6 @@
               },
               {
                 "required": [
-                  "artifact.capture"
-                ]
-              },
-              {
-                "required": [
-                  "artifact.validate"
-                ]
-              },
-              {
-                "required": [
                   "assert"
                 ]
               },
@@ -21344,21 +18214,6 @@
               {
                 "required": [
                   "read.yaml"
-                ]
-              },
-              {
-                "required": [
-                  "repo.patch"
-                ]
-              },
-              {
-                "required": [
-                  "repo.search"
-                ]
-              },
-              {
-                "required": [
-                  "repo.tree"
                 ]
               },
               {
@@ -21472,16 +18327,6 @@
               },
               {
                 "required": [
-                  "artifact.capture"
-                ]
-              },
-              {
-                "required": [
-                  "artifact.validate"
-                ]
-              },
-              {
-                "required": [
                   "assert"
                 ]
               },
@@ -21693,21 +18538,6 @@
               {
                 "required": [
                   "read.yaml"
-                ]
-              },
-              {
-                "required": [
-                  "repo.patch"
-                ]
-              },
-              {
-                "required": [
-                  "repo.search"
-                ]
-              },
-              {
-                "required": [
-                  "repo.tree"
                 ]
               },
               {
@@ -21821,16 +18651,6 @@
               },
               {
                 "required": [
-                  "artifact.capture"
-                ]
-              },
-              {
-                "required": [
-                  "artifact.validate"
-                ]
-              },
-              {
-                "required": [
                   "assert"
                 ]
               },
@@ -22042,21 +18862,6 @@
               {
                 "required": [
                   "read.yaml"
-                ]
-              },
-              {
-                "required": [
-                  "repo.patch"
-                ]
-              },
-              {
-                "required": [
-                  "repo.search"
-                ]
-              },
-              {
-                "required": [
-                  "repo.tree"
                 ]
               },
               {
@@ -22170,16 +18975,6 @@
               },
               {
                 "required": [
-                  "artifact.capture"
-                ]
-              },
-              {
-                "required": [
-                  "artifact.validate"
-                ]
-              },
-              {
-                "required": [
                   "assert"
                 ]
               },
@@ -22391,21 +19186,6 @@
               {
                 "required": [
                   "read.yaml"
-                ]
-              },
-              {
-                "required": [
-                  "repo.patch"
-                ]
-              },
-              {
-                "required": [
-                  "repo.search"
-                ]
-              },
-              {
-                "required": [
-                  "repo.tree"
                 ]
               },
               {
@@ -22519,16 +19299,6 @@
               },
               {
                 "required": [
-                  "artifact.capture"
-                ]
-              },
-              {
-                "required": [
-                  "artifact.validate"
-                ]
-              },
-              {
-                "required": [
                   "assert"
                 ]
               },
@@ -22740,21 +19510,6 @@
               {
                 "required": [
                   "read.yaml"
-                ]
-              },
-              {
-                "required": [
-                  "repo.patch"
-                ]
-              },
-              {
-                "required": [
-                  "repo.search"
-                ]
-              },
-              {
-                "required": [
-                  "repo.tree"
                 ]
               },
               {
@@ -22868,16 +19623,6 @@
               },
               {
                 "required": [
-                  "artifact.capture"
-                ]
-              },
-              {
-                "required": [
-                  "artifact.validate"
-                ]
-              },
-              {
-                "required": [
                   "assert"
                 ]
               },
@@ -23089,21 +19834,6 @@
               {
                 "required": [
                   "read.yaml"
-                ]
-              },
-              {
-                "required": [
-                  "repo.patch"
-                ]
-              },
-              {
-                "required": [
-                  "repo.search"
-                ]
-              },
-              {
-                "required": [
-                  "repo.tree"
                 ]
               },
               {
@@ -23217,16 +19947,6 @@
               },
               {
                 "required": [
-                  "artifact.capture"
-                ]
-              },
-              {
-                "required": [
-                  "artifact.validate"
-                ]
-              },
-              {
-                "required": [
                   "assert"
                 ]
               },
@@ -23438,21 +20158,6 @@
               {
                 "required": [
                   "read.yaml"
-                ]
-              },
-              {
-                "required": [
-                  "repo.patch"
-                ]
-              },
-              {
-                "required": [
-                  "repo.search"
-                ]
-              },
-              {
-                "required": [
-                  "repo.tree"
                 ]
               },
               {
@@ -23566,16 +20271,6 @@
               },
               {
                 "required": [
-                  "artifact.capture"
-                ]
-              },
-              {
-                "required": [
-                  "artifact.validate"
-                ]
-              },
-              {
-                "required": [
                   "assert"
                 ]
               },
@@ -23787,21 +20482,6 @@
               {
                 "required": [
                   "read.yaml"
-                ]
-              },
-              {
-                "required": [
-                  "repo.patch"
-                ]
-              },
-              {
-                "required": [
-                  "repo.search"
-                ]
-              },
-              {
-                "required": [
-                  "repo.tree"
                 ]
               },
               {
@@ -23913,16 +20593,6 @@
               },
               {
                 "required": [
-                  "artifact.capture"
-                ]
-              },
-              {
-                "required": [
-                  "artifact.validate"
-                ]
-              },
-              {
-                "required": [
                   "assert"
                 ]
               },
@@ -24134,21 +20804,6 @@
               {
                 "required": [
                   "read.yaml"
-                ]
-              },
-              {
-                "required": [
-                  "repo.patch"
-                ]
-              },
-              {
-                "required": [
-                  "repo.search"
-                ]
-              },
-              {
-                "required": [
-                  "repo.tree"
                 ]
               },
               {
@@ -24260,16 +20915,6 @@
               },
               {
                 "required": [
-                  "artifact.capture"
-                ]
-              },
-              {
-                "required": [
-                  "artifact.validate"
-                ]
-              },
-              {
-                "required": [
                   "assert"
                 ]
               },
@@ -24481,21 +21126,6 @@
               {
                 "required": [
                   "read.yaml"
-                ]
-              },
-              {
-                "required": [
-                  "repo.patch"
-                ]
-              },
-              {
-                "required": [
-                  "repo.search"
-                ]
-              },
-              {
-                "required": [
-                  "repo.tree"
                 ]
               },
               {
@@ -24609,16 +21239,6 @@
               },
               {
                 "required": [
-                  "artifact.capture"
-                ]
-              },
-              {
-                "required": [
-                  "artifact.validate"
-                ]
-              },
-              {
-                "required": [
                   "assert"
                 ]
               },
@@ -24830,21 +21450,6 @@
               {
                 "required": [
                   "read.yaml"
-                ]
-              },
-              {
-                "required": [
-                  "repo.patch"
-                ]
-              },
-              {
-                "required": [
-                  "repo.search"
-                ]
-              },
-              {
-                "required": [
-                  "repo.tree"
                 ]
               },
               {
@@ -24958,16 +21563,6 @@
               },
               {
                 "required": [
-                  "artifact.capture"
-                ]
-              },
-              {
-                "required": [
-                  "artifact.validate"
-                ]
-              },
-              {
-                "required": [
                   "assert"
                 ]
               },
@@ -25179,21 +21774,6 @@
               {
                 "required": [
                   "read.yaml"
-                ]
-              },
-              {
-                "required": [
-                  "repo.patch"
-                ]
-              },
-              {
-                "required": [
-                  "repo.search"
-                ]
-              },
-              {
-                "required": [
-                  "repo.tree"
                 ]
               },
               {
@@ -25307,16 +21887,6 @@
               },
               {
                 "required": [
-                  "artifact.capture"
-                ]
-              },
-              {
-                "required": [
-                  "artifact.validate"
-                ]
-              },
-              {
-                "required": [
                   "assert"
                 ]
               },
@@ -25528,21 +22098,6 @@
               {
                 "required": [
                   "read.yaml"
-                ]
-              },
-              {
-                "required": [
-                  "repo.patch"
-                ]
-              },
-              {
-                "required": [
-                  "repo.search"
-                ]
-              },
-              {
-                "required": [
-                  "repo.tree"
                 ]
               },
               {
@@ -25656,16 +22211,6 @@
               },
               {
                 "required": [
-                  "artifact.capture"
-                ]
-              },
-              {
-                "required": [
-                  "artifact.validate"
-                ]
-              },
-              {
-                "required": [
                   "assert"
                 ]
               },
@@ -25877,21 +22422,6 @@
               {
                 "required": [
                   "read.yaml"
-                ]
-              },
-              {
-                "required": [
-                  "repo.patch"
-                ]
-              },
-              {
-                "required": [
-                  "repo.search"
-                ]
-              },
-              {
-                "required": [
-                  "repo.tree"
                 ]
               },
               {
@@ -26005,16 +22535,6 @@
               },
               {
                 "required": [
-                  "artifact.capture"
-                ]
-              },
-              {
-                "required": [
-                  "artifact.validate"
-                ]
-              },
-              {
-                "required": [
                   "assert"
                 ]
               },
@@ -26226,21 +22746,6 @@
               {
                 "required": [
                   "read.yaml"
-                ]
-              },
-              {
-                "required": [
-                  "repo.patch"
-                ]
-              },
-              {
-                "required": [
-                  "repo.search"
-                ]
-              },
-              {
-                "required": [
-                  "repo.tree"
                 ]
               },
               {
@@ -26354,16 +22859,6 @@
               },
               {
                 "required": [
-                  "artifact.capture"
-                ]
-              },
-              {
-                "required": [
-                  "artifact.validate"
-                ]
-              },
-              {
-                "required": [
                   "assert"
                 ]
               },
@@ -26575,21 +23070,6 @@
               {
                 "required": [
                   "read.yaml"
-                ]
-              },
-              {
-                "required": [
-                  "repo.patch"
-                ]
-              },
-              {
-                "required": [
-                  "repo.search"
-                ]
-              },
-              {
-                "required": [
-                  "repo.tree"
                 ]
               },
               {
@@ -26703,16 +23183,6 @@
               },
               {
                 "required": [
-                  "artifact.capture"
-                ]
-              },
-              {
-                "required": [
-                  "artifact.validate"
-                ]
-              },
-              {
-                "required": [
                   "assert"
                 ]
               },
@@ -26924,21 +23394,6 @@
               {
                 "required": [
                   "read.yaml"
-                ]
-              },
-              {
-                "required": [
-                  "repo.patch"
-                ]
-              },
-              {
-                "required": [
-                  "repo.search"
-                ]
-              },
-              {
-                "required": [
-                  "repo.tree"
                 ]
               },
               {

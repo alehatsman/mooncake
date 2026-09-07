@@ -144,13 +144,6 @@ linters:
       - path: internal/actions/file_patch_apply/
         linters: [dupl]
 
-      - path: internal/(agent|actions/artifact_capture|actions/artifact_validate)/
-        linters: [gosec]
-        text: "G(301|306)"
-
-      - path: internal/(actions/artifact_capture|artifacts)/
-        linters: [goconst]
-
       - path: internal/(actions/template|template)/
         linters: [revive]
         text: "var-naming: avoid package names that conflict with Go standard library"
@@ -169,7 +162,7 @@ linters:
       # fmt.Fprintf/Fprintln to operator-facing writers in internal/fleet/
       # and a few other display helpers — best-effort writes to terminal
       # output; ignoring the error is idiomatic Go CLI code.
-      - path: internal/(doctor/render_text|fleet/.+|logger/first_run_subscriber|agent/confirm|scaffold/scaffold)\.go
+      - path: internal/(doctor/render_text|fleet/.+|logger/first_run_subscriber|scaffold/scaffold)\.go
         linters: [errcheck]
         text: "Error return value of `fmt\\.F"
 

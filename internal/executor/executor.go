@@ -122,7 +122,6 @@ import (
 	"time"
 
 	"github.com/alehatsman/mooncake/internal/actions"
-	"github.com/alehatsman/mooncake/internal/artifacts"
 	"github.com/alehatsman/mooncake/internal/config"
 	"github.com/alehatsman/mooncake/internal/events"
 	"github.com/alehatsman/mooncake/internal/expression"
@@ -1255,12 +1254,6 @@ type StartConfig struct {
 	// AND'd with Tags at plan-build time: a step must pass both.
 	Names []string
 
-	// Artifact configuration
-	ArtifactsDir      string
-	CaptureFullOutput bool
-	MaxOutputBytes    int
-	MaxOutputLines    int
-
 	// KeepGoing continues the run past a failing step, collecting the
 	// failures and returning them together at the end (still a
 	// non-zero exit). See RunServices.KeepGoing.
@@ -1398,44 +1391,6 @@ func Start(ctx context.Context, startConfig StartConfig, log logger.Logger, publ
 	// the user thinks their deploy ran when it didn't.
 	if msg := filter.UnmatchedTagsError(startConfig.Tags, planData); msg != "" {
 		return &SetupError{Component: "tags", Issue: msg}
-	}
-
-	// Setup artifact writer if artifacts-dir is specified
-	if startConfig.ArtifactsDir != "" {
-		// Gather system facts for artifact generation
-		systemFacts := facts.Collect()
-
-		// Create artifact writer
-		artifactWriter, err := artifacts.NewWriter(
-			artifacts.Config{
-				BaseDir:        startConfig.ArtifactsDir,
-				CaptureStdout:  startConfig.CaptureFullOutput,
-				CaptureStderr:  startConfig.CaptureFullOutput,
-				MaxOutputBytes: startConfig.MaxOutputBytes,
-				MaxOutputLines: startConfig.MaxOutputLines,
-			},
-			planData,
-			systemFacts,
-		)
-		if err != nil {
-			return &SetupError{Component: "artifacts", Issue: "failed to create artifact writer", Cause: err}
-		}
-		// MT-53 (events-drop-on-close): the writer subscribes to an
-		// async channel publisher. EventRunCompleted is queued just
-		// before ExecutePlan returns; if we close the writer before
-		// the publisher's forwarding goroutine has drained its channel,
-		// the writer's `closed` flag is set and the queued
-		// run-completed event is silently dropped — including the call
-		// that writes results.json / SUMMARY.md / changed_files.json.
-		// Drain pending events FIRST (LIFO defer order: Flush below
-		// runs *before* the Close above).
-		defer artifactWriter.Close()
-		defer publisher.Flush()
-
-		// Subscribe artifact writer to events
-		publisher.Subscribe(artifactWriter)
-
-		log.Debugf("Artifacts will be written to: %s/runs/%s", startConfig.ArtifactsDir, "...")
 	}
 
 	// R1.1b: feed Capture.Plan up-front so the Runner sees the compiled

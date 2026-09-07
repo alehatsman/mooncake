@@ -125,8 +125,8 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 	// the warning is suppressed at default log level, and the handler
 	// proceeds to read/write the path the user asked for. The check was
 	// dead-code theater. If a real "stay-under-base" check is needed in
-	// future, use pathutil.SafeJoin (see F033 part A in
-	// repo_apply_patchset).
+	// future, use pathutil.SafeJoin (see internal/actions/unarchive for
+	// an existing consumer).
 
 	rendered, err := renderFields(ctx, tl)
 	if err != nil {
