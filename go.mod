@@ -4,6 +4,7 @@ go 1.26.4
 
 require (
 	filippo.io/age v1.3.1
+	github.com/ProtonMail/go-crypto v1.4.1
 	github.com/expr-lang/expr v1.17.7
 	github.com/fatih/color v1.18.0
 	github.com/flosch/pongo2/v6 v6.0.0
@@ -13,15 +14,16 @@ require (
 	github.com/pkg/sftp v1.13.10
 	github.com/santhosh-tekuri/jsonschema/v5 v5.3.1
 	github.com/urfave/cli/v2 v2.27.7
-	golang.org/x/crypto v0.52.0
-	golang.org/x/sys v0.45.0
-	golang.org/x/term v0.43.0
+	golang.org/x/crypto v0.56.0
+	golang.org/x/sys v0.47.0
+	golang.org/x/term v0.45.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (
 	filippo.io/hpke v0.4.0 // indirect
 	github.com/cenkalti/backoff v2.2.1+incompatible // indirect
+	github.com/cloudflare/circl v1.6.3 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.7 // indirect
 	github.com/kr/fs v0.1.0 // indirect
 	github.com/mattn/go-colorable v0.1.14 // indirect
@@ -29,5 +31,5 @@ require (
 	github.com/miekg/dns v1.1.27 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/xrash/smetrics v0.0.0-20250705151800-55b8f293f342 // indirect
-	golang.org/x/net v0.54.0 // indirect
+	golang.org/x/net v0.57.0 // indirect
 )

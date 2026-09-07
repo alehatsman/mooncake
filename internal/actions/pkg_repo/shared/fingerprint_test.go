@@ -11,9 +11,8 @@ import (
 	"testing"
 	"time"
 
-	"golang.org/x/crypto/openpgp" //nolint:staticcheck // same vendor as fingerprint.go
-	"golang.org/x/crypto/openpgp/armor"
-	//nolint:staticcheck
+	"github.com/ProtonMail/go-crypto/openpgp" // same vendor as fingerprint.go
+	"github.com/ProtonMail/go-crypto/openpgp/armor"
 )
 
 // generateTestKey creates a small OpenPGP key entity and returns its

@@ -19,8 +19,12 @@ import (
 	"io"
 	"strings"
 
-	"golang.org/x/crypto/openpgp"       //nolint:staticcheck // x/crypto/openpgp is deprecated but the maintained replacements aren't in our module graph yet; in-process fingerprint parsing is preferable to shelling to gpg.
-	"golang.org/x/crypto/openpgp/armor" //nolint:staticcheck
+	// ProtonMail/go-crypto is the maintained fork of x/crypto/openpgp, which
+	// upstream abandoned (GO-2026-5932: "unmaintained, unsafe by design",
+	// Fixed in: N/A — no x/crypto release ever clears it). Same API, so this
+	// keeps fingerprint parsing in-process rather than shelling out to gpg.
+	"github.com/ProtonMail/go-crypto/openpgp"
+	"github.com/ProtonMail/go-crypto/openpgp/armor"
 )
 
 // VerifyKeyFingerprint is the production fingerprint check. Tests
