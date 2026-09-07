@@ -1411,7 +1411,3 @@ func TestHandler_Run_InvalidContext(t *testing.T) {
 func boolPtr(b bool) *bool {
 	return &b
 }
-
-func stringPtr(s string) *string {
-	return &s
-}

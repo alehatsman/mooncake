@@ -202,13 +202,6 @@ func RecordOp(command, configPath string, planOnly bool) string {
 	return recordOp(command, configPath, planOnly)
 }
 
-// ResolveLocalOverlays is the exported wrapper for resolveLocalOverlays.
-// cmd/task uses it to honor --host / --overlays the same way apply and
-// plan do.
-func ResolveLocalOverlays(c *cli.Context, configPath string) ([]string, error) {
-	return resolveLocalOverlays(c, configPath)
-}
-
 // RunWithSignalCtx exports apply.go's runWithSignalCtx so cmd/task
 // (which drives the same plan→apply pipeline) can install the same
 // SIGINT/SIGTERM handling without inlining its own copy.

@@ -1,8 +1,6 @@
 package config
 
 import (
-	"bytes"
-	"fmt"
 	"reflect"
 	"strings"
 
@@ -187,34 +185,6 @@ func foldBuiltinCarrier(step *yaml.Node) bool {
 	}
 	step.Content = out
 	return true
-}
-
-// NormalizePlanBytes applies both normalization passes to raw plan bytes and
-// returns the re-encoded YAML. Callers that decode a plan into typed
-// config.Step values before it reaches a reader (e.g. the agent's transaction
-// wrap) must run this first.
-//
-// The input is returned UNCHANGED — byte-for-byte — when no step needed
-// folding, so a plan that uses only short-form built-ins never gets reflowed
-// and its hash is stable.
-func NormalizePlanBytes(planBytes []byte, isCustom IsCustomAction) ([]byte, error) {
-	var root yaml.Node
-	if err := yaml.Unmarshal(planBytes, &root); err != nil {
-		return nil, fmt.Errorf("parse plan: %w", err)
-	}
-	if !normalizeCustomActionSteps(&root, isCustom) {
-		return planBytes, nil
-	}
-	var buf bytes.Buffer
-	enc := yaml.NewEncoder(&buf)
-	enc.SetIndent(2)
-	if err := enc.Encode(&root); err != nil {
-		return nil, fmt.Errorf("normalize plan: %w", err)
-	}
-	if err := enc.Close(); err != nil {
-		return nil, fmt.Errorf("normalize plan: %w", err)
-	}
-	return buf.Bytes(), nil
 }
 
 // mappingValue returns the value node for key in a mapping node, or nil.

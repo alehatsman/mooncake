@@ -24,6 +24,7 @@ import (
 	toolcmd "github.com/alehatsman/mooncake/cmd/tool"
 	vaultcmd "github.com/alehatsman/mooncake/cmd/vault"
 	"github.com/alehatsman/mooncake/internal/envpath"
+	"github.com/alehatsman/mooncake/internal/httputil"
 )
 
 var version = "dev"
@@ -131,6 +132,7 @@ func main() {
 	fleetcmd.Version = version
 	agentdcmd.Version = version
 	doctorcmd.Version = version
+	httputil.SetUserAgent("mooncake/" + version)
 
 	app := createApp()
 

@@ -260,24 +260,8 @@ func (p *Planner) BuildPlan(cfg PlannerConfig) (*Plan, error) {
 	return p.buildFromRunConfig(runConfig, cfg, cfg.ConfigPath, true)
 }
 
-// BuildPlanFromConfig generates a plan from an already-parsed RunConfig,
-// skipping the file read. It runs the identical pipeline as BuildPlan —
-// var merge, facts injection, step expansion (loops, includes, template
-// rendering), strict-template scan — so inline/in-memory input is not a
-// parallel code path (#142). Relative paths and `import:` references in
-// the steps resolve against the process cwd, since there is no source
-// file to anchor them. The synthetic root is labeled "<inline>" and no
-// input-file hash is computed (an in-memory plan cannot be stale).
-func (p *Planner) BuildPlanFromConfig(runConfig *config.RunConfig, cfg PlannerConfig) (*Plan, error) {
-	p.reg = cfg.Registry
-	if runConfig == nil {
-		return nil, fmt.Errorf("BuildPlanFromConfig: runConfig must not be nil")
-	}
-	return p.buildFromRunConfig(runConfig, cfg, inlineRootLabel, false)
-}
-
 // inlineRootLabel is the synthetic RootFile for in-memory plans built
-// via BuildPlanFromConfig — they have no source file on disk.
+// from raw bytes (BuildPlanFromBytes) — they have no source file on disk.
 const inlineRootLabel = "<inline>"
 
 // buildFromRunConfig is the shared body behind BuildPlan (file source)

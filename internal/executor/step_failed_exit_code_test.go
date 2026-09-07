@@ -14,7 +14,7 @@ package executor_test
 import (
 	"testing"
 
-	_ "github.com/alehatsman/mooncake/internal/actions/command"
+	_ "github.com/alehatsman/mooncake/internal/actions/cmd"
 	_ "github.com/alehatsman/mooncake/internal/actions/shell"
 	"github.com/alehatsman/mooncake/internal/config"
 	"github.com/alehatsman/mooncake/internal/events"

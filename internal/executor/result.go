@@ -395,64 +395,6 @@ func (r RegisteredResult) ToMap() map[string]interface{} {
 	return m
 }
 
-// --- proposal-01 / proposal-06 result helpers --------------------------------
-//
-// Handlers should prefer these constructors over hand-built struct
-// literals so Operation / Target / Error stay in lockstep with the
-// envelope contract. Each helper sets Operation explicitly; callers
-// add Reason/Duration/AppliedDiff after construction.
-
-// QueryResult builds a read-only observation result (observe.*, read.*,
-// wait.* on success). Changed=false, Failed=false, Error="" — per
-// proposal-06, "absent" / "not matching" is success.
-func QueryResult(target string, data map[string]interface{}) *Result {
-	return &Result{
-		Operation: OpQuery,
-		Target:    target,
-		Data:      data,
-	}
-}
-
-// ChangedResult builds a successful mutation result. Op must be one
-// of OpCreate, OpUpdate, or OpDelete. Changed=true.
-func ChangedResult(op Operation, target string, data map[string]interface{}) *Result {
-	return &Result{
-		Operation: op,
-		Target:    target,
-		Data:      data,
-		Changed:   true,
-	}
-}
-
-// NoopResult builds an idempotent "already at target state" result.
-// Changed=false, Operation=OpNoop.
-func NoopResult(target string, data map[string]interface{}) *Result {
-	return &Result{
-		Operation: OpNoop,
-		Target:    target,
-		Data:      data,
-	}
-}
-
-// FailedResult builds a mutation-failed result (proposal-06: mutation
-// that didn't happen IS failure). Op is the operation that was
-// attempted; data may carry partial state captured before the
-// failure. Failed=true, Rc=1, Error=err.Error().
-func FailedResult(op Operation, target string, err error, data map[string]interface{}) *Result {
-	var msg string
-	if err != nil {
-		msg = err.Error()
-	}
-	return &Result{
-		Operation: op,
-		Target:    target,
-		Data:      data,
-		Failed:    true,
-		Rc:        1,
-		Error:     msg,
-	}
-}
-
 // PublishObservation lands a spec-59 ObserveResult onto this Result
 // using the proposal-01 / proposal-06 envelope conventions:
 //

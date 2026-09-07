@@ -192,6 +192,11 @@ tasks:
   # ── Architecture / analysis ──────────────────────────────────────────
   arch-snapshot: goq/arch-snapshot
 
+  deadcode-check:
+    desc: Fail on unreachable code (golang.org/x/tools/cmd/deadcode), dscl's documented darwin-only exception aside
+    steps:
+      - shell: { cmd: "bash ./scripts/deadcode-check.sh" }
+
   # Kept local: mooncake's budget adds project-specific caps (handler LOC,
   # config.Step universal-field count) on top of the generic gocyclo/god-files.
   budget-status:
@@ -251,14 +256,14 @@ tasks:
       - log: { msg: "✓ Fast checks green — full 'mooncake task ci' gate runs on push." }
 
   ci:
-    desc: "Full gate: build + cross-build + test + lint + vuln + docs/schema + mkdocs + arch + budget + dupl + escalation-lint (add --keep-going to see every failure, not just the first)"
+    desc: "Full gate: build + cross-build + test + lint + vuln + docs/schema + mkdocs + arch + deadcode + budget + dupl + escalation-lint (add --keep-going to see every failure, not just the first)"
     steps:
-      - name: "[1/11] build"
+      - name: "[1/12] build"
         use: goq/build
         props:
           cmd_path: ./cmd
           bin: '{{ BIN }}'
-      - name: "[2/11] cross-build (GOOS-specific shims: windows/darwin)"
+      - name: "[2/12] cross-build (GOOS-specific shims: windows/darwin)"
         shell:
           cmd: |
             for target in windows/amd64 darwin/amd64 darwin/arm64; do
@@ -269,13 +274,13 @@ tasks:
               fi
               echo "  ✓ ${target}"
             done
-      - name: "[3/11] test"
+      - name: "[3/12] test"
         use: goq/test
-      - name: "[4/11] lint"
+      - name: "[4/12] lint"
         use: goq/lint
-      - name: "[5/11] vuln"
+      - name: "[5/12] vuln"
         use: goq/vuln
-      - name: "[6/11] regen docs + schema, then verify clean"
+      - name: "[6/12] regen docs + schema, then verify clean"
         shell:
           cmd: |
             rm -rf dist/docs && mkdir -p dist/docs
@@ -285,7 +290,7 @@ tasks:
             {{ BIN }} dev schema generate --format typescript --output mooncake.d.ts                         >/dev/null
             BIN={{ BIN }} bash ./scripts/docs-check.sh
             BIN={{ BIN }} bash ./scripts/schema-check.sh
-      - name: "[7/11] mkdocs build --strict (skipped when pipenv/mkdocs absent)"
+      - name: "[7/12] mkdocs build --strict (skipped when pipenv/mkdocs absent)"
         shell:
           cmd: |
             if command -v pipenv >/dev/null 2>&1 && pipenv run mkdocs --version >/dev/null 2>&1; then
@@ -294,13 +299,15 @@ tasks:
             else
               echo "  ⚠ pipenv/mkdocs not on PATH — skipping (run 'mooncake task docs-tools-install' to enable)"
             fi
-      - name: "[8/11] arch-snapshot"
+      - name: "[8/12] arch-snapshot"
         use: goq/arch-snapshot
-      - name: "[9/11] soft-cap budget (mooncake caps)"
+      - name: "[9/12] deadcode (dscl's documented darwin-only exception aside)"
+        shell: { cmd: "bash ./scripts/deadcode-check.sh" }
+      - name: "[10/12] soft-cap budget (mooncake caps)"
         shell: { cmd: "bash ./scripts/budget-status.sh | sed 's/^/  /'" }
-      - name: "[10/11] dupl (production-code duplication report)"
+      - name: "[11/12] dupl (production-code duplication report)"
         use: goq/dupl
-      - name: "[11/11] escalation-lint (spec-72 §G1)"
+      - name: "[12/12] escalation-lint (spec-72 §G1)"
         shell: { cmd: "bash ./scripts/escalation-lint.sh --fail" }
       - log: { msg: "✓ All checks green — safe to push." }
 

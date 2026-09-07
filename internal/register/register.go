@@ -14,15 +14,15 @@ import (
 	_ "github.com/alehatsman/mooncake/internal/actions/container_run"
 
 	// File management
-	_ "github.com/alehatsman/mooncake/internal/actions/copy"
-	_ "github.com/alehatsman/mooncake/internal/actions/download"
-	_ "github.com/alehatsman/mooncake/internal/actions/file"
-	_ "github.com/alehatsman/mooncake/internal/actions/file_delete_range"
-	_ "github.com/alehatsman/mooncake/internal/actions/file_insert"
-	_ "github.com/alehatsman/mooncake/internal/actions/file_patch_apply"
-	_ "github.com/alehatsman/mooncake/internal/actions/file_replace"
-	_ "github.com/alehatsman/mooncake/internal/actions/template"
-	_ "github.com/alehatsman/mooncake/internal/actions/unarchive"
+	_ "github.com/alehatsman/mooncake/internal/actions/file_copy"
+	_ "github.com/alehatsman/mooncake/internal/actions/file_download"
+	_ "github.com/alehatsman/mooncake/internal/actions/file_template"
+	_ "github.com/alehatsman/mooncake/internal/actions/file_unarchive"
+	_ "github.com/alehatsman/mooncake/internal/actions/file_write"
+	_ "github.com/alehatsman/mooncake/internal/actions/text_delete_range"
+	_ "github.com/alehatsman/mooncake/internal/actions/text_insert"
+	_ "github.com/alehatsman/mooncake/internal/actions/text_patch"
+	_ "github.com/alehatsman/mooncake/internal/actions/text_replace"
 
 	// Git
 	_ "github.com/alehatsman/mooncake/internal/actions/git_checkout"
@@ -47,14 +47,14 @@ import (
 	_ "github.com/alehatsman/mooncake/internal/actions/os_firewall"
 	_ "github.com/alehatsman/mooncake/internal/actions/os_group"
 	_ "github.com/alehatsman/mooncake/internal/actions/os_mount"
+	_ "github.com/alehatsman/mooncake/internal/actions/os_service"
 	_ "github.com/alehatsman/mooncake/internal/actions/os_ssh_key"
 	_ "github.com/alehatsman/mooncake/internal/actions/os_sysctl"
 	_ "github.com/alehatsman/mooncake/internal/actions/os_systemd"
 	_ "github.com/alehatsman/mooncake/internal/actions/os_user"
-	_ "github.com/alehatsman/mooncake/internal/actions/service"
 
 	// Package management
-	_ "github.com/alehatsman/mooncake/internal/actions/package"
+	_ "github.com/alehatsman/mooncake/internal/actions/pkg"
 	_ "github.com/alehatsman/mooncake/internal/actions/pkg_hold"
 	_ "github.com/alehatsman/mooncake/internal/actions/pkg_list"
 	_ "github.com/alehatsman/mooncake/internal/actions/pkg_repo"
@@ -62,7 +62,7 @@ import (
 
 	// Runtime / execution
 	_ "github.com/alehatsman/mooncake/internal/actions/assert"
-	_ "github.com/alehatsman/mooncake/internal/actions/command"
+	_ "github.com/alehatsman/mooncake/internal/actions/cmd"
 	_ "github.com/alehatsman/mooncake/internal/actions/process"
 	_ "github.com/alehatsman/mooncake/internal/actions/shell"
 	_ "github.com/alehatsman/mooncake/internal/actions/tool"
@@ -75,11 +75,11 @@ import (
 	_ "github.com/alehatsman/mooncake/internal/actions/text_patch_yaml"
 
 	// Variables / data
-	_ "github.com/alehatsman/mooncake/internal/actions/include_vars"
-	_ "github.com/alehatsman/mooncake/internal/actions/print"
+	_ "github.com/alehatsman/mooncake/internal/actions/log"
 	_ "github.com/alehatsman/mooncake/internal/actions/read_json"
 	_ "github.com/alehatsman/mooncake/internal/actions/read_yaml"
 	_ "github.com/alehatsman/mooncake/internal/actions/vars"
+	_ "github.com/alehatsman/mooncake/internal/actions/vars_load"
 
 	// Network
 	_ "github.com/alehatsman/mooncake/internal/actions/http_request"

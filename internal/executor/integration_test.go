@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/alehatsman/mooncake/internal/actions"
-	_ "github.com/alehatsman/mooncake/internal/actions/print"
+	_ "github.com/alehatsman/mooncake/internal/actions/log"
 	_ "github.com/alehatsman/mooncake/internal/actions/shell"
 	_ "github.com/alehatsman/mooncake/internal/actions/vars"
 	"github.com/alehatsman/mooncake/internal/config"

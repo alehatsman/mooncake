@@ -140,7 +140,6 @@ Config structures are designed to be read\-only after parsing. The executor clon
 - [func FormatStepExcerpt(step *Step) string](<#func-formatstepexcerpt>)
 - [func HasErrors(diagnostics []Diagnostic) bool](<#func-haserrors>)
 - [func HintNoConfigFound(e *ErrNoConfigFound, cmdName string) string](<#func-hintnoconfigfound>)
-- [func NormalizePlanBytes(planBytes []byte, isCustom IsCustomAction) ([]byte, error)](<#func-normalizeplanbytes>)
 - [func ReadConfigBytesWithValidation(data []byte, label string, isCustom IsCustomAction) (*ParsedConfig, []Diagnostic, error)](<#func-readconfigbyteswithvalidation>)
 - [func ReadConfigWithValidation(path string, isCustom IsCustomAction) (*ParsedConfig, []Diagnostic, error)](<#func-readconfigwithvalidation>)
 - [func ReadVariables(path string) (map[string]interface{}, error)](<#func-readvariables>)
@@ -418,16 +417,6 @@ func HintNoConfigFound(e *ErrNoConfigFound, cmdName string) string
 ```
 
 HintNoConfigFound returns the user\-facing remediation message for an ErrNoConfigFound. cmdName is the subcommand the user invoked, used in the "point explicitly" suggestion \(e.g. "apply", "plan", "validate"\).
-
-## func [NormalizePlanBytes](<https://github.com/alehatsman/mooncake/blob/main/internal/config/custom_action.go#L200>)
-
-```go
-func NormalizePlanBytes(planBytes []byte, isCustom IsCustomAction) ([]byte, error)
-```
-
-NormalizePlanBytes applies both normalization passes to raw plan bytes and returns the re\-encoded YAML. Callers that decode a plan into typed config.Step values before it reaches a reader \(e.g. the agent's transaction wrap\) must run this first.
-
-The input is returned UNCHANGED — byte\-for\-byte — when no step needed folding, so a plan that uses only short\-form built\-ins never gets reflowed and its hash is stable.
 
 ## func [ReadConfigBytesWithValidation](<https://github.com/alehatsman/mooncake/blob/main/internal/config/reader.go#L513>)
 
@@ -1235,7 +1224,7 @@ type HTTPRequest struct {
 }
 ```
 
-## type [IsCustomAction](<https://github.com/alehatsman/mooncake/blob/main/internal/config/custom_action.go#L26>)
+## type [IsCustomAction](<https://github.com/alehatsman/mooncake/blob/main/internal/config/custom_action.go#L24>)
 
 IsCustomAction reports whether name is a registered custom action — one admitted by the run's action registry that has no dedicated typed Step field \(e.g. "notify.webhook"\). It lets the parser fold a typed\-key custom action into the generic \#111 carrier so it validates and dispatches exactly like a built\-in.
 

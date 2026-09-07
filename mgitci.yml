@@ -2,7 +2,7 @@
 #
 # This is the ONLY place the full gate runs. Both git hooks (pre-commit and
 # pre-push) run `mooncake task ci-fast`, so a green push says nothing about the
-# 11 stages below — check the run.
+# 12 stages below — check the run.
 #
 # Schema (moongit internal/ci/ci.go): version "1"; `on.push.branches` gates
 # which refs trigger a run; `jobs` is a DAG wired by `needs`. Each job runs in a
@@ -11,9 +11,9 @@
 # on PATH (plus whatever the steps shell out to). See ci/Dockerfile for the
 # image this job uses (mooncake-ci:latest = moongit-ci-dev + gomarkdoc).
 #
-# `mooncake task ci` is the 11-step gate:
+# `mooncake task ci` is the 12-step gate:
 # build + cross-build + test + lint + vuln + docs/schema regen-and-verify +
-# mkdocs + arch-snapshot + budget + dupl + escalation-lint. Its go tooling
+# mkdocs + arch-snapshot + deadcode + budget + dupl + escalation-lint. Its go tooling
 # (golangci-lint/govulncheck/gocyclo/dupl) comes from the shared go-quality
 # module, fetched from github.com over https (see tasks.yml). The job therefore
 # needs no host trust and no route back to the moongit host — a throwaway

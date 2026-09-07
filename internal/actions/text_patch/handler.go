@@ -1,0 +1,468 @@
+// Package file_patch_apply implements the file_patch_apply action handler.
+//
+// The file_patch_apply action applies unified diff patches to files with support for:
+// - Inline patch content or external patch files
+// - Context line validation
+// - Strict mode (fail on any hunk failure)
+// - Atomic writes (temp file + rename)
+// - Backup creation before modification
+// - Idempotency (no change if patch already applied)
+//
+//nolint:revive,staticcheck // Package name matches action name convention (text_patch)
+package text_patch
+
+import (
+	"fmt"
+	"os"
+	"regexp"
+	"strconv"
+	"strings"
+	"time"
+
+	"github.com/alehatsman/mooncake/internal/actions"
+	filehandler "github.com/alehatsman/mooncake/internal/actions/file_write"
+	"github.com/alehatsman/mooncake/internal/config"
+	"github.com/alehatsman/mooncake/internal/events"
+	"github.com/alehatsman/mooncake/internal/executor"
+)
+
+const (
+	actionName = "text.patch"
+)
+
+// Handler implements the Handler interface for file_patch_apply actions.
+type Handler struct{}
+
+// Register this handler on import
+func init() {
+	actions.Register(&Handler{})
+}
+
+// Metadata returns metadata about the file_patch_apply action.
+func (h *Handler) Metadata() actions.ActionMetadata {
+	return actions.ActionMetadata{
+		Name:           actionName,
+		Description:    "Apply unified diff patches to files",
+		Category:       actions.CategoryFile,
+		SupportsDryRun: true,
+		SupportsBecome: true,
+		EmitsEvents: []string{
+			string(events.EventFileUpdated),
+		},
+		Version:            "1.0.0",
+		SupportedPlatforms: []string{}, // All platforms
+		RequiresSudo:       false,      // Depends on file permissions
+		ImplementsCheck:    true,       // Checks if patch already applied
+	}
+}
+
+// Permissions implements actions.Permitter (spec-22). text.patch
+// applies a unified-diff-style patch to a file; Sudo when Path is
+// under a known system root. FilesystemWrite=[Path]. PatchFile (when
+// used) is a read-only input on the controller's FS, so it isn't
+// echoed into FilesystemWrite. No Network; no RequiredBinaries
+// (patch logic is in-process, no external `patch` invocation).
+func (h *Handler) Permissions(step *config.Step) actions.PermissionSet {
+	var ps actions.PermissionSet
+	if step == nil || step.TextPatch == nil {
+		return ps
+	}
+	if actions.PathNeedsSudo(step.TextPatch.Path) {
+		ps.Sudo = true
+	}
+	if step.TextPatch.Path != "" {
+		ps.FilesystemWrite = []string{step.TextPatch.Path}
+	}
+	return ps
+}
+
+// Validate checks if the file_patch_apply configuration is valid.
+func (h *Handler) Validate(step *config.Step) error {
+	if step.TextPatch == nil {
+		return fmt.Errorf("file_patch_apply configuration is nil")
+	}
+
+	fpa := step.TextPatch
+
+	if fpa.Path == "" {
+		hint := actions.GetActionHint(actionName, "path")
+		return fmt.Errorf("path is required%s", hint)
+	}
+
+	// Either patch or patch_file must be specified
+	if fpa.Patch == "" && fpa.PatchFile == "" {
+		hint := actions.GetActionHint(actionName, "patch")
+		return fmt.Errorf("either patch or patch_file is required%s", hint)
+	}
+
+	// Both cannot be specified
+	if fpa.Patch != "" && fpa.PatchFile != "" {
+		return fmt.Errorf("cannot specify both patch and patch_file")
+	}
+
+	// Validate context_lines if specified
+	if fpa.ContextLines != nil && *fpa.ContextLines < 0 {
+		return fmt.Errorf("context_lines must be >= 0, got %d", *fpa.ContextLines)
+	}
+
+	return nil
+}
+
+// Patch represents a parsed unified diff patch
+type Patch struct {
+	Hunks []*Hunk
+}
+
+// Hunk represents a single hunk in a unified diff
+type Hunk struct {
+	OldStart int      // Starting line in old file
+	OldCount int      // Number of lines in old file
+	NewStart int      // Starting line in new file
+	NewCount int      // Number of lines in new file
+	Lines    []string // Patch lines (with +, -, or space prefix)
+}
+
+// parsePatch parses a unified diff patch
+func (h *Handler) parsePatch(patchContent string) (*Patch, error) {
+	lines := strings.Split(patchContent, "\n")
+	patch := &Patch{}
+
+	// Regex for hunk header: @@ -old_start,old_count +new_start,new_count @@
+	hunkHeaderRe := regexp.MustCompile(`^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@`)
+
+	var currentHunk *Hunk
+	inHunk := false
+
+	for _, line := range lines {
+		// Check for hunk header
+		if matches := hunkHeaderRe.FindStringSubmatch(line); matches != nil {
+			// Save previous hunk
+			if currentHunk != nil {
+				patch.Hunks = append(patch.Hunks, currentHunk)
+			}
+
+			// Parse hunk header
+			oldStart, _ := strconv.Atoi(matches[1])
+			oldCount := 1
+			if matches[2] != "" {
+				oldCount, _ = strconv.Atoi(matches[2])
+			}
+			newStart, _ := strconv.Atoi(matches[3])
+			newCount := 1
+			if matches[4] != "" {
+				newCount, _ = strconv.Atoi(matches[4])
+			}
+
+			currentHunk = &Hunk{
+				OldStart: oldStart,
+				OldCount: oldCount,
+				NewStart: newStart,
+				NewCount: newCount,
+				Lines:    []string{},
+			}
+			inHunk = true
+			continue
+		}
+
+		// Add lines to current hunk
+		if inHunk && currentHunk != nil {
+			// Unified diff lines start with +, -, or space
+			if len(line) > 0 && (line[0] == '+' || line[0] == '-' || line[0] == ' ') {
+				currentHunk.Lines = append(currentHunk.Lines, line)
+			} else if line == "" {
+				// Empty line in patch (context line)
+				currentHunk.Lines = append(currentHunk.Lines, " ")
+			}
+		}
+	}
+
+	// Save last hunk
+	if currentHunk != nil {
+		patch.Hunks = append(patch.Hunks, currentHunk)
+	}
+
+	if len(patch.Hunks) == 0 {
+		return nil, fmt.Errorf("no valid hunks found in patch")
+	}
+
+	return patch, nil
+}
+
+// applyPatch applies a patch to file content
+func (h *Handler) applyPatch(content string, patch *Patch, minContextLines int) (newContent string, appliedHunks, failedHunks int) {
+	lines := strings.Split(content, "\n")
+	result := make([]string, 0, len(lines))
+
+	lineIdx := 0 // Current position in original file (0-indexed)
+
+	for _, hunk := range patch.Hunks {
+		// Copy lines before the hunk
+		hunkStart := hunk.OldStart - 1 // Convert to 0-indexed
+		for lineIdx < hunkStart && lineIdx < len(lines) {
+			result = append(result, lines[lineIdx])
+			lineIdx++
+		}
+
+		// Try to apply hunk
+		applied, newLines, err := h.applyHunk(lines, lineIdx, hunk, minContextLines)
+		if err != nil || !applied {
+			// MT-80: distinguish "already applied" (idempotent) from
+			// "drifted" (broken). If the file already contains the
+			// post-patch shape at this offset, treat the hunk as
+			// applied — that lets us report a clean idempotent run
+			// while still flagging genuine drift as a failure.
+			if h.hunkAlreadyApplied(lines, lineIdx, hunk) {
+				appliedHunks++
+				for i := 0; i < hunk.NewCount && lineIdx < len(lines); i++ {
+					result = append(result, lines[lineIdx])
+					lineIdx++
+				}
+				continue
+			}
+			failedHunks++
+			// In non-strict mode, copy original lines
+			for i := 0; i < hunk.OldCount && lineIdx < len(lines); i++ {
+				result = append(result, lines[lineIdx])
+				lineIdx++
+			}
+			continue
+		}
+
+		// Hunk applied successfully
+		appliedHunks++
+		result = append(result, newLines...)
+		lineIdx += hunk.OldCount
+	}
+
+	// Copy remaining lines
+	for lineIdx < len(lines) {
+		result = append(result, lines[lineIdx])
+		lineIdx++
+	}
+
+	newContent = strings.Join(result, "\n")
+	return newContent, appliedHunks, failedHunks
+}
+
+// hunkAlreadyApplied checks whether the post-patch shape of a hunk
+// already lives at lines[startIdx:]. Used by applyPatch to keep
+// idempotent re-runs clean while letting MT-80's drift-detection
+// branch fire when the file genuinely doesn't match either form.
+func (h *Handler) hunkAlreadyApplied(lines []string, startIdx int, hunk *Hunk) bool {
+	expected := make([]string, 0, len(hunk.Lines))
+	for _, patchLine := range hunk.Lines {
+		if len(patchLine) == 0 {
+			continue
+		}
+		switch patchLine[0] {
+		case ' ', '+':
+			expected = append(expected, patchLine[1:])
+		}
+	}
+	if startIdx+len(expected) > len(lines) {
+		return false
+	}
+	for i, want := range expected {
+		if lines[startIdx+i] != want {
+			return false
+		}
+	}
+	return true
+}
+
+// applyHunk attempts to apply a single hunk
+func (h *Handler) applyHunk(lines []string, startIdx int, hunk *Hunk, minContextLines int) (applied bool, newLines []string, err error) {
+	newLines = []string{}
+
+	// Validate context lines
+	contextMatches := 0
+	oldIdx := 0
+
+	for _, patchLine := range hunk.Lines {
+		if len(patchLine) == 0 {
+			continue
+		}
+
+		prefix := patchLine[0]
+		content := patchLine[1:]
+
+		if prefix == ' ' {
+			// Context line - must match
+			fileIdx := startIdx + oldIdx
+			if fileIdx >= len(lines) {
+				return false, nil, fmt.Errorf("context line beyond file end")
+			}
+
+			if lines[fileIdx] == content {
+				contextMatches++
+				newLines = append(newLines, content)
+				oldIdx++
+			} else if contextMatches < minContextLines {
+				// Context mismatch
+				return false, nil, fmt.Errorf("insufficient context matches")
+			}
+		} else if prefix == '-' {
+			// Deletion line - must match to be deleted
+			fileIdx := startIdx + oldIdx
+			if fileIdx >= len(lines) {
+				return false, nil, fmt.Errorf("deletion line beyond file end")
+			}
+
+			if lines[fileIdx] != content {
+				return false, nil, fmt.Errorf("deletion line mismatch")
+			}
+			// Don't add to newLines (it's being deleted)
+			oldIdx++
+		} else if prefix == '+' {
+			// Addition line
+			newLines = append(newLines, content)
+			// Don't increment oldIdx (no corresponding old line)
+		}
+	}
+
+	return true, newLines, nil
+}
+
+// Run is the Spec 16 unified entry point. Applies the patch in memory
+// to predict the result; plan mode reports the prediction, execute
+// mode commits the atomic write.
+// RunRaw signals spec-69 RawRunner participation so user-declared
+// `retry:` actually retries this idempotent action via the
+// centralized executor loop instead of being silently no-op'd.
+func (h *Handler) RunRaw(ctx actions.Context, step *config.Step) (actions.Result, error) {
+	return h.Run(ctx, step)
+}
+
+func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, error) {
+	fpa := step.TextPatch
+
+	ec, ok := ctx.(*executor.ExecutionContext)
+	if !ok {
+		return nil, fmt.Errorf("context is not an ExecutionContext")
+	}
+
+	result := executor.NewResult()
+	result.Checkable = true
+	result.Operation = executor.OpUpdate
+	result.StartTime = time.Now()
+	defer func() {
+		result.EndTime = time.Now()
+		result.Duration = result.EndTime.Sub(result.StartTime)
+		if !result.Changed && !result.WouldChange && !result.Failed {
+			result.Operation = executor.OpNoop
+		}
+	}()
+
+	renderedPath, err := ec.Svc.PathUtil.ExpandPath(fpa.Path, ec.CurrentDir, ctx.Variables())
+	if err != nil {
+		return result, fmt.Errorf("failed to expand path: %w", err)
+	}
+	result.Target = renderedPath
+	// F033: dead-code traversal check removed (see text_patch_ini).
+
+	//nolint:dupl // patch-load idiom shared with handler.go; trivial helper not worth the indirection.
+	patchContent := ""
+	if fpa.Patch != "" {
+		rendered, perr := ctx.Template().Render(fpa.Patch, ctx.Variables())
+		if perr != nil {
+			return result, fmt.Errorf("failed to render patch: %w", perr)
+		}
+		patchContent = rendered
+	} else {
+		renderedPatchFile, pferr := ec.Svc.PathUtil.ExpandPath(fpa.PatchFile, ec.CurrentDir, ctx.Variables())
+		if pferr != nil {
+			return result, fmt.Errorf("failed to expand patch_file path: %w", pferr)
+		}
+		// #nosec G304 -- patch file from user config
+		patchBytes, rerr := os.ReadFile(renderedPatchFile)
+		if rerr != nil {
+			return result, fmt.Errorf("failed to read patch file %s: %w", renderedPatchFile, rerr)
+		}
+		patchContent = string(patchBytes)
+	}
+
+	// #nosec G304 -- target file from user config
+	originalContent, err := os.ReadFile(renderedPath)
+	if err != nil {
+		return result, fmt.Errorf("failed to read file %s: %w", renderedPath, err)
+	}
+	// Capture the original mode so the atomic write preserves it rather
+	// than clobbering the file to 0644. The pre-#90 writeAtomic hardcoded
+	// 0644; routing through the Performer (below) lets us keep the real
+	// mode and escalate for root-owned targets.
+	origInfo, err := os.Stat(renderedPath)
+	if err != nil {
+		return result, fmt.Errorf("failed to stat file %s: %w", renderedPath, err)
+	}
+	origMode := origInfo.Mode().Perm()
+
+	patch, err := h.parsePatch(patchContent)
+	if err != nil {
+		return result, fmt.Errorf("failed to parse patch: %w", err)
+	}
+
+	contextLines := 3
+	if fpa.ContextLines != nil {
+		contextLines = *fpa.ContextLines
+	}
+
+	newContent, appliedHunks, failedHunks := h.applyPatch(string(originalContent), patch, contextLines)
+
+	if fpa.Strict && failedHunks > 0 {
+		return result, fmt.Errorf("patch application failed: %d hunk(s) failed in strict mode", failedHunks)
+	}
+
+	if string(originalContent) == newContent {
+		result.Reason = "patch already applied"
+		return result, nil
+	}
+
+	if ctx.Mode() == actions.ModePlan {
+		result.WouldChange = true
+		result.Reason = fmt.Sprintf("would apply %d hunk(s) (%d failed)", appliedHunks, failedHunks)
+		return result, nil
+	}
+
+	// Capture pre-state for Reverse() (spec-22 phase 5 slice E).
+	result.ReverseData = filehandler.CaptureReverseInfo(renderedPath, "")
+
+	if fpa.Backup {
+		backupPath := renderedPath + ".bak"
+		// #90/#92: route the backup write through the Performer too so a
+		// backup of a root-owned file works under become/as_user.
+		if eff := ctx.Effects().WriteFile(backupPath, originalContent, 0o600, actions.PerformerOpts{}); eff.Err != nil {
+			return result, fmt.Errorf("failed to create backup: %w", eff.Err)
+		}
+	}
+
+	// #90/#92: route the atomic write through the Performer so root-owned
+	// targets succeed under become/as_user. The Performer stages a temp
+	// via os.CreateTemp and sudo mv/chmod when escalation is needed,
+	// which also removes the predictable path+".tmp" hazard (#91).
+	// origMode is passed explicitly so the file's mode is preserved.
+	if eff := ctx.Effects().WriteFile(renderedPath, []byte(newContent), origMode, actions.PerformerOpts{}); eff.Err != nil {
+		return result, fmt.Errorf("failed to write file: %w", eff.Err)
+	}
+
+	result.Changed = true
+	ctx.Logger().Infof("  Applied patch to %s (%d hunks succeeded, %d failed)", renderedPath, appliedHunks, failedHunks)
+
+	if pub := ctx.EventPublisher(); pub != nil {
+		pub.Publish(events.Event{
+			Type: events.EventFileUpdated,
+			Data: events.FileOperationData{
+				Path:    renderedPath,
+				Changed: true,
+				DryRun:  false,
+			},
+		})
+	}
+
+	result.SetData(map[string]interface{}{
+		"path":          renderedPath,
+		"applied_hunks": appliedHunks,
+		"failed_hunks":  failedHunks,
+		"total_hunks":   len(patch.Hunks),
+	})
+	return result, nil
+}

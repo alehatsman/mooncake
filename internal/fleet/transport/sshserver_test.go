@@ -113,16 +113,6 @@ func (s *testSSHServer) expect(cmd string, resp commandResponse) {
 	s.commands[cmd] = resp
 }
 
-// received returns the (ordered) list of commands the server has been
-// asked to run.
-func (s *testSSHServer) received() []string {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	out := make([]string, len(s.requests))
-	copy(out, s.requests)
-	return out
-}
-
 // serve accepts connections in a loop. golang.org/x/crypto/ssh's handshake
 // + channel/request dispatch is single-connection-friendly; the test
 // scenarios fit one client per test.

@@ -122,7 +122,6 @@ func (h *Handler) Metadata() actions.ActionMetadata {
 - [func Count() int](<#func-count>)
 - [func EvaluateBoolExpression(ctx Context, fieldName, expression string, evalContext map[string]interface{}) (bool, error)](<#func-evaluateboolexpression>)
 - [func GetActionHint(actionName string, missingField string) string](<#func-getactionhint>)
-- [func GetFieldExample(actionName, fieldName string) string](<#func-getfieldexample>)
 - [func Has(actionType string) bool](<#func-has>)
 - [func IsCoster(h Handler) bool](<#func-iscoster>)
 - [func IsDiffer(h Handler) bool](<#func-isdiffer>)
@@ -132,7 +131,6 @@ func (h *Handler) Metadata() actions.ActionMetadata {
 - [func PathNeedsSudo(p string) bool](<#func-pathneedssudo>)
 - [func PredicateFor(reg *Registry) config.IsCustomAction](<#func-predicatefor>)
 - [func Register(handler Handler)](<#func-register>)
-- [func RegisterBuiltins(dst *Registry) error](<#func-registerbuiltins>)
 - [func ValidateWait(actionName string, w *config.WaitSpec) error](<#func-validatewait>)
 - [func WaitCondition(until string) (bool, error)](<#func-waitcondition>)
 - [type Action](<#type-action>)
@@ -280,7 +278,7 @@ var SystemPathPrefixes = []string{
 }
 ```
 
-## func [Count](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/registry.go#L225>)
+## func [Count](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/registry.go#L194>)
 
 ```go
 func Count() int
@@ -306,15 +304,7 @@ func GetActionHint(actionName string, missingField string) string
 
 GetActionHint generates a helpful hint for an action based on the schema. It includes: \- Action description \- Required parameters with descriptions \- Optional parameters with descriptions \- Examples where available
 
-## func [GetFieldExample](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/validation.go#L136>)
-
-```go
-func GetFieldExample(actionName, fieldName string) string
-```
-
-GetFieldExample returns an example value for a field based on schema
-
-## func [Has](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/registry.go#L220>)
+## func [Has](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/registry.go#L189>)
 
 ```go
 func Has(actionType string) bool
@@ -384,7 +374,7 @@ func PredicateFor(reg *Registry) config.IsCustomAction
 
 PredicateFor returns a config.IsCustomAction backed by reg, falling back to the global registry when reg is nil — the same registry the planner and executor resolve actions against. Pass the result to config.ReadConfigWithValidation \(with a predicate\) so a typed\-key custom action \(\`notify.webhook: \{…\}\`\) is folded into the carrier during validation exactly as it will dispatch at execution. A built\-in name passed through it stays false\-positive\-free: built\-ins have typed Step fields, so the parser never folds them regardless.
 
-## func [Register](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/registry.go#L203>)
+## func [Register](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/registry.go#L172>)
 
 ```go
 func Register(handler Handler)
@@ -399,22 +389,6 @@ func init() {
     actions.Register(&MyHandler{})
 }
 ```
-
-## func [RegisterBuiltins](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/registry.go#L175>)
-
-```go
-func RegisterBuiltins(dst *Registry) error
-```
-
-RegisterBuiltins registers every built\-in handler into dst \(the ones the global registry holds from package init\(\)\). It is the explicit alternative to GlobalRegistry\(\).Clone\(\) for a consumer that starts from NewRegistry\(\) and wants the built\-ins plus its own handlers:
-
-```
-reg := actions.NewRegistry()
-_ = actions.RegisterBuiltins(reg)
-_ = reg.Register(myCustomHandler)
-```
-
-A built\-in whose name is already present in dst is skipped \(so a consumer may pre\-register an override before calling this\). Returns the first non\-skip registration error, if any.
 
 ## func [ValidateWait](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/observe_wait.go#L71>)
 
@@ -570,7 +544,7 @@ type ActionMetadata struct {
 }
 ```
 
-### func [List](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/registry.go#L215>)
+### func [List](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/registry.go#L184>)
 
 ```go
 func List() []ActionMetadata
@@ -1149,7 +1123,7 @@ type Handler interface {
 }
 ```
 
-### func [Get](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/registry.go#L210>)
+### func [Get](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/registry.go#L179>)
 
 ```go
 func Get(actionType string) (Handler, bool)

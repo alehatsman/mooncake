@@ -46,9 +46,6 @@ func SetUserAgent(ua string) {
 	}
 }
 
-// UserAgent returns the configured User-Agent string.
-func UserAgent() string { return userAgent }
-
 const (
 	dialTimeout           = 30 * time.Second
 	tlsHandshakeTimeout   = 30 * time.Second

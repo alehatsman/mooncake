@@ -1,0 +1,504 @@
+package log
+
+import (
+	"context"
+	"os"
+	"strings"
+	"testing"
+	"time"
+
+	"github.com/alehatsman/mooncake/internal/actions"
+	"github.com/alehatsman/mooncake/internal/config"
+	"github.com/alehatsman/mooncake/internal/events"
+	"github.com/alehatsman/mooncake/internal/executor"
+	"github.com/alehatsman/mooncake/internal/expression"
+	"github.com/alehatsman/mooncake/internal/logger"
+	"github.com/alehatsman/mooncake/internal/security"
+	"github.com/alehatsman/mooncake/internal/template"
+)
+
+// mustNewRenderer creates a renderer or panics
+func mustNewRenderer() template.Renderer {
+	r, err := template.NewPongo2Renderer()
+	if err != nil {
+		panic("Failed to create renderer: " + err.Error())
+	}
+	return r
+}
+
+// mockContext implements actions.Context for testing
+type mockContext struct {
+	variables map[string]interface{}
+	tmpl      template.Renderer
+	publisher *mockPublisher
+	log       logger.Logger
+	stepID    string
+	mode      actions.Mode // zero-value = ModeApply (Mode is int-typed)
+}
+
+func (m *mockContext) Variables() map[string]interface{} {
+	return m.variables
+}
+
+func (m *mockContext) SetVariable(key string, value interface{}) {
+	m.variables[key] = value
+}
+
+func (m *mockContext) Template() template.Renderer {
+	return m.tmpl
+}
+
+func (m *mockContext) EventPublisher() events.Publisher {
+	return m.publisher
+}
+
+func (m *mockContext) Logger() logger.Logger {
+	return m.log
+}
+
+func (m *mockContext) StepID() string {
+	if m.stepID == "" {
+		return "step-1"
+	}
+	return m.stepID
+}
+
+func (m *mockContext) Evaluator() expression.Evaluator {
+	return expression.NewExprEvaluator()
+}
+
+func (m *mockContext) IsDryRun() bool {
+	return false
+}
+
+func (m *mockContext) Mode() actions.Mode { return m.mode }
+
+func (m *mockContext) Effects() actions.Performer { return printNoopPerformer{} }
+
+func (m *mockContext) Ctx() context.Context { return context.Background() }
+func (m *mockContext) Privileged() *security.Privileged {
+	return &security.Privileged{
+		Escalation: security.EscalationReport{Available: true, Reason: security.EscalationAvailableRoot},
+	}
+}
+
+func (m *mockContext) MergeUserVars(vars map[string]interface{}) {
+	if m.variables == nil {
+		m.variables = make(map[string]interface{})
+	}
+	for k, v := range vars {
+		m.variables[k] = v
+	}
+}
+
+// printNoopPerformer is a stub Performer for tests in this package; the
+// print action doesn't call effect helpers but the interface requires it.
+type printNoopPerformer struct{}
+
+func (printNoopPerformer) Mode() actions.Mode { return actions.ModeApply }
+func (printNoopPerformer) Mkdir(string, os.FileMode, actions.PerformerOpts) actions.Effect {
+	return actions.Effect{}
+}
+func (printNoopPerformer) WriteFile(string, []byte, os.FileMode, actions.PerformerOpts) actions.Effect {
+	return actions.Effect{}
+}
+func (printNoopPerformer) CopyFile(string, string, os.FileMode, actions.PerformerOpts) actions.Effect {
+	return actions.Effect{}
+}
+func (printNoopPerformer) Symlink(string, string, actions.PerformerOpts) actions.Effect {
+	return actions.Effect{}
+}
+func (printNoopPerformer) Hardlink(string, string, actions.PerformerOpts) actions.Effect {
+	return actions.Effect{}
+}
+func (printNoopPerformer) Touch(string, os.FileMode, actions.PerformerOpts) actions.Effect {
+	return actions.Effect{}
+}
+func (printNoopPerformer) Remove(string, bool, actions.PerformerOpts) actions.Effect {
+	return actions.Effect{}
+}
+func (printNoopPerformer) Chmod(string, os.FileMode, actions.PerformerOpts) actions.Effect {
+	return actions.Effect{}
+}
+func (printNoopPerformer) Chown(string, string, string, actions.PerformerOpts) actions.Effect {
+	return actions.Effect{}
+}
+
+// mockPublisher implements events.Publisher for testing
+type mockPublisher struct {
+	events []events.Event
+}
+
+func (m *mockPublisher) Publish(event events.Event) {
+	if m == nil {
+		return
+	}
+	m.events = append(m.events, event)
+}
+
+func (m *mockPublisher) Subscribe(subscriber events.Subscriber) int {
+	return 0
+}
+
+func (m *mockPublisher) Unsubscribe(id int) {}
+
+func (m *mockPublisher) Flush() {}
+
+func (m *mockPublisher) Close() {}
+
+// mockLogger implements logger.Logger for testing
+type mockLogger struct {
+	logs []string
+}
+
+func (m *mockLogger) Infof(format string, args ...interface{}) {
+	m.logs = append(m.logs, format)
+}
+
+func (m *mockLogger) Debugf(format string, args ...interface{}) {
+	m.logs = append(m.logs, format)
+}
+
+func (m *mockLogger) Errorf(format string, args ...interface{}) {
+	m.logs = append(m.logs, format)
+}
+
+func (m *mockLogger) Codef(format string, args ...interface{}) {
+	m.logs = append(m.logs, format)
+}
+
+func (m *mockLogger) Textf(format string, args ...interface{}) {
+	m.logs = append(m.logs, format)
+}
+
+func (m *mockLogger) Mooncake() {
+	m.logs = append(m.logs, "mooncake")
+}
+
+func (m *mockLogger) SetLogLevel(logLevel int) {}
+
+func (m *mockLogger) SetLogLevelStr(logLevel string) error {
+	return nil
+}
+
+func (m *mockLogger) WithPadLevel(padLevel int) logger.Logger {
+	return m
+}
+
+func (m *mockLogger) LogStep(info logger.StepInfo) {
+	m.logs = append(m.logs, info.Name)
+}
+
+func (m *mockLogger) Complete(stats logger.ExecutionStats) {
+	m.logs = append(m.logs, "complete")
+}
+
+func (m *mockLogger) SetRedactor(redactor logger.Redactor) {}
+
+func TestHandler_Metadata(t *testing.T) {
+	h := &Handler{}
+	meta := h.Metadata()
+
+	if meta.Name != "log" {
+		t.Errorf("Name = %v, want 'print'", meta.Name)
+	}
+	if meta.Description == "" {
+		t.Error("Description is empty")
+	}
+	if meta.Category != actions.CategoryOutput {
+		t.Errorf("Category = %v, want %v", meta.Category, actions.CategoryOutput)
+	}
+	if !meta.SupportsDryRun {
+		t.Error("SupportsDryRun should be true")
+	}
+	if meta.SupportsBecome {
+		t.Error("SupportsBecome should be false")
+	}
+	if len(meta.EmitsEvents) != 1 {
+		t.Errorf("EmitsEvents length = %d, want 1", len(meta.EmitsEvents))
+	}
+	if len(meta.EmitsEvents) > 0 && meta.EmitsEvents[0] != string(events.EventPrintMessage) {
+		t.Errorf("EmitsEvents[0] = %v, want %v", meta.EmitsEvents[0], string(events.EventPrintMessage))
+	}
+	if meta.Version != "1.0.0" {
+		t.Errorf("Version = %v, want '1.0.0'", meta.Version)
+	}
+}
+
+func TestHandler_Validate(t *testing.T) {
+	h := &Handler{}
+
+	tests := []struct {
+		name    string
+		step    *config.Step
+		wantErr bool
+	}{
+		{
+			name: "valid print action",
+			step: &config.Step{
+				Log: &config.PrintAction{
+					Msg: "Hello, World!",
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "nil print action",
+			step: &config.Step{
+				Log: nil,
+			},
+			wantErr: true,
+		},
+		{
+			name: "empty message",
+			step: &config.Step{
+				Log: &config.PrintAction{
+					Msg: "",
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "message with template",
+			step: &config.Step{
+				Log: &config.PrintAction{
+					Msg: "Hello, {{ name }}!",
+				},
+			},
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := h.Validate(tt.step)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Validate() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestHandler_Execute(t *testing.T) {
+	h := &Handler{}
+
+	tests := []struct {
+		name      string
+		step      *config.Step
+		variables map[string]interface{}
+		wantMsg   string
+		wantErr   bool
+	}{
+		{
+			name: "simple message",
+			step: &config.Step{
+				Log: &config.PrintAction{
+					Msg: "Hello, World!",
+				},
+			},
+			variables: map[string]interface{}{},
+			wantMsg:   "Hello, World!",
+			wantErr:   false,
+		},
+		{
+			name: "message with template variable",
+			step: &config.Step{
+				Log: &config.PrintAction{
+					Msg: "Hello, {{ name }}!",
+				},
+			},
+			variables: map[string]interface{}{
+				"name": "Alice",
+			},
+			wantMsg: "Hello, Alice!",
+			wantErr: false,
+		},
+		{
+			name: "message with multiple variables",
+			step: &config.Step{
+				Log: &config.PrintAction{
+					Msg: "{{ greeting }}, {{ name }}!",
+				},
+			},
+			variables: map[string]interface{}{
+				"greeting": "Hi",
+				"name":     "Bob",
+			},
+			wantMsg: "Hi, Bob!",
+			wantErr: false,
+		},
+		{
+			name: "message with missing variable renders empty",
+			step: &config.Step{
+				Log: &config.PrintAction{
+					Msg: "Hello, {{ missing_var }}!",
+				},
+			},
+			variables: map[string]interface{}{},
+			wantMsg:   "Hello, !",
+			wantErr:   false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tmpl := mustNewRenderer()
+			pub := &mockPublisher{events: []events.Event{}}
+			log := &mockLogger{logs: []string{}}
+
+			ctx := &mockContext{
+				variables: tt.variables,
+				tmpl:      tmpl,
+				publisher: pub,
+				log:       log,
+			}
+
+			result, err := h.Run(ctx, tt.step)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Execute() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+
+			if tt.wantErr {
+				return
+			}
+
+			// Check result properties
+			execResult, ok := result.(*executor.Result)
+			if !ok {
+				t.Fatalf("Execute() result is not *executor.Result")
+			}
+
+			if execResult.Changed {
+				t.Error("Result.Changed should be false for print action")
+			}
+
+			if execResult.Stdout != tt.wantMsg {
+				t.Errorf("Result.Stdout = %v, want %v", execResult.Stdout, tt.wantMsg)
+			}
+
+			// Check event was published
+			if len(pub.events) != 1 {
+				t.Errorf("Expected 1 event to be published, got %d", len(pub.events))
+				return
+			}
+
+			event := pub.events[0]
+			if event.Type != events.EventPrintMessage {
+				t.Errorf("Event.Type = %v, want %v", event.Type, events.EventPrintMessage)
+			}
+
+			printData, ok := event.Data.(events.PrintData)
+			if !ok {
+				t.Fatalf("Event.Data is not events.PrintData")
+			}
+
+			if printData.Message != tt.wantMsg {
+				t.Errorf("PrintData.Message = %v, want %v", printData.Message, tt.wantMsg)
+			}
+
+			// Check timestamp is reasonable
+			if event.Timestamp.IsZero() {
+				t.Error("Event.Timestamp is zero")
+			}
+			if time.Since(event.Timestamp) > time.Second {
+				t.Error("Event.Timestamp is too old")
+			}
+		})
+	}
+}
+
+func TestHandler_Execute_NoPublisher(t *testing.T) {
+	h := &Handler{}
+
+	tmpl := mustNewRenderer()
+	log := &mockLogger{logs: []string{}}
+
+	ctx := &mockContext{
+		variables: map[string]interface{}{},
+		tmpl:      tmpl,
+		publisher: nil, // No publisher
+		log:       log,
+	}
+
+	step := &config.Step{
+		Log: &config.PrintAction{
+			Msg: "Hello, World!",
+		},
+	}
+
+	result, err := h.Run(ctx, step)
+	if err != nil {
+		t.Errorf("Execute() should not error when publisher is nil, got: %v", err)
+	}
+
+	execResult, ok := result.(*executor.Result)
+	if !ok {
+		t.Fatalf("Execute() result is not *executor.Result")
+	}
+
+	if execResult.Stdout != "Hello, World!" {
+		t.Errorf("Result.Stdout = %v, want 'Hello, World!'", execResult.Stdout)
+	}
+}
+
+// TestHandler_PlanMode replaces the legacy TestHandler_DryRun (F011).
+// Plan-mode Run renders the message and returns a Result with a
+// "would print: …" Reason; the legacy DryRun just logged. The
+// behavior was equivalent; the new assertion is on Result.Reason
+// rather than logger output.
+func TestHandler_PlanMode(t *testing.T) {
+	h := &Handler{}
+
+	tests := []struct {
+		name      string
+		step      *config.Step
+		variables map[string]interface{}
+	}{
+		{
+			name: "simple message",
+			step: &config.Step{
+				Log: &config.PrintAction{Msg: "Hello, World!"},
+			},
+			variables: map[string]interface{}{},
+		},
+		{
+			name: "message with template variable",
+			step: &config.Step{
+				Log: &config.PrintAction{Msg: "Hello, {{ name }}!"},
+			},
+			variables: map[string]interface{}{"name": "Alice"},
+		},
+		{
+			name: "message with missing variable - should not error",
+			step: &config.Step{
+				Log: &config.PrintAction{Msg: "Hello, {{ missing_var }}!"},
+			},
+			variables: map[string]interface{}{},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tmpl := mustNewRenderer()
+			ctx := &mockContext{
+				variables: tt.variables,
+				tmpl:      tmpl,
+				publisher: nil,
+				log:       &mockLogger{logs: []string{}},
+				mode:      actions.ModePlan,
+			}
+			result, err := h.Run(ctx, tt.step)
+			if err != nil {
+				t.Errorf("Run() in plan mode error = %v, want nil", err)
+			}
+			r, ok := result.(*executor.Result)
+			if !ok {
+				t.Fatalf("Run() returned %T, want *executor.Result", result)
+			}
+			if !strings.HasPrefix(r.Reason, "would print") {
+				t.Errorf("Reason = %q, want it to start with 'would print'", r.Reason)
+			}
+		})
+	}
+}

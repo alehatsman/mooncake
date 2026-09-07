@@ -780,7 +780,7 @@ func writeAtomic(runCtx context.Context, runner *security.Privileged, scope, pat
 	// Sudo fallback: stage in /tmp under the user, then `sudo cp`
 	// (atomic enough — same FS, but Rename doesn't help when the user
 	// can't write to the destination dir) and `sudo chmod`. Mirrors
-	// the pattern in internal/actions/service/handler.go:594.
+	// the pattern in internal/actions/os_service/handler.go:594.
 	tmpFile, err := os.CreateTemp("", "os-systemd-unit-*")
 	if err != nil {
 		return fmt.Errorf("create temp: %w", err)

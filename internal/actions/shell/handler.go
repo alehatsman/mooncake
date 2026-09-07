@@ -172,37 +172,6 @@ func formatStepFailure(step *config.Step, result *executor.Result) error {
 	return fmt.Errorf("command failed with exit code %d", result.Rc)
 }
 
-// executeShellCommand executes the actual shell command and applies
-// changed_when / failed_when overrides. Kept for callers outside the
-// retry loop (no current internal callers — see executeShellCommandRaw
-// for the retry-friendly variant).
-//
-//nolint:unused // public-shape helper preserved for SDK/MCP callers that bypass retry.
-func (h *Handler) executeShellCommand(ctx actions.Context, step *config.Step, renderedCommand string) (actions.Result, error) {
-	r, err := h.executeShellCommandRaw(ctx, step, renderedCommand)
-	if err != nil {
-		// Still apply overrides on failure so failed_when can mask it.
-		if rr, ok := r.(*executor.Result); ok {
-			if oerr := h.evaluateResultOverrides(ctx, step, rr); oerr != nil {
-				return rr, oerr
-			}
-			if !rr.Failed {
-				return rr, nil
-			}
-		}
-		return r, err
-	}
-	if rr, ok := r.(*executor.Result); ok {
-		if oerr := h.evaluateResultOverrides(ctx, step, rr); oerr != nil {
-			return rr, oerr
-		}
-		if rr.Failed {
-			return rr, formatStepFailure(step, rr)
-		}
-	}
-	return r, nil
-}
-
 // executeShellCommandRaw runs the command and returns a result whose
 // Failed/Rc reflect the underlying process exit code only — NO
 // changed_when / failed_when applied. The retry loop uses this so a

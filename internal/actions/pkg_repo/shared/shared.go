@@ -28,11 +28,6 @@ import (
 const (
 	StatePresent = "present"
 	StateAbsent  = "absent"
-
-	// AtomicTempSuffix is appended to the destination path before
-	// a write-and-rename completes. Exported so per-driver tests
-	// can recognise / clean up half-finished writes if needed.
-	AtomicTempSuffix = ".mooncake-tmp"
 )
 
 // NameRE constrains the repo name. Used as the on-disk filename
@@ -107,21 +102,6 @@ func ReadFile(path string) (string, bool, error) {
 		return "", false, fmt.Errorf("read %s: %w", path, err)
 	}
 	return string(data), true, nil
-}
-
-// WriteAtomic writes content to a temp sibling then renames into
-// place. The rename is atomic on POSIX; if it fails the temp file
-// is removed.
-func WriteAtomic(path string, content []byte, mode os.FileMode) error {
-	tmp := path + AtomicTempSuffix
-	if err := os.WriteFile(tmp, content, mode); err != nil {
-		return err
-	}
-	if err := os.Rename(tmp, path); err != nil {
-		_ = os.Remove(tmp)
-		return err
-	}
-	return nil
 }
 
 // HTTPFetchKey is the package-level hook for fetching a GPG key body

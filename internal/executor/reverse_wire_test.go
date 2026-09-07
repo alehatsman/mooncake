@@ -10,8 +10,8 @@ import (
 	// ReverseData type at init() via executor.RegisterReverseDataType.
 	// Pull all 16 in so the round-trip table below can exercise every
 	// concrete payload type without per-handler test scaffolding.
-	"github.com/alehatsman/mooncake/internal/actions/file"
-	_ "github.com/alehatsman/mooncake/internal/actions/file"
+	"github.com/alehatsman/mooncake/internal/actions/file_write"
+	_ "github.com/alehatsman/mooncake/internal/actions/file_write"
 	"github.com/alehatsman/mooncake/internal/actions/git_checkout"
 	_ "github.com/alehatsman/mooncake/internal/actions/git_checkout"
 	"github.com/alehatsman/mooncake/internal/actions/git_config"
@@ -20,14 +20,14 @@ import (
 	_ "github.com/alehatsman/mooncake/internal/actions/os_firewall"
 	_ "github.com/alehatsman/mooncake/internal/actions/os_group"
 	_ "github.com/alehatsman/mooncake/internal/actions/os_mount"
+	"github.com/alehatsman/mooncake/internal/actions/os_service"
 	_ "github.com/alehatsman/mooncake/internal/actions/os_ssh_key"
 	_ "github.com/alehatsman/mooncake/internal/actions/os_sysctl"
 	_ "github.com/alehatsman/mooncake/internal/actions/os_systemd"
 	_ "github.com/alehatsman/mooncake/internal/actions/os_user"
-	pkghandler "github.com/alehatsman/mooncake/internal/actions/package"
+	pkghandler "github.com/alehatsman/mooncake/internal/actions/pkg"
 	"github.com/alehatsman/mooncake/internal/actions/pkg_hold"
 	"github.com/alehatsman/mooncake/internal/actions/pkg_repo"
-	"github.com/alehatsman/mooncake/internal/actions/service"
 )
 
 // TestResult_ReverseData_WireRoundTrip — R2.1c phase 2: every
@@ -50,11 +50,11 @@ func TestResult_ReverseData_WireRoundTrip(t *testing.T) {
 	}{
 		{
 			name:    "FileReverseInfo",
-			payload: &file.FileReverseInfo{State: "file", Existed: true, Kind: "file", Mode: 0o644, Content: []byte("hello")},
+			payload: &file_write.FileReverseInfo{State: "file", Existed: true, Kind: "file", Mode: 0o644, Content: []byte("hello")},
 			assert: func(t *testing.T, got any) {
-				v, ok := got.(*file.FileReverseInfo)
+				v, ok := got.(*file_write.FileReverseInfo)
 				if !ok {
-					t.Fatalf("got %T, want *file.FileReverseInfo", got)
+					t.Fatalf("got %T, want *file_write.FileReverseInfo", got)
 				}
 				if v.State != "file" || !v.Existed || string(v.Content) != "hello" {
 					t.Errorf("payload not restored: %+v", v)
@@ -129,10 +129,10 @@ func TestResult_ReverseData_WireRoundTrip(t *testing.T) {
 		},
 		{
 			name:    "OsServiceReverseInfo",
-			payload: &service.OsServiceReverseInfo{},
+			payload: &os_service.OsServiceReverseInfo{},
 			assert: func(t *testing.T, got any) {
-				if _, ok := got.(*service.OsServiceReverseInfo); !ok {
-					t.Errorf("got %T, want *service.OsServiceReverseInfo", got)
+				if _, ok := got.(*os_service.OsServiceReverseInfo); !ok {
+					t.Errorf("got %T, want *os_service.OsServiceReverseInfo", got)
 				}
 			},
 		},

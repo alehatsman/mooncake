@@ -19,6 +19,7 @@ import (
 
 	"github.com/alehatsman/mooncake/internal/agentd"
 	"github.com/alehatsman/mooncake/internal/envpath"
+	"github.com/alehatsman/mooncake/internal/fleet"
 	"github.com/alehatsman/mooncake/internal/fleet/install"
 
 	"github.com/alehatsman/mooncake/cmd/kernel"
@@ -242,13 +243,12 @@ func agentdBootstrapAction(c *cli.Context) error {
 
 	binPath := c.String("binary")
 	if binPath == "" {
-		exe, err := os.Executable()
+		exe, err := fleet.EnsureLocalBinaryPath()
 		if err != nil {
-			return fmt.Errorf("locate own binary: %w", err)
+			return err
 		}
 		binPath = exe
-	}
-	if _, err := os.Stat(binPath); err != nil {
+	} else if _, err := os.Stat(binPath); err != nil {
 		return fmt.Errorf("stat binary at %s: %w", binPath, err)
 	}
 

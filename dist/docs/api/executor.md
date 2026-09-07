@@ -167,11 +167,7 @@ log.Infof("Summary: %d changed, %d unchanged, %d failed",
   - [func (e *RenderError) Error() string](<#func-rendererror-error>)
   - [func (e *RenderError) Unwrap() error](<#func-rendererror-unwrap>)
 - [type Result](<#type-result>)
-  - [func ChangedResult(op Operation, target string, data map[string]interface{}) *Result](<#func-changedresult>)
-  - [func FailedResult(op Operation, target string, err error, data map[string]interface{}) *Result](<#func-failedresult>)
   - [func NewResult() *Result](<#func-newresult>)
-  - [func NoopResult(target string, data map[string]interface{}) *Result](<#func-noopresult>)
-  - [func QueryResult(target string, data map[string]interface{}) *Result](<#func-queryresult>)
   - [func (r *Result) MarshalJSON() ([]byte, error)](<#func-result-marshaljson>)
   - [func (r *Result) PublishObservation(env actions.ObserveResult, target string)](<#func-result-publishobservation>)
   - [func (r *Result) RegisterTo(variables map[string]interface{}, name string)](<#func-result-registerto>)
@@ -1304,22 +1300,6 @@ type Result struct {
 }
 ```
 
-### func [ChangedResult](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/result.go#L418>)
-
-```go
-func ChangedResult(op Operation, target string, data map[string]interface{}) *Result
-```
-
-ChangedResult builds a successful mutation result. Op must be one of OpCreate, OpUpdate, or OpDelete. Changed=true.
-
-### func [FailedResult](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/result.go#L441>)
-
-```go
-func FailedResult(op Operation, target string, err error, data map[string]interface{}) *Result
-```
-
-FailedResult builds a mutation\-failed result \(proposal\-06: mutation that didn't happen IS failure\). Op is the operation that was attempted; data may carry partial state captured before the failure. Failed=true, Rc=1, Error=err.Error\(\).
-
 ### func [NewResult](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/result.go#L226>)
 
 ```go
@@ -1328,23 +1308,7 @@ func NewResult() *Result
 
 NewResult creates a new Result with default values.
 
-### func [NoopResult](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/result.go#L429>)
-
-```go
-func NoopResult(target string, data map[string]interface{}) *Result
-```
-
-NoopResult builds an idempotent "already at target state" result. Changed=false, Operation=OpNoop.
-
-### func [QueryResult](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/result.go#L408>)
-
-```go
-func QueryResult(target string, data map[string]interface{}) *Result
-```
-
-QueryResult builds a read\-only observation result \(observe.\*, read.\*, wait.\* on success\). Changed=false, Failed=false, Error="" — per proposal\-06, "absent" / "not matching" is success.
-
-### func \(\*Result\) [MarshalJSON](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/result.go#L570>)
+### func \(\*Result\) [MarshalJSON](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/result.go#L512>)
 
 ```go
 func (r *Result) MarshalJSON() ([]byte, error)
@@ -1354,7 +1318,7 @@ MarshalJSON serialises Result with ReverseData wrapped in a discriminator envelo
 
 When ReverseData is nil, the output matches the pre\-phase\-2 shape — no \`reverse\_data\` key at all. Old daemons / clients that don't know about the field are unaffected on the read side, and new code that consumes them sees \`nil\` ReverseData \(which the existing "ReverseData is nil" refusal in handlers' Reverse\(\) already handles\).
 
-### func \(\*Result\) [PublishObservation](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/result.go#L469>)
+### func \(\*Result\) [PublishObservation](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/result.go#L411>)
 
 ```go
 func (r *Result) PublishObservation(env actions.ObserveResult, target string)
@@ -1382,7 +1346,7 @@ func (r *Result) RegisterTo(variables map[string]interface{}, name string)
 
 RegisterTo registers this result to the variables map under the given name. The result can be accessed using nested field syntax \(e.g., "result.stdout", "result.rc"\) in templates and when conditions.
 
-### func \(\*Result\) [SetChanged](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/result.go#L491>)
+### func \(\*Result\) [SetChanged](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/result.go#L433>)
 
 ```go
 func (r *Result) SetChanged(changed bool)
@@ -1390,7 +1354,7 @@ func (r *Result) SetChanged(changed bool)
 
 SetChanged marks whether the action made changes.
 
-### func \(\*Result\) [SetData](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/result.go#L516>)
+### func \(\*Result\) [SetData](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/result.go#L458>)
 
 ```go
 func (r *Result) SetData(data map[string]interface{})
@@ -1398,7 +1362,7 @@ func (r *Result) SetData(data map[string]interface{})
 
 SetData sets custom result data. This merges the provided data into the result's ToMap output, allowing actions to provide additional structured information.
 
-### func \(\*Result\) [SetFailed](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/result.go#L506>)
+### func \(\*Result\) [SetFailed](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/result.go#L448>)
 
 ```go
 func (r *Result) SetFailed(failed bool)
@@ -1406,7 +1370,7 @@ func (r *Result) SetFailed(failed bool)
 
 SetFailed marks the result as failed.
 
-### func \(\*Result\) [SetStderr](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/result.go#L501>)
+### func \(\*Result\) [SetStderr](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/result.go#L443>)
 
 ```go
 func (r *Result) SetStderr(stderr string)
@@ -1414,7 +1378,7 @@ func (r *Result) SetStderr(stderr string)
 
 SetStderr sets the stderr output.
 
-### func \(\*Result\) [SetStdout](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/result.go#L496>)
+### func \(\*Result\) [SetStdout](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/result.go#L438>)
 
 ```go
 func (r *Result) SetStdout(stdout string)
@@ -1452,7 +1416,7 @@ func (r *Result) ToRegisteredResult() RegisteredResult
 
 ToRegisteredResult converts a \*Result into a RegisteredResult snapshot.
 
-### func \(\*Result\) [UnmarshalJSON](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/result.go#L593>)
+### func \(\*Result\) [UnmarshalJSON](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/result.go#L535>)
 
 ```go
 func (r *Result) UnmarshalJSON(b []byte) error

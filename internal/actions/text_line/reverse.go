@@ -4,7 +4,7 @@ import (
 	"errors"
 
 	"github.com/alehatsman/mooncake/internal/actions"
-	filehandler "github.com/alehatsman/mooncake/internal/actions/file"
+	filehandler "github.com/alehatsman/mooncake/internal/actions/file_write"
 	"github.com/alehatsman/mooncake/internal/config"
 )
 

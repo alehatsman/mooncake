@@ -63,9 +63,6 @@ func New(name, addr, token string) *Client {
 	}
 }
 
-// SetHTTPClient swaps the underlying http.Client. Intended for tests.
-func (c *Client) SetHTTPClient(h *http.Client) { c.http = h }
-
 // authReq returns a request with the bearer header set. Use this instead of
 // http.NewRequestWithContext directly to keep auth wiring in one place.
 func (c *Client) authReq(ctx context.Context, method, fullURL string, body io.Reader) (*http.Request, error) {
