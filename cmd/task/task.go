@@ -82,7 +82,7 @@ func Command() *cli.Command {
 // taskFlags is the trimmed flag set for `mooncake task`. Two modes:
 //
 //   - run mode (default): execute the task through the in-memory apply
-//     runner. --vars, --tags, sudo flags apply.
+//     runner. --vars, --tags, --keep-going, sudo flags apply.
 //   - plan mode (--plan): build the plan via the planner and print it
 //     without executing. --format, --diff, --show-origins apply.
 //
@@ -149,6 +149,17 @@ func taskFlags() []cli.Flag {
 		&cli.StringFlag{
 			Name:  "skip-tags",
 			Usage: "Exclude steps whose tags appear in this list (comma-separated). Composes with --tags via AND.",
+		},
+
+		// Failure handling — run mode only.
+		&cli.BoolFlag{
+			Name: "keep-going",
+			// No backticks in Usage — urfave hoists the first backticked word
+			// into the flag's value placeholder (#173), and there is a test
+			// enforcing it.
+			Usage: "Run every step, reporting all failures at the end instead of " +
+				"stopping at the first. The run still fails. Use it on gates " +
+				"so one standing failure does not hide the stages behind it.",
 		},
 
 		// Sudo handoffs — run mode only, but cheap to accept in plan mode too
@@ -431,6 +442,7 @@ func executeTaskPlan(c *cli.Context, configPath, name string, planData *plan.Pla
 		// from LogLevel so users can keep --log-level info to avoid
 		// the executor's internal debug traces.
 		StreamStepOutput: true,
+		KeepGoing:        c.Bool("keep-going"),
 		OpID:             kernel.RecordOp("task "+name, configPath, false),
 		RootFile:         configPath,
 	}

@@ -83,7 +83,7 @@ log.Infof("Summary: %d changed, %d unchanged, %d failed",
 - [func AddGlobalVariables(scope *VariableScope)](<#func-addglobalvariables>)
 - [func DispatchStepAction(step config.Step, ec *ExecutionContext) error](<#func-dispatchstepaction>)
 - [func ExecutePlan(ctx context.Context, p *plan.Plan, sudoPass string, mode actions.Mode, log logger.Logger, publisher events.Publisher) error](<#func-executeplan>)
-- [func ExecutePlanFull(ctx context.Context, p *plan.Plan, sudoPass string, mode actions.Mode, log logger.Logger, publisher events.Publisher, capture *RunCapture, policy *Policy, registry *actions.Registry) error](<#func-executeplanfull>)
+- [func ExecutePlanFull(ctx context.Context, p *plan.Plan, sudoPass string, mode actions.Mode, log logger.Logger, publisher events.Publisher, capture *RunCapture, policy *Policy, registry *actions.Registry, keepGoing bool) error](<#func-executeplanfull>)
 - [func ExecutePlanWithCapture(ctx context.Context, p *plan.Plan, sudoPass string, mode actions.Mode, log logger.Logger, publisher events.Publisher, capture *RunCapture) error](<#func-executeplanwithcapture>)
 - [func ExecuteStep(step config.Step, ec *ExecutionContext) error](<#func-executestep>)
 - [func ExecuteSteps(steps []config.Step, ec *ExecutionContext) error](<#func-executesteps>)
@@ -270,13 +270,15 @@ INTERNAL: This function is exported for testing purposes only and is not part of
 func ExecutePlan(ctx context.Context, p *plan.Plan, sudoPass string, mode actions.Mode, log logger.Logger, publisher events.Publisher) error
 ```
 
-## func [ExecutePlanFull](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/executor.go#L1497>)
+## func [ExecutePlanFull](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/executor.go#L1503>)
 
 ```go
-func ExecutePlanFull(ctx context.Context, p *plan.Plan, sudoPass string, mode actions.Mode, log logger.Logger, publisher events.Publisher, capture *RunCapture, policy *Policy, registry *actions.Registry) error
+func ExecutePlanFull(ctx context.Context, p *plan.Plan, sudoPass string, mode actions.Mode, log logger.Logger, publisher events.Publisher, capture *RunCapture, policy *Policy, registry *actions.Registry, keepGoing bool) error
 ```
 
 ExecutePlanFull runs a pre\-compiled plan with the full options set: capture, policy, and registry. All three may be nil \(nil capture disables the kernel\-result substrate; nil policy enforces nothing; nil registry uses the process\-wide global\). Used by the SDK's inline\-input execution path so ApplySteps/ApplyConfig/ApplyBytes thread policy and a consumer\-owned registry through the same funnel as Apply.
+
+keepGoing mirrors StartConfig.KeepGoing: a failing step is recorded and the run continues, with every failure reported together at the end as a DeferredFailuresError. The run still fails — it just fails with the whole picture instead of the first item of it. Steps inside a transaction are exempt \(all\-or\-nothing wins\).
 
 ## func [ExecutePlanWithCapture](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/executor.go#L1486>)
 

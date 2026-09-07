@@ -28,6 +28,7 @@ Variable precedence (highest first): --vars files, task-level `vars:`, file-leve
 | `--show-origins` | bool | false | With --plan: include file:line:col for each step |
 | `--tags / -t` | string | - | Filter the task's steps by tags (comma-separated) |
 | `--skip-tags` | string | - | Exclude steps whose tags appear in this list (comma-separated). Composes with --tags via AND. |
+| `--keep-going` | bool | false | Run every step, reporting all failures at the end instead of stopping at the first. The run still fails. Use it on gates so one standing failure does not hide the stages behind it. |
 | `--sudo-pass-file` | string | - | Read sudo password from file (must have 0600 permissions) |
 | `--sudo-pass / -s` | string | - | Sudo password (requires --insecure-sudo-pass) |
 | `--ask-become-pass / -K` | bool | false | Prompt for sudo password interactively |

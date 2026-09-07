@@ -44,6 +44,11 @@ type InMemoryPlanOptions struct {
 	// the noisier internal debug logs on.
 	StreamStepOutput bool
 
+	// KeepGoing mirrors Config.KeepGoing: continue past a failing step and
+	// report every failure at the end instead of aborting on the first.
+	// `mooncake task --keep-going` sets it. The run still fails.
+	KeepGoing bool
+
 	// OpID, when non-empty, links this in-memory apply to a row in
 	// ops.jsonl (spec-68 wave 2). Same semantics as Config.OpID on
 	// the config-path Runner — minted by the CLI before invocation.
@@ -151,6 +156,7 @@ func (r *Runner) runFromInMemoryPlan(ctx context.Context) (*KernelResult, error)
 		capture,
 		opts.Policy,
 		opts.Registry,
+		opts.KeepGoing,
 	)
 
 	publisher.Flush()

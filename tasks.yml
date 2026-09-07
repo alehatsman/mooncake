@@ -269,7 +269,7 @@ tasks:
       - log: { msg: "✓ Fast checks green — full 'mooncake task ci' gate runs on push." }
 
   ci:
-    desc: "Pre-push gate: build + cross-build + test + lint + vuln + docs/schema + mkdocs + arch + budget + dupl + escalation-lint"
+    desc: "Full gate: build + cross-build + test + lint + vuln + docs/schema + mkdocs + arch + budget + dupl + escalation-lint (add --keep-going to see every failure, not just the first)"
     steps:
       - name: "[1/11] build"
         use: goq/build

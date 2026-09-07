@@ -47,4 +47,8 @@ jobs:
     image: mooncake-ci:latest
     steps:
       - shell:
-          cmd: mooncake task ci
+          # --keep-going so one standing failure does not hide the stages behind
+          # it. The run still fails; it fails with the whole picture. Without it
+          # the vuln stage (5/11) had been masking 6-11 for as long as #187 has
+          # been open — including the docs/schema regen-and-verify (#193).
+          cmd: mooncake task ci --keep-going

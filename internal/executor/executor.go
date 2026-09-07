@@ -1494,8 +1494,14 @@ func ExecutePlanWithCapture(ctx context.Context, p *plan.Plan, sudoPass string, 
 // inline-input execution path so ApplySteps/ApplyConfig/ApplyBytes
 // thread policy and a consumer-owned registry through the same funnel
 // as Apply.
-func ExecutePlanFull(ctx context.Context, p *plan.Plan, sudoPass string, mode actions.Mode, log logger.Logger, publisher events.Publisher, capture *RunCapture, policy *Policy, registry *actions.Registry) error {
-	return executePlanWithCapture(ctx, p, sudoPass, mode, log, publisher, capture, policy, registry, false)
+//
+// keepGoing mirrors StartConfig.KeepGoing: a failing step is recorded and the
+// run continues, with every failure reported together at the end as a
+// DeferredFailuresError. The run still fails — it just fails with the whole
+// picture instead of the first item of it. Steps inside a transaction are
+// exempt (all-or-nothing wins).
+func ExecutePlanFull(ctx context.Context, p *plan.Plan, sudoPass string, mode actions.Mode, log logger.Logger, publisher events.Publisher, capture *RunCapture, policy *Policy, registry *actions.Registry, keepGoing bool) error {
+	return executePlanWithCapture(ctx, p, sudoPass, mode, log, publisher, capture, policy, registry, keepGoing)
 }
 
 // executePlanWithCapture is the shared implementation behind
