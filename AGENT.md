@@ -1,7 +1,8 @@
 # Agent shortcuts — mooncake
 
-Discoverable surface for LLM agents working in this repo. For full project
-guide see [LLM_GUIDE.md](./LLM_GUIDE.md); for rules of engagement see
+Discoverable surface for LLM agents working in this repo. For the generated
+reference see [dist/docs/llms.txt](./dist/docs/llms.txt) (orientation:
+`dex query --kind=orient`); for rules of engagement see
 [CLAUDE.md](./CLAUDE.md). This file is the working-memory cheat sheet.
 
 ## 👉 What to work on right now

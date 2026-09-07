@@ -1633,7 +1633,7 @@ func executePlanWithCapture(ctx context.Context, p *plan.Plan, sudoPass string, 
 
 	// Populate Facts + Metrics on the typed scope so templates and `when:`
 	// expressions can read live values (load_avg_1m, cpu_usage_pct, …) the
-	// way LLM_GUIDE.md and the metrics docs promise. The planner had been
+	// way the metrics docs promise. The planner had been
 	// injecting facts into User for compat, but no one was populating the
 	// Metrics section — `{{ load_avg_1m }}` rendered empty for every apply
 	// path.
