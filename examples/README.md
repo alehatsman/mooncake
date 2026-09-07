@@ -24,11 +24,11 @@ to browse when you hit a relevant problem.
 ## Quick starts
 
 ```bash
+# Preview without running
+mooncake plan --config hello-world/config.yml
+
 # Run the simplest example
 mooncake apply --config hello-world/config.yml
-
-# Preview without running
-mooncake apply --config hello-world/config.yml --dry-run
 
 # Scaffold your own project (uses these examples' patterns)
 mooncake init --template dotfiles
@@ -57,14 +57,14 @@ mooncake init --template dotfiles
   `text.*` actions on existing files
 - `global-variables-example.yml` — global variable scoping
 - `json-output-example.md` — structured JSON CLI output
-- `wait-example.yml` — `wait.*` actions
+- `observe-wait-example.yml` — `observe.*` actions with a `wait:` modifier
+  (the poll-until-condition primitive; there used to be a separate
+  `wait.*` action family, collapsed into this modifier)
 
 ## See also
 
-- Browse `./components/` — 330+ ready-made components (zsh, neovim,
-  docker, …) you include in a playbook with `use:`
 - `mooncake actions list` — full typed-action surface
 - `mooncake mod add github.com/mooncake-modules/<name>@<v>` —
-  fetch a remote module into your project
+  fetch a remote module into your project; see [MODULES.md](../MODULES.md)
 - `mooncake init --list-templates` — starter scaffolds
-- [Full documentation](https://mooncake.alehatsman.com)
+- [Full generated documentation](../dist/docs/)

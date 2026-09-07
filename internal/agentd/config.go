@@ -3,7 +3,7 @@
 // local HTTP API. The daemon serves on a unix socket by default (gated by
 // filesystem perms) and optionally on a TCP listener with bearer-token
 // auth. On Windows where AF_UNIX is supported but uncommon, the daemon
-// can also run TCP-only. See VISION.md §5 / §6.2.
+// can also run TCP-only. See specs/agentd.md.
 package agentd
 
 import (

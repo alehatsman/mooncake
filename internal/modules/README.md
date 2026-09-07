@@ -31,6 +31,117 @@ steps:
   - use: postgres/backup     # named export
 ```
 
+## Authoring a component
+
+A component is a YAML file with two top-level keys:
+
+```yaml
+# components/install.yml
+props:
+  tls:  { type: bool,   default: false }
+  port: { type: string, default: "5432" }
+  state:
+    type: string
+    enum: [present, absent]
+    default: present
+
+steps:
+  - pkg.install:
+      name: postgresql
+
+  - import: tasks/configure.yml
+    when: "props.tls"
+```
+
+`props:` supports:
+
+- `type:` — `string` · `bool` · `array` · `object`
+- `required:` — defaults to `false`
+- `default:` — value when the caller omits it
+- `enum:` — restrict to a fixed set
+- `description:` — surfaced by `mooncake validate` and the schema docs
+
+Inside steps, reference props via `{{ props.<name> }}` (or `{{ parameters.<name> }}` —
+the legacy spelling still resolves; see *Migration* below).
+
+Components can include other YAML files relative to the component's directory
+(`import: tasks/configure.yml`), but cannot themselves invoke other components
+yet (no `use:` inside a component).
+
+### Migration: `parameters:` → `props:`
+
+Components that still use `parameters:` continue to work. Loading one emits a
+one-time deprecation warning:
+
+```
+warning: components/install.yml uses `parameters:` which is deprecated — rename to `props:`
+```
+
+To migrate: rename the top-level key. Step expressions can use either
+`{{ parameters.x }}` or `{{ props.x }}` — both namespaces are injected at
+expansion time. Mixing `props:` and `parameters:` in the same file is an
+error; pick one.
+
+## Reducing boilerplate: default props + task shorthand
+
+Two sugars cut the ceremony when a repo wires the same module export into many
+tasks.
+
+### Module-level default props
+
+A `modules:` entry can be an object with `props:` instead of a bare string.
+Those props are applied as **defaults** to every `use:` of that alias, so an
+invariant value (a `dir:`, a `go_tags:`) is declared once, not at every call
+site:
+
+```yaml
+modules:
+  goq:
+    source: "127.0.0.1:8080/owner/go-quality@v0.1.1"
+    props:
+      go_tags: "{{ GO_TAGS }}"   # templated like any per-call prop
+  tq:
+    source: "127.0.0.1:8080/owner/ts-quality@v0.1.0"
+    props: { dir: web }
+
+steps:
+  - use: tq/lint            # runs with dir=web, no props: needed
+  - use: tq/lint            # a per-call prop wins over the default:
+    props: { dir: other }   #   → dir=other
+```
+
+Precedence, highest first: **per-call `props:` > module default props >
+the component's own prop defaults**. The bare-string form
+(`goq: ".../@v0.1.1"`) still works and carries no defaults.
+
+A default prop is applied **only to the exports that declare it** — a default
+for a prop a given component doesn't define is silently skipped, not an error.
+That's what lets one binding carry, say, a `go_tags` default that only some of
+a module's exports accept: `use: goq/lint` picks it up, `use: goq/budget-status`
+(which has no `go_tags` prop) ignores it.
+
+### Task shorthand: a string task value is a `use:` reference
+
+A task value may be a `use:` reference string instead of a full
+`{ steps: [...] }` map. It expands to a single-step task:
+
+```yaml
+tasks:
+  ui-lint: tq/lint          # == { steps: [{ use: tq/lint }] }
+  ui-build: tq/build
+  lint: goq/lint
+```
+
+When a shorthand task has no `desc:`, `mooncake task` shows the referenced
+**component's own `description:`** — so the listing never drifts from the
+component. Local components are read directly; module aliases are resolved
+from the **local module cache only** (never cloned, so the listing stays
+offline). If the module isn't cached yet, the listing shows a `→ <ref>` hint
+until the next run populates the cache. Need extra props?
+Use the full map form: `ai-lint-all: { steps: [{ use: goq/ai-lint, props: { all: true } }] }`.
+
+Combined with module default props, the one-liner is a complete working task.
+
 ## Reference format
 
 ```
@@ -132,17 +243,46 @@ cache only — a listing never triggers a network clone.
 | `MOONCAKE_MODULE_CACHE` | Override the cache root directory |
 | `MOONCAKE_MODULE_INSECURE` | Comma-separated list of `host` or `host:port` values that are allowed to clone over plain `http` instead of `https`. Use for trusted local servers (e.g. a self-hosted moongit on `127.0.0.1:8080`). |
 
+## Lockfile: reproducible trees
+
+`mooncake mod tidy` fetches every reference in the playbook's `modules:` block
+and every export those modules pull in transitively, then writes
+`mooncake.modules.lock` next to the playbook — an `h1:`-hashed tree pin, sorted
+deterministic, dropping entries no longer referenced. `mooncake mod verify`
+re-hashes every locked module and fails on drift; `mooncake mod list` prints
+each alias with its resolved version and lock status. See `specs/modules.md`
+for the full contract.
+
+## Error messages
+
+The loader maps failure modes to canonical messages, useful when matching in
+tests or CI tooling:
+
+| Condition                          | Message                                                           |
+|------------------------------------|-------------------------------------------------------------------|
+| Reference missing `@version`       | `expected <url>@<version>, e.g. github.com/owner/repo@v1.0.0`     |
+| Tag not in repo                    | `no tag <v> in <host>/<owner>/<repo>`                             |
+| `index.yml` missing                | `module has no index.yml at root (<path>)`                        |
+| Export name unknown                | `module <name> has no export "<x>"; available: <list>`            |
+| Export points at missing file      | `export "<x>" points to <rel> which does not exist`               |
+| Network failure, nothing cached    | `module not cached and fetch failed: <git error>`                 |
+| Local path not found               | `component not found: <path>`                                     |
+| Unknown alias                      | `unknown module alias "<a>" (not declared in modules: block)`     |
+
 ## CLI reference
 
 - [`mooncake mod add`](../cli/mod_add.md) — fetch a module and register it in
   the playbook
+- [`mooncake mod tidy`](../cli/mod_tidy.md) — write/refresh `mooncake.modules.lock`
+- [`mooncake mod verify`](../cli/mod_verify.md) — re-hash locked modules, fail on drift
+- [`mooncake mod list`](../cli/mod_list.md) — print aliases with resolved version + lock status
 - [`mooncake mod cache list`](../cli/mod_cache_list.md) — list cached entries
 - [`mooncake mod cache clean`](../cli/mod_cache_clean.md) — remove the cache
 
 ## Known limitations
 
-- References are pinned to exact tags — version ranges and automatic update are
-  out of scope for phase 1.
+- No cross-module dependencies, SSH/private-Git auth, or `mooncake mod init`
+  scaffold yet — see moongit #181's remaining children for status.
 - `mod add` rewrites the `modules:` block via `yaml.v3`; comments and key order
   in that section are not preserved.
 - A module component's `file.copy` destination that contains a subdirectory

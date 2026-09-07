@@ -80,7 +80,7 @@ func TestFormatStrictFieldError_NamesTheFix(t *testing.T) {
 	}
 
 	// No close candidate: fall back to a pointer at a surface that
-	// exists. The old text named docs-next/, which was archived.
+	// exists.
 	msg = formatStrictFieldError(
 		"yaml: unmarshal errors:\n  line 4: field frobnicate not found in type config.Step")
 	if want := "unknown field `frobnicate` (likely a typo or a renamed field — run `mooncake actions list`)"; msg != want {

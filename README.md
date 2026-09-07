@@ -29,7 +29,7 @@ pre-transaction state.
 
 - **Solo developers** — manage dotfiles + dev box + a personal fleet
   of 1–10 machines from one terminal, peer-to-peer, no hub.
-- **Platform engineers** — declarative state with `--dry-run`,
+- **Platform engineers** — declarative state with `mooncake plan --diff`,
   structured Diff output per action, run audit log, secret redaction.
 
 The typed ABI, dry-run validation, and auto-revert above aren't a
@@ -94,7 +94,7 @@ JSON — is one short YAML file.
 
 ## What you can do
 
-The full action surface (66 typed actions, 42 of them reversible).
+The full action surface (59 typed actions, 33 of them reversible).
 Highlights:
 
 | Action | Purpose |
@@ -106,10 +106,10 @@ Highlights:
 | `os.user` · `os.group` · `os.ssh_key` | Identity management |
 | `git.clone` · `git.checkout` · `git.config` | Repository setup with credentials + submodules |
 | `container.image` · `container` | Container build / run |
-| `wait.{port,http,file,command}` | Synchronization primitives |
+| `observe.{port,http,file,command,process,service,...}` with a `wait:` modifier | Read-until-condition synchronization primitives |
 | `shell` · `cmd` · `assert` · `log` | Escape hatches + control |
 
-See the full [actions reference](https://mooncake.alehatsman.com/guide/config/actions/).
+See the full [actions reference](dist/docs/actions/).
 
 **Auto-detected facts**: `{{os}}`, `{{arch}}`, `{{cpu_cores}}`,
 `{{memory_total_mb}}`, `{{distribution}}`, `{{package_manager}}`.
@@ -151,7 +151,7 @@ for the design rationale.
 | Capability | Mooncake | Ansible | Shell scripts |
 |---|---|---|---|
 | Single-binary install | ✓ | Python + modules | n/a |
-| Idempotent typed actions | ✓ (66, 42 with Reverse) | ✓ (untyped) | ✗ |
+| Idempotent typed actions | ✓ (59, 33 with Reverse) | ✓ (untyped) | ✗ |
 | Dry-run with structural diffs | ✓ `plan --diff` | partial (check mode) | ✗ |
 | **Transactions with auto-revert** | ✓ `transaction:` | ✗ | ✗ |
 | **Secret refs that don't leak** | ✓ `!secret env:KEY` | partial (Vault module) | ✗ |
@@ -166,15 +166,16 @@ blocks, typed secrets, agent-safe ABI) while staying a single binary.
 
 ## Documentation
 
-**[Full documentation](https://mooncake.alehatsman.com)** — guides,
-action reference, AI specification.
+Generated straight from code and verified byte-for-byte on every change
+(`task ci`'s docs-check stage) — [`dist/docs/`](dist/docs/), indexed by
+[`llms.txt`](dist/docs/llms.txt).
 
 Quick links:
-- [Core concepts](https://mooncake.alehatsman.com/guide/core-concepts/)
-- [Actions reference](https://mooncake.alehatsman.com/guide/config/actions/)
-- [Complete reference](https://mooncake.alehatsman.com/guide/config/reference/)
-- [AI / LLM specification](https://mooncake.alehatsman.com/ai-specification/)
-- [Modules](https://mooncake.alehatsman.com/guide/modules/) — Git-native distribution for reusable, parameterized YAML components. `mooncake mod add <host>/<owner>/<repo>@<tag>`
+- [Concepts](dist/docs/concepts/) — kernel model, security, modules
+- [Actions reference](dist/docs/actions/) — one page per action, every field
+- [CLI reference](dist/docs/cli/) — every subcommand and flag
+- [Go API reference](dist/docs/api/) — gomarkdoc over the public packages
+- [Modules](dist/docs/concepts/modules.md) — Git-native distribution for reusable, parameterized YAML components. `mooncake mod add <host>/<owner>/<repo>@<tag>`
 
 ### Local examples
 
@@ -200,13 +201,10 @@ Tested across Linux (Ubuntu, Debian, Alpine, Fedora, Arch), macOS
 (Intel + Apple Silicon), and Windows Server.
 See [testing docs](testing-next/README.md).
 
-## Contributing
+## Status
 
-Contributions welcome. See [CONTRIBUTING.md](CONTRIBUTING.md).
-
-- [Report bugs](https://github.com/alehatsman/mooncake/issues)
-- [Request features](https://github.com/alehatsman/mooncake/issues)
-- [Roadmap](docs-working/plan-2026-09-07-provisioning-focus.md)
+Pre-1.0, solo-maintained, no external contributor process yet. See
+[ROADMAP.md](ROADMAP.md) for what's tracked toward `v1.0.0-pre`.
 
 ## License
 
@@ -214,5 +212,5 @@ MIT — Copyright (c) 2026 Aleh Atsman. See [LICENSE](LICENSE).
 
 ---
 
-**[Read the full documentation](https://mooncake.alehatsman.com)** for
-detailed guides, examples, and reference materials.
+**[Browse the full generated documentation](dist/docs/)** for every
+action, CLI command, concept, and Go API surface.

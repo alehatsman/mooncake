@@ -45,8 +45,9 @@ when-expression evaluation, etc.).
 
 ## Code lookups (replace grep+read cycles)
 
-Prefer `dex_context` (see CLAUDE.md "Search and exploration"). When dex
-is unavailable or you already have a specific identifier in hand:
+Prefer dex's `query` verb (see CLAUDE.md "dex — semantic search & context
+routing"). When dex is unavailable or you already have a specific
+identifier in hand:
 
 ```
 gopls workspace_symbol Runner                            # find symbol locations
@@ -77,9 +78,9 @@ Package graph + LOC + coupling metrics. Re-run after structural changes.
 ## Hard rules (see CLAUDE.md for full)
 
 - **Do not commit/push** unless the user explicitly requests it.
-- **Use a worktree** for any implementation work: `git worktree add ../mooncake-<slug> -b worktree-<slug>`. Doc-only edits can stay on the current branch.
-- **Claim work** in `~/.mooncake/claims.jsonl` before starting (`claimed` → `in-progress` → `done`/`abandoned`).
-- **Soft caps** (handler LOC > 1500, gocyclo > 35, Step fields > 40) are tracked, not auto-blocked. `mooncake task budget-status` shows current state.
+- **Use a worktree** for any implementation work: `git worktree add ~/worktrees/mooncake/<branch> -b <branch>`, outside the repo. Doc-only edits can stay on the current branch.
+- **Claim work** with `mgit issue claim <n> --state in_progress` before starting (see above) — `unclaim` if you abandon it.
+- **Soft caps** (handler LOC > 1500, gocyclo > 35, Step fields > 42) are tracked, not auto-blocked. `mooncake task budget-status` shows current state.
 
 ## Where things live
 
@@ -90,11 +91,11 @@ Package graph + LOC + coupling metrics. Re-run after structural changes.
 | Planner | `internal/plan/` |
 | Executor | `internal/executor/` |
 | Facts (host introspection) | `internal/facts/` |
-| Components | `internal/components/` + `components/` (the example tree) |
+| Components | `internal/components/` (loader/validator/expander) |
 | CLI entry points | `cmd/` |
-| Generated docs | `docs-next/generated/` (regen via `mooncake task docs-generate`) |
+| Generated docs | `dist/docs/` (regen via `mooncake task docs-generate`) |
 | Generated schema | `internal/config/schema.json` (regen via `mooncake task schema-generate`) |
-| Strategy / vision docs | `docs-working/vision/`, `docs-working/positioning.md` |
+| Strategy / vision docs | `docs-working/vision/` |
 | Backlog: specs, proposals, audit gaps (start here) | moongit issues — `mgit issue list`; full design docs inlined as comments |
 | Architecture report, manual-test findings, code-review findings | git history — `git show HEAD~:docs-working/arch-report/…` / `…/code-review/…` (dropped from the tree 2026-05-30) |
 

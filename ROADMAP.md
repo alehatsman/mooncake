@@ -1,7 +1,11 @@
 # Roadmap
 
-For the complete roadmap and planned features, see:
+The live roadmap is the moongit issue tracker, not a file that goes stale
+next to it. Start at the 1.0.0-pre master plan:
 
-**https://mooncake.alehatsman.com/development/roadmap/**
+**moongit #203** — coordinates every workstream between now and tagging
+`v1.0.0-pre`: one product, a clean tree, an honest surface, no dead code,
+a green gate, a releasable binary.
 
-The documentation site contains the full, up-to-date roadmap with all planned features, milestones, and version history.
+`mgit issue show 203` for the full plan, or `mgit issue list --epics` for
+every open epic.
