@@ -1,31 +1,30 @@
 ---
 type: action
-name: wait.port
-category: network
+name: observe.command
+category: command
 platforms: [linux, darwin, windows, freebsd]
 capabilities:
   dry_run: true
   become: false
   check: false
-  diff: false
-  cost: false
+  diff: true
+  cost: true
   reverse: false
-  permissions: false
+  permissions: true
 ---
 
-# wait.port
+# observe.command
 
-Wait for a TCP port to accept connections
+Run a command and observe its exit code (non-zero is data, not failure)
 
 ## Properties
 
 | Property | Type | Required | Description |
 |----------|------|----------|-------------|
-| `host` | string | No | - |
-| `interval` | string | No | - |
-| `poll_interval` | string | No | - |
-| `port` | integer | **Yes** | - |
+| `cmd` | string | **Yes** | - |
+| `expect_exit` | integer | No | - |
 | `timeout` | string | No | - |
+| `wait` | object | No | - |
 
 ## Platform Support
 

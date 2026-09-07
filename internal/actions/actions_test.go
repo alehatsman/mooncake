@@ -67,6 +67,10 @@ type mockContext struct {
 	log       logger.Logger
 	stepID    string
 	dryRun    bool
+
+	// ctx overrides the background context, so a test can prove that a
+	// cancellable operation (e.g. the observe `wait:` poll loop) aborts.
+	ctx context.Context
 }
 
 func (m *mockContext) Variables() map[string]interface{} {
@@ -125,7 +129,12 @@ func (m *mockContext) Mode() Mode {
 
 func (m *mockContext) Effects() Performer { return testNoopPerformer{mode: m.Mode()} }
 
-func (m *mockContext) Ctx() context.Context { return context.Background() }
+func (m *mockContext) Ctx() context.Context {
+	if m.ctx != nil {
+		return m.ctx
+	}
+	return context.Background()
+}
 
 func (m *mockContext) Privileged() *security.Privileged {
 	return &security.Privileged{

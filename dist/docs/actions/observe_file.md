@@ -1,31 +1,30 @@
 ---
 type: action
-name: wait.file
+name: observe.file
 category: system
 platforms: [linux, darwin, windows, freebsd]
 capabilities:
   dry_run: true
   become: false
   check: false
-  diff: false
-  cost: false
+  diff: true
+  cost: true
   reverse: false
-  permissions: false
+  permissions: true
+  capture_in_plan: true
 ---
 
-# wait.file
+# observe.file
 
-Wait for a file or directory to exist (optionally containing a substring)
+Read whether a path exists (and optionally contains a substring)
 
 ## Properties
 
 | Property | Type | Required | Description |
 |----------|------|----------|-------------|
 | `contains` | string | No | - |
-| `interval` | string | No | - |
 | `path` | string | **Yes** | - |
-| `poll_interval` | string | No | - |
-| `timeout` | string | No | - |
+| `wait` | object | No | - |
 
 ## Platform Support
 

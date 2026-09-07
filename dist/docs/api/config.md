@@ -206,7 +206,9 @@ Config structures are designed to be read\-only after parsing. The executor clon
   - [func (m *ModuleBinding) UnmarshalJSON(data []byte) error](<#func-modulebinding-unmarshaljson>)
   - [func (m *ModuleBinding) UnmarshalYAML(unmarshal func(interface{}) error) error](<#func-modulebinding-unmarshalyaml>)
 - [type ObserveCPU](<#type-observecpu>)
+- [type ObserveCommand](<#type-observecommand>)
 - [type ObserveDisk](<#type-observedisk>)
+- [type ObserveFile](<#type-observefile>)
 - [type ObserveGPU](<#type-observegpu>)
 - [type ObserveHTTP](<#type-observehttp>)
 - [type ObserveLogs](<#type-observelogs>)
@@ -284,10 +286,8 @@ Config structures are designed to be read\-only after parsing. The executor clon
 - [type Unarchive](<#type-unarchive>)
 - [type ValidationError](<#type-validationerror>)
   - [func (e *ValidationError) Error() string](<#func-validationerror-error>)
-- [type WaitCommand](<#type-waitcommand>)
-- [type WaitFile](<#type-waitfile>)
 - [type WaitHTTP](<#type-waithttp>)
-- [type WaitPort](<#type-waitport>)
+- [type WaitSpec](<#type-waitspec>)
 - [type WindowsFirewallRule](<#type-windowsfirewallrule>)
 - [type WindowsHyperVFirewallRule](<#type-windowshypervfirewallrule>)
 - [type WindowsRegistry](<#type-windowsregistry>)
@@ -323,7 +323,7 @@ var TasksSearchPaths = []string{
 }
 ```
 
-## func [ActionFieldIndices](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2364>)
+## func [ActionFieldIndices](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2388>)
 
 ```go
 func ActionFieldIndices() []int
@@ -493,7 +493,7 @@ type ArtifactCapture struct {
 }
 ```
 
-## type [ArtifactValidate](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1860-L1868>)
+## type [ArtifactValidate](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1886-L1894>)
 
 ArtifactValidate validates artifacts against constraints \(change budgets\). Designed for LLM agent loops to enforce guardrails on file modifications.
 
@@ -941,7 +941,7 @@ type FirewallRule struct {
 }
 ```
 
-## type [ForEachField](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2208-L2214>)
+## type [ForEachField](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2232-L2238>)
 
 ForEachField holds the value of a Step's \`for\_each\` keyword. It supports two YAML forms:
 
@@ -965,7 +965,7 @@ type ForEachField struct {
 }
 ```
 
-### func \(ForEachField\) [MarshalJSON](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2241>)
+### func \(ForEachField\) [MarshalJSON](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2265>)
 
 ```go
 func (f ForEachField) MarshalJSON() ([]byte, error)
@@ -973,7 +973,7 @@ func (f ForEachField) MarshalJSON() ([]byte, error)
 
 MarshalJSON ensures Validate's json.Marshal → unmarshal → schema\-check round\-trip emits the scalar/sequence form rather than a struct shape.
 
-### func \(ForEachField\) [MarshalYAML](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2232>)
+### func \(ForEachField\) [MarshalYAML](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2256>)
 
 ```go
 func (f ForEachField) MarshalYAML() (interface{}, error)
@@ -981,7 +981,7 @@ func (f ForEachField) MarshalYAML() (interface{}, error)
 
 MarshalYAML emits whichever form is populated \(scalar or sequence\).
 
-### func \(\*ForEachField\) [UnmarshalJSON](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2249>)
+### func \(\*ForEachField\) [UnmarshalJSON](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2273>)
 
 ```go
 func (f *ForEachField) UnmarshalJSON(data []byte) error
@@ -989,7 +989,7 @@ func (f *ForEachField) UnmarshalJSON(data []byte) error
 
 UnmarshalJSON parses either a scalar \(string\) or sequence \(array\) form.
 
-### func \(\*ForEachField\) [UnmarshalYAML](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2217>)
+### func \(\*ForEachField\) [UnmarshalYAML](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2241>)
 
 ```go
 func (f *ForEachField) UnmarshalYAML(unmarshal func(interface{}) error) error
@@ -1066,7 +1066,7 @@ type GitCredentials struct {
 }
 ```
 
-## type [HTTPAuth](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1816-L1823>)
+## type [HTTPAuth](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1863-L1870>)
 
 HTTPAuth is the one\-of credential block for HTTPRequest. Set at most one of Bearer/Basic/Header.
 
@@ -1081,7 +1081,7 @@ type HTTPAuth struct {
 }
 ```
 
-## type [HTTPAuthHeader](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1832-L1835>)
+## type [HTTPAuthHeader](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1879-L1882>)
 
 HTTPAuthHeader is an arbitrary auth header.
 
@@ -1092,7 +1092,7 @@ type HTTPAuthHeader struct {
 }
 ```
 
-## type [HTTPBasicAuth](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1826-L1829>)
+## type [HTTPBasicAuth](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1873-L1876>)
 
 HTTPBasicAuth is the user/pass pair for HTTPAuth.Basic.
 
@@ -1103,7 +1103,7 @@ type HTTPBasicAuth struct {
 }
 ```
 
-## type [HTTPRequest](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1654-L1812>)
+## type [HTTPRequest](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1701-L1859>)
 
 HTTPRequest is the proposal\-16 first\-class HTTP action. Unlike \`file.download\` \(URL→file\+checksum\), \`observe.http\` \(single\-shot probe\), and \`wait.http\` \(poll until ready\), HTTPRequest is the general "call an endpoint, capture the response as a fact" primitive — the action \`notify\` and \`llm\` will sit on top of.
 
@@ -1329,7 +1329,7 @@ func (lm *LocationMap) Set(path string, line, column int)
 
 Set stores a position for a given JSON pointer path
 
-## type [LoopContext](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2337-L2345>)
+## type [LoopContext](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2361-L2369>)
 
 LoopContext captures loop iteration metadata
 
@@ -1404,7 +1404,7 @@ func (m *ModuleBinding) UnmarshalYAML(unmarshal func(interface{}) error) error
 
 UnmarshalYAML accepts both the bare\-string form \(\`tq: ".../@v"\`\) and the object form \(\`tq: \{ source: ..., props: \{...\} \}\`\).
 
-## type [ObserveCPU](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1538>)
+## type [ObserveCPU](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1571>)
 
 ObserveCPU is the spec\-60 single\-shot read of CPU utilization \+ load averages. Pulls from the shared internal/metrics collector.
 
@@ -1412,7 +1412,24 @@ ObserveCPU is the spec\-60 single\-shot read of CPU utilization \+ load averages
 type ObserveCPU struct{}
 ```
 
-## type [ObserveDisk](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1548-L1550>)
+## type [ObserveCommand](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1612-L1619>)
+
+ObserveCommand runs a command and reports its exit status as an observation. Found means "exited with ExpectExit" \(default 0\).
+
+A non\-zero exit does NOT fail the step: the exit status is the data being observed, and failing on it would make the probe unusable for "is this service healthy yet?". Only a \`wait:\` that times out fails. Successor to wait.command.
+
+```go
+type ObserveCommand struct {
+    Cmd        string `yaml:"cmd" json:"cmd"`                           // Shell command (required)
+    ExpectExit int    `yaml:"expect_exit" json:"expect_exit,omitempty"` // Exit code meaning "found" (default: 0)
+    Timeout    string `yaml:"timeout" json:"timeout,omitempty"`         // Per-attempt timeout (default: "30s")
+
+    // Wait polls until the command exits as expected instead of running once.
+    Wait *WaitSpec `yaml:"wait,omitempty" json:"wait,omitempty"`
+}
+```
+
+## type [ObserveDisk](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1581-L1583>)
 
 ObserveDisk is the spec\-60 single\-shot read of a filesystem path. Path defaults to "/" if unset. ReadOnly and inode counts are best\-effort \(platform\-dependent\).
 
@@ -1422,7 +1439,21 @@ type ObserveDisk struct {
 }
 ```
 
-## type [ObserveGPU](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1556-L1558>)
+## type [ObserveFile](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1597-L1603>)
+
+ObserveFile reads whether a filesystem path exists, and optionally whether its contents contain a substring. Found means "exists" — and, where Contains is set, "exists and matches". Successor to wait.file: add \`wait:\` to poll instead of reading once.
+
+```go
+type ObserveFile struct {
+    Path     string `yaml:"path" json:"path" plan:"path"`       // File or directory path (required)
+    Contains string `yaml:"contains" json:"contains,omitempty"` // Optional substring required in contents
+
+    // Wait polls until the file appears (or disappears) instead of reading once.
+    Wait *WaitSpec `yaml:"wait,omitempty" json:"wait,omitempty"`
+}
+```
+
+## type [ObserveGPU](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1589-L1591>)
 
 ObserveGPU is the spec\-62 single\-shot read of GPU utilization \+ memory. Wraps the shared internal/metrics collector so /v1/metrics and observe.gpu share one nvidia\-smi/powermetrics sample. Index selects one GPU; unset returns all detected with an aggregate view.
 
@@ -1432,7 +1463,7 @@ type ObserveGPU struct {
 }
 ```
 
-## type [ObserveHTTP](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1511-L1526>)
+## type [ObserveHTTP](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1540-L1559>)
 
 ObserveHTTP is the spec\-59 single\-shot HTTP GET observation. Network\-flagged via Permissions\{Network:true\}. Body sample is capped at 2048 bytes; headers are filtered to CaptureHeaders.
 
@@ -1452,10 +1483,14 @@ type ObserveHTTP struct {
     // (canonical use: pair with `expect_status: 301` to verify an
     // HTTP→HTTPS redirect is still in place). Issue #18.
     FollowRedirects *int `yaml:"follow_redirects,omitempty" json:"follow_redirects,omitempty"`
+
+    // Wait polls until the endpoint responds as expected (or stops), instead
+    // of reading once.
+    Wait *WaitSpec `yaml:"wait,omitempty" json:"wait,omitempty"`
 }
 ```
 
-## type [ObserveLogs](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1565-L1586>)
+## type [ObserveLogs](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1626-L1647>)
 
 ObserveLogs is the spec\-61 single\-shot read of a log source within a time / line window. Exactly one of Path / JournalUnit / Container must be set. Patterns are regexes evaluated line\-by\-line; per\-pattern match counts \+ sample lines \(capped\) are returned in the typed LogObservation.
 
@@ -1484,7 +1519,7 @@ type ObserveLogs struct {
 }
 ```
 
-## type [ObserveMemory](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1543>)
+## type [ObserveMemory](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1576>)
 
 ObserveMemory is the spec\-60 single\-shot read of RAM / swap state. Total \+ Used \+ Free \+ Available \+ Swap fields are read directly from /proc/meminfo on Linux, sysctl on macOS.
 
@@ -1492,9 +1527,9 @@ ObserveMemory is the spec\-60 single\-shot read of RAM / swap state. Total \+ Us
 type ObserveMemory struct{}
 ```
 
-## type [ObservePort](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1493-L1498>)
+## type [ObservePort](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1519-L1527>)
 
-ObservePort is the spec\-59 single\-shot read of TCP/UDP port state. The polling cousin is wait.port; observe.port returns the current state once and lets the next step branch on it via spec\-37 \`as:\` capture. Read\-only by contract — Changed=false, empty Diff, nil Reverse, Cost\{Risk:1, Reversible:true\}.
+ObservePort is the spec\-59 read of TCP/UDP port state. Returns the current state and lets the next step branch on it via spec\-37 \`as:\` capture; add \`wait:\` to poll until the port opens or closes. Read\-only by contract — Changed=false, noop Diff, no Reverse, Cost\{Risk:1, Reversible:false\}.
 
 ```go
 type ObservePort struct {
@@ -1502,10 +1537,13 @@ type ObservePort struct {
     Port     int    `yaml:"port" json:"port"`                   // Port (required)
     Protocol string `yaml:"protocol" json:"protocol,omitempty"` // "tcp" (default) | "udp"
     Timeout  string `yaml:"timeout" json:"timeout,omitempty"`   // Dial timeout (default: "2s")
+
+    // Wait polls until the port is open (or closed) instead of reading once.
+    Wait *WaitSpec `yaml:"wait,omitempty" json:"wait,omitempty"`
 }
 ```
 
-## type [ObserveProcess](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1503-L1506>)
+## type [ObserveProcess](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1532-L1535>)
 
 ObserveProcess is the spec\-59 single\-shot read of process state. Selector is either Name \(exact match against process basename\) or Pattern \(regex against full argv\). At least one must be set.
 
@@ -1516,7 +1554,7 @@ type ObserveProcess struct {
 }
 ```
 
-## type [ObserveService](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1531-L1534>)
+## type [ObserveService](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1564-L1567>)
 
 ObserveService is the spec\-59 single\-shot read of init\-system service state. systemd on Linux, launchd on macOS, sysv fallback elsewhere. Manager defaults to "auto" \(detect from facts\).
 
@@ -1527,7 +1565,7 @@ type ObserveService struct {
 }
 ```
 
-## type [Origin](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2329-L2334>)
+## type [Origin](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2353-L2358>)
 
 Origin tracks source location and include chain for plan traceability
 
@@ -1870,7 +1908,7 @@ type PrintAction struct {
 }
 ```
 
-### func \(\*PrintAction\) [UnmarshalYAML](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1872>)
+### func \(\*PrintAction\) [UnmarshalYAML](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1898>)
 
 ```go
 func (p *PrintAction) UnmarshalYAML(unmarshal func(interface{}) error) error
@@ -2023,7 +2061,7 @@ type RepoTree struct {
 }
 ```
 
-## type [RetryPolicy](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2274-L2280>)
+## type [RetryPolicy](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2298-L2304>)
 
 RetryPolicy controls per\-step retry behavior \(spec\-21\). Replaces the legacy flat Retries \+ RetryDelay fields with a single structured block; future\-compat for backoff strategies.
 
@@ -2204,7 +2242,7 @@ func (s *ShellAction) UnmarshalYAML(unmarshal func(interface{}) error) error
 
 UnmarshalYAML implements custom YAML unmarshaling to support both string and object forms. Supports: shell: "command" AND shell: \{ cmd: "command", interpreter: "bash", ... \}
 
-## type [Step](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1915-L2194>)
+## type [Step](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1941-L2218>)
 
 Step represents a single configuration step that can perform various actions.
 
@@ -2309,16 +2347,14 @@ type Step struct {
     ObservePort               *ObservePort               `yaml:"observe.port,omitempty"      json:"observe.port,omitempty"      action:"observe.port"`
     ObserveProcess            *ObserveProcess            `yaml:"observe.process,omitempty"   json:"observe.process,omitempty"   action:"observe.process"`
     ObserveHTTP               *ObserveHTTP               `yaml:"observe.http,omitempty"      json:"observe.http,omitempty"      action:"observe.http"`
+    ObserveFile               *ObserveFile               `yaml:"observe.file,omitempty"      json:"observe.file,omitempty"      action:"observe.file"`
+    ObserveCommand            *ObserveCommand            `yaml:"observe.command,omitempty"   json:"observe.command,omitempty"   action:"observe.command"`
     ObserveService            *ObserveService            `yaml:"observe.service,omitempty"   json:"observe.service,omitempty"   action:"observe.service"`
     ObserveCPU                *ObserveCPU                `yaml:"observe.cpu,omitempty"       json:"observe.cpu,omitempty"       action:"observe.cpu"`
     ObserveMemory             *ObserveMemory             `yaml:"observe.memory,omitempty"    json:"observe.memory,omitempty"    action:"observe.memory"`
     ObserveDisk               *ObserveDisk               `yaml:"observe.disk,omitempty"      json:"observe.disk,omitempty"      action:"observe.disk"`
     ObserveGPU                *ObserveGPU                `yaml:"observe.gpu,omitempty"       json:"observe.gpu,omitempty"       action:"observe.gpu"`
     ObserveLogs               *ObserveLogs               `yaml:"observe.logs,omitempty"      json:"observe.logs,omitempty"      action:"observe.logs"`
-    WaitPort                  *WaitPort                  `yaml:"wait.port,omitempty"         json:"wait.port,omitempty"         action:"wait.port"`
-    WaitHTTP                  *WaitHTTP                  `yaml:"wait.http,omitempty"         json:"wait.http,omitempty"         action:"wait.http"`
-    WaitFile                  *WaitFile                  `yaml:"wait.file,omitempty"         json:"wait.file,omitempty"         action:"wait.file"`
-    WaitCommand               *WaitCommand               `yaml:"wait.command,omitempty"      json:"wait.command,omitempty"      action:"wait.command"`
     HTTPRequest               *HTTPRequest               `yaml:"http.request,omitempty"      json:"http.request,omitempty"      action:"http.request"`
     Log                       *PrintAction               `yaml:"log,omitempty"               json:"log,omitempty"               action:"log"`
     Use                       string                     `yaml:"use,omitempty"               json:"use,omitempty"               action:"use"`
@@ -2495,7 +2531,7 @@ type Step struct {
 }
 ```
 
-### func \(\*Step\) [Clone](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2492>)
+### func \(\*Step\) [Clone](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2516>)
 
 ```go
 func (s *Step) Clone() *Step
@@ -2503,7 +2539,7 @@ func (s *Step) Clone() *Step
 
 Clone creates a shallow copy of the step.
 
-### func \(\*Step\) [DetermineActionType](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2401>)
+### func \(\*Step\) [DetermineActionType](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2425>)
 
 ```go
 func (s *Step) DetermineActionType() string
@@ -2511,7 +2547,7 @@ func (s *Step) DetermineActionType() string
 
 DetermineActionType returns the action type for this step based on which action field is populated. Returned strings are the modern dot\-namespaced YAML keys \(spec\-21\).
 
-### func \(\*Step\) [RetryAttempts](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2284>)
+### func \(\*Step\) [RetryAttempts](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2308>)
 
 ```go
 func (s *Step) RetryAttempts() int
@@ -2519,7 +2555,7 @@ func (s *Step) RetryAttempts() int
 
 RetryAttempts returns the configured retry\-attempt count, or 0 if no retry policy is set. Helper for the post\-spec\-21 Retry struct.
 
-### func \(\*Step\) [RetryBackoffStrategy](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2305>)
+### func \(\*Step\) [RetryBackoffStrategy](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2329>)
 
 ```go
 func (s *Step) RetryBackoffStrategy() string
@@ -2527,7 +2563,7 @@ func (s *Step) RetryBackoffStrategy() string
 
 RetryBackoffStrategy returns the configured backoff strategy, or "fixed" \(the default\) when unset. The Retry.Backoff field was declared in the schema but never read — \`linear\` and \`exponential\` were silently ignored and every retry slept for the bare delay, defeating the point of backoff for external\-API integrations.
 
-### func \(\*Step\) [RetryDelayDuration](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2293>)
+### func \(\*Step\) [RetryDelayDuration](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2317>)
 
 ```go
 func (s *Step) RetryDelayDuration() string
@@ -2535,7 +2571,7 @@ func (s *Step) RetryDelayDuration() string
 
 RetryDelayDuration returns the configured retry delay string, or "" if no retry policy is set. Helper for the post\-spec\-21 Retry struct.
 
-### func \(\*Step\) [ShouldBecome](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2318>)
+### func \(\*Step\) [ShouldBecome](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2342>)
 
 ```go
 func (s *Step) ShouldBecome() bool
@@ -2543,7 +2579,7 @@ func (s *Step) ShouldBecome() bool
 
 ShouldBecome reports whether the step requests privilege escalation. True iff AsUser is non\-empty \(spec\-21 collapsed become/become\_user\) AND the current process is not already running as the target user. When the current euid is 0 and AsUser targets root \("root" or "0"\), no escalation is needed — short\-circuits sudo invocation so components work in minimal containers \(ubuntu:24.04, alpine:3.21\) that don't ship sudo.
 
-### func \(\*Step\) [Validate](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2437>)
+### func \(\*Step\) [Validate](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2461>)
 
 ```go
 func (s *Step) Validate() error
@@ -2551,7 +2587,7 @@ func (s *Step) Validate() error
 
 Validate checks that the step configuration is valid.
 
-### func \(\*Step\) [ValidateHasAction](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2429>)
+### func \(\*Step\) [ValidateHasAction](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2453>)
 
 ```go
 func (s *Step) ValidateHasAction() error
@@ -2559,7 +2595,7 @@ func (s *Step) ValidateHasAction() error
 
 ValidateHasAction checks that the step has at least one action defined.
 
-### func \(\*Step\) [ValidateOneAction](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2421>)
+### func \(\*Step\) [ValidateOneAction](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L2445>)
 
 ```go
 func (s *Step) ValidateOneAction() error
@@ -2773,37 +2809,7 @@ func (e *ValidationError) Error() string
 
 Error implements the error interface
 
-## type [WaitCommand](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1849-L1856>)
-
-WaitCommand waits for a shell command to exit with the expected code.
-
-```go
-type WaitCommand struct {
-    Cmd          string `yaml:"cmd" json:"cmd"`                               // Shell command (required)
-    ExpectExit   int    `yaml:"expect_exit" json:"expect_exit,omitempty"`     // Expected exit code (default: 0)
-    Timeout      string `yaml:"timeout" json:"timeout,omitempty"`             // Total timeout duration (default: "60s")
-    PollInterval string `yaml:"poll_interval" json:"poll_interval,omitempty"` // Time between attempts (default: "1s")
-    // Interval is an alias for PollInterval (MT-42). See WaitPort.
-    Interval string `yaml:"interval,omitempty" json:"interval,omitempty"`
-}
-```
-
-## type [WaitFile](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1839-L1846>)
-
-WaitFile waits for a filesystem path to exist, optionally containing a substring in its contents.
-
-```go
-type WaitFile struct {
-    Path         string `yaml:"path" json:"path" plan:"path"`                 // File or directory path (required)
-    Contains     string `yaml:"contains" json:"contains,omitempty"`           // Optional substring required in file contents
-    Timeout      string `yaml:"timeout" json:"timeout,omitempty"`             // Total timeout duration (default: "60s")
-    PollInterval string `yaml:"poll_interval" json:"poll_interval,omitempty"` // Time between checks (default: "1s")
-    // Interval is an alias for PollInterval (MT-42). See WaitPort.
-    Interval string `yaml:"interval,omitempty" json:"interval,omitempty"`
-}
-```
-
-## type [WaitHTTP](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1604-L1629>)
+## type [WaitHTTP](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1651-L1676>)
 
 WaitHTTP waits for an HTTP endpoint to return one of the accepted status codes, optionally with a substring match on the body.
 
@@ -2836,21 +2842,32 @@ type WaitHTTP struct {
 }
 ```
 
-## type [WaitPort](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1590-L1600>)
+## type [WaitSpec](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1500-L1513>)
 
-WaitPort waits for a TCP port to accept connections. Useful for orchestrating service start → port open → next step.
+WaitSpec is the \`wait:\` modifier shared by every observe.\* action whose Found flag is meaningful. It turns a single\-shot read into "read until", replacing the retired wait.\* action family — those were a poll loop wrapped around a probe observe.\* already implemented, with their own duration parsing and their own subtly different defaults.
+
+```
+- observe.port:
+  port: 5432
+  wait: { for: 30s, until: open }
+```
+
+A wait whose budget elapses without the condition holding FAILS the step. That is what makes it an orchestration primitive rather than a slow read.
 
 ```go
-type WaitPort struct {
-    Host         string `yaml:"host" json:"host,omitempty"`                   // Host to dial (default: "localhost")
-    Port         int    `yaml:"port" json:"port"`                             // TCP port (required)
-    Timeout      string `yaml:"timeout" json:"timeout,omitempty"`             // Total timeout duration (default: "60s")
-    PollInterval string `yaml:"poll_interval" json:"poll_interval,omitempty"` // Time between dial attempts (default: "1s")
-    // Interval is an alias for PollInterval (MT-42). Authors instinctively
-    // write `interval:`; without this the field is silently dropped and
-    // the default 1s is used. Handler precedence: PollInterval wins if
-    // both are set.
-    Interval string `yaml:"interval,omitempty" json:"interval,omitempty"`
+type WaitSpec struct {
+    // For is the total budget, e.g. "30s". Default "60s".
+    For string `yaml:"for" json:"for,omitempty"`
+
+    // Until is the condition to poll for. "found" (default) waits for the
+    // probe to see the target; "gone" waits for it to disappear. Synonyms
+    // that read better per probe are accepted — open/up/ready/present/running
+    // and closed/down/stopped/absent — and are exactly synonyms.
+    Until string `yaml:"until" json:"until,omitempty"`
+
+    // Interval is the gap between attempts. Default "1s", floored at 100ms so
+    // a typo cannot turn a wait into a busy loop.
+    Interval string `yaml:"interval" json:"interval,omitempty"`
 }
 ```
 

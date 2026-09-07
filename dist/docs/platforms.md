@@ -18,8 +18,10 @@
 | git.config | ✓ | ✓ | ✓ | ✓ |
 | http.request | ✓ | ✓ | ✓ | ✓ |
 | log | ✓ | ✓ | ✓ | ✓ |
+| observe.command | ✓ | ✓ | ✓ | ✓ |
 | observe.cpu | ✓ | ✓ | ✓ | ✓ |
 | observe.disk | ✓ | ✓ | ✓ | ✓ |
+| observe.file | ✓ | ✓ | ✓ | ✓ |
 | observe.gpu | ✓ | ✓ | ✓ | ✓ |
 | observe.http | ✓ | ✓ | ✓ | ✓ |
 | observe.logs | ✓ | ✓ | ✓ | ✓ |
@@ -60,10 +62,6 @@
 | use | ✓ | ✓ | ✓ | ✓ |
 | vars | ✓ | ✓ | ✓ | ✓ |
 | vars.load | ✓ | ✓ | ✓ | ✓ |
-| wait.command | ✓ | ✓ | ✓ | ✓ |
-| wait.file | ✓ | ✓ | ✓ | ✓ |
-| wait.http | ✓ | ✓ | ✓ | ✓ |
-| wait.port | ✓ | ✓ | ✓ | ✓ |
 | windows.firewall_rule | ✗ | ✗ | ✓ | ✗ |
 | windows.hyperv_firewall_rule | ✗ | ✗ | ✓ | ✗ |
 | windows.registry | ✗ | ✗ | ✓ | ✗ |

@@ -741,10 +741,8 @@ var actionStructByName = map[string]any{
 	"git.clone":         &config.GitClone{},
 	"git.checkout":      &config.GitCheckout{},
 	"git.config":        &config.GitConfig{},
-	"wait.port":         &config.WaitPort{},
-	"wait.http":         &config.WaitHTTP{},
-	"wait.file":         &config.WaitFile{},
-	"wait.command":      &config.WaitCommand{},
+	"observe.file":      &config.ObserveFile{},
+	"observe.command":   &config.ObserveCommand{},
 	"read.json":         &config.ReadFile{},
 	"read.yaml":         &config.ReadFile{},
 

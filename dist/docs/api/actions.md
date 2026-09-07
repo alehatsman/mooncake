@@ -133,6 +133,8 @@ func (h *Handler) Metadata() actions.ActionMetadata {
 - [func PredicateFor(reg *Registry) config.IsCustomAction](<#func-predicatefor>)
 - [func Register(handler Handler)](<#func-register>)
 - [func RegisterBuiltins(dst *Registry) error](<#func-registerbuiltins>)
+- [func ValidateWait(actionName string, w *config.WaitSpec) error](<#func-validatewait>)
+- [func WaitCondition(until string) (bool, error)](<#func-waitcondition>)
 - [type Action](<#type-action>)
 - [type ActionCategory](<#type-actioncategory>)
 - [type ActionDefinition](<#type-actiondefinition>)
@@ -177,6 +179,7 @@ func (h *Handler) Metadata() actions.ActionMetadata {
   - [func (m Mode) String() string](<#func-mode-string>)
 - [type MountDiff](<#type-mountdiff>)
 - [type ObserveResult](<#type-observeresult>)
+  - [func ObserveWait(ctx Context, actionName, target string, w *config.WaitSpec, probe func() ObserveResult) (ObserveResult, error)](<#func-observewait>)
   - [func PlanDeferred(emptyValue any) ObserveResult](<#func-plandeferred>)
 - [type Operation](<#type-operation>)
 - [type PackageDiff](<#type-packagediff>)
@@ -226,9 +229,28 @@ func (h *Handler) Metadata() actions.ActionMetadata {
 - [type TransactionDiff](<#type-transactiondiff>)
 - [type TryDiff](<#type-trydiff>)
 - [type UserDiff](<#type-userdiff>)
+- [type WaitTimeoutError](<#type-waittimeouterror>)
+  - [func (e *WaitTimeoutError) Error() string](<#func-waittimeouterror-error>)
 
 
 ## Constants
+
+Defaults and bounds for the observe \`wait:\` modifier.
+
+```go
+const (
+    // DefaultWaitFor is the total budget when `for:` is unset. Matches what
+    // the retired wait.* actions used, so migrated steps behave the same.
+    DefaultWaitFor = 60 * time.Second
+
+    // DefaultWaitInterval is the gap between attempts when `interval:` is unset.
+    DefaultWaitInterval = time.Second
+
+    // MinWaitInterval floors the poll gap. A typo like `interval: 1ms` would
+    // otherwise turn a wait into a busy loop hammering a remote endpoint.
+    MinWaitInterval = 100 * time.Millisecond
+)
+```
 
 ObserveTargetHost is the conventional Target value for system\-wide observations \(cpu, memory, gpu\) that have no specific file or URL to point at — they observe the host itself.
 
@@ -393,6 +415,22 @@ _ = reg.Register(myCustomHandler)
 ```
 
 A built\-in whose name is already present in dst is skipped \(so a consumer may pre\-register an override before calling this\). Returns the first non\-skip registration error, if any.
+
+## func [ValidateWait](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/observe_wait.go#L71>)
+
+```go
+func ValidateWait(actionName string, w *config.WaitSpec) error
+```
+
+ValidateWait checks a \`wait:\` block without running it. Called from each handler's Validate so a bad condition or duration fails at plan time rather than sixty seconds into an apply.
+
+## func [WaitCondition](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/observe_wait.go#L49>)
+
+```go
+func WaitCondition(until string) (bool, error)
+```
+
+WaitCondition resolves an \`until:\` value to the Found state being waited for. An empty value means the default, \`found\`.
 
 ## type [Action](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/performer.go#L7>)
 
@@ -1260,6 +1298,18 @@ type ObserveResult struct {
 }
 ```
 
+### func [ObserveWait](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/observe_wait.go#L145-L146>)
+
+```go
+func ObserveWait(ctx Context, actionName, target string, w *config.WaitSpec, probe func() ObserveResult) (ObserveResult, error)
+```
+
+ObserveWait polls probe until the wait condition holds or the budget elapses.
+
+It always returns the LAST observation, satisfied or not, so an \`as:\` capture downstream of a timed\-out wait still sees real data rather than a zero value. The error is non\-nil exactly when the condition never held; the caller decides whether that fails the step \(it does — see the spec\).
+
+The context is checked between attempts, so SIGINT during a five\-minute wait aborts promptly instead of running to the budget.
+
 ### func [PlanDeferred](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/observe.go#L87>)
 
 ```go
@@ -2087,6 +2137,27 @@ type UserDiff struct {
     // System mirrors the system-account flag.
     System bool `json:"system,omitempty"`
 }
+```
+
+## type [WaitTimeoutError](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/observe_wait.go#L114-L121>)
+
+WaitTimeoutError is returned when a \`wait:\` budget elapses without the condition holding. Typed so callers can distinguish "the thing never showed up" from "the probe itself broke".
+
+```go
+type WaitTimeoutError struct {
+    Action    string
+    Target    string
+    Until     string
+    Budget    time.Duration
+    Attempts  int
+    LastError string
+}
+```
+
+### func \(\*WaitTimeoutError\) [Error](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/observe_wait.go#L123>)
+
+```go
+func (e *WaitTimeoutError) Error() string
 ```
 
 

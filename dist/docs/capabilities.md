@@ -18,8 +18,10 @@
 | git.config | system | Yes | No | Yes |
 | http.request | network | Yes | No | Yes |
 | log | output | Yes | No | No |
+| observe.command | command | Yes | No | No |
 | observe.cpu | system | Yes | No | No |
 | observe.disk | system | Yes | No | No |
+| observe.file | system | Yes | No | No |
 | observe.gpu | system | Yes | No | No |
 | observe.http | network | Yes | No | No |
 | observe.logs | system | Yes | No | No |
@@ -60,10 +62,6 @@
 | use | system | Yes | No | No |
 | vars | data | Yes | No | No |
 | vars.load | data | Yes | No | No |
-| wait.command | command | Yes | No | No |
-| wait.file | system | Yes | No | No |
-| wait.http | network | Yes | No | No |
-| wait.port | network | Yes | No | No |
 | windows.firewall_rule | system | Yes | No | Yes |
 | windows.hyperv_firewall_rule | system | Yes | No | Yes |
 | windows.registry | system | Yes | No | Yes |

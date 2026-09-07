@@ -1254,6 +1254,47 @@
         "print.message"
       ]
     },
+    "observe.command": {
+      "type": "object",
+      "description": "Run a command and observe its exit code (non-zero is data, not failure)",
+      "properties": {
+        "cmd": {
+          "type": "string",
+          "minLength": 1
+        },
+        "expect_exit": {
+          "type": "integer"
+        },
+        "timeout": {
+          "type": "string",
+          "pattern": "^[0-9]+(ns|us|µs|ms|s|m|h)$"
+        },
+        "wait": {
+          "type": "object",
+          "properties": {
+            "for": {
+              "type": "string"
+            },
+            "interval": {
+              "type": "string"
+            },
+            "until": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "cmd"
+      ],
+      "additionalProperties": false,
+      "x-implements-diff": true,
+      "x-implements-cost": true,
+      "x-implements-permissions": true,
+      "x-category": "command",
+      "x-supports-dry-run": true
+    },
     "observe.cpu": {
       "type": "object",
       "description": "Single-shot read of CPU utilization + load averages",
@@ -1272,6 +1313,43 @@
           "type": "string"
         }
       },
+      "additionalProperties": false,
+      "x-implements-diff": true,
+      "x-implements-cost": true,
+      "x-implements-permissions": true,
+      "x-category": "system",
+      "x-supports-dry-run": true
+    },
+    "observe.file": {
+      "type": "object",
+      "description": "Read whether a path exists (and optionally contains a substring)",
+      "properties": {
+        "contains": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "wait": {
+          "type": "object",
+          "properties": {
+            "for": {
+              "type": "string"
+            },
+            "interval": {
+              "type": "string"
+            },
+            "until": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "path"
+      ],
       "additionalProperties": false,
       "x-implements-diff": true,
       "x-implements-cost": true,
@@ -1323,6 +1401,21 @@
         "url": {
           "type": "string",
           "minLength": 1
+        },
+        "wait": {
+          "type": "object",
+          "properties": {
+            "for": {
+              "type": "string"
+            },
+            "interval": {
+              "type": "string"
+            },
+            "until": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
         }
       },
       "required": [
@@ -1403,6 +1496,21 @@
         "timeout": {
           "type": "string",
           "pattern": "^[0-9]+(ns|us|µs|ms|s|m|h)$"
+        },
+        "wait": {
+          "type": "object",
+          "properties": {
+            "for": {
+              "type": "string"
+            },
+            "interval": {
+              "type": "string"
+            },
+            "until": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
         }
       },
       "required": [
@@ -2853,6 +2961,10 @@
           "type": "string",
           "description": "Name of the step (universal)"
         },
+        "observe.command": {
+          "description": "Run a command and observe its exit code (non-zero is data, not failure)",
+          "$ref": "#/definitions/observe.command"
+        },
         "observe.cpu": {
           "description": "Single-shot read of CPU utilization + load averages",
           "$ref": "#/definitions/observe.cpu"
@@ -2860,6 +2972,10 @@
         "observe.disk": {
           "description": "Single-shot read of filesystem space / inode usage for a path",
           "$ref": "#/definitions/observe.disk"
+        },
+        "observe.file": {
+          "description": "Read whether a path exists (and optionally contains a substring)",
+          "$ref": "#/definitions/observe.file"
         },
         "observe.gpu": {
           "description": "Single-shot read of GPU utilization + memory (NVIDIA/Apple)",
@@ -3111,22 +3227,6 @@
           "description": "Load variables from YAML files",
           "$ref": "#/definitions/vars.load"
         },
-        "wait.command": {
-          "description": "Wait for a shell command to exit with the expected code",
-          "$ref": "#/definitions/wait.command"
-        },
-        "wait.file": {
-          "description": "Wait for a file or directory to exist (optionally containing a substring)",
-          "$ref": "#/definitions/wait.file"
-        },
-        "wait.http": {
-          "description": "Wait for an HTTP endpoint to return an accepted status",
-          "$ref": "#/definitions/wait.http"
-        },
-        "wait.port": {
-          "description": "Wait for a TCP port to accept connections",
-          "$ref": "#/definitions/wait.port"
-        },
         "when": {
           "type": "string",
           "description": "Conditional expression for step execution (universal)"
@@ -3252,12 +3352,22 @@
               },
               {
                 "required": [
+                  "observe.command"
+                ]
+              },
+              {
+                "required": [
                   "observe.cpu"
                 ]
               },
               {
                 "required": [
                   "observe.disk"
+                ]
+              },
+              {
+                "required": [
+                  "observe.file"
                 ]
               },
               {
@@ -3468,26 +3578,6 @@
               {
                 "required": [
                   "vars.load"
-                ]
-              },
-              {
-                "required": [
-                  "wait.command"
-                ]
-              },
-              {
-                "required": [
-                  "wait.file"
-                ]
-              },
-              {
-                "required": [
-                  "wait.http"
-                ]
-              },
-              {
-                "required": [
-                  "wait.port"
                 ]
               },
               {
@@ -3611,12 +3701,22 @@
               },
               {
                 "required": [
+                  "observe.command"
+                ]
+              },
+              {
+                "required": [
                   "observe.cpu"
                 ]
               },
               {
                 "required": [
                   "observe.disk"
+                ]
+              },
+              {
+                "required": [
+                  "observe.file"
                 ]
               },
               {
@@ -3827,26 +3927,6 @@
               {
                 "required": [
                   "vars.load"
-                ]
-              },
-              {
-                "required": [
-                  "wait.command"
-                ]
-              },
-              {
-                "required": [
-                  "wait.file"
-                ]
-              },
-              {
-                "required": [
-                  "wait.http"
-                ]
-              },
-              {
-                "required": [
-                  "wait.port"
                 ]
               },
               {
@@ -3970,12 +4050,22 @@
               },
               {
                 "required": [
+                  "observe.command"
+                ]
+              },
+              {
+                "required": [
                   "observe.cpu"
                 ]
               },
               {
                 "required": [
                   "observe.disk"
+                ]
+              },
+              {
+                "required": [
+                  "observe.file"
                 ]
               },
               {
@@ -4186,26 +4276,6 @@
               {
                 "required": [
                   "vars.load"
-                ]
-              },
-              {
-                "required": [
-                  "wait.command"
-                ]
-              },
-              {
-                "required": [
-                  "wait.file"
-                ]
-              },
-              {
-                "required": [
-                  "wait.http"
-                ]
-              },
-              {
-                "required": [
-                  "wait.port"
                 ]
               },
               {
@@ -4329,12 +4399,22 @@
               },
               {
                 "required": [
+                  "observe.command"
+                ]
+              },
+              {
+                "required": [
                   "observe.cpu"
                 ]
               },
               {
                 "required": [
                   "observe.disk"
+                ]
+              },
+              {
+                "required": [
+                  "observe.file"
                 ]
               },
               {
@@ -4545,26 +4625,6 @@
               {
                 "required": [
                   "vars.load"
-                ]
-              },
-              {
-                "required": [
-                  "wait.command"
-                ]
-              },
-              {
-                "required": [
-                  "wait.file"
-                ]
-              },
-              {
-                "required": [
-                  "wait.http"
-                ]
-              },
-              {
-                "required": [
-                  "wait.port"
                 ]
               },
               {
@@ -4688,12 +4748,22 @@
               },
               {
                 "required": [
+                  "observe.command"
+                ]
+              },
+              {
+                "required": [
                   "observe.cpu"
                 ]
               },
               {
                 "required": [
                   "observe.disk"
+                ]
+              },
+              {
+                "required": [
+                  "observe.file"
                 ]
               },
               {
@@ -4904,26 +4974,6 @@
               {
                 "required": [
                   "vars.load"
-                ]
-              },
-              {
-                "required": [
-                  "wait.command"
-                ]
-              },
-              {
-                "required": [
-                  "wait.file"
-                ]
-              },
-              {
-                "required": [
-                  "wait.http"
-                ]
-              },
-              {
-                "required": [
-                  "wait.port"
                 ]
               },
               {
@@ -5047,12 +5097,22 @@
               },
               {
                 "required": [
+                  "observe.command"
+                ]
+              },
+              {
+                "required": [
                   "observe.cpu"
                 ]
               },
               {
                 "required": [
                   "observe.disk"
+                ]
+              },
+              {
+                "required": [
+                  "observe.file"
                 ]
               },
               {
@@ -5263,26 +5323,6 @@
               {
                 "required": [
                   "vars.load"
-                ]
-              },
-              {
-                "required": [
-                  "wait.command"
-                ]
-              },
-              {
-                "required": [
-                  "wait.file"
-                ]
-              },
-              {
-                "required": [
-                  "wait.http"
-                ]
-              },
-              {
-                "required": [
-                  "wait.port"
                 ]
               },
               {
@@ -5406,12 +5446,22 @@
               },
               {
                 "required": [
+                  "observe.command"
+                ]
+              },
+              {
+                "required": [
                   "observe.cpu"
                 ]
               },
               {
                 "required": [
                   "observe.disk"
+                ]
+              },
+              {
+                "required": [
+                  "observe.file"
                 ]
               },
               {
@@ -5622,26 +5672,6 @@
               {
                 "required": [
                   "vars.load"
-                ]
-              },
-              {
-                "required": [
-                  "wait.command"
-                ]
-              },
-              {
-                "required": [
-                  "wait.file"
-                ]
-              },
-              {
-                "required": [
-                  "wait.http"
-                ]
-              },
-              {
-                "required": [
-                  "wait.port"
                 ]
               },
               {
@@ -5765,12 +5795,22 @@
               },
               {
                 "required": [
+                  "observe.command"
+                ]
+              },
+              {
+                "required": [
                   "observe.cpu"
                 ]
               },
               {
                 "required": [
                   "observe.disk"
+                ]
+              },
+              {
+                "required": [
+                  "observe.file"
                 ]
               },
               {
@@ -5981,26 +6021,6 @@
               {
                 "required": [
                   "vars.load"
-                ]
-              },
-              {
-                "required": [
-                  "wait.command"
-                ]
-              },
-              {
-                "required": [
-                  "wait.file"
-                ]
-              },
-              {
-                "required": [
-                  "wait.http"
-                ]
-              },
-              {
-                "required": [
-                  "wait.port"
                 ]
               },
               {
@@ -6124,12 +6144,22 @@
               },
               {
                 "required": [
+                  "observe.command"
+                ]
+              },
+              {
+                "required": [
                   "observe.cpu"
                 ]
               },
               {
                 "required": [
                   "observe.disk"
+                ]
+              },
+              {
+                "required": [
+                  "observe.file"
                 ]
               },
               {
@@ -6340,26 +6370,6 @@
               {
                 "required": [
                   "vars.load"
-                ]
-              },
-              {
-                "required": [
-                  "wait.command"
-                ]
-              },
-              {
-                "required": [
-                  "wait.file"
-                ]
-              },
-              {
-                "required": [
-                  "wait.http"
-                ]
-              },
-              {
-                "required": [
-                  "wait.port"
                 ]
               },
               {
@@ -6483,12 +6493,22 @@
               },
               {
                 "required": [
+                  "observe.command"
+                ]
+              },
+              {
+                "required": [
                   "observe.cpu"
                 ]
               },
               {
                 "required": [
                   "observe.disk"
+                ]
+              },
+              {
+                "required": [
+                  "observe.file"
                 ]
               },
               {
@@ -6699,26 +6719,6 @@
               {
                 "required": [
                   "vars.load"
-                ]
-              },
-              {
-                "required": [
-                  "wait.command"
-                ]
-              },
-              {
-                "required": [
-                  "wait.file"
-                ]
-              },
-              {
-                "required": [
-                  "wait.http"
-                ]
-              },
-              {
-                "required": [
-                  "wait.port"
                 ]
               },
               {
@@ -6842,12 +6842,22 @@
               },
               {
                 "required": [
+                  "observe.command"
+                ]
+              },
+              {
+                "required": [
                   "observe.cpu"
                 ]
               },
               {
                 "required": [
                   "observe.disk"
+                ]
+              },
+              {
+                "required": [
+                  "observe.file"
                 ]
               },
               {
@@ -7058,26 +7068,6 @@
               {
                 "required": [
                   "vars.load"
-                ]
-              },
-              {
-                "required": [
-                  "wait.command"
-                ]
-              },
-              {
-                "required": [
-                  "wait.file"
-                ]
-              },
-              {
-                "required": [
-                  "wait.http"
-                ]
-              },
-              {
-                "required": [
-                  "wait.port"
                 ]
               },
               {
@@ -7201,12 +7191,22 @@
               },
               {
                 "required": [
+                  "observe.command"
+                ]
+              },
+              {
+                "required": [
                   "observe.cpu"
                 ]
               },
               {
                 "required": [
                   "observe.disk"
+                ]
+              },
+              {
+                "required": [
+                  "observe.file"
                 ]
               },
               {
@@ -7417,26 +7417,6 @@
               {
                 "required": [
                   "vars.load"
-                ]
-              },
-              {
-                "required": [
-                  "wait.command"
-                ]
-              },
-              {
-                "required": [
-                  "wait.file"
-                ]
-              },
-              {
-                "required": [
-                  "wait.http"
-                ]
-              },
-              {
-                "required": [
-                  "wait.port"
                 ]
               },
               {
@@ -7560,12 +7540,22 @@
               },
               {
                 "required": [
+                  "observe.command"
+                ]
+              },
+              {
+                "required": [
                   "observe.cpu"
                 ]
               },
               {
                 "required": [
                   "observe.disk"
+                ]
+              },
+              {
+                "required": [
+                  "observe.file"
                 ]
               },
               {
@@ -7776,26 +7766,6 @@
               {
                 "required": [
                   "vars.load"
-                ]
-              },
-              {
-                "required": [
-                  "wait.command"
-                ]
-              },
-              {
-                "required": [
-                  "wait.file"
-                ]
-              },
-              {
-                "required": [
-                  "wait.http"
-                ]
-              },
-              {
-                "required": [
-                  "wait.port"
                 ]
               },
               {
@@ -7919,12 +7889,22 @@
               },
               {
                 "required": [
+                  "observe.command"
+                ]
+              },
+              {
+                "required": [
                   "observe.cpu"
                 ]
               },
               {
                 "required": [
                   "observe.disk"
+                ]
+              },
+              {
+                "required": [
+                  "observe.file"
                 ]
               },
               {
@@ -8135,26 +8115,6 @@
               {
                 "required": [
                   "vars.load"
-                ]
-              },
-              {
-                "required": [
-                  "wait.command"
-                ]
-              },
-              {
-                "required": [
-                  "wait.file"
-                ]
-              },
-              {
-                "required": [
-                  "wait.http"
-                ]
-              },
-              {
-                "required": [
-                  "wait.port"
                 ]
               },
               {
@@ -8278,12 +8238,22 @@
               },
               {
                 "required": [
+                  "observe.command"
+                ]
+              },
+              {
+                "required": [
                   "observe.cpu"
                 ]
               },
               {
                 "required": [
                   "observe.disk"
+                ]
+              },
+              {
+                "required": [
+                  "observe.file"
                 ]
               },
               {
@@ -8494,26 +8464,6 @@
               {
                 "required": [
                   "vars.load"
-                ]
-              },
-              {
-                "required": [
-                  "wait.command"
-                ]
-              },
-              {
-                "required": [
-                  "wait.file"
-                ]
-              },
-              {
-                "required": [
-                  "wait.http"
-                ]
-              },
-              {
-                "required": [
-                  "wait.port"
                 ]
               },
               {
@@ -8637,12 +8587,22 @@
               },
               {
                 "required": [
+                  "observe.command"
+                ]
+              },
+              {
+                "required": [
                   "observe.cpu"
                 ]
               },
               {
                 "required": [
                   "observe.disk"
+                ]
+              },
+              {
+                "required": [
+                  "observe.file"
                 ]
               },
               {
@@ -8853,26 +8813,6 @@
               {
                 "required": [
                   "vars.load"
-                ]
-              },
-              {
-                "required": [
-                  "wait.command"
-                ]
-              },
-              {
-                "required": [
-                  "wait.file"
-                ]
-              },
-              {
-                "required": [
-                  "wait.http"
-                ]
-              },
-              {
-                "required": [
-                  "wait.port"
                 ]
               },
               {
@@ -8996,12 +8936,22 @@
               },
               {
                 "required": [
+                  "observe.command"
+                ]
+              },
+              {
+                "required": [
                   "observe.cpu"
                 ]
               },
               {
                 "required": [
                   "observe.disk"
+                ]
+              },
+              {
+                "required": [
+                  "observe.file"
                 ]
               },
               {
@@ -9212,26 +9162,6 @@
               {
                 "required": [
                   "vars.load"
-                ]
-              },
-              {
-                "required": [
-                  "wait.command"
-                ]
-              },
-              {
-                "required": [
-                  "wait.file"
-                ]
-              },
-              {
-                "required": [
-                  "wait.http"
-                ]
-              },
-              {
-                "required": [
-                  "wait.port"
                 ]
               },
               {
@@ -9355,12 +9285,22 @@
               },
               {
                 "required": [
+                  "observe.command"
+                ]
+              },
+              {
+                "required": [
                   "observe.cpu"
                 ]
               },
               {
                 "required": [
                   "observe.disk"
+                ]
+              },
+              {
+                "required": [
+                  "observe.file"
                 ]
               },
               {
@@ -9575,22 +9515,351 @@
               },
               {
                 "required": [
-                  "wait.command"
+                  "windows.firewall_rule"
                 ]
               },
               {
                 "required": [
-                  "wait.file"
+                  "windows.hyperv_firewall_rule"
                 ]
               },
               {
                 "required": [
-                  "wait.http"
+                  "windows.registry"
                 ]
               },
               {
                 "required": [
-                  "wait.port"
+                  "windows.scheduled_task"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "required": [
+            "observe.command"
+          ],
+          "properties": {
+            "observe.command": {
+              "$ref": "#/definitions/observe.command"
+            }
+          },
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "action"
+                ]
+              },
+              {
+                "required": [
+                  "artifact.capture"
+                ]
+              },
+              {
+                "required": [
+                  "artifact.validate"
+                ]
+              },
+              {
+                "required": [
+                  "assert"
+                ]
+              },
+              {
+                "required": [
+                  "cmd"
+                ]
+              },
+              {
+                "required": [
+                  "container"
+                ]
+              },
+              {
+                "required": [
+                  "container.image"
+                ]
+              },
+              {
+                "required": [
+                  "file.copy"
+                ]
+              },
+              {
+                "required": [
+                  "file.download"
+                ]
+              },
+              {
+                "required": [
+                  "file.template"
+                ]
+              },
+              {
+                "required": [
+                  "file.unarchive"
+                ]
+              },
+              {
+                "required": [
+                  "file.write"
+                ]
+              },
+              {
+                "required": [
+                  "git.checkout"
+                ]
+              },
+              {
+                "required": [
+                  "git.clone"
+                ]
+              },
+              {
+                "required": [
+                  "git.config"
+                ]
+              },
+              {
+                "required": [
+                  "http.request"
+                ]
+              },
+              {
+                "required": [
+                  "import"
+                ]
+              },
+              {
+                "required": [
+                  "log"
+                ]
+              },
+              {
+                "required": [
+                  "observe.cpu"
+                ]
+              },
+              {
+                "required": [
+                  "observe.disk"
+                ]
+              },
+              {
+                "required": [
+                  "observe.file"
+                ]
+              },
+              {
+                "required": [
+                  "observe.gpu"
+                ]
+              },
+              {
+                "required": [
+                  "observe.http"
+                ]
+              },
+              {
+                "required": [
+                  "observe.logs"
+                ]
+              },
+              {
+                "required": [
+                  "observe.memory"
+                ]
+              },
+              {
+                "required": [
+                  "observe.port"
+                ]
+              },
+              {
+                "required": [
+                  "observe.process"
+                ]
+              },
+              {
+                "required": [
+                  "observe.service"
+                ]
+              },
+              {
+                "required": [
+                  "os.cron"
+                ]
+              },
+              {
+                "required": [
+                  "os.firewall"
+                ]
+              },
+              {
+                "required": [
+                  "os.group"
+                ]
+              },
+              {
+                "required": [
+                  "os.mount"
+                ]
+              },
+              {
+                "required": [
+                  "os.service"
+                ]
+              },
+              {
+                "required": [
+                  "os.ssh_key"
+                ]
+              },
+              {
+                "required": [
+                  "os.sysctl"
+                ]
+              },
+              {
+                "required": [
+                  "os.systemd"
+                ]
+              },
+              {
+                "required": [
+                  "os.user"
+                ]
+              },
+              {
+                "required": [
+                  "pkg"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.hold"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.list"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.repo"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.upgrade"
+                ]
+              },
+              {
+                "required": [
+                  "process"
+                ]
+              },
+              {
+                "required": [
+                  "read.json"
+                ]
+              },
+              {
+                "required": [
+                  "read.yaml"
+                ]
+              },
+              {
+                "required": [
+                  "repo.patch"
+                ]
+              },
+              {
+                "required": [
+                  "repo.search"
+                ]
+              },
+              {
+                "required": [
+                  "repo.tree"
+                ]
+              },
+              {
+                "required": [
+                  "shell"
+                ]
+              },
+              {
+                "required": [
+                  "text.delete_range"
+                ]
+              },
+              {
+                "required": [
+                  "text.insert"
+                ]
+              },
+              {
+                "required": [
+                  "text.line"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.ini"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.json"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.yaml"
+                ]
+              },
+              {
+                "required": [
+                  "text.replace"
+                ]
+              },
+              {
+                "required": [
+                  "tool"
+                ]
+              },
+              {
+                "required": [
+                  "transaction"
+                ]
+              },
+              {
+                "required": [
+                  "try"
+                ]
+              },
+              {
+                "required": [
+                  "use"
+                ]
+              },
+              {
+                "required": [
+                  "vars"
+                ]
+              },
+              {
+                "required": [
+                  "vars.load"
                 ]
               },
               {
@@ -9719,7 +9988,17 @@
               },
               {
                 "required": [
+                  "observe.command"
+                ]
+              },
+              {
+                "required": [
                   "observe.disk"
+                ]
+              },
+              {
+                "required": [
+                  "observe.file"
                 ]
               },
               {
@@ -9930,26 +10209,6 @@
               {
                 "required": [
                   "vars.load"
-                ]
-              },
-              {
-                "required": [
-                  "wait.command"
-                ]
-              },
-              {
-                "required": [
-                  "wait.file"
-                ]
-              },
-              {
-                "required": [
-                  "wait.http"
-                ]
-              },
-              {
-                "required": [
-                  "wait.port"
                 ]
               },
               {
@@ -10078,7 +10337,17 @@
               },
               {
                 "required": [
+                  "observe.command"
+                ]
+              },
+              {
+                "required": [
                   "observe.cpu"
+                ]
+              },
+              {
+                "required": [
+                  "observe.file"
                 ]
               },
               {
@@ -10293,22 +10562,351 @@
               },
               {
                 "required": [
-                  "wait.command"
+                  "windows.firewall_rule"
                 ]
               },
               {
                 "required": [
-                  "wait.file"
+                  "windows.hyperv_firewall_rule"
                 ]
               },
               {
                 "required": [
-                  "wait.http"
+                  "windows.registry"
                 ]
               },
               {
                 "required": [
-                  "wait.port"
+                  "windows.scheduled_task"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "required": [
+            "observe.file"
+          ],
+          "properties": {
+            "observe.file": {
+              "$ref": "#/definitions/observe.file"
+            }
+          },
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "action"
+                ]
+              },
+              {
+                "required": [
+                  "artifact.capture"
+                ]
+              },
+              {
+                "required": [
+                  "artifact.validate"
+                ]
+              },
+              {
+                "required": [
+                  "assert"
+                ]
+              },
+              {
+                "required": [
+                  "cmd"
+                ]
+              },
+              {
+                "required": [
+                  "container"
+                ]
+              },
+              {
+                "required": [
+                  "container.image"
+                ]
+              },
+              {
+                "required": [
+                  "file.copy"
+                ]
+              },
+              {
+                "required": [
+                  "file.download"
+                ]
+              },
+              {
+                "required": [
+                  "file.template"
+                ]
+              },
+              {
+                "required": [
+                  "file.unarchive"
+                ]
+              },
+              {
+                "required": [
+                  "file.write"
+                ]
+              },
+              {
+                "required": [
+                  "git.checkout"
+                ]
+              },
+              {
+                "required": [
+                  "git.clone"
+                ]
+              },
+              {
+                "required": [
+                  "git.config"
+                ]
+              },
+              {
+                "required": [
+                  "http.request"
+                ]
+              },
+              {
+                "required": [
+                  "import"
+                ]
+              },
+              {
+                "required": [
+                  "log"
+                ]
+              },
+              {
+                "required": [
+                  "observe.command"
+                ]
+              },
+              {
+                "required": [
+                  "observe.cpu"
+                ]
+              },
+              {
+                "required": [
+                  "observe.disk"
+                ]
+              },
+              {
+                "required": [
+                  "observe.gpu"
+                ]
+              },
+              {
+                "required": [
+                  "observe.http"
+                ]
+              },
+              {
+                "required": [
+                  "observe.logs"
+                ]
+              },
+              {
+                "required": [
+                  "observe.memory"
+                ]
+              },
+              {
+                "required": [
+                  "observe.port"
+                ]
+              },
+              {
+                "required": [
+                  "observe.process"
+                ]
+              },
+              {
+                "required": [
+                  "observe.service"
+                ]
+              },
+              {
+                "required": [
+                  "os.cron"
+                ]
+              },
+              {
+                "required": [
+                  "os.firewall"
+                ]
+              },
+              {
+                "required": [
+                  "os.group"
+                ]
+              },
+              {
+                "required": [
+                  "os.mount"
+                ]
+              },
+              {
+                "required": [
+                  "os.service"
+                ]
+              },
+              {
+                "required": [
+                  "os.ssh_key"
+                ]
+              },
+              {
+                "required": [
+                  "os.sysctl"
+                ]
+              },
+              {
+                "required": [
+                  "os.systemd"
+                ]
+              },
+              {
+                "required": [
+                  "os.user"
+                ]
+              },
+              {
+                "required": [
+                  "pkg"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.hold"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.list"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.repo"
+                ]
+              },
+              {
+                "required": [
+                  "pkg.upgrade"
+                ]
+              },
+              {
+                "required": [
+                  "process"
+                ]
+              },
+              {
+                "required": [
+                  "read.json"
+                ]
+              },
+              {
+                "required": [
+                  "read.yaml"
+                ]
+              },
+              {
+                "required": [
+                  "repo.patch"
+                ]
+              },
+              {
+                "required": [
+                  "repo.search"
+                ]
+              },
+              {
+                "required": [
+                  "repo.tree"
+                ]
+              },
+              {
+                "required": [
+                  "shell"
+                ]
+              },
+              {
+                "required": [
+                  "text.delete_range"
+                ]
+              },
+              {
+                "required": [
+                  "text.insert"
+                ]
+              },
+              {
+                "required": [
+                  "text.line"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.ini"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.json"
+                ]
+              },
+              {
+                "required": [
+                  "text.patch.yaml"
+                ]
+              },
+              {
+                "required": [
+                  "text.replace"
+                ]
+              },
+              {
+                "required": [
+                  "tool"
+                ]
+              },
+              {
+                "required": [
+                  "transaction"
+                ]
+              },
+              {
+                "required": [
+                  "try"
+                ]
+              },
+              {
+                "required": [
+                  "use"
+                ]
+              },
+              {
+                "required": [
+                  "vars"
+                ]
+              },
+              {
+                "required": [
+                  "vars.load"
                 ]
               },
               {
@@ -10437,12 +11035,22 @@
               },
               {
                 "required": [
+                  "observe.command"
+                ]
+              },
+              {
+                "required": [
                   "observe.cpu"
                 ]
               },
               {
                 "required": [
                   "observe.disk"
+                ]
+              },
+              {
+                "required": [
+                  "observe.file"
                 ]
               },
               {
@@ -10648,26 +11256,6 @@
               {
                 "required": [
                   "vars.load"
-                ]
-              },
-              {
-                "required": [
-                  "wait.command"
-                ]
-              },
-              {
-                "required": [
-                  "wait.file"
-                ]
-              },
-              {
-                "required": [
-                  "wait.http"
-                ]
-              },
-              {
-                "required": [
-                  "wait.port"
                 ]
               },
               {
@@ -10796,12 +11384,22 @@
               },
               {
                 "required": [
+                  "observe.command"
+                ]
+              },
+              {
+                "required": [
                   "observe.cpu"
                 ]
               },
               {
                 "required": [
                   "observe.disk"
+                ]
+              },
+              {
+                "required": [
+                  "observe.file"
                 ]
               },
               {
@@ -11007,26 +11605,6 @@
               {
                 "required": [
                   "vars.load"
-                ]
-              },
-              {
-                "required": [
-                  "wait.command"
-                ]
-              },
-              {
-                "required": [
-                  "wait.file"
-                ]
-              },
-              {
-                "required": [
-                  "wait.http"
-                ]
-              },
-              {
-                "required": [
-                  "wait.port"
                 ]
               },
               {
@@ -11155,12 +11733,22 @@
               },
               {
                 "required": [
+                  "observe.command"
+                ]
+              },
+              {
+                "required": [
                   "observe.cpu"
                 ]
               },
               {
                 "required": [
                   "observe.disk"
+                ]
+              },
+              {
+                "required": [
+                  "observe.file"
                 ]
               },
               {
@@ -11366,26 +11954,6 @@
               {
                 "required": [
                   "vars.load"
-                ]
-              },
-              {
-                "required": [
-                  "wait.command"
-                ]
-              },
-              {
-                "required": [
-                  "wait.file"
-                ]
-              },
-              {
-                "required": [
-                  "wait.http"
-                ]
-              },
-              {
-                "required": [
-                  "wait.port"
                 ]
               },
               {
@@ -11514,12 +12082,22 @@
               },
               {
                 "required": [
+                  "observe.command"
+                ]
+              },
+              {
+                "required": [
                   "observe.cpu"
                 ]
               },
               {
                 "required": [
                   "observe.disk"
+                ]
+              },
+              {
+                "required": [
+                  "observe.file"
                 ]
               },
               {
@@ -11725,26 +12303,6 @@
               {
                 "required": [
                   "vars.load"
-                ]
-              },
-              {
-                "required": [
-                  "wait.command"
-                ]
-              },
-              {
-                "required": [
-                  "wait.file"
-                ]
-              },
-              {
-                "required": [
-                  "wait.http"
-                ]
-              },
-              {
-                "required": [
-                  "wait.port"
                 ]
               },
               {
@@ -11873,12 +12431,22 @@
               },
               {
                 "required": [
+                  "observe.command"
+                ]
+              },
+              {
+                "required": [
                   "observe.cpu"
                 ]
               },
               {
                 "required": [
                   "observe.disk"
+                ]
+              },
+              {
+                "required": [
+                  "observe.file"
                 ]
               },
               {
@@ -12084,26 +12652,6 @@
               {
                 "required": [
                   "vars.load"
-                ]
-              },
-              {
-                "required": [
-                  "wait.command"
-                ]
-              },
-              {
-                "required": [
-                  "wait.file"
-                ]
-              },
-              {
-                "required": [
-                  "wait.http"
-                ]
-              },
-              {
-                "required": [
-                  "wait.port"
                 ]
               },
               {
@@ -12232,12 +12780,22 @@
               },
               {
                 "required": [
+                  "observe.command"
+                ]
+              },
+              {
+                "required": [
                   "observe.cpu"
                 ]
               },
               {
                 "required": [
                   "observe.disk"
+                ]
+              },
+              {
+                "required": [
+                  "observe.file"
                 ]
               },
               {
@@ -12443,26 +13001,6 @@
               {
                 "required": [
                   "vars.load"
-                ]
-              },
-              {
-                "required": [
-                  "wait.command"
-                ]
-              },
-              {
-                "required": [
-                  "wait.file"
-                ]
-              },
-              {
-                "required": [
-                  "wait.http"
-                ]
-              },
-              {
-                "required": [
-                  "wait.port"
                 ]
               },
               {
@@ -12591,12 +13129,22 @@
               },
               {
                 "required": [
+                  "observe.command"
+                ]
+              },
+              {
+                "required": [
                   "observe.cpu"
                 ]
               },
               {
                 "required": [
                   "observe.disk"
+                ]
+              },
+              {
+                "required": [
+                  "observe.file"
                 ]
               },
               {
@@ -12802,26 +13350,6 @@
               {
                 "required": [
                   "vars.load"
-                ]
-              },
-              {
-                "required": [
-                  "wait.command"
-                ]
-              },
-              {
-                "required": [
-                  "wait.file"
-                ]
-              },
-              {
-                "required": [
-                  "wait.http"
-                ]
-              },
-              {
-                "required": [
-                  "wait.port"
                 ]
               },
               {
@@ -12950,12 +13478,22 @@
               },
               {
                 "required": [
+                  "observe.command"
+                ]
+              },
+              {
+                "required": [
                   "observe.cpu"
                 ]
               },
               {
                 "required": [
                   "observe.disk"
+                ]
+              },
+              {
+                "required": [
+                  "observe.file"
                 ]
               },
               {
@@ -13161,26 +13699,6 @@
               {
                 "required": [
                   "vars.load"
-                ]
-              },
-              {
-                "required": [
-                  "wait.command"
-                ]
-              },
-              {
-                "required": [
-                  "wait.file"
-                ]
-              },
-              {
-                "required": [
-                  "wait.http"
-                ]
-              },
-              {
-                "required": [
-                  "wait.port"
                 ]
               },
               {
@@ -13309,12 +13827,22 @@
               },
               {
                 "required": [
+                  "observe.command"
+                ]
+              },
+              {
+                "required": [
                   "observe.cpu"
                 ]
               },
               {
                 "required": [
                   "observe.disk"
+                ]
+              },
+              {
+                "required": [
+                  "observe.file"
                 ]
               },
               {
@@ -13520,26 +14048,6 @@
               {
                 "required": [
                   "vars.load"
-                ]
-              },
-              {
-                "required": [
-                  "wait.command"
-                ]
-              },
-              {
-                "required": [
-                  "wait.file"
-                ]
-              },
-              {
-                "required": [
-                  "wait.http"
-                ]
-              },
-              {
-                "required": [
-                  "wait.port"
                 ]
               },
               {
@@ -13668,12 +14176,22 @@
               },
               {
                 "required": [
+                  "observe.command"
+                ]
+              },
+              {
+                "required": [
                   "observe.cpu"
                 ]
               },
               {
                 "required": [
                   "observe.disk"
+                ]
+              },
+              {
+                "required": [
+                  "observe.file"
                 ]
               },
               {
@@ -13879,26 +14397,6 @@
               {
                 "required": [
                   "vars.load"
-                ]
-              },
-              {
-                "required": [
-                  "wait.command"
-                ]
-              },
-              {
-                "required": [
-                  "wait.file"
-                ]
-              },
-              {
-                "required": [
-                  "wait.http"
-                ]
-              },
-              {
-                "required": [
-                  "wait.port"
                 ]
               },
               {
@@ -14027,12 +14525,22 @@
               },
               {
                 "required": [
+                  "observe.command"
+                ]
+              },
+              {
+                "required": [
                   "observe.cpu"
                 ]
               },
               {
                 "required": [
                   "observe.disk"
+                ]
+              },
+              {
+                "required": [
+                  "observe.file"
                 ]
               },
               {
@@ -14238,26 +14746,6 @@
               {
                 "required": [
                   "vars.load"
-                ]
-              },
-              {
-                "required": [
-                  "wait.command"
-                ]
-              },
-              {
-                "required": [
-                  "wait.file"
-                ]
-              },
-              {
-                "required": [
-                  "wait.http"
-                ]
-              },
-              {
-                "required": [
-                  "wait.port"
                 ]
               },
               {
@@ -14386,12 +14874,22 @@
               },
               {
                 "required": [
+                  "observe.command"
+                ]
+              },
+              {
+                "required": [
                   "observe.cpu"
                 ]
               },
               {
                 "required": [
                   "observe.disk"
+                ]
+              },
+              {
+                "required": [
+                  "observe.file"
                 ]
               },
               {
@@ -14597,26 +15095,6 @@
               {
                 "required": [
                   "vars.load"
-                ]
-              },
-              {
-                "required": [
-                  "wait.command"
-                ]
-              },
-              {
-                "required": [
-                  "wait.file"
-                ]
-              },
-              {
-                "required": [
-                  "wait.http"
-                ]
-              },
-              {
-                "required": [
-                  "wait.port"
                 ]
               },
               {
@@ -14745,12 +15223,22 @@
               },
               {
                 "required": [
+                  "observe.command"
+                ]
+              },
+              {
+                "required": [
                   "observe.cpu"
                 ]
               },
               {
                 "required": [
                   "observe.disk"
+                ]
+              },
+              {
+                "required": [
+                  "observe.file"
                 ]
               },
               {
@@ -14956,26 +15444,6 @@
               {
                 "required": [
                   "vars.load"
-                ]
-              },
-              {
-                "required": [
-                  "wait.command"
-                ]
-              },
-              {
-                "required": [
-                  "wait.file"
-                ]
-              },
-              {
-                "required": [
-                  "wait.http"
-                ]
-              },
-              {
-                "required": [
-                  "wait.port"
                 ]
               },
               {
@@ -15104,12 +15572,22 @@
               },
               {
                 "required": [
+                  "observe.command"
+                ]
+              },
+              {
+                "required": [
                   "observe.cpu"
                 ]
               },
               {
                 "required": [
                   "observe.disk"
+                ]
+              },
+              {
+                "required": [
+                  "observe.file"
                 ]
               },
               {
@@ -15315,26 +15793,6 @@
               {
                 "required": [
                   "vars.load"
-                ]
-              },
-              {
-                "required": [
-                  "wait.command"
-                ]
-              },
-              {
-                "required": [
-                  "wait.file"
-                ]
-              },
-              {
-                "required": [
-                  "wait.http"
-                ]
-              },
-              {
-                "required": [
-                  "wait.port"
                 ]
               },
               {
@@ -15463,12 +15921,22 @@
               },
               {
                 "required": [
+                  "observe.command"
+                ]
+              },
+              {
+                "required": [
                   "observe.cpu"
                 ]
               },
               {
                 "required": [
                   "observe.disk"
+                ]
+              },
+              {
+                "required": [
+                  "observe.file"
                 ]
               },
               {
@@ -15674,26 +16142,6 @@
               {
                 "required": [
                   "vars.load"
-                ]
-              },
-              {
-                "required": [
-                  "wait.command"
-                ]
-              },
-              {
-                "required": [
-                  "wait.file"
-                ]
-              },
-              {
-                "required": [
-                  "wait.http"
-                ]
-              },
-              {
-                "required": [
-                  "wait.port"
                 ]
               },
               {
@@ -15822,12 +16270,22 @@
               },
               {
                 "required": [
+                  "observe.command"
+                ]
+              },
+              {
+                "required": [
                   "observe.cpu"
                 ]
               },
               {
                 "required": [
                   "observe.disk"
+                ]
+              },
+              {
+                "required": [
+                  "observe.file"
                 ]
               },
               {
@@ -16033,26 +16491,6 @@
               {
                 "required": [
                   "vars.load"
-                ]
-              },
-              {
-                "required": [
-                  "wait.command"
-                ]
-              },
-              {
-                "required": [
-                  "wait.file"
-                ]
-              },
-              {
-                "required": [
-                  "wait.http"
-                ]
-              },
-              {
-                "required": [
-                  "wait.port"
                 ]
               },
               {
@@ -16181,12 +16619,22 @@
               },
               {
                 "required": [
+                  "observe.command"
+                ]
+              },
+              {
+                "required": [
                   "observe.cpu"
                 ]
               },
               {
                 "required": [
                   "observe.disk"
+                ]
+              },
+              {
+                "required": [
+                  "observe.file"
                 ]
               },
               {
@@ -16392,26 +16840,6 @@
               {
                 "required": [
                   "vars.load"
-                ]
-              },
-              {
-                "required": [
-                  "wait.command"
-                ]
-              },
-              {
-                "required": [
-                  "wait.file"
-                ]
-              },
-              {
-                "required": [
-                  "wait.http"
-                ]
-              },
-              {
-                "required": [
-                  "wait.port"
                 ]
               },
               {
@@ -16540,12 +16968,22 @@
               },
               {
                 "required": [
+                  "observe.command"
+                ]
+              },
+              {
+                "required": [
                   "observe.cpu"
                 ]
               },
               {
                 "required": [
                   "observe.disk"
+                ]
+              },
+              {
+                "required": [
+                  "observe.file"
                 ]
               },
               {
@@ -16751,26 +17189,6 @@
               {
                 "required": [
                   "vars.load"
-                ]
-              },
-              {
-                "required": [
-                  "wait.command"
-                ]
-              },
-              {
-                "required": [
-                  "wait.file"
-                ]
-              },
-              {
-                "required": [
-                  "wait.http"
-                ]
-              },
-              {
-                "required": [
-                  "wait.port"
                 ]
               },
               {
@@ -16899,12 +17317,22 @@
               },
               {
                 "required": [
+                  "observe.command"
+                ]
+              },
+              {
+                "required": [
                   "observe.cpu"
                 ]
               },
               {
                 "required": [
                   "observe.disk"
+                ]
+              },
+              {
+                "required": [
+                  "observe.file"
                 ]
               },
               {
@@ -17110,26 +17538,6 @@
               {
                 "required": [
                   "vars.load"
-                ]
-              },
-              {
-                "required": [
-                  "wait.command"
-                ]
-              },
-              {
-                "required": [
-                  "wait.file"
-                ]
-              },
-              {
-                "required": [
-                  "wait.http"
-                ]
-              },
-              {
-                "required": [
-                  "wait.port"
                 ]
               },
               {
@@ -17258,12 +17666,22 @@
               },
               {
                 "required": [
+                  "observe.command"
+                ]
+              },
+              {
+                "required": [
                   "observe.cpu"
                 ]
               },
               {
                 "required": [
                   "observe.disk"
+                ]
+              },
+              {
+                "required": [
+                  "observe.file"
                 ]
               },
               {
@@ -17469,26 +17887,6 @@
               {
                 "required": [
                   "vars.load"
-                ]
-              },
-              {
-                "required": [
-                  "wait.command"
-                ]
-              },
-              {
-                "required": [
-                  "wait.file"
-                ]
-              },
-              {
-                "required": [
-                  "wait.http"
-                ]
-              },
-              {
-                "required": [
-                  "wait.port"
                 ]
               },
               {
@@ -17617,12 +18015,22 @@
               },
               {
                 "required": [
+                  "observe.command"
+                ]
+              },
+              {
+                "required": [
                   "observe.cpu"
                 ]
               },
               {
                 "required": [
                   "observe.disk"
+                ]
+              },
+              {
+                "required": [
+                  "observe.file"
                 ]
               },
               {
@@ -17828,26 +18236,6 @@
               {
                 "required": [
                   "vars.load"
-                ]
-              },
-              {
-                "required": [
-                  "wait.command"
-                ]
-              },
-              {
-                "required": [
-                  "wait.file"
-                ]
-              },
-              {
-                "required": [
-                  "wait.http"
-                ]
-              },
-              {
-                "required": [
-                  "wait.port"
                 ]
               },
               {
@@ -17976,12 +18364,22 @@
               },
               {
                 "required": [
+                  "observe.command"
+                ]
+              },
+              {
+                "required": [
                   "observe.cpu"
                 ]
               },
               {
                 "required": [
                   "observe.disk"
+                ]
+              },
+              {
+                "required": [
+                  "observe.file"
                 ]
               },
               {
@@ -18187,26 +18585,6 @@
               {
                 "required": [
                   "vars.load"
-                ]
-              },
-              {
-                "required": [
-                  "wait.command"
-                ]
-              },
-              {
-                "required": [
-                  "wait.file"
-                ]
-              },
-              {
-                "required": [
-                  "wait.http"
-                ]
-              },
-              {
-                "required": [
-                  "wait.port"
                 ]
               },
               {
@@ -18335,12 +18713,22 @@
               },
               {
                 "required": [
+                  "observe.command"
+                ]
+              },
+              {
+                "required": [
                   "observe.cpu"
                 ]
               },
               {
                 "required": [
                   "observe.disk"
+                ]
+              },
+              {
+                "required": [
+                  "observe.file"
                 ]
               },
               {
@@ -18546,26 +18934,6 @@
               {
                 "required": [
                   "vars.load"
-                ]
-              },
-              {
-                "required": [
-                  "wait.command"
-                ]
-              },
-              {
-                "required": [
-                  "wait.file"
-                ]
-              },
-              {
-                "required": [
-                  "wait.http"
-                ]
-              },
-              {
-                "required": [
-                  "wait.port"
                 ]
               },
               {
@@ -18694,12 +19062,22 @@
               },
               {
                 "required": [
+                  "observe.command"
+                ]
+              },
+              {
+                "required": [
                   "observe.cpu"
                 ]
               },
               {
                 "required": [
                   "observe.disk"
+                ]
+              },
+              {
+                "required": [
+                  "observe.file"
                 ]
               },
               {
@@ -18905,26 +19283,6 @@
               {
                 "required": [
                   "vars.load"
-                ]
-              },
-              {
-                "required": [
-                  "wait.command"
-                ]
-              },
-              {
-                "required": [
-                  "wait.file"
-                ]
-              },
-              {
-                "required": [
-                  "wait.http"
-                ]
-              },
-              {
-                "required": [
-                  "wait.port"
                 ]
               },
               {
@@ -19053,12 +19411,22 @@
               },
               {
                 "required": [
+                  "observe.command"
+                ]
+              },
+              {
+                "required": [
                   "observe.cpu"
                 ]
               },
               {
                 "required": [
                   "observe.disk"
+                ]
+              },
+              {
+                "required": [
+                  "observe.file"
                 ]
               },
               {
@@ -19264,26 +19632,6 @@
               {
                 "required": [
                   "vars.load"
-                ]
-              },
-              {
-                "required": [
-                  "wait.command"
-                ]
-              },
-              {
-                "required": [
-                  "wait.file"
-                ]
-              },
-              {
-                "required": [
-                  "wait.http"
-                ]
-              },
-              {
-                "required": [
-                  "wait.port"
                 ]
               },
               {
@@ -19412,12 +19760,22 @@
               },
               {
                 "required": [
+                  "observe.command"
+                ]
+              },
+              {
+                "required": [
                   "observe.cpu"
                 ]
               },
               {
                 "required": [
                   "observe.disk"
+                ]
+              },
+              {
+                "required": [
+                  "observe.file"
                 ]
               },
               {
@@ -19627,26 +19985,6 @@
               },
               {
                 "required": [
-                  "wait.command"
-                ]
-              },
-              {
-                "required": [
-                  "wait.file"
-                ]
-              },
-              {
-                "required": [
-                  "wait.http"
-                ]
-              },
-              {
-                "required": [
-                  "wait.port"
-                ]
-              },
-              {
-                "required": [
                   "windows.firewall_rule"
                 ]
               },
@@ -19771,12 +20109,22 @@
               },
               {
                 "required": [
+                  "observe.command"
+                ]
+              },
+              {
+                "required": [
                   "observe.cpu"
                 ]
               },
               {
                 "required": [
                   "observe.disk"
+                ]
+              },
+              {
+                "required": [
+                  "observe.file"
                 ]
               },
               {
@@ -19982,26 +20330,6 @@
               {
                 "required": [
                   "vars.load"
-                ]
-              },
-              {
-                "required": [
-                  "wait.command"
-                ]
-              },
-              {
-                "required": [
-                  "wait.file"
-                ]
-              },
-              {
-                "required": [
-                  "wait.http"
-                ]
-              },
-              {
-                "required": [
-                  "wait.port"
                 ]
               },
               {
@@ -20137,12 +20465,22 @@
               },
               {
                 "required": [
+                  "observe.command"
+                ]
+              },
+              {
+                "required": [
                   "observe.cpu"
                 ]
               },
               {
                 "required": [
                   "observe.disk"
+                ]
+              },
+              {
+                "required": [
+                  "observe.file"
                 ]
               },
               {
@@ -20348,26 +20686,6 @@
               {
                 "required": [
                   "vars.load"
-                ]
-              },
-              {
-                "required": [
-                  "wait.command"
-                ]
-              },
-              {
-                "required": [
-                  "wait.file"
-                ]
-              },
-              {
-                "required": [
-                  "wait.http"
-                ]
-              },
-              {
-                "required": [
-                  "wait.port"
                 ]
               },
               {
@@ -20496,12 +20814,22 @@
               },
               {
                 "required": [
+                  "observe.command"
+                ]
+              },
+              {
+                "required": [
                   "observe.cpu"
                 ]
               },
               {
                 "required": [
                   "observe.disk"
+                ]
+              },
+              {
+                "required": [
+                  "observe.file"
                 ]
               },
               {
@@ -20707,26 +21035,6 @@
               {
                 "required": [
                   "vars.load"
-                ]
-              },
-              {
-                "required": [
-                  "wait.command"
-                ]
-              },
-              {
-                "required": [
-                  "wait.file"
-                ]
-              },
-              {
-                "required": [
-                  "wait.http"
-                ]
-              },
-              {
-                "required": [
-                  "wait.port"
                 ]
               },
               {
@@ -20855,12 +21163,22 @@
               },
               {
                 "required": [
+                  "observe.command"
+                ]
+              },
+              {
+                "required": [
                   "observe.cpu"
                 ]
               },
               {
                 "required": [
                   "observe.disk"
+                ]
+              },
+              {
+                "required": [
+                  "observe.file"
                 ]
               },
               {
@@ -21066,26 +21384,6 @@
               {
                 "required": [
                   "vars.load"
-                ]
-              },
-              {
-                "required": [
-                  "wait.command"
-                ]
-              },
-              {
-                "required": [
-                  "wait.file"
-                ]
-              },
-              {
-                "required": [
-                  "wait.http"
-                ]
-              },
-              {
-                "required": [
-                  "wait.port"
                 ]
               },
               {
@@ -21214,12 +21512,22 @@
               },
               {
                 "required": [
+                  "observe.command"
+                ]
+              },
+              {
+                "required": [
                   "observe.cpu"
                 ]
               },
               {
                 "required": [
                   "observe.disk"
+                ]
+              },
+              {
+                "required": [
+                  "observe.file"
                 ]
               },
               {
@@ -21425,26 +21733,6 @@
               {
                 "required": [
                   "vars.load"
-                ]
-              },
-              {
-                "required": [
-                  "wait.command"
-                ]
-              },
-              {
-                "required": [
-                  "wait.file"
-                ]
-              },
-              {
-                "required": [
-                  "wait.http"
-                ]
-              },
-              {
-                "required": [
-                  "wait.port"
                 ]
               },
               {
@@ -21573,12 +21861,22 @@
               },
               {
                 "required": [
+                  "observe.command"
+                ]
+              },
+              {
+                "required": [
                   "observe.cpu"
                 ]
               },
               {
                 "required": [
                   "observe.disk"
+                ]
+              },
+              {
+                "required": [
+                  "observe.file"
                 ]
               },
               {
@@ -21784,26 +22082,6 @@
               {
                 "required": [
                   "vars.load"
-                ]
-              },
-              {
-                "required": [
-                  "wait.command"
-                ]
-              },
-              {
-                "required": [
-                  "wait.file"
-                ]
-              },
-              {
-                "required": [
-                  "wait.http"
-                ]
-              },
-              {
-                "required": [
-                  "wait.port"
                 ]
               },
               {
@@ -21932,12 +22210,22 @@
               },
               {
                 "required": [
+                  "observe.command"
+                ]
+              },
+              {
+                "required": [
                   "observe.cpu"
                 ]
               },
               {
                 "required": [
                   "observe.disk"
+                ]
+              },
+              {
+                "required": [
+                  "observe.file"
                 ]
               },
               {
@@ -22143,26 +22431,6 @@
               {
                 "required": [
                   "vars.load"
-                ]
-              },
-              {
-                "required": [
-                  "wait.command"
-                ]
-              },
-              {
-                "required": [
-                  "wait.file"
-                ]
-              },
-              {
-                "required": [
-                  "wait.http"
-                ]
-              },
-              {
-                "required": [
-                  "wait.port"
                 ]
               },
               {
@@ -22291,12 +22559,22 @@
               },
               {
                 "required": [
+                  "observe.command"
+                ]
+              },
+              {
+                "required": [
                   "observe.cpu"
                 ]
               },
               {
                 "required": [
                   "observe.disk"
+                ]
+              },
+              {
+                "required": [
+                  "observe.file"
                 ]
               },
               {
@@ -22502,26 +22780,6 @@
               {
                 "required": [
                   "vars.load"
-                ]
-              },
-              {
-                "required": [
-                  "wait.command"
-                ]
-              },
-              {
-                "required": [
-                  "wait.file"
-                ]
-              },
-              {
-                "required": [
-                  "wait.http"
-                ]
-              },
-              {
-                "required": [
-                  "wait.port"
                 ]
               },
               {
@@ -22650,12 +22908,22 @@
               },
               {
                 "required": [
+                  "observe.command"
+                ]
+              },
+              {
+                "required": [
                   "observe.cpu"
                 ]
               },
               {
                 "required": [
                   "observe.disk"
+                ]
+              },
+              {
+                "required": [
+                  "observe.file"
                 ]
               },
               {
@@ -22861,26 +23129,6 @@
               {
                 "required": [
                   "vars.load"
-                ]
-              },
-              {
-                "required": [
-                  "wait.command"
-                ]
-              },
-              {
-                "required": [
-                  "wait.file"
-                ]
-              },
-              {
-                "required": [
-                  "wait.http"
-                ]
-              },
-              {
-                "required": [
-                  "wait.port"
                 ]
               },
               {
@@ -23009,12 +23257,22 @@
               },
               {
                 "required": [
+                  "observe.command"
+                ]
+              },
+              {
+                "required": [
                   "observe.cpu"
                 ]
               },
               {
                 "required": [
                   "observe.disk"
+                ]
+              },
+              {
+                "required": [
+                  "observe.file"
                 ]
               },
               {
@@ -23220,26 +23478,6 @@
               {
                 "required": [
                   "vars.load"
-                ]
-              },
-              {
-                "required": [
-                  "wait.command"
-                ]
-              },
-              {
-                "required": [
-                  "wait.file"
-                ]
-              },
-              {
-                "required": [
-                  "wait.http"
-                ]
-              },
-              {
-                "required": [
-                  "wait.port"
                 ]
               },
               {
@@ -23368,12 +23606,22 @@
               },
               {
                 "required": [
+                  "observe.command"
+                ]
+              },
+              {
+                "required": [
                   "observe.cpu"
                 ]
               },
               {
                 "required": [
                   "observe.disk"
+                ]
+              },
+              {
+                "required": [
+                  "observe.file"
                 ]
               },
               {
@@ -23579,26 +23827,6 @@
               {
                 "required": [
                   "vars.load"
-                ]
-              },
-              {
-                "required": [
-                  "wait.command"
-                ]
-              },
-              {
-                "required": [
-                  "wait.file"
-                ]
-              },
-              {
-                "required": [
-                  "wait.http"
-                ]
-              },
-              {
-                "required": [
-                  "wait.port"
                 ]
               },
               {
@@ -23725,12 +23953,22 @@
               },
               {
                 "required": [
+                  "observe.command"
+                ]
+              },
+              {
+                "required": [
                   "observe.cpu"
                 ]
               },
               {
                 "required": [
                   "observe.disk"
+                ]
+              },
+              {
+                "required": [
+                  "observe.file"
                 ]
               },
               {
@@ -23940,26 +24178,6 @@
               },
               {
                 "required": [
-                  "wait.command"
-                ]
-              },
-              {
-                "required": [
-                  "wait.file"
-                ]
-              },
-              {
-                "required": [
-                  "wait.http"
-                ]
-              },
-              {
-                "required": [
-                  "wait.port"
-                ]
-              },
-              {
-                "required": [
                   "windows.firewall_rule"
                 ]
               },
@@ -24082,12 +24300,22 @@
               },
               {
                 "required": [
+                  "observe.command"
+                ]
+              },
+              {
+                "required": [
                   "observe.cpu"
                 ]
               },
               {
                 "required": [
                   "observe.disk"
+                ]
+              },
+              {
+                "required": [
+                  "observe.file"
                 ]
               },
               {
@@ -24293,26 +24521,6 @@
               {
                 "required": [
                   "vars.load"
-                ]
-              },
-              {
-                "required": [
-                  "wait.command"
-                ]
-              },
-              {
-                "required": [
-                  "wait.file"
-                ]
-              },
-              {
-                "required": [
-                  "wait.http"
-                ]
-              },
-              {
-                "required": [
-                  "wait.port"
                 ]
               },
               {
@@ -24441,12 +24649,22 @@
               },
               {
                 "required": [
+                  "observe.command"
+                ]
+              },
+              {
+                "required": [
                   "observe.cpu"
                 ]
               },
               {
                 "required": [
                   "observe.disk"
+                ]
+              },
+              {
+                "required": [
+                  "observe.file"
                 ]
               },
               {
@@ -24652,26 +24870,6 @@
               {
                 "required": [
                   "vars.load"
-                ]
-              },
-              {
-                "required": [
-                  "wait.command"
-                ]
-              },
-              {
-                "required": [
-                  "wait.file"
-                ]
-              },
-              {
-                "required": [
-                  "wait.http"
-                ]
-              },
-              {
-                "required": [
-                  "wait.port"
                 ]
               },
               {
@@ -24800,12 +24998,22 @@
               },
               {
                 "required": [
+                  "observe.command"
+                ]
+              },
+              {
+                "required": [
                   "observe.cpu"
                 ]
               },
               {
                 "required": [
                   "observe.disk"
+                ]
+              },
+              {
+                "required": [
+                  "observe.file"
                 ]
               },
               {
@@ -25011,26 +25219,6 @@
               {
                 "required": [
                   "vars.load"
-                ]
-              },
-              {
-                "required": [
-                  "wait.command"
-                ]
-              },
-              {
-                "required": [
-                  "wait.file"
-                ]
-              },
-              {
-                "required": [
-                  "wait.http"
-                ]
-              },
-              {
-                "required": [
-                  "wait.port"
                 ]
               },
               {
@@ -25159,12 +25347,22 @@
               },
               {
                 "required": [
+                  "observe.command"
+                ]
+              },
+              {
+                "required": [
                   "observe.cpu"
                 ]
               },
               {
                 "required": [
                   "observe.disk"
+                ]
+              },
+              {
+                "required": [
+                  "observe.file"
                 ]
               },
               {
@@ -25370,1462 +25568,6 @@
               {
                 "required": [
                   "vars"
-                ]
-              },
-              {
-                "required": [
-                  "wait.command"
-                ]
-              },
-              {
-                "required": [
-                  "wait.file"
-                ]
-              },
-              {
-                "required": [
-                  "wait.http"
-                ]
-              },
-              {
-                "required": [
-                  "wait.port"
-                ]
-              },
-              {
-                "required": [
-                  "windows.firewall_rule"
-                ]
-              },
-              {
-                "required": [
-                  "windows.hyperv_firewall_rule"
-                ]
-              },
-              {
-                "required": [
-                  "windows.registry"
-                ]
-              },
-              {
-                "required": [
-                  "windows.scheduled_task"
-                ]
-              }
-            ]
-          }
-        },
-        {
-          "required": [
-            "wait.command"
-          ],
-          "properties": {
-            "wait.command": {
-              "$ref": "#/definitions/wait.command"
-            }
-          },
-          "not": {
-            "anyOf": [
-              {
-                "required": [
-                  "action"
-                ]
-              },
-              {
-                "required": [
-                  "artifact.capture"
-                ]
-              },
-              {
-                "required": [
-                  "artifact.validate"
-                ]
-              },
-              {
-                "required": [
-                  "assert"
-                ]
-              },
-              {
-                "required": [
-                  "cmd"
-                ]
-              },
-              {
-                "required": [
-                  "container"
-                ]
-              },
-              {
-                "required": [
-                  "container.image"
-                ]
-              },
-              {
-                "required": [
-                  "file.copy"
-                ]
-              },
-              {
-                "required": [
-                  "file.download"
-                ]
-              },
-              {
-                "required": [
-                  "file.template"
-                ]
-              },
-              {
-                "required": [
-                  "file.unarchive"
-                ]
-              },
-              {
-                "required": [
-                  "file.write"
-                ]
-              },
-              {
-                "required": [
-                  "git.checkout"
-                ]
-              },
-              {
-                "required": [
-                  "git.clone"
-                ]
-              },
-              {
-                "required": [
-                  "git.config"
-                ]
-              },
-              {
-                "required": [
-                  "http.request"
-                ]
-              },
-              {
-                "required": [
-                  "import"
-                ]
-              },
-              {
-                "required": [
-                  "log"
-                ]
-              },
-              {
-                "required": [
-                  "observe.cpu"
-                ]
-              },
-              {
-                "required": [
-                  "observe.disk"
-                ]
-              },
-              {
-                "required": [
-                  "observe.gpu"
-                ]
-              },
-              {
-                "required": [
-                  "observe.http"
-                ]
-              },
-              {
-                "required": [
-                  "observe.logs"
-                ]
-              },
-              {
-                "required": [
-                  "observe.memory"
-                ]
-              },
-              {
-                "required": [
-                  "observe.port"
-                ]
-              },
-              {
-                "required": [
-                  "observe.process"
-                ]
-              },
-              {
-                "required": [
-                  "observe.service"
-                ]
-              },
-              {
-                "required": [
-                  "os.cron"
-                ]
-              },
-              {
-                "required": [
-                  "os.firewall"
-                ]
-              },
-              {
-                "required": [
-                  "os.group"
-                ]
-              },
-              {
-                "required": [
-                  "os.mount"
-                ]
-              },
-              {
-                "required": [
-                  "os.service"
-                ]
-              },
-              {
-                "required": [
-                  "os.ssh_key"
-                ]
-              },
-              {
-                "required": [
-                  "os.sysctl"
-                ]
-              },
-              {
-                "required": [
-                  "os.systemd"
-                ]
-              },
-              {
-                "required": [
-                  "os.user"
-                ]
-              },
-              {
-                "required": [
-                  "pkg"
-                ]
-              },
-              {
-                "required": [
-                  "pkg.hold"
-                ]
-              },
-              {
-                "required": [
-                  "pkg.list"
-                ]
-              },
-              {
-                "required": [
-                  "pkg.repo"
-                ]
-              },
-              {
-                "required": [
-                  "pkg.upgrade"
-                ]
-              },
-              {
-                "required": [
-                  "process"
-                ]
-              },
-              {
-                "required": [
-                  "read.json"
-                ]
-              },
-              {
-                "required": [
-                  "read.yaml"
-                ]
-              },
-              {
-                "required": [
-                  "repo.patch"
-                ]
-              },
-              {
-                "required": [
-                  "repo.search"
-                ]
-              },
-              {
-                "required": [
-                  "repo.tree"
-                ]
-              },
-              {
-                "required": [
-                  "shell"
-                ]
-              },
-              {
-                "required": [
-                  "text.delete_range"
-                ]
-              },
-              {
-                "required": [
-                  "text.insert"
-                ]
-              },
-              {
-                "required": [
-                  "text.line"
-                ]
-              },
-              {
-                "required": [
-                  "text.patch"
-                ]
-              },
-              {
-                "required": [
-                  "text.patch.ini"
-                ]
-              },
-              {
-                "required": [
-                  "text.patch.json"
-                ]
-              },
-              {
-                "required": [
-                  "text.patch.yaml"
-                ]
-              },
-              {
-                "required": [
-                  "text.replace"
-                ]
-              },
-              {
-                "required": [
-                  "tool"
-                ]
-              },
-              {
-                "required": [
-                  "transaction"
-                ]
-              },
-              {
-                "required": [
-                  "try"
-                ]
-              },
-              {
-                "required": [
-                  "use"
-                ]
-              },
-              {
-                "required": [
-                  "vars"
-                ]
-              },
-              {
-                "required": [
-                  "vars.load"
-                ]
-              },
-              {
-                "required": [
-                  "wait.file"
-                ]
-              },
-              {
-                "required": [
-                  "wait.http"
-                ]
-              },
-              {
-                "required": [
-                  "wait.port"
-                ]
-              },
-              {
-                "required": [
-                  "windows.firewall_rule"
-                ]
-              },
-              {
-                "required": [
-                  "windows.hyperv_firewall_rule"
-                ]
-              },
-              {
-                "required": [
-                  "windows.registry"
-                ]
-              },
-              {
-                "required": [
-                  "windows.scheduled_task"
-                ]
-              }
-            ]
-          }
-        },
-        {
-          "required": [
-            "wait.file"
-          ],
-          "properties": {
-            "wait.file": {
-              "$ref": "#/definitions/wait.file"
-            }
-          },
-          "not": {
-            "anyOf": [
-              {
-                "required": [
-                  "action"
-                ]
-              },
-              {
-                "required": [
-                  "artifact.capture"
-                ]
-              },
-              {
-                "required": [
-                  "artifact.validate"
-                ]
-              },
-              {
-                "required": [
-                  "assert"
-                ]
-              },
-              {
-                "required": [
-                  "cmd"
-                ]
-              },
-              {
-                "required": [
-                  "container"
-                ]
-              },
-              {
-                "required": [
-                  "container.image"
-                ]
-              },
-              {
-                "required": [
-                  "file.copy"
-                ]
-              },
-              {
-                "required": [
-                  "file.download"
-                ]
-              },
-              {
-                "required": [
-                  "file.template"
-                ]
-              },
-              {
-                "required": [
-                  "file.unarchive"
-                ]
-              },
-              {
-                "required": [
-                  "file.write"
-                ]
-              },
-              {
-                "required": [
-                  "git.checkout"
-                ]
-              },
-              {
-                "required": [
-                  "git.clone"
-                ]
-              },
-              {
-                "required": [
-                  "git.config"
-                ]
-              },
-              {
-                "required": [
-                  "http.request"
-                ]
-              },
-              {
-                "required": [
-                  "import"
-                ]
-              },
-              {
-                "required": [
-                  "log"
-                ]
-              },
-              {
-                "required": [
-                  "observe.cpu"
-                ]
-              },
-              {
-                "required": [
-                  "observe.disk"
-                ]
-              },
-              {
-                "required": [
-                  "observe.gpu"
-                ]
-              },
-              {
-                "required": [
-                  "observe.http"
-                ]
-              },
-              {
-                "required": [
-                  "observe.logs"
-                ]
-              },
-              {
-                "required": [
-                  "observe.memory"
-                ]
-              },
-              {
-                "required": [
-                  "observe.port"
-                ]
-              },
-              {
-                "required": [
-                  "observe.process"
-                ]
-              },
-              {
-                "required": [
-                  "observe.service"
-                ]
-              },
-              {
-                "required": [
-                  "os.cron"
-                ]
-              },
-              {
-                "required": [
-                  "os.firewall"
-                ]
-              },
-              {
-                "required": [
-                  "os.group"
-                ]
-              },
-              {
-                "required": [
-                  "os.mount"
-                ]
-              },
-              {
-                "required": [
-                  "os.service"
-                ]
-              },
-              {
-                "required": [
-                  "os.ssh_key"
-                ]
-              },
-              {
-                "required": [
-                  "os.sysctl"
-                ]
-              },
-              {
-                "required": [
-                  "os.systemd"
-                ]
-              },
-              {
-                "required": [
-                  "os.user"
-                ]
-              },
-              {
-                "required": [
-                  "pkg"
-                ]
-              },
-              {
-                "required": [
-                  "pkg.hold"
-                ]
-              },
-              {
-                "required": [
-                  "pkg.list"
-                ]
-              },
-              {
-                "required": [
-                  "pkg.repo"
-                ]
-              },
-              {
-                "required": [
-                  "pkg.upgrade"
-                ]
-              },
-              {
-                "required": [
-                  "process"
-                ]
-              },
-              {
-                "required": [
-                  "read.json"
-                ]
-              },
-              {
-                "required": [
-                  "read.yaml"
-                ]
-              },
-              {
-                "required": [
-                  "repo.patch"
-                ]
-              },
-              {
-                "required": [
-                  "repo.search"
-                ]
-              },
-              {
-                "required": [
-                  "repo.tree"
-                ]
-              },
-              {
-                "required": [
-                  "shell"
-                ]
-              },
-              {
-                "required": [
-                  "text.delete_range"
-                ]
-              },
-              {
-                "required": [
-                  "text.insert"
-                ]
-              },
-              {
-                "required": [
-                  "text.line"
-                ]
-              },
-              {
-                "required": [
-                  "text.patch"
-                ]
-              },
-              {
-                "required": [
-                  "text.patch.ini"
-                ]
-              },
-              {
-                "required": [
-                  "text.patch.json"
-                ]
-              },
-              {
-                "required": [
-                  "text.patch.yaml"
-                ]
-              },
-              {
-                "required": [
-                  "text.replace"
-                ]
-              },
-              {
-                "required": [
-                  "tool"
-                ]
-              },
-              {
-                "required": [
-                  "transaction"
-                ]
-              },
-              {
-                "required": [
-                  "try"
-                ]
-              },
-              {
-                "required": [
-                  "use"
-                ]
-              },
-              {
-                "required": [
-                  "vars"
-                ]
-              },
-              {
-                "required": [
-                  "vars.load"
-                ]
-              },
-              {
-                "required": [
-                  "wait.command"
-                ]
-              },
-              {
-                "required": [
-                  "wait.http"
-                ]
-              },
-              {
-                "required": [
-                  "wait.port"
-                ]
-              },
-              {
-                "required": [
-                  "windows.firewall_rule"
-                ]
-              },
-              {
-                "required": [
-                  "windows.hyperv_firewall_rule"
-                ]
-              },
-              {
-                "required": [
-                  "windows.registry"
-                ]
-              },
-              {
-                "required": [
-                  "windows.scheduled_task"
-                ]
-              }
-            ]
-          }
-        },
-        {
-          "required": [
-            "wait.http"
-          ],
-          "properties": {
-            "wait.http": {
-              "$ref": "#/definitions/wait.http"
-            }
-          },
-          "not": {
-            "anyOf": [
-              {
-                "required": [
-                  "action"
-                ]
-              },
-              {
-                "required": [
-                  "artifact.capture"
-                ]
-              },
-              {
-                "required": [
-                  "artifact.validate"
-                ]
-              },
-              {
-                "required": [
-                  "assert"
-                ]
-              },
-              {
-                "required": [
-                  "cmd"
-                ]
-              },
-              {
-                "required": [
-                  "container"
-                ]
-              },
-              {
-                "required": [
-                  "container.image"
-                ]
-              },
-              {
-                "required": [
-                  "file.copy"
-                ]
-              },
-              {
-                "required": [
-                  "file.download"
-                ]
-              },
-              {
-                "required": [
-                  "file.template"
-                ]
-              },
-              {
-                "required": [
-                  "file.unarchive"
-                ]
-              },
-              {
-                "required": [
-                  "file.write"
-                ]
-              },
-              {
-                "required": [
-                  "git.checkout"
-                ]
-              },
-              {
-                "required": [
-                  "git.clone"
-                ]
-              },
-              {
-                "required": [
-                  "git.config"
-                ]
-              },
-              {
-                "required": [
-                  "http.request"
-                ]
-              },
-              {
-                "required": [
-                  "import"
-                ]
-              },
-              {
-                "required": [
-                  "log"
-                ]
-              },
-              {
-                "required": [
-                  "observe.cpu"
-                ]
-              },
-              {
-                "required": [
-                  "observe.disk"
-                ]
-              },
-              {
-                "required": [
-                  "observe.gpu"
-                ]
-              },
-              {
-                "required": [
-                  "observe.http"
-                ]
-              },
-              {
-                "required": [
-                  "observe.logs"
-                ]
-              },
-              {
-                "required": [
-                  "observe.memory"
-                ]
-              },
-              {
-                "required": [
-                  "observe.port"
-                ]
-              },
-              {
-                "required": [
-                  "observe.process"
-                ]
-              },
-              {
-                "required": [
-                  "observe.service"
-                ]
-              },
-              {
-                "required": [
-                  "os.cron"
-                ]
-              },
-              {
-                "required": [
-                  "os.firewall"
-                ]
-              },
-              {
-                "required": [
-                  "os.group"
-                ]
-              },
-              {
-                "required": [
-                  "os.mount"
-                ]
-              },
-              {
-                "required": [
-                  "os.service"
-                ]
-              },
-              {
-                "required": [
-                  "os.ssh_key"
-                ]
-              },
-              {
-                "required": [
-                  "os.sysctl"
-                ]
-              },
-              {
-                "required": [
-                  "os.systemd"
-                ]
-              },
-              {
-                "required": [
-                  "os.user"
-                ]
-              },
-              {
-                "required": [
-                  "pkg"
-                ]
-              },
-              {
-                "required": [
-                  "pkg.hold"
-                ]
-              },
-              {
-                "required": [
-                  "pkg.list"
-                ]
-              },
-              {
-                "required": [
-                  "pkg.repo"
-                ]
-              },
-              {
-                "required": [
-                  "pkg.upgrade"
-                ]
-              },
-              {
-                "required": [
-                  "process"
-                ]
-              },
-              {
-                "required": [
-                  "read.json"
-                ]
-              },
-              {
-                "required": [
-                  "read.yaml"
-                ]
-              },
-              {
-                "required": [
-                  "repo.patch"
-                ]
-              },
-              {
-                "required": [
-                  "repo.search"
-                ]
-              },
-              {
-                "required": [
-                  "repo.tree"
-                ]
-              },
-              {
-                "required": [
-                  "shell"
-                ]
-              },
-              {
-                "required": [
-                  "text.delete_range"
-                ]
-              },
-              {
-                "required": [
-                  "text.insert"
-                ]
-              },
-              {
-                "required": [
-                  "text.line"
-                ]
-              },
-              {
-                "required": [
-                  "text.patch"
-                ]
-              },
-              {
-                "required": [
-                  "text.patch.ini"
-                ]
-              },
-              {
-                "required": [
-                  "text.patch.json"
-                ]
-              },
-              {
-                "required": [
-                  "text.patch.yaml"
-                ]
-              },
-              {
-                "required": [
-                  "text.replace"
-                ]
-              },
-              {
-                "required": [
-                  "tool"
-                ]
-              },
-              {
-                "required": [
-                  "transaction"
-                ]
-              },
-              {
-                "required": [
-                  "try"
-                ]
-              },
-              {
-                "required": [
-                  "use"
-                ]
-              },
-              {
-                "required": [
-                  "vars"
-                ]
-              },
-              {
-                "required": [
-                  "vars.load"
-                ]
-              },
-              {
-                "required": [
-                  "wait.command"
-                ]
-              },
-              {
-                "required": [
-                  "wait.file"
-                ]
-              },
-              {
-                "required": [
-                  "wait.port"
-                ]
-              },
-              {
-                "required": [
-                  "windows.firewall_rule"
-                ]
-              },
-              {
-                "required": [
-                  "windows.hyperv_firewall_rule"
-                ]
-              },
-              {
-                "required": [
-                  "windows.registry"
-                ]
-              },
-              {
-                "required": [
-                  "windows.scheduled_task"
-                ]
-              }
-            ]
-          }
-        },
-        {
-          "required": [
-            "wait.port"
-          ],
-          "properties": {
-            "wait.port": {
-              "$ref": "#/definitions/wait.port"
-            }
-          },
-          "not": {
-            "anyOf": [
-              {
-                "required": [
-                  "action"
-                ]
-              },
-              {
-                "required": [
-                  "artifact.capture"
-                ]
-              },
-              {
-                "required": [
-                  "artifact.validate"
-                ]
-              },
-              {
-                "required": [
-                  "assert"
-                ]
-              },
-              {
-                "required": [
-                  "cmd"
-                ]
-              },
-              {
-                "required": [
-                  "container"
-                ]
-              },
-              {
-                "required": [
-                  "container.image"
-                ]
-              },
-              {
-                "required": [
-                  "file.copy"
-                ]
-              },
-              {
-                "required": [
-                  "file.download"
-                ]
-              },
-              {
-                "required": [
-                  "file.template"
-                ]
-              },
-              {
-                "required": [
-                  "file.unarchive"
-                ]
-              },
-              {
-                "required": [
-                  "file.write"
-                ]
-              },
-              {
-                "required": [
-                  "git.checkout"
-                ]
-              },
-              {
-                "required": [
-                  "git.clone"
-                ]
-              },
-              {
-                "required": [
-                  "git.config"
-                ]
-              },
-              {
-                "required": [
-                  "http.request"
-                ]
-              },
-              {
-                "required": [
-                  "import"
-                ]
-              },
-              {
-                "required": [
-                  "log"
-                ]
-              },
-              {
-                "required": [
-                  "observe.cpu"
-                ]
-              },
-              {
-                "required": [
-                  "observe.disk"
-                ]
-              },
-              {
-                "required": [
-                  "observe.gpu"
-                ]
-              },
-              {
-                "required": [
-                  "observe.http"
-                ]
-              },
-              {
-                "required": [
-                  "observe.logs"
-                ]
-              },
-              {
-                "required": [
-                  "observe.memory"
-                ]
-              },
-              {
-                "required": [
-                  "observe.port"
-                ]
-              },
-              {
-                "required": [
-                  "observe.process"
-                ]
-              },
-              {
-                "required": [
-                  "observe.service"
-                ]
-              },
-              {
-                "required": [
-                  "os.cron"
-                ]
-              },
-              {
-                "required": [
-                  "os.firewall"
-                ]
-              },
-              {
-                "required": [
-                  "os.group"
-                ]
-              },
-              {
-                "required": [
-                  "os.mount"
-                ]
-              },
-              {
-                "required": [
-                  "os.service"
-                ]
-              },
-              {
-                "required": [
-                  "os.ssh_key"
-                ]
-              },
-              {
-                "required": [
-                  "os.sysctl"
-                ]
-              },
-              {
-                "required": [
-                  "os.systemd"
-                ]
-              },
-              {
-                "required": [
-                  "os.user"
-                ]
-              },
-              {
-                "required": [
-                  "pkg"
-                ]
-              },
-              {
-                "required": [
-                  "pkg.hold"
-                ]
-              },
-              {
-                "required": [
-                  "pkg.list"
-                ]
-              },
-              {
-                "required": [
-                  "pkg.repo"
-                ]
-              },
-              {
-                "required": [
-                  "pkg.upgrade"
-                ]
-              },
-              {
-                "required": [
-                  "process"
-                ]
-              },
-              {
-                "required": [
-                  "read.json"
-                ]
-              },
-              {
-                "required": [
-                  "read.yaml"
-                ]
-              },
-              {
-                "required": [
-                  "repo.patch"
-                ]
-              },
-              {
-                "required": [
-                  "repo.search"
-                ]
-              },
-              {
-                "required": [
-                  "repo.tree"
-                ]
-              },
-              {
-                "required": [
-                  "shell"
-                ]
-              },
-              {
-                "required": [
-                  "text.delete_range"
-                ]
-              },
-              {
-                "required": [
-                  "text.insert"
-                ]
-              },
-              {
-                "required": [
-                  "text.line"
-                ]
-              },
-              {
-                "required": [
-                  "text.patch"
-                ]
-              },
-              {
-                "required": [
-                  "text.patch.ini"
-                ]
-              },
-              {
-                "required": [
-                  "text.patch.json"
-                ]
-              },
-              {
-                "required": [
-                  "text.patch.yaml"
-                ]
-              },
-              {
-                "required": [
-                  "text.replace"
-                ]
-              },
-              {
-                "required": [
-                  "tool"
-                ]
-              },
-              {
-                "required": [
-                  "transaction"
-                ]
-              },
-              {
-                "required": [
-                  "try"
-                ]
-              },
-              {
-                "required": [
-                  "use"
-                ]
-              },
-              {
-                "required": [
-                  "vars"
-                ]
-              },
-              {
-                "required": [
-                  "vars.load"
-                ]
-              },
-              {
-                "required": [
-                  "wait.command"
-                ]
-              },
-              {
-                "required": [
-                  "wait.file"
-                ]
-              },
-              {
-                "required": [
-                  "wait.http"
                 ]
               },
               {
@@ -26954,12 +25696,22 @@
               },
               {
                 "required": [
+                  "observe.command"
+                ]
+              },
+              {
+                "required": [
                   "observe.cpu"
                 ]
               },
               {
                 "required": [
                   "observe.disk"
+                ]
+              },
+              {
+                "required": [
+                  "observe.file"
                 ]
               },
               {
@@ -27170,26 +25922,6 @@
               {
                 "required": [
                   "vars.load"
-                ]
-              },
-              {
-                "required": [
-                  "wait.command"
-                ]
-              },
-              {
-                "required": [
-                  "wait.file"
-                ]
-              },
-              {
-                "required": [
-                  "wait.http"
-                ]
-              },
-              {
-                "required": [
-                  "wait.port"
                 ]
               },
               {
@@ -27313,12 +26045,22 @@
               },
               {
                 "required": [
+                  "observe.command"
+                ]
+              },
+              {
+                "required": [
                   "observe.cpu"
                 ]
               },
               {
                 "required": [
                   "observe.disk"
+                ]
+              },
+              {
+                "required": [
+                  "observe.file"
                 ]
               },
               {
@@ -27529,26 +26271,6 @@
               {
                 "required": [
                   "vars.load"
-                ]
-              },
-              {
-                "required": [
-                  "wait.command"
-                ]
-              },
-              {
-                "required": [
-                  "wait.file"
-                ]
-              },
-              {
-                "required": [
-                  "wait.http"
-                ]
-              },
-              {
-                "required": [
-                  "wait.port"
                 ]
               },
               {
@@ -27672,12 +26394,22 @@
               },
               {
                 "required": [
+                  "observe.command"
+                ]
+              },
+              {
+                "required": [
                   "observe.cpu"
                 ]
               },
               {
                 "required": [
                   "observe.disk"
+                ]
+              },
+              {
+                "required": [
+                  "observe.file"
                 ]
               },
               {
@@ -27888,26 +26620,6 @@
               {
                 "required": [
                   "vars.load"
-                ]
-              },
-              {
-                "required": [
-                  "wait.command"
-                ]
-              },
-              {
-                "required": [
-                  "wait.file"
-                ]
-              },
-              {
-                "required": [
-                  "wait.http"
-                ]
-              },
-              {
-                "required": [
-                  "wait.port"
                 ]
               },
               {
@@ -28031,12 +26743,22 @@
               },
               {
                 "required": [
+                  "observe.command"
+                ]
+              },
+              {
+                "required": [
                   "observe.cpu"
                 ]
               },
               {
                 "required": [
                   "observe.disk"
+                ]
+              },
+              {
+                "required": [
+                  "observe.file"
                 ]
               },
               {
@@ -28247,26 +26969,6 @@
               {
                 "required": [
                   "vars.load"
-                ]
-              },
-              {
-                "required": [
-                  "wait.command"
-                ]
-              },
-              {
-                "required": [
-                  "wait.file"
-                ]
-              },
-              {
-                "required": [
-                  "wait.http"
-                ]
-              },
-              {
-                "required": [
-                  "wait.port"
                 ]
               },
               {
@@ -28769,137 +27471,6 @@
       "x-emits-events": [
         "variables.loaded"
       ]
-    },
-    "wait.command": {
-      "type": "object",
-      "description": "Wait for a shell command to exit with the expected code",
-      "properties": {
-        "cmd": {
-          "type": "string",
-          "minLength": 1
-        },
-        "expect_exit": {
-          "type": "integer"
-        },
-        "interval": {
-          "type": "string"
-        },
-        "poll_interval": {
-          "type": "string"
-        },
-        "timeout": {
-          "type": "string",
-          "pattern": "^[0-9]+(ns|us|µs|ms|s|m|h)$"
-        }
-      },
-      "required": [
-        "cmd"
-      ],
-      "additionalProperties": false,
-      "x-category": "command",
-      "x-supports-dry-run": true
-    },
-    "wait.file": {
-      "type": "object",
-      "description": "Wait for a file or directory to exist (optionally containing a substring)",
-      "properties": {
-        "contains": {
-          "type": "string"
-        },
-        "interval": {
-          "type": "string"
-        },
-        "path": {
-          "type": "string",
-          "minLength": 1
-        },
-        "poll_interval": {
-          "type": "string"
-        },
-        "timeout": {
-          "type": "string",
-          "pattern": "^[0-9]+(ns|us|µs|ms|s|m|h)$"
-        }
-      },
-      "required": [
-        "path"
-      ],
-      "additionalProperties": false,
-      "x-category": "system",
-      "x-supports-dry-run": true
-    },
-    "wait.http": {
-      "type": "object",
-      "description": "Wait for an HTTP endpoint to return an accepted status",
-      "properties": {
-        "body": {
-          "type": "string"
-        },
-        "body_contains": {
-          "type": "string"
-        },
-        "headers": {
-          "type": "object",
-          "additionalProperties": true
-        },
-        "interval": {
-          "type": "string"
-        },
-        "method": {
-          "type": "string"
-        },
-        "poll_interval": {
-          "type": "string"
-        },
-        "status": {
-          "type": "array",
-          "items": {
-            "type": "integer"
-          }
-        },
-        "timeout": {
-          "type": "string",
-          "pattern": "^[0-9]+(ns|us|µs|ms|s|m|h)$"
-        },
-        "url": {
-          "type": "string",
-          "minLength": 1
-        }
-      },
-      "required": [
-        "url"
-      ],
-      "additionalProperties": false,
-      "x-category": "network",
-      "x-supports-dry-run": true
-    },
-    "wait.port": {
-      "type": "object",
-      "description": "Wait for a TCP port to accept connections",
-      "properties": {
-        "host": {
-          "type": "string"
-        },
-        "interval": {
-          "type": "string"
-        },
-        "poll_interval": {
-          "type": "string"
-        },
-        "port": {
-          "type": "integer"
-        },
-        "timeout": {
-          "type": "string",
-          "pattern": "^[0-9]+(ns|us|µs|ms|s|m|h)$"
-        }
-      },
-      "required": [
-        "port"
-      ],
-      "additionalProperties": false,
-      "x-category": "network",
-      "x-supports-dry-run": true
     },
     "windows.firewall_rule": {
       "type": "object",

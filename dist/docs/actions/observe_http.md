@@ -29,6 +29,7 @@ Single-shot HTTP GET; returns typed status, latency, headers, body sample
 | `skip_tls_verify` | boolean | No | - |
 | `timeout` | string | No | - |
 | `url` | string | **Yes** | - |
+| `wait` | object | No | - |
 
 ## Platform Support
 

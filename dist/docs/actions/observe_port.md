@@ -26,6 +26,7 @@ Single-shot read of TCP/UDP port state (open? listener? pid?)
 | `port` | integer | **Yes** | - |
 | `protocol` | string | No | - |
 | `timeout` | string | No | - |
+| `wait` | object | No | - |
 
 ## Platform Support
 

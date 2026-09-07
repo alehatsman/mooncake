@@ -1485,16 +1485,45 @@ type ArtifactCapture struct {
 	Steps            []Step `yaml:"steps" json:"steps"`                                   // Steps to execute and capture (required)
 }
 
-// ObservePort is the spec-59 single-shot read of TCP/UDP port state.
-// The polling cousin is wait.port; observe.port returns the current
-// state once and lets the next step branch on it via spec-37 `as:`
-// capture. Read-only by contract — Changed=false, empty Diff, nil
-// Reverse, Cost{Risk:1, Reversible:true}.
+// WaitSpec is the `wait:` modifier shared by every observe.* action whose
+// Found flag is meaningful. It turns a single-shot read into "read until",
+// replacing the retired wait.* action family — those were a poll loop wrapped
+// around a probe observe.* already implemented, with their own duration
+// parsing and their own subtly different defaults.
+//
+//   - observe.port:
+//     port: 5432
+//     wait: { for: 30s, until: open }
+//
+// A wait whose budget elapses without the condition holding FAILS the step.
+// That is what makes it an orchestration primitive rather than a slow read.
+type WaitSpec struct {
+	// For is the total budget, e.g. "30s". Default "60s".
+	For string `yaml:"for" json:"for,omitempty"`
+
+	// Until is the condition to poll for. "found" (default) waits for the
+	// probe to see the target; "gone" waits for it to disappear. Synonyms
+	// that read better per probe are accepted — open/up/ready/present/running
+	// and closed/down/stopped/absent — and are exactly synonyms.
+	Until string `yaml:"until" json:"until,omitempty"`
+
+	// Interval is the gap between attempts. Default "1s", floored at 100ms so
+	// a typo cannot turn a wait into a busy loop.
+	Interval string `yaml:"interval" json:"interval,omitempty"`
+}
+
+// ObservePort is the spec-59 read of TCP/UDP port state. Returns the current
+// state and lets the next step branch on it via spec-37 `as:` capture; add
+// `wait:` to poll until the port opens or closes. Read-only by contract —
+// Changed=false, noop Diff, no Reverse, Cost{Risk:1, Reversible:false}.
 type ObservePort struct {
 	Host     string `yaml:"host" json:"host,omitempty"`         // Host to probe (default: "localhost")
 	Port     int    `yaml:"port" json:"port"`                   // Port (required)
 	Protocol string `yaml:"protocol" json:"protocol,omitempty"` // "tcp" (default) | "udp"
 	Timeout  string `yaml:"timeout" json:"timeout,omitempty"`   // Dial timeout (default: "2s")
+
+	// Wait polls until the port is open (or closed) instead of reading once.
+	Wait *WaitSpec `yaml:"wait,omitempty" json:"wait,omitempty"`
 }
 
 // ObserveProcess is the spec-59 single-shot read of process state.
@@ -1523,6 +1552,10 @@ type ObserveHTTP struct {
 	// (canonical use: pair with `expect_status: 301` to verify an
 	// HTTP→HTTPS redirect is still in place). Issue #18.
 	FollowRedirects *int `yaml:"follow_redirects,omitempty" json:"follow_redirects,omitempty"`
+
+	// Wait polls until the endpoint responds as expected (or stops), instead
+	// of reading once.
+	Wait *WaitSpec `yaml:"wait,omitempty" json:"wait,omitempty"`
 }
 
 // ObserveService is the spec-59 single-shot read of init-system
@@ -1557,6 +1590,34 @@ type ObserveGPU struct {
 	Index *int `yaml:"index" json:"index,omitempty"` // Specific GPU index (default: all)
 }
 
+// ObserveFile reads whether a filesystem path exists, and optionally whether
+// its contents contain a substring. Found means "exists" — and, where
+// Contains is set, "exists and matches". Successor to wait.file: add `wait:`
+// to poll instead of reading once.
+type ObserveFile struct {
+	Path     string `yaml:"path" json:"path" plan:"path"`       // File or directory path (required)
+	Contains string `yaml:"contains" json:"contains,omitempty"` // Optional substring required in contents
+
+	// Wait polls until the file appears (or disappears) instead of reading once.
+	Wait *WaitSpec `yaml:"wait,omitempty" json:"wait,omitempty"`
+}
+
+// ObserveCommand runs a command and reports its exit status as an
+// observation. Found means "exited with ExpectExit" (default 0).
+//
+// A non-zero exit does NOT fail the step: the exit status is the data being
+// observed, and failing on it would make the probe unusable for "is this
+// service healthy yet?". Only a `wait:` that times out fails. Successor to
+// wait.command.
+type ObserveCommand struct {
+	Cmd        string `yaml:"cmd" json:"cmd"`                           // Shell command (required)
+	ExpectExit int    `yaml:"expect_exit" json:"expect_exit,omitempty"` // Exit code meaning "found" (default: 0)
+	Timeout    string `yaml:"timeout" json:"timeout,omitempty"`         // Per-attempt timeout (default: "30s")
+
+	// Wait polls until the command exits as expected instead of running once.
+	Wait *WaitSpec `yaml:"wait,omitempty" json:"wait,omitempty"`
+}
+
 // ObserveLogs is the spec-61 single-shot read of a log source within
 // a time / line window. Exactly one of Path / JournalUnit / Container
 // must be set. Patterns are regexes evaluated line-by-line; per-pattern
@@ -1583,20 +1644,6 @@ type ObserveLogs struct {
 
 	// MaxLines caps the total lines scanned. Default 10000.
 	MaxLines int `yaml:"max_lines" json:"max_lines,omitempty"`
-}
-
-// WaitPort waits for a TCP port to accept connections.
-// Useful for orchestrating service start → port open → next step.
-type WaitPort struct {
-	Host         string `yaml:"host" json:"host,omitempty"`                   // Host to dial (default: "localhost")
-	Port         int    `yaml:"port" json:"port"`                             // TCP port (required)
-	Timeout      string `yaml:"timeout" json:"timeout,omitempty"`             // Total timeout duration (default: "60s")
-	PollInterval string `yaml:"poll_interval" json:"poll_interval,omitempty"` // Time between dial attempts (default: "1s")
-	// Interval is an alias for PollInterval (MT-42). Authors instinctively
-	// write `interval:`; without this the field is silently dropped and
-	// the default 1s is used. Handler precedence: PollInterval wins if
-	// both are set.
-	Interval string `yaml:"interval,omitempty" json:"interval,omitempty"`
 }
 
 // WaitHTTP waits for an HTTP endpoint to return one of the accepted
@@ -1834,27 +1881,6 @@ type HTTPAuthHeader struct {
 	Value string `yaml:"value" json:"value"`
 }
 
-// WaitFile waits for a filesystem path to exist, optionally containing
-// a substring in its contents.
-type WaitFile struct {
-	Path         string `yaml:"path" json:"path" plan:"path"`                 // File or directory path (required)
-	Contains     string `yaml:"contains" json:"contains,omitempty"`           // Optional substring required in file contents
-	Timeout      string `yaml:"timeout" json:"timeout,omitempty"`             // Total timeout duration (default: "60s")
-	PollInterval string `yaml:"poll_interval" json:"poll_interval,omitempty"` // Time between checks (default: "1s")
-	// Interval is an alias for PollInterval (MT-42). See WaitPort.
-	Interval string `yaml:"interval,omitempty" json:"interval,omitempty"`
-}
-
-// WaitCommand waits for a shell command to exit with the expected code.
-type WaitCommand struct {
-	Cmd          string `yaml:"cmd" json:"cmd"`                               // Shell command (required)
-	ExpectExit   int    `yaml:"expect_exit" json:"expect_exit,omitempty"`     // Expected exit code (default: 0)
-	Timeout      string `yaml:"timeout" json:"timeout,omitempty"`             // Total timeout duration (default: "60s")
-	PollInterval string `yaml:"poll_interval" json:"poll_interval,omitempty"` // Time between attempts (default: "1s")
-	// Interval is an alias for PollInterval (MT-42). See WaitPort.
-	Interval string `yaml:"interval,omitempty" json:"interval,omitempty"`
-}
-
 // ArtifactValidate validates artifacts against constraints (change budgets).
 // Designed for LLM agent loops to enforce guardrails on file modifications.
 type ArtifactValidate struct {
@@ -2004,16 +2030,14 @@ type Step struct {
 	ObservePort               *ObservePort               `yaml:"observe.port,omitempty"      json:"observe.port,omitempty"      action:"observe.port"`
 	ObserveProcess            *ObserveProcess            `yaml:"observe.process,omitempty"   json:"observe.process,omitempty"   action:"observe.process"`
 	ObserveHTTP               *ObserveHTTP               `yaml:"observe.http,omitempty"      json:"observe.http,omitempty"      action:"observe.http"`
+	ObserveFile               *ObserveFile               `yaml:"observe.file,omitempty"      json:"observe.file,omitempty"      action:"observe.file"`
+	ObserveCommand            *ObserveCommand            `yaml:"observe.command,omitempty"   json:"observe.command,omitempty"   action:"observe.command"`
 	ObserveService            *ObserveService            `yaml:"observe.service,omitempty"   json:"observe.service,omitempty"   action:"observe.service"`
 	ObserveCPU                *ObserveCPU                `yaml:"observe.cpu,omitempty"       json:"observe.cpu,omitempty"       action:"observe.cpu"`
 	ObserveMemory             *ObserveMemory             `yaml:"observe.memory,omitempty"    json:"observe.memory,omitempty"    action:"observe.memory"`
 	ObserveDisk               *ObserveDisk               `yaml:"observe.disk,omitempty"      json:"observe.disk,omitempty"      action:"observe.disk"`
 	ObserveGPU                *ObserveGPU                `yaml:"observe.gpu,omitempty"       json:"observe.gpu,omitempty"       action:"observe.gpu"`
 	ObserveLogs               *ObserveLogs               `yaml:"observe.logs,omitempty"      json:"observe.logs,omitempty"      action:"observe.logs"`
-	WaitPort                  *WaitPort                  `yaml:"wait.port,omitempty"         json:"wait.port,omitempty"         action:"wait.port"`
-	WaitHTTP                  *WaitHTTP                  `yaml:"wait.http,omitempty"         json:"wait.http,omitempty"         action:"wait.http"`
-	WaitFile                  *WaitFile                  `yaml:"wait.file,omitempty"         json:"wait.file,omitempty"         action:"wait.file"`
-	WaitCommand               *WaitCommand               `yaml:"wait.command,omitempty"      json:"wait.command,omitempty"      action:"wait.command"`
 	HTTPRequest               *HTTPRequest               `yaml:"http.request,omitempty"      json:"http.request,omitempty"      action:"http.request"`
 	Log                       *PrintAction               `yaml:"log,omitempty"               json:"log,omitempty"               action:"log"`
 	Use                       string                     `yaml:"use,omitempty"               json:"use,omitempty"               action:"use"`
@@ -2554,10 +2578,8 @@ func (s *Step) Clone() *Step {
 		ObserveDisk:               s.ObserveDisk,
 		ObserveGPU:                s.ObserveGPU,
 		ObserveLogs:               s.ObserveLogs,
-		WaitPort:                  s.WaitPort,
-		WaitHTTP:                  s.WaitHTTP,
-		WaitFile:                  s.WaitFile,
-		WaitCommand:               s.WaitCommand,
+		ObserveFile:               s.ObserveFile,
+		ObserveCommand:            s.ObserveCommand,
 		HTTPRequest:               s.HTTPRequest,
 		Log:                       s.Log,
 		Use:                       s.Use,

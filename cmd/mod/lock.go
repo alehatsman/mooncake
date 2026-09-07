@@ -176,10 +176,18 @@ func runModTidy(c *cli.Context) error {
 				return err
 			}
 			hashes[key] = hash
+
+			// Keep the existing timestamp when the hash is unchanged. Stamping
+			// a fresh one every run would make `mod tidy` produce a diff on a
+			// no-op, which defeats the point of committing the lockfile.
+			lockedAt := modules.NowRFC3339()
+			if prev, ok := lock.LookupLock(key); ok && prev.Hash == hash && prev.LockedAt != "" {
+				lockedAt = prev.LockedAt
+			}
 			lock.Set(modules.LockEntry{
 				Ref:      key,
 				Hash:     hash,
-				LockedAt: modules.NowRFC3339(),
+				LockedAt: lockedAt,
 			})
 		}
 		pinned = append(pinned, tidyEntry{Alias: alias, Ref: key, Hash: hash})
