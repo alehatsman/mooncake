@@ -47,8 +47,16 @@ jobs:
     image: mooncake-ci:latest
     steps:
       - shell:
+          # Two-stage on purpose. The `mooncake` on the container's PATH is the
+          # static one baked into mooncake-ci:latest, so it lags this repo by
+          # however long it has been since the image was rebuilt — it cannot run
+          # CLI surface added after that. Build first with whatever the image
+          # has, then run the gate with the binary from the commit under test.
+          # Without this, adding --keep-going below failed the whole run at
+          # step 1 with "flag provided but not defined" (run 113).
+          #
           # --keep-going so one standing failure does not hide the stages behind
           # it. The run still fails; it fails with the whole picture. Without it
           # the vuln stage (5/11) had been masking 6-11 for as long as #187 has
           # been open — including the docs/schema regen-and-verify (#193).
-          cmd: mooncake task ci --keep-going
+          cmd: mooncake task build && out/mooncake task ci --keep-going
