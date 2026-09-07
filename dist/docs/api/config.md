@@ -1105,7 +1105,7 @@ type HTTPBasicAuth struct {
 
 ## type [HTTPRequest](<https://github.com/alehatsman/mooncake/blob/main/internal/config/config.go#L1701-L1859>)
 
-HTTPRequest is the proposal\-16 first\-class HTTP action. Unlike \`file.download\` \(URL→file\+checksum\), \`observe.http\` \(single\-shot probe\), and \`wait.http\` \(poll until ready\), HTTPRequest is the general "call an endpoint, capture the response as a fact" primitive — the action \`notify\` and \`llm\` will sit on top of.
+HTTPRequest is the proposal\-16 first\-class HTTP action. Unlike \`file.download\` \(URL→file\+checksum\) and \`observe.http\` \(probe, with an optional \`wait:\` to poll until ready\), HTTPRequest is the general "call an endpoint, capture the response as a fact" primitive — the action \`notify\` and \`llm\` will sit on top of.
 
 Idempotency contract: POST and PATCH calls are unsafe by default \(the server may create or mutate state on each call\). The handler's Validate\(\) refuses to ship a POST/PATCH unless the user supplies EXACTLY ONE of: \- IdempotencyKey \(sent as an \`Idempotency\-Key\` header — server\-side dedup\), \- CreatesWhen \(template predicate evaluated against existing facts — Wave 2 wires this into plan\-mode probes; Wave 1 honors it as a gate inside Run\), \- Risk = "high" \(explicit operator ack\).
 

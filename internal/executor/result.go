@@ -134,7 +134,7 @@ type Result struct {
 	// Error carries a single-string diagnostic when Failed is true. Per
 	// proposal-06 this field MUST be empty when Failed is false — the
 	// pre-proposal pattern of `failed: false, error: "no matching X"`
-	// (observe.process, wait.http, os.mount, os.firewall) is the bug
+	// (observe.process, os.mount, os.firewall) is the bug
 	// this contract closes.
 	Error string `json:"error,omitempty"`
 

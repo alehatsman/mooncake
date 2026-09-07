@@ -1,7 +1,8 @@
-// Package observe_port implements the observe.port action: single-shot
-// read of TCP/UDP port state (spec-59). The polling cousin is wait.port;
-// observe.port returns the current state once and lets the next step
-// branch on it via spec-37 `as:` capture.
+// Package observe_port implements the observe.port action: a read of TCP/UDP
+// port state (spec-59). It returns the current state and lets the next step
+// branch on it via spec-37 `as:` capture; add a `wait:` block to poll until
+// the port opens or closes instead. The retired wait.port action was exactly
+// that poll loop, hard-coded.
 package observe_port
 
 import (
@@ -190,9 +191,10 @@ func resolveHost(ctx actions.Context, host string) (string, error) {
 // Cost: every observe.* handler reports Risk=1, Reversible=false,
 // Resources=0, Bytes=0. Pure read.
 //
-// Reversible mirrors the Reverser type assertion, and observe handlers
-// deliberately do not implement Reverser: a read has nothing to undo, which
-// is not the same as being undoable.
+// Reversible answers "would reversing this do anything useful?", and for a
+// read the answer is no. Observe handlers also deliberately do not implement
+// Reverser at all: a read has nothing to undo, which is not the same as being
+// undoable. See CostEstimate.Reversible for why the two are distinct.
 func (h *Handler) Cost(_ actions.Context, _ *config.Step) (actions.CostEstimate, error) {
 	return actions.CostEstimate{
 		Resources:  0,
