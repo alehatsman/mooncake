@@ -24,6 +24,7 @@ Single-shot read of process state (running? pid? args?)
 |----------|------|----------|-------------|
 | `name` | string | No | - |
 | `pattern` | string | No | - |
+| `wait` | object | No | - |
 
 ## Platform Support
 

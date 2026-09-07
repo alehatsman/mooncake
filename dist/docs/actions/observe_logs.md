@@ -30,6 +30,7 @@ Single-shot read of a log source; returns per-pattern match counts + sample line
 | `patterns` | array | **Yes** | - |
 | `sample_lines` | integer | No | - |
 | `since` | string | No | - |
+| `wait` | object | No | - |
 
 ## Platform Support
 

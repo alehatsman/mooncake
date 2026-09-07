@@ -24,6 +24,7 @@ Single-shot read of service state (active? enabled?)
 |----------|------|----------|-------------|
 | `manager` | string | No | - |
 | `name` | string | **Yes** | - |
+| `wait` | object | No | - |
 
 ## Platform Support
 

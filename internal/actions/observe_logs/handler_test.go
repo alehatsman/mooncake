@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/alehatsman/mooncake/internal/actions"
 	"github.com/alehatsman/mooncake/internal/config"
@@ -124,7 +125,10 @@ WARN slow request
 	}
 }
 
-func TestRun_FileSource_NoMatches_StillFound(t *testing.T) {
+// A clean log is a successful observation that found nothing: found=false
+// with an empty error. Found used to mean "the read succeeded", which is
+// constant for any readable source and would make `wait:` instant.
+func TestRun_FileSource_NoMatches_IsNotFound(t *testing.T) {
 	p := writeLog(t, "INFO clean run\nINFO another clean line\n")
 	h := &Handler{}
 	step := &config.Step{ObserveLogs: &config.ObserveLogs{
@@ -135,17 +139,99 @@ func TestRun_FileSource_NoMatches_StillFound(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Run: %v", err)
 	}
-	data := res.(*executor.Result).Data
-	if found, _ := data["found"].(bool); !found {
-		t.Errorf("expected found=true even with zero matches")
+	r := res.(*executor.Result)
+	data := r.Data
+	if found, _ := data["found"].(bool); found {
+		t.Errorf("expected found=false with zero matches")
+	}
+	// The distinguishing half: nothing matched is an answer, so the step
+	// neither errors nor fails. Only a failure to read does that.
+	if r.Error != "" {
+		t.Errorf("error should be empty when the log read fine; got %q", r.Error)
+	}
+	if r.Failed {
+		t.Error("a clean log is a successful observation, not a failed step")
 	}
 	val, _ := data["value"].(map[string]any)
 	matches, _ := val["matches"].([]any)
+	if len(matches) != 2 {
+		t.Fatalf("expected both patterns reported, got %d", len(matches))
+	}
 	for _, m := range matches {
 		mm, _ := m.(map[string]any)
 		if c, _ := mm["count"].(float64); c != 0 {
 			t.Errorf("pattern %v: count should be 0 (clean log); got %v", mm["pattern"], c)
 		}
+	}
+}
+
+// The other side of the same split: an unreadable source is a probe
+// failure, not "the pattern is absent". If this collapsed into found=false
+// with no error, `wait: { until: gone }` would be satisfied by a log it
+// could never read.
+func TestRun_FileSource_Unreadable_SetsError(t *testing.T) {
+	h := &Handler{}
+	step := &config.Step{ObserveLogs: &config.ObserveLogs{
+		Path:     filepath.Join(t.TempDir(), "does-not-exist.log"),
+		Patterns: []string{"ERROR"},
+	}}
+	res, err := h.Run(newCtx(t, false), step)
+	if err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	r := res.(*executor.Result)
+	if found, _ := r.Data["found"].(bool); found {
+		t.Errorf("expected found=false for an unreadable source")
+	}
+	if r.Error == "" {
+		t.Error("expected error to name the read failure")
+	}
+}
+
+// A wait whose condition never holds fails the step, and still publishes
+// the last real observation for a downstream `as:` capture.
+func TestRun_Wait_TimesOutOnCleanLog(t *testing.T) {
+	p := writeLog(t, "INFO clean run\n")
+	h := &Handler{}
+	step := &config.Step{ObserveLogs: &config.ObserveLogs{
+		Path:     p,
+		Patterns: []string{"ERROR"},
+		Wait:     &config.WaitSpec{For: "150ms", Interval: "50ms"},
+	}}
+	res, err := h.Run(newCtx(t, false), step)
+	if err == nil {
+		t.Fatal("expected the wait to fail when no pattern ever matches")
+	}
+	data := res.(*executor.Result).Data
+	if found, _ := data["found"].(bool); found {
+		t.Errorf("expected found=false on the last observation")
+	}
+	if _, ok := data["value"].(map[string]any); !ok {
+		t.Error("timed-out wait should still publish the last observation")
+	}
+}
+
+// The matching case returns as soon as the pattern is present, without
+// burning the budget.
+func TestRun_Wait_SucceedsWhenPatternPresent(t *testing.T) {
+	p := writeLog(t, "ERROR boom\n")
+	h := &Handler{}
+	step := &config.Step{ObserveLogs: &config.ObserveLogs{
+		Path:     p,
+		Patterns: []string{"ERROR"},
+		Wait:     &config.WaitSpec{For: "10s", Interval: "50ms"},
+	}}
+	start := time.Now()
+	res, err := h.Run(newCtx(t, false), step)
+	if err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	if elapsed := time.Since(start); elapsed > 5*time.Second {
+		t.Errorf("wait should return on the first match, took %s", elapsed)
+	}
+	data := res.(*executor.Result).Data
+	if found, _ := data["found"].(bool); !found {
+		t.Errorf("expected found=true when the pattern matches")
 	}
 }
 

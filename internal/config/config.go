@@ -1532,6 +1532,10 @@ type ObservePort struct {
 type ObserveProcess struct {
 	Name    string `yaml:"name" json:"name,omitempty"`       // Exact match against process basename
 	Pattern string `yaml:"pattern" json:"pattern,omitempty"` // Regex against full argv (alternative to name)
+
+	// Wait polls until a process matches (or stops matching) the selector
+	// instead of reading once.
+	Wait *WaitSpec `yaml:"wait,omitempty" json:"wait,omitempty"`
 }
 
 // ObserveHTTP is the spec-59 single-shot HTTP GET observation.
@@ -1564,6 +1568,11 @@ type ObserveHTTP struct {
 type ObserveService struct {
 	Name    string `yaml:"name" json:"name"`                 // Service unit name (required)
 	Manager string `yaml:"manager" json:"manager,omitempty"` // "systemd" | "launchd" | "auto"
+
+	// Wait polls until the service is active (or stopped) instead of
+	// reading once. Note this polls ACTIVE, not installed — see
+	// ServiceObservation for why Found means active.
+	Wait *WaitSpec `yaml:"wait,omitempty" json:"wait,omitempty"`
 }
 
 // ObserveCPU is the spec-60 single-shot read of CPU utilization +
@@ -1644,35 +1653,12 @@ type ObserveLogs struct {
 
 	// MaxLines caps the total lines scanned. Default 10000.
 	MaxLines int `yaml:"max_lines" json:"max_lines,omitempty"`
-}
 
-// WaitHTTP waits for an HTTP endpoint to return one of the accepted
-// status codes, optionally with a substring match on the body.
-type WaitHTTP struct {
-	URL          string `yaml:"url" json:"url"`                               // Target URL (required)
-	Method       string `yaml:"method" json:"method,omitempty"`               // HTTP method (default: "GET")
-	Status       []int  `yaml:"status" json:"status,omitempty"`               // Accepted status codes (default: [200])
-	BodyContains string `yaml:"body_contains" json:"body_contains,omitempty"` // Optional substring required in body
-	// Body is the optional request payload sent with every poll —
-	// proposal-10's motivating case is "poll POST /v1/embeddings
-	// with a JSON payload because the service has no GET /healthz."
-	// Goes through the template renderer so `{{ var }}` interpolation
-	// works the same way it does for URL / Headers / BodyContains.
-	// Raw-string shape (vs structured) matches what download:/
-	// pkg.repo: do for inline content and keeps the user in charge
-	// of JSON escaping. Caller is responsible for setting an
-	// appropriate Content-Type header — this action is the polling
-	// primitive, not a JSON client.
-	//
-	// Side-effect note: polling a non-GET endpoint hits the handler
-	// every iteration. The embedding case re-runs inference each
-	// poll. The user is expected to know what they're poking.
-	Body         string            `yaml:"body,omitempty" json:"body,omitempty"`
-	Headers      map[string]string `yaml:"headers" json:"headers,omitempty"`             // Optional request headers
-	Timeout      string            `yaml:"timeout" json:"timeout,omitempty"`             // Total timeout duration (default: "60s")
-	PollInterval string            `yaml:"poll_interval" json:"poll_interval,omitempty"` // Time between requests (default: "1s")
-	// Interval is an alias for PollInterval (MT-42). See WaitPort.
-	Interval string `yaml:"interval,omitempty" json:"interval,omitempty"`
+	// Wait polls until a pattern matches (or stops matching) instead of
+	// reading once. Each attempt re-reads the window, so `since:` should be
+	// at least as long as `interval:` or a match can fall out of the window
+	// between polls.
+	Wait *WaitSpec `yaml:"wait,omitempty" json:"wait,omitempty"`
 }
 
 // HTTPRequest is the proposal-16 first-class HTTP action. Unlike

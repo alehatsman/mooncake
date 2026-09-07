@@ -470,6 +470,7 @@ Single-shot read of a log source; returns per-pattern match counts + sample line
 | `patterns` | array | **Yes** | - |
 | `sample_lines` | integer | No | - |
 | `since` | string | No | - |
+| `wait` | object | No | - |
 
 **Metadata:**
 - Category: `system`
@@ -512,6 +513,7 @@ Single-shot read of process state (running? pid? args?)
 |----------|------|----------|-------------|
 | `name` | string | No | - |
 | `pattern` | string | No | - |
+| `wait` | object | No | - |
 
 **Metadata:**
 - Category: `system`
@@ -527,6 +529,7 @@ Single-shot read of service state (active? enabled?)
 |----------|------|----------|-------------|
 | `manager` | string | No | - |
 | `name` | string | **Yes** | - |
+| `wait` | object | No | - |
 
 **Metadata:**
 - Category: `system`

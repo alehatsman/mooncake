@@ -93,6 +93,26 @@ So polling is not a separate family; it is a modifier. `observe.X` grows
   expected code (default `0`). The command's exit status is data, so a non-zero
   exit SHALL NOT fail the step; only a `wait:` that times out does.
 
+### What `Found` means, per handler
+A handler's `Found` is the thing `wait:` polls, so it SHALL be the state a user
+would wait for, not the easiest boolean the probe has to hand.
+
+- WHEN `observe.port` runs, `Found` SHALL mean a listener is bound.
+- WHEN `observe.process` runs, `Found` SHALL mean a process matched the selector.
+- WHEN `observe.http` runs, `Found` SHALL mean the endpoint answered as expected.
+- WHEN `observe.service` runs, `Found` SHALL mean the service is ACTIVE, not that
+  its unit file exists. `until: running` has to mean running: a unit installed
+  and stopped is the exact state a wait exists to sit through. Installation is
+  still observable at `value.exists`, which is why the two are separate fields.
+- WHEN `observe.logs` runs, `Found` SHALL mean at least one `patterns:` entry
+  matched inside the window. A failure to read the source SHALL set `Error` and
+  leave `Found` false, mirroring `observe.process`: "nothing matched" is an
+  answer, "could not look" is a failure.
+- WHERE a probe distinguishes "the thing is absent" from "the probe broke", it
+  SHALL report the first as `Found=false` with an empty `Error`, and only the
+  second SHALL populate `Error`. A `wait: { until: gone }` polls the first and
+  MUST NOT be satisfied by the second.
+
 ## Non-goals
 - `mooncake facts` / `state` / `metrics` CLI reads, and `fleet observe` fan-out.
   Both should route through these handlers rather than reimplementing them, but
@@ -113,7 +133,8 @@ So polling is not a separate family; it is a modifier. `observe.X` grows
       cancellation between attempts, fail-on-timeout, last observation returned.
 - [x] `observe.file` and `observe.command`.
 - [x] `wait.port` / `wait.http` / `wait.file` / `wait.command` removed.
-- [ ] `wait:` extended to `observe.process` / `observe.service` / `observe.logs`
-      (mechanism is shared; only the per-handler wiring is left).
+- [x] `wait:` extended to `observe.process` / `observe.service` / `observe.logs`,
+      including the `Found` corrections that made the wait meaningful on the
+      last two.
 - [ ] `fleet observe` and the `state` CLI route through these handlers instead
       of reimplementing the probes (the remainder of #180).

@@ -106,3 +106,89 @@
   log:
     msg: "nginx active: {{ nginx_state.found }} (exit {{ nginx_state.value.exit_code }})"
   tags: [command]
+
+####################
+# 5. observe.service
+####################
+
+# `found` means ACTIVE, not installed. `until: running` has to keep polling
+# through the state where the unit file is present and the service is down —
+# that is the whole state a wait exists to sit through. Installation is still
+# visible at `value.exists`.
+- name: Wait for postgres to come up
+  observe.service:
+    name: postgresql
+    wait: { for: 60s, interval: 2s, until: running }
+  tags: [service, database]
+
+- name: Wait for the old unit to stop before swapping the binary
+  observe.service:
+    name: myapp
+    wait: { for: 30s, until: stopped }
+  tags: [service, deploy]
+
+- name: Read service state without blocking
+  observe.service:
+    name: nginx
+  as: nginx_svc
+  tags: [service]
+
+- name: Installed and running are different questions
+  log:
+    msg: "nginx installed: {{ nginx_svc.value.exists }}, running: {{ nginx_svc.found }}, enabled at boot: {{ nginx_svc.value.enabled }}"
+  tags: [service]
+
+####################
+# 6. observe.process
+####################
+
+- name: Wait for the worker to start
+  observe.process:
+    pattern: "myapp --role=worker"
+    wait: { for: 60s, until: running }
+  tags: [process]
+
+- name: Wait for it to exit before cleaning up
+  observe.process:
+    name: myapp
+    wait: { for: 30s, until: gone }
+  tags: [process, cleanup]
+
+####################
+# 7. observe.logs
+####################
+
+# `found` means at least one `patterns:` entry matched inside the window.
+# Each poll re-reads the window, so keep `since:` at least as long as
+# `interval:` or a match can fall out of the window between attempts.
+- name: Wait for the startup banner in the journal
+  observe.logs:
+    journal_unit: myapp
+    patterns: ["Server listening on"]
+    since: 30s
+    wait: { for: 2m, interval: 5s }
+  tags: [logs]
+
+# Failing to READ the log is an error; reading it and finding nothing is just
+# found=false. That distinction is what keeps `until: gone` honest — an
+# unreadable log never counts as "the error stopped happening".
+- name: Confirm the error stopped appearing
+  observe.logs:
+    path: /var/log/myapp.log
+    patterns: ["FATAL", "panic:"]
+    since: 30s
+    wait: { for: 2m, interval: 10s, until: gone }
+  tags: [logs]
+
+- name: Scan for errors without blocking
+  observe.logs:
+    container: myapp
+    patterns: ["ERROR", "WARN"]
+    since: 5m
+  as: applogs
+  tags: [logs]
+
+- name: Report the scan
+  log:
+    msg: "matched: {{ applogs.found }} across {{ applogs.value.lines_read }} lines"
+  tags: [logs]
