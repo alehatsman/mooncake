@@ -299,5 +299,5 @@ These are explicit non-goals; expect them in phase 2+:
 - [`docs-working/streams/core/specs/spec-67-module-system-revised.md`](docs-working/streams/core/specs/spec-67-module-system-revised.md)
   — design rationale and acceptance criteria.
 - [`internal/modules/`](internal/modules/) — parser, fetcher, index loader, resolver.
-- [`internal/presets/`](internal/presets/) — component loader, validator, expander
-  (named `presets` for historical reasons; the user-facing concept is "component").
+- [`internal/components/`](internal/components/) — component loader, validator, expander
+  (named `components` for historical reasons; the user-facing concept is "component").

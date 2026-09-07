@@ -1,6 +1,6 @@
-# Ollama Preset Examples
+# Ollama Component Examples
 
-This directory contains examples demonstrating the Ollama preset for managing Ollama installations, service configuration, and LLM model management.
+This directory contains examples demonstrating the Ollama component for managing Ollama installations, service configuration, and LLM model management.
 
 ## Quick Start
 
@@ -19,7 +19,7 @@ mooncake run -c examples/ollama/ollama-quick-start.yml --ask-become-pass
 ## Examples
 
 ### `ollama-example.yml` (Comprehensive)
-Complete example demonstrating all Ollama preset capabilities:
+Complete example demonstrating all Ollama component capabilities:
 - Installation variations (basic, with service, via specific method)
 - Model management (single, multiple, force re-pull)
 - Service configuration (custom host, models directory, environment variables)
@@ -37,7 +37,7 @@ mooncake run -c examples/ollama/ollama-example.yml --ask-become-pass
 ```
 
 ### `ollama-quick-start.yml` (Beginner-Friendly)
-Fast introduction to Ollama preset with minimal configuration:
+Fast introduction to Ollama component with minimal configuration:
 - Quick installation
 - Single model download
 - Simple test queries
@@ -48,7 +48,7 @@ Fast introduction to Ollama preset with minimal configuration:
 ### 1. Basic Installation
 ```yaml
 - name: Install Ollama
-  preset: ollama
+  component: ollama
   with:
     state: present
   become: true
@@ -57,7 +57,7 @@ Fast introduction to Ollama preset with minimal configuration:
 ### 2. Install with Service
 ```yaml
 - name: Install Ollama with service
-  preset: ollama
+  component: ollama
   with:
     state: present
     service: true
@@ -67,7 +67,7 @@ Fast introduction to Ollama preset with minimal configuration:
 ### 3. Install and Pull Models
 ```yaml
 - name: Install Ollama and pull models
-  preset: ollama
+  component: ollama
   with:
     state: present
     service: true
@@ -80,7 +80,7 @@ Fast introduction to Ollama preset with minimal configuration:
 ### 4. Complete Configuration
 ```yaml
 - name: Full Ollama deployment
-  preset: ollama
+  component: ollama
   with:
     state: present
     service: true
@@ -119,7 +119,7 @@ Fast introduction to Ollama preset with minimal configuration:
 
 1. **Start with dry-run**: Use `--dry-run` to see what will happen
 2. **Use facts**: Check `{{ ollama_version }}` before installation
-3. **Idempotency**: The preset won't reinstall if Ollama is already present
+3. **Idempotency**: The component won't reinstall if Ollama is already present
 4. **Model size**: Consider starting with tinyllama (~637MB) for testing
 5. **Service management**: Use `service: true` for production deployments
 6. **Sudo required**: Most operations need `become: true` or `--ask-become-pass`
@@ -127,7 +127,7 @@ Fast introduction to Ollama preset with minimal configuration:
 ## Documentation
 
 For complete documentation, see:
-- [Preset Reference](../../docs/guide/presets.md) - Full preset documentation
+- [Component Reference](../../docs/guide/components.md) - Full component documentation
 - [Configuration Reference](../../docs/guide/config/reference.md) - Property tables
 - [Core Concepts](../../docs/guide/core-concepts.md) - Overview
 

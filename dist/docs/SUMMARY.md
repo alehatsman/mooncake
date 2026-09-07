@@ -155,6 +155,7 @@
     - [vault.rekey](cli/vault_rekey.md)
 - API:
     - [actions](api/actions.md)
+    - [components](api/components.md)
     - [config](api/config.md)
     - [effects](api/effects.md)
     - [events](api/events.md)
@@ -163,7 +164,6 @@
     - [logger](api/logger.md)
     - [modules](api/modules.md)
     - [plan](api/plan.md)
-    - [presets](api/presets.md)
     - [schemagen](api/schemagen.md)
 - Reference:
     - [capabilities](capabilities.md)

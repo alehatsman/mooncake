@@ -29,7 +29,7 @@ func sortByRel(entries []FileEntry) {
 func TestWalk_FindsRegularFiles(t *testing.T) {
 	root := t.TempDir()
 	writeFile(t, filepath.Join(root, "config.yml"), []byte("steps: []\n"))
-	writeFile(t, filepath.Join(root, "presets", "p.yml"), []byte("x"))
+	writeFile(t, filepath.Join(root, "components", "p.yml"), []byte("x"))
 	writeFile(t, filepath.Join(root, "vars", "common.yml"), []byte("foo: bar"))
 
 	entries, total, err := Walk(root, 1<<30)
@@ -37,7 +37,7 @@ func TestWalk_FindsRegularFiles(t *testing.T) {
 		t.Fatalf("Walk: %v", err)
 	}
 	sortByRel(entries)
-	wantRel := []string{"config.yml", "presets/p.yml", "vars/common.yml"}
+	wantRel := []string{"components/p.yml", "config.yml", "vars/common.yml"}
 	if len(entries) != len(wantRel) {
 		t.Fatalf("entry count = %d, want %d (%+v)", len(entries), len(wantRel), entries)
 	}
@@ -232,8 +232,8 @@ func TestPeerPath(t *testing.T) {
 	}{
 		{"/var/lib/mooncake/agentd/synced", "abc/def", "config.yml",
 			"/var/lib/mooncake/agentd/synced/abc/def/config.yml"},
-		{"/synced", "scope", "presets/p.yml",
-			"/synced/scope/presets/p.yml"},
+		{"/synced", "scope", "components/p.yml",
+			"/synced/scope/components/p.yml"},
 		// leading slash on rel is tolerated.
 		{"/synced", "scope", "/config.yml", "/synced/scope/config.yml"},
 		// empty rel returns just root + scope (used for BaseDir).

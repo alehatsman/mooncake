@@ -111,10 +111,10 @@ const (
 	EventAssertFailed Type = "assert.failed"
 )
 
-// Event types for presets
+// Event types for components
 const (
-	EventPresetExpanded  Type = "preset.expanded"
-	EventPresetCompleted Type = "preset.completed"
+	EventComponentExpanded  Type = "component.expanded"
+	EventComponentCompleted Type = "component.completed"
 )
 
 // Event types for agent loop
@@ -478,11 +478,11 @@ type AssertionData struct {
 	StepID   string `json:"step_id,omitempty"` // Step ID (added by event bus)
 }
 
-// PresetData contains data for preset events
-type PresetData struct {
-	Name       string                 `json:"name"`                 // Preset name
-	Parameters map[string]interface{} `json:"parameters,omitempty"` // Parameters passed to preset
-	StepsCount int                    `json:"steps_count"`          // Number of steps in preset
+// ComponentData contains data for component events
+type ComponentData struct {
+	Name       string                 `json:"name"`                 // Component name
+	Parameters map[string]interface{} `json:"parameters,omitempty"` // Parameters passed to component
+	StepsCount int                    `json:"steps_count"`          // Number of steps in component
 	Changed    bool                   `json:"changed,omitempty"`    // Whether any step changed (only in completed event)
 }
 

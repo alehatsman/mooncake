@@ -42,7 +42,7 @@ var DefaultAPIPackages = []string{
 	"internal/logger",
 	"internal/modules",
 	"internal/plan",
-	"internal/presets",
+	"internal/components",
 	"internal/schemagen",
 }
 

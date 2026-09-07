@@ -229,12 +229,12 @@ func (d *DryRunLogger) LogAssertCheck(assertType, expected string) {
 	d.logger.Infof("  [DRY-RUN] Would assert (%s): %s", assertType, expected)
 }
 
-// LogPresetOperation logs a preset expansion operation in dry-run mode.
-func (d *DryRunLogger) LogPresetOperation(name string, paramsCount int) {
+// LogComponentOperation logs a component expansion operation in dry-run mode.
+func (d *DryRunLogger) LogComponentOperation(name string, paramsCount int) {
 	if paramsCount > 0 {
-		d.logger.Infof("  [DRY-RUN] Would expand preset '%s' with %d parameters", name, paramsCount)
+		d.logger.Infof("  [DRY-RUN] Would expand component '%s' with %d parameters", name, paramsCount)
 	} else {
-		d.logger.Infof("  [DRY-RUN] Would expand preset '%s'", name)
+		d.logger.Infof("  [DRY-RUN] Would expand component '%s'", name)
 	}
 }
 

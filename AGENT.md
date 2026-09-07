@@ -89,7 +89,7 @@ Package graph + LOC + coupling metrics. Re-run after structural changes.
 | Planner | `internal/plan/` |
 | Executor | `internal/executor/` |
 | Facts (host introspection) | `internal/facts/` |
-| Presets | `internal/presets/` + `presets/` (the example tree) |
+| Components | `internal/components/` + `components/` (the example tree) |
 | CLI entry points | `cmd/` |
 | Generated docs | `docs-next/generated/` (regen via `mooncake task docs-generate`) |
 | Generated schema | `internal/config/schema.json` (regen via `mooncake task schema-generate`) |

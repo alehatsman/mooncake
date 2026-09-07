@@ -1,6 +1,6 @@
 # Mooncake Multi-Architecture Testing Framework
 
-Docker-based testing framework for Mooncake presets with full multi-architecture support (linux/amd64 and linux/arm64).
+Docker-based testing framework for Mooncake components with full multi-architecture support (linux/amd64 and linux/arm64).
 
 ## Quick Start
 
@@ -13,8 +13,8 @@ task setup-buildx
 # Test on your native architecture
 task test-ubuntu
 
-# Test specific preset
-task test-preset PRESET=docker
+# Test specific component
+task test-component COMPONENT=docker
 
 # Clean up
 task clean-all
@@ -38,7 +38,7 @@ testing-next/
 │   └── common.sh        # Shared test functions
 ├── core-tests/
 │   └── run.sh           # Core mooncake functionality tests
-├── test-presets.sh      # Main preset test runner
+├── test-components.sh      # Main component test runner
 ├── Makefile             # Build and test orchestration
 └── README.md
 ```
@@ -84,12 +84,12 @@ task test-ubuntu
 task test-ubuntu-amd64
 task test-ubuntu-arm64
 
-# Test specific preset
-task test-preset PRESET=nginx
+# Test specific component
+task test-component COMPONENT=nginx
 
-# Test specific preset on specific arch
-task test-preset-amd64 PRESET=docker
-task test-preset-arm64 PRESET=kubernetes
+# Test specific component on specific arch
+task test-component-amd64 COMPONENT=docker
+task test-component-arm64 COMPONENT=kubernetes
 ```
 
 ### Results
@@ -97,7 +97,7 @@ task test-preset-arm64 PRESET=kubernetes
 Results are saved to `../artifacts/<distro>-<arch>/`:
 - **`results.json`** - Machine-readable test results (JSON array)
 - **`summary.md`** - Human-readable summary with pass/fail counts
-- **`<preset>.log`** - Individual preset output logs
+- **`<component>.log`** - Individual component output logs
 
 Example:
 ```bash
@@ -105,7 +105,7 @@ Example:
 cat ../artifacts/ubuntu-amd64/summary.md
 cat ../artifacts/ubuntu-amd64/results.json
 
-# View specific preset log
+# View specific component log
 cat ../artifacts/ubuntu-amd64/docker.log
 ```
 
@@ -132,7 +132,7 @@ task shell-ubuntu-arm64
 # Inside container:
 mooncake actions list
 mooncake facts
-ls /usr/share/mooncake/presets/ 2>/dev/null  # or wherever the container vendors them
+ls /usr/share/mooncake/components/ 2>/dev/null  # or wherever the container vendors them
 ```
 
 ## Multi-Architecture Details
@@ -188,8 +188,8 @@ Adding more distros is straightforward - just create a new Dockerfile in `images
 - Image build (emulated): ~30-60s
 
 **Test execution**:
-- Single preset: ~2-10s (varies by complexity)
-- All presets (~400): ~20-40 minutes (sequential)
+- Single component: ~2-10s (varies by complexity)
+- All components (~400): ~20-40 minutes (sequential)
 
 ## Troubleshooting
 
@@ -228,7 +228,7 @@ Cross-architecture tests use QEMU emulation which is slower. For faster tests:
 ### GitHub Actions Example
 
 ```yaml
-name: Test Presets
+name: Test Components
 on: [push, pull_request]
 
 jobs:
@@ -271,13 +271,13 @@ jobs:
 
 - **Simpler**: No race conditions or resource conflicts
 - **Predictable**: Deterministic ordering
-- **Sufficient**: ~400 presets complete in ~30 minutes
+- **Sufficient**: ~400 components complete in ~30 minutes
 
 Parallel execution can be added later if needed.
 
 ## Contributing
 
-When adding new presets, they're automatically discovered and tested. No changes needed unless:
+When adding new components, they're automatically discovered and tested. No changes needed unless:
 - New distro support (add Dockerfile in `images/`)
 - New architecture (add build target in Makefile)
 - New test dimensions (parameters, platforms, etc.)

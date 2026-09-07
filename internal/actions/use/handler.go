@@ -1,6 +1,8 @@
-// Package preset implements the preset action handler.
-// Presets expand into multiple steps with parameter injection.
-package preset
+// Package use implements the `use:` action handler, which expands a component
+// into steps with its props injected. The component comes from a local file
+// (`use: ./db.yml`), a name resolved through the component search paths, or a
+// Git-native module alias declared in the playbook's `modules:` block.
+package use
 
 import (
 	"context"
@@ -8,15 +10,15 @@ import (
 	"path/filepath"
 
 	"github.com/alehatsman/mooncake/internal/actions"
+	"github.com/alehatsman/mooncake/internal/components"
 	"github.com/alehatsman/mooncake/internal/config"
 	"github.com/alehatsman/mooncake/internal/events"
 	"github.com/alehatsman/mooncake/internal/executor"
 	"github.com/alehatsman/mooncake/internal/modules"
 	"github.com/alehatsman/mooncake/internal/plan"
-	"github.com/alehatsman/mooncake/internal/presets"
 )
 
-// Handler implements the preset action handler.
+// Handler implements the component action handler.
 type Handler struct{}
 
 func init() {
@@ -42,10 +44,10 @@ func captureContext(ec *executor.ExecutionContext) *savedContext {
 }
 
 // restoreContext restores the execution context to the saved state,
-// removing any keys added during preset execution.
-func (s *savedContext) restore(ec *executor.ExecutionContext, parametersNamespace map[string]interface{}) {
-	// Remove parameters namespace from scope user vars
-	for k := range parametersNamespace {
+// removing any keys added during component execution.
+func (s *savedContext) restore(ec *executor.ExecutionContext, propsNamespace map[string]interface{}) {
+	// Remove props namespace from scope user vars
+	for k := range propsNamespace {
 		delete(ec.Scope.User, k)
 	}
 	// Restore original user variables
@@ -60,7 +62,7 @@ func (s *savedContext) restore(ec *executor.ExecutionContext, parametersNamespac
 func (h *Handler) Metadata() actions.ActionMetadata {
 	return actions.ActionMetadata{
 		Name:               "use",
-		Description:        "Execute a preset by expanding it into steps",
+		Description:        "Execute a component by expanding it into steps",
 		Category:           actions.CategorySystem,
 		SupportsDryRun:     true,
 		SupportedPlatforms: []string{}, // All platforms (meta-action)
@@ -69,26 +71,26 @@ func (h *Handler) Metadata() actions.ActionMetadata {
 	}
 }
 
-// Validate validates the preset action configuration.
+// Validate validates the component action configuration.
 func (h *Handler) Validate(step *config.Step) error {
 	if step.Use == "" {
-		return fmt.Errorf("preset name is required")
+		return fmt.Errorf("component name is required")
 	}
 	return nil
 }
 
-// Execute executes the preset action.
-// Run is the Spec 16 entry point. Presets compose other steps; the
+// Execute executes the component action.
+// Run is the Spec 16 entry point. Components compose other steps; the
 // planner expands them at plan time so this handler rarely runs in
 // practice. Plan mode reports "not checkable"; apply mode expands
-// the preset, executes its expanded steps in sequence, and emits
-// EventPresetExpanded / EventPresetCompleted bookends.
+// the component, executes its expanded steps in sequence, and emits
+// EventComponentExpanded / EventComponentCompleted bookends.
 //
 // F011: legacy Execute / DryRun pair folded into Run.
 func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, error) {
 	if ctx.Mode() == actions.ModePlan {
 		r := executor.NewResult()
-		r.Reason = "not checkable (preset; usually expanded at plan time)"
+		r.Reason = "not checkable (component; usually expanded at plan time)"
 		return r, nil
 	}
 
@@ -101,13 +103,13 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 	props := step.Props
 
 	// spec-67 dispatch:
-	//   local path  → LoadPresetFromPath against ec.CurrentDir
+	//   local path  → LoadComponentFromPath against ec.CurrentDir
 	//   remote ref  → resolver fetches + reads index.yml
 	//   alias hit   → resolver via Svc.Modules
-	//   else        → legacy preset (search paths)
+	//   else        → legacy component (search paths)
 	var expandedSteps []config.Step
-	var parametersNamespace map[string]interface{}
-	var presetBaseDir string
+	var propsNamespace map[string]interface{}
+	var componentBaseDir string
 	var err error
 	switch config.ComponentRefKindOf(name) {
 	case config.ComponentRefLocalPath:
@@ -115,80 +117,80 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		if !filepath.IsAbs(absPath) {
 			absPath = filepath.Join(ec.CurrentDir, name)
 		}
-		expandedSteps, parametersNamespace, presetBaseDir, err = presets.ExpandPresetFromPath(name, props, absPath)
+		expandedSteps, propsNamespace, componentBaseDir, err = components.ExpandComponentFromPath(name, props, absPath)
 		if err != nil {
 			return nil, fmt.Errorf("failed to expand component '%s': %w", name, err)
 		}
 	case config.ComponentRefRemote:
 		// Inline remote refs carry no alias binding, so no default props.
-		expandedSteps, parametersNamespace, presetBaseDir, err = resolveAndExpand(ec, name, props, nil)
+		expandedSteps, propsNamespace, componentBaseDir, err = resolveAndExpand(ec, name, props, nil)
 		if err != nil {
 			return nil, err
 		}
 	default:
 		// Alias hit when the bare name appears in the playbook's modules: block.
-		// Otherwise fall through to the legacy preset search-path loader.
+		// Otherwise fall through to the legacy component search-path loader.
 		if binding, isAlias := ec.Svc.Modules[firstSegment(name)]; isAlias && ec.Svc.Modules != nil {
 			// #52/#57: the alias binding may carry default props; they're
 			// applied (filtered to the component's declared params) inside
 			// resolveAndExpand once the component is loaded.
-			expandedSteps, parametersNamespace, presetBaseDir, err = resolveAndExpand(ec, name, props, binding.Props)
+			expandedSteps, propsNamespace, componentBaseDir, err = resolveAndExpand(ec, name, props, binding.Props)
 			if err != nil {
 				return nil, err
 			}
 		} else {
-			expandedSteps, parametersNamespace, presetBaseDir, err = presets.ExpandPreset(name, props)
+			expandedSteps, propsNamespace, componentBaseDir, err = components.ExpandComponent(name, props)
 			if err != nil {
-				return nil, fmt.Errorf("failed to expand preset '%s': %w", name, err)
+				return nil, fmt.Errorf("failed to expand component '%s': %w", name, err)
 			}
 		}
 	}
 
-	// Emit preset expanded event
-	ec.EmitEvent(events.EventPresetExpanded, events.PresetData{
+	// Emit component expanded event
+	ec.EmitEvent(events.EventComponentExpanded, events.ComponentData{
 		Name:       name,
 		Parameters: props,
 		StepsCount: len(expandedSteps),
 	})
 
-	ec.Svc.Logger.Infof("Expanding preset '%s' into %d steps", name, len(expandedSteps))
+	ec.Svc.Logger.Infof("Expanding component '%s' into %d steps", name, len(expandedSteps))
 
 	// Save current context for restoration
 	saved := captureContext(ec)
-	defer saved.restore(ec, parametersNamespace)
+	defer saved.restore(ec, propsNamespace)
 
-	// Merge parameters namespace into variables
-	for k, v := range parametersNamespace {
+	// Merge props namespace into variables
+	for k, v := range propsNamespace {
 		ec.Scope.User[k] = v
 	}
 
-	// Flip CurrentDir to the preset's entrypoint dir so the first file's
-	// relative paths resolve against the preset root. Subsequent includes
-	// inside the preset re-flip CurrentDir per file via the planner.
-	if presetBaseDir != "" {
-		ec.CurrentDir = presetBaseDir
+	// Flip CurrentDir to the component's entrypoint dir so the first file's
+	// relative paths resolve against the component root. Subsequent includes
+	// inside the component re-flip CurrentDir per file via the planner.
+	if componentBaseDir != "" {
+		ec.CurrentDir = componentBaseDir
 	}
 
 	// Use planner to expand includes, loops, and other plan-time directives
-	// This ensures includes within preset steps are properly expanded
+	// This ensures includes within component steps are properly expanded
 	planner, err := plan.NewPlanner()
 	if err != nil {
 		return nil, fmt.Errorf("failed to create planner: %w", err)
 	}
-	fullyExpandedSteps, err := planner.ExpandStepsWithContext(expandedSteps, ec.Variables(), presetBaseDir)
+	fullyExpandedSteps, err := planner.ExpandStepsWithContext(expandedSteps, ec.Variables(), componentBaseDir)
 	if err != nil {
-		return nil, fmt.Errorf("failed to expand preset steps: %w", err)
+		return nil, fmt.Errorf("failed to expand component steps: %w", err)
 	}
 
-	ec.Svc.Logger.Infof("Preset '%s' expanded to %d steps (after include expansion)", name, len(fullyExpandedSteps))
+	ec.Svc.Logger.Infof("Component '%s' expanded to %d steps (after include expansion)", name, len(fullyExpandedSteps))
 
 	// Execute fully expanded steps
 	anyChanged := false
 	for i, expandedStep := range fullyExpandedSteps {
-		ec.Svc.Logger.Debugf("Executing preset step %d/%d: %s", i+1, len(fullyExpandedSteps), expandedStep.Name)
+		ec.Svc.Logger.Debugf("Executing component step %d/%d: %s", i+1, len(fullyExpandedSteps), expandedStep.Name)
 
 		if err := executor.ExecuteStep(expandedStep, ec); err != nil {
-			return nil, fmt.Errorf("preset '%s' step %d failed: %w", name, i+1, err)
+			return nil, fmt.Errorf("component '%s' step %d failed: %w", name, i+1, err)
 		}
 
 		// Track if any step changed
@@ -197,7 +199,7 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		}
 	}
 
-	// Create preset result
+	// Create component result
 	result := executor.NewResult()
 	result.Target = name
 	if anyChanged {
@@ -206,17 +208,17 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		result.Operation = executor.OpNoop
 	}
 	result.Changed = anyChanged
-	result.Stdout = fmt.Sprintf("Preset '%s' executed %d steps", name, len(fullyExpandedSteps))
+	result.Stdout = fmt.Sprintf("Component '%s' executed %d steps", name, len(fullyExpandedSteps))
 
-	// Emit preset completed event
-	ec.EmitEvent(events.EventPresetCompleted, events.PresetData{
+	// Emit component completed event
+	ec.EmitEvent(events.EventComponentCompleted, events.ComponentData{
 		Name:       name,
 		Parameters: props,
 		StepsCount: len(fullyExpandedSteps),
 		Changed:    anyChanged,
 	})
 
-	ec.Svc.Logger.Infof("Preset '%s' completed: changed=%v", name, anyChanged)
+	ec.Svc.Logger.Infof("Component '%s' completed: changed=%v", name, anyChanged)
 
 	return result, nil
 }
@@ -282,16 +284,16 @@ func resolveAndExpand(ec *executor.ExecutionContext, name string, props, default
 	if err != nil {
 		return nil, nil, "", fmt.Errorf("resolve module %q: %w", name, err)
 	}
-	def, err := presets.LoadPresetFromPath(resolved.ComponentPath)
+	def, err := components.LoadComponentFromPath(resolved.ComponentPath)
 	if err != nil {
 		return nil, nil, "", fmt.Errorf("resolve module %q: %w", name, err)
 	}
 	render := func(s string) (string, error) { return ec.Template().Render(s, ec.Variables()) }
-	merged, err := mergeModuleDefaults(props, defaultProps, def.Parameters, render)
+	merged, err := mergeModuleDefaults(props, defaultProps, def.Props, render)
 	if err != nil {
 		return nil, nil, "", fmt.Errorf("module %q: %w", name, err)
 	}
-	return presets.ExpandLoadedDefinition(name, merged, def)
+	return components.ExpandLoadedDefinition(name, merged, def)
 }
 
 // mergeModuleDefaults layers a module binding's default props (#52) underneath
@@ -301,7 +303,7 @@ func resolveAndExpand(ec *executor.ExecutionContext, name string, props, default
 // default that only some exports accept. Default values are template-rendered
 // (so `{{ GO_TAGS }}` resolves); per-call props always win and are never
 // re-rendered here (they were rendered at plan time).
-func mergeModuleDefaults(caller, defaults map[string]interface{}, declared map[string]config.PresetParameter, render func(string) (string, error)) (map[string]interface{}, error) {
+func mergeModuleDefaults(caller, defaults map[string]interface{}, declared map[string]config.ComponentProp, render func(string) (string, error)) (map[string]interface{}, error) {
 	if len(defaults) == 0 {
 		return caller, nil
 	}

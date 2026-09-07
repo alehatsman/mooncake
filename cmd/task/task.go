@@ -18,12 +18,12 @@ import (
 	"github.com/alehatsman/mooncake/cmd/cmdutil"
 	"github.com/alehatsman/mooncake/cmd/kernel"
 	"github.com/alehatsman/mooncake/internal/apply"
+	"github.com/alehatsman/mooncake/internal/components"
 	"github.com/alehatsman/mooncake/internal/config"
 	"github.com/alehatsman/mooncake/internal/executor"
 	"github.com/alehatsman/mooncake/internal/logger"
 	"github.com/alehatsman/mooncake/internal/modules"
 	"github.com/alehatsman/mooncake/internal/plan"
-	"github.com/alehatsman/mooncake/internal/presets"
 	"github.com/alehatsman/mooncake/internal/security"
 	"github.com/urfave/cli/v2"
 )
@@ -268,7 +268,7 @@ func resolveComponentDescription(ref, configDir string, resolver *modules.Resolv
 		}
 		path = resolved.ComponentPath
 	}
-	if def, err := presets.LoadPresetFromPath(path); err == nil {
+	if def, err := components.LoadComponentFromPath(path); err == nil {
 		return def.Description
 	}
 	return ""

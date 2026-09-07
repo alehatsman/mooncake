@@ -71,7 +71,7 @@ This repository contains a suite of packages that form the core functionality of
 - [internal/expression](#module-internalexpression)
 - [internal/actions/repo_apply_patchset](#module-internalactionsrepo_apply_patchset)
 - [internal/actions/windows_hyperv_firewall_rule](#module-internalactionswindows_hyperv_firewall_rule)
-- [internal/presets](#module-internalpresets)
+- [internal/components](#module-internalcomponents)
 - [internal/actions/shell](#module-internalactionsshell)
 - [internal/actions/service/shared](#module-internalactionsserviceshared)
 - [internal/actions/pkg_upgrade](#module-internalactionspkg_upgrade)
@@ -114,7 +114,7 @@ This repository contains a suite of packages that form the core functionality of
 - [internal/actions/file_replace](#module-internalactionsfile_replace)
 - [internal/factsfmt](#module-internalfactsfmt)
 - [internal/textpatchpath](#module-internaltextpatchpath)
-- [internal/actions/preset](#module-internalactionspreset)
+- [internal/actions/use](#module-internalactionsuse)
 - [internal/actions/container_run](#module-internalactionscontainer_run)
 - [internal/actions/command](#module-internalactionscommand)
 - [internal/actions/print](#module-internalactionsprint)
@@ -201,7 +201,7 @@ The `internal/config` package provides comprehensive support for reading, valida
 
 ### Used by
 
-- cmd/cmdutil, cmd/kernel, cmd/step, cmd/task, internal/actions, internal/actions/artifact_capture, internal/actions/artifact_validate, internal/actions/assert, internal/actions/command, internal/actions/container_image, internal/actions/container_run, internal/actions/copy, internal/actions/download, internal/actions/file, internal/actions/file_delete_range, internal/actions/file_insert, internal/actions/file_patch_apply, internal/actions/file_replace, internal/actions/git_checkout, internal/actions/git_clone, internal/actions/git_config, internal/actions/http_request, internal/actions/include_vars, internal/actions/observe_cpu, internal/actions/observe_disk, internal/actions/observe_gpu, internal/actions/observe_http, internal/actions/observe_logs, internal/actions/observe_memory, internal/actions/observe_port, internal/actions/observe_process, internal/actions/observe_service, internal/actions/os_cron, internal/actions/os_firewall, internal/actions/os_group, internal/actions/os_mount, internal/actions/os_ssh_key, internal/actions/os_sysctl, internal/actions/os_systemd, internal/actions/os_user, internal/actions/package, internal/actions/pkg_hold, internal/actions/pkg_list, internal/actions/pkg_repo, internal/actions/pkg_repo/apt, internal/actions/pkg_repo/brew, internal/actions/pkg_repo/dnf, internal/actions/pkg_upgrade, internal/actions/preset, internal/actions/print, internal/actions/read_common, internal/actions/read_json, internal/actions/read_yaml, internal/actions/repo_apply_patchset, internal/actions/repo_search, internal/actions/repo_tree, internal/actions/service, internal/actions/service/darwin, internal/actions/service/linux, internal/actions/service/shared, internal/actions/service/windows, internal/actions/shell, internal/actions/template, internal/actions/testutil, internal/actions/text_line, internal/actions/text_patch_ini, internal/actions/text_patch_json, internal/actions/text_patch_yaml, internal/actions/tool, internal/actions/unarchive, internal/actions/vars, internal/actions/wait_command, internal/actions/wait_file, internal/actions/wait_http, internal/actions/wait_port, internal/actions/windows_firewall_rule, internal/actions/windows_hyperv_firewall_rule, internal/actions/windows_scheduled_task, internal/apply, internal/artifacts, internal/diff, internal/docgen, internal/doctor, internal/executor, internal/explain, internal/fleet/exec, internal/fleet/observe, internal/agent, internal/plan, internal/plan/filter, internal/presets, internal/schemagen, internal/secrets/resolver, testing-next/agent-evals/assertions
+- cmd/cmdutil, cmd/kernel, cmd/step, cmd/task, internal/actions, internal/actions/artifact_capture, internal/actions/artifact_validate, internal/actions/assert, internal/actions/command, internal/actions/container_image, internal/actions/container_run, internal/actions/copy, internal/actions/download, internal/actions/file, internal/actions/file_delete_range, internal/actions/file_insert, internal/actions/file_patch_apply, internal/actions/file_replace, internal/actions/git_checkout, internal/actions/git_clone, internal/actions/git_config, internal/actions/http_request, internal/actions/include_vars, internal/actions/observe_cpu, internal/actions/observe_disk, internal/actions/observe_gpu, internal/actions/observe_http, internal/actions/observe_logs, internal/actions/observe_memory, internal/actions/observe_port, internal/actions/observe_process, internal/actions/observe_service, internal/actions/os_cron, internal/actions/os_firewall, internal/actions/os_group, internal/actions/os_mount, internal/actions/os_ssh_key, internal/actions/os_sysctl, internal/actions/os_systemd, internal/actions/os_user, internal/actions/package, internal/actions/pkg_hold, internal/actions/pkg_list, internal/actions/pkg_repo, internal/actions/pkg_repo/apt, internal/actions/pkg_repo/brew, internal/actions/pkg_repo/dnf, internal/actions/pkg_upgrade, internal/actions/component, internal/actions/print, internal/actions/read_common, internal/actions/read_json, internal/actions/read_yaml, internal/actions/repo_apply_patchset, internal/actions/repo_search, internal/actions/repo_tree, internal/actions/service, internal/actions/service/darwin, internal/actions/service/linux, internal/actions/service/shared, internal/actions/service/windows, internal/actions/shell, internal/actions/template, internal/actions/testutil, internal/actions/text_line, internal/actions/text_patch_ini, internal/actions/text_patch_json, internal/actions/text_patch_yaml, internal/actions/tool, internal/actions/unarchive, internal/actions/vars, internal/actions/wait_command, internal/actions/wait_file, internal/actions/wait_http, internal/actions/wait_port, internal/actions/windows_firewall_rule, internal/actions/windows_hyperv_firewall_rule, internal/actions/windows_scheduled_task, internal/apply, internal/artifacts, internal/diff, internal/docgen, internal/doctor, internal/executor, internal/explain, internal/fleet/exec, internal/fleet/observe, internal/agent, internal/plan, internal/plan/filter, internal/components, internal/schemagen, internal/secrets/resolver, testing-next/agent-evals/assertions
 
 ## Module: internal/actions
 
@@ -236,7 +236,7 @@ The `internal/actions` package in a configuration management system defines type
 
 ### Used by
 
-- cmd/kernel, cmd/step, internal/actions/artifact_capture, internal/actions/artifact_validate, internal/actions/assert, internal/actions/command, internal/actions/container_image, internal/actions/container_run, internal/actions/copy, internal/actions/download, internal/actions/file, internal/actions/file_delete_range, internal/actions/file_insert, internal/actions/file_patch_apply, internal/actions/file_replace, internal/actions/git_checkout, internal/actions/git_clone, internal/actions/git_config, internal/actions/http_request, internal/actions/include_vars, internal/actions/observe_cpu, internal/actions/observe_disk, internal/actions/observe_gpu, internal/actions/observe_http, internal/actions/observe_logs, internal/actions/observe_memory, internal/actions/observe_port, internal/actions/observe_process, internal/actions/observe_service, internal/actions/os_cron, internal/actions/os_firewall, internal/actions/os_group, internal/actions/os_mount, internal/actions/os_ssh_key, internal/actions/os_sysctl, internal/actions/os_systemd, internal/actions/os_user, internal/actions/package, internal/actions/pkg_hold, internal/actions/pkg_list, internal/actions/pkg_repo, internal/actions/pkg_repo/apt, internal/actions/pkg_repo/brew, internal/actions/pkg_repo/dnf, internal/actions/pkg_upgrade, internal/actions/preset, internal/actions/print, internal/actions/read_common, internal/actions/read_json, internal/actions/read_yaml, internal/actions/repo_apply_patchset, internal/actions/repo_search, internal/actions/repo_tree, internal/actions/service, internal/actions/service/darwin, internal/actions/service/linux, internal/actions/service/windows, internal/actions/shell, internal/actions/template, internal/actions/testutil, internal/actions/text_line, internal/actions/text_patch_ini, internal/actions/text_patch_json, internal/actions/text_patch_yaml, internal/actions/tool, internal/actions/unarchive, internal/actions/vars, internal/actions/wait_command, internal/actions/wait_file, internal/actions/wait_http, internal/actions/wait_port, internal/actions/windows_firewall_rule, internal/actions/windows_hyperv_firewall_rule, internal/actions/windows_scheduled_task, internal/apply, internal/diff, internal/docgen, internal/effects, internal/executor, internal/explain, internal/mcp, internal/agent, internal/plan, internal/schemagen, internal/snapshot
+- cmd/kernel, cmd/step, internal/actions/artifact_capture, internal/actions/artifact_validate, internal/actions/assert, internal/actions/command, internal/actions/container_image, internal/actions/container_run, internal/actions/copy, internal/actions/download, internal/actions/file, internal/actions/file_delete_range, internal/actions/file_insert, internal/actions/file_patch_apply, internal/actions/file_replace, internal/actions/git_checkout, internal/actions/git_clone, internal/actions/git_config, internal/actions/http_request, internal/actions/include_vars, internal/actions/observe_cpu, internal/actions/observe_disk, internal/actions/observe_gpu, internal/actions/observe_http, internal/actions/observe_logs, internal/actions/observe_memory, internal/actions/observe_port, internal/actions/observe_process, internal/actions/observe_service, internal/actions/os_cron, internal/actions/os_firewall, internal/actions/os_group, internal/actions/os_mount, internal/actions/os_ssh_key, internal/actions/os_sysctl, internal/actions/os_systemd, internal/actions/os_user, internal/actions/package, internal/actions/pkg_hold, internal/actions/pkg_list, internal/actions/pkg_repo, internal/actions/pkg_repo/apt, internal/actions/pkg_repo/brew, internal/actions/pkg_repo/dnf, internal/actions/pkg_upgrade, internal/actions/component, internal/actions/print, internal/actions/read_common, internal/actions/read_json, internal/actions/read_yaml, internal/actions/repo_apply_patchset, internal/actions/repo_search, internal/actions/repo_tree, internal/actions/service, internal/actions/service/darwin, internal/actions/service/linux, internal/actions/service/windows, internal/actions/shell, internal/actions/template, internal/actions/testutil, internal/actions/text_line, internal/actions/text_patch_ini, internal/actions/text_patch_json, internal/actions/text_patch_yaml, internal/actions/tool, internal/actions/unarchive, internal/actions/vars, internal/actions/wait_command, internal/actions/wait_file, internal/actions/wait_http, internal/actions/wait_port, internal/actions/windows_firewall_rule, internal/actions/windows_hyperv_firewall_rule, internal/actions/windows_scheduled_task, internal/apply, internal/diff, internal/docgen, internal/effects, internal/executor, internal/explain, internal/mcp, internal/agent, internal/plan, internal/schemagen, internal/snapshot
 
 ## Module: internal/logger
 
@@ -306,7 +306,7 @@ The `internal/executor` package manages the execution of tasks or steps within a
 
 ### Used by
 
-- cmd/kernel, cmd/step, cmd/task, internal/actions/artifact_capture, internal/actions/artifact_validate, internal/actions/assert, internal/actions/command, internal/actions/container_image, internal/actions/container_run, internal/actions/copy, internal/actions/download, internal/actions/file, internal/actions/file_delete_range, internal/actions/file_insert, internal/actions/file_patch_apply, internal/actions/file_replace, internal/actions/git_checkout, internal/actions/git_clone, internal/actions/git_config, internal/actions/http_request, internal/actions/include_vars, internal/actions/observe_cpu, internal/actions/observe_disk, internal/actions/observe_gpu, internal/actions/observe_http, internal/actions/observe_logs, internal/actions/observe_memory, internal/actions/observe_port, internal/actions/observe_process, internal/actions/observe_service, internal/actions/os_cron, internal/actions/os_firewall, internal/actions/os_group, internal/actions/os_mount, internal/actions/os_ssh_key, internal/actions/os_sysctl, internal/actions/os_systemd, internal/actions/os_user, internal/actions/package, internal/actions/pkg_hold, internal/actions/pkg_list, internal/actions/pkg_repo, internal/actions/pkg_repo/apt, internal/actions/pkg_repo/brew, internal/actions/pkg_repo/dnf, internal/actions/pkg_upgrade, internal/actions/preset, internal/actions/print, internal/actions/read_common, internal/actions/repo_apply_patchset, internal/actions/repo_search, internal/actions/repo_tree, internal/actions/service, internal/actions/service/darwin, internal/actions/service/linux, internal/actions/service/shared, internal/actions/service/windows, internal/actions/shell, internal/actions/template, internal/actions/text_line, internal/actions/text_patch_ini, internal/actions/text_patch_json, internal/actions/text_patch_yaml, internal/actions/tool, internal/actions/unarchive, internal/actions/vars, internal/actions/wait_command, internal/actions/wait_file, internal/actions/wait_http, internal/actions/wait_port, internal/actions/windows_firewall_rule, internal/actions/windows_hyperv_firewall_rule, internal/actions/windows_scheduled_task, internal/apply, internal/mcp, internal/agent
+- cmd/kernel, cmd/step, cmd/task, internal/actions/artifact_capture, internal/actions/artifact_validate, internal/actions/assert, internal/actions/command, internal/actions/container_image, internal/actions/container_run, internal/actions/copy, internal/actions/download, internal/actions/file, internal/actions/file_delete_range, internal/actions/file_insert, internal/actions/file_patch_apply, internal/actions/file_replace, internal/actions/git_checkout, internal/actions/git_clone, internal/actions/git_config, internal/actions/http_request, internal/actions/include_vars, internal/actions/observe_cpu, internal/actions/observe_disk, internal/actions/observe_gpu, internal/actions/observe_http, internal/actions/observe_logs, internal/actions/observe_memory, internal/actions/observe_port, internal/actions/observe_process, internal/actions/observe_service, internal/actions/os_cron, internal/actions/os_firewall, internal/actions/os_group, internal/actions/os_mount, internal/actions/os_ssh_key, internal/actions/os_sysctl, internal/actions/os_systemd, internal/actions/os_user, internal/actions/package, internal/actions/pkg_hold, internal/actions/pkg_list, internal/actions/pkg_repo, internal/actions/pkg_repo/apt, internal/actions/pkg_repo/brew, internal/actions/pkg_repo/dnf, internal/actions/pkg_upgrade, internal/actions/component, internal/actions/print, internal/actions/read_common, internal/actions/repo_apply_patchset, internal/actions/repo_search, internal/actions/repo_tree, internal/actions/service, internal/actions/service/darwin, internal/actions/service/linux, internal/actions/service/shared, internal/actions/service/windows, internal/actions/shell, internal/actions/template, internal/actions/text_line, internal/actions/text_patch_ini, internal/actions/text_patch_json, internal/actions/text_patch_yaml, internal/actions/tool, internal/actions/unarchive, internal/actions/vars, internal/actions/wait_command, internal/actions/wait_file, internal/actions/wait_http, internal/actions/wait_port, internal/actions/windows_firewall_rule, internal/actions/windows_hyperv_firewall_rule, internal/actions/windows_scheduled_task, internal/apply, internal/mcp, internal/agent
 
 ## Module: internal/fleet
 
@@ -431,7 +431,7 @@ The `internal/events` package in the "mooncake" automation tool defines data str
 
 ### Used by
 
-- cmd/step, internal/actions, internal/actions/artifact_capture, internal/actions/assert, internal/actions/copy, internal/actions/download, internal/actions/file, internal/actions/file_delete_range, internal/actions/file_insert, internal/actions/file_patch_apply, internal/actions/file_replace, internal/actions/http_request, internal/actions/include_vars, internal/actions/os_cron, internal/actions/os_mount, internal/actions/os_ssh_key, internal/actions/os_sysctl, internal/actions/os_systemd, internal/actions/package, internal/actions/pkg_hold, internal/actions/pkg_repo, internal/actions/pkg_repo/apt, internal/actions/pkg_repo/brew, internal/actions/pkg_repo/dnf, internal/actions/pkg_upgrade, internal/actions/preset, internal/actions/print, internal/actions/repo_apply_patchset, internal/actions/service/darwin, internal/actions/service/linux, internal/actions/service/windows, internal/actions/shell, internal/actions/template, internal/actions/testutil, internal/actions/text_line, internal/actions/text_patch_ini, internal/actions/text_patch_json, internal/actions/text_patch_yaml, internal/actions/unarchive, internal/actions/vars, internal/agentd, internal/apply, internal/artifacts, internal/executor, internal/logger, internal/mcp, internal/agent
+- cmd/step, internal/actions, internal/actions/artifact_capture, internal/actions/assert, internal/actions/copy, internal/actions/download, internal/actions/file, internal/actions/file_delete_range, internal/actions/file_insert, internal/actions/file_patch_apply, internal/actions/file_replace, internal/actions/http_request, internal/actions/include_vars, internal/actions/os_cron, internal/actions/os_mount, internal/actions/os_ssh_key, internal/actions/os_sysctl, internal/actions/os_systemd, internal/actions/package, internal/actions/pkg_hold, internal/actions/pkg_repo, internal/actions/pkg_repo/apt, internal/actions/pkg_repo/brew, internal/actions/pkg_repo/dnf, internal/actions/pkg_upgrade, internal/actions/component, internal/actions/print, internal/actions/repo_apply_patchset, internal/actions/service/darwin, internal/actions/service/linux, internal/actions/service/windows, internal/actions/shell, internal/actions/template, internal/actions/testutil, internal/actions/text_line, internal/actions/text_patch_ini, internal/actions/text_patch_json, internal/actions/text_patch_yaml, internal/actions/unarchive, internal/actions/vars, internal/agentd, internal/apply, internal/artifacts, internal/executor, internal/logger, internal/mcp, internal/agent
 
 ## Module: internal/security
 
@@ -595,12 +595,12 @@ The `internal/plan` package in this codebase provides essential functionality fo
 
 ### Depends on
 
-- project: internal/actions, internal/config, internal/expression, internal/facts, internal/filetree, internal/pathutil, internal/presets, internal/secrets/resolver, internal/security, internal/template, internal/utils
+- project: internal/actions, internal/config, internal/expression, internal/facts, internal/filetree, internal/pathutil, internal/components, internal/secrets/resolver, internal/security, internal/template, internal/utils
 - external: bytes, crypto/sha256, encoding/hex, encoding/json, errors, fmt, gopkg.in/yaml.v3, os, path/filepath, reflect, regexp, runtime, sort, strings, time
 
 ### Used by
 
-- cmd/kernel, cmd/task, internal/actions/artifact_capture, internal/actions/preset, internal/apply, internal/artifacts, internal/executor, internal/fleet, internal/mcp, internal/plan/filter
+- cmd/kernel, cmd/task, internal/actions/artifact_capture, internal/actions/component, internal/apply, internal/artifacts, internal/executor, internal/fleet, internal/mcp, internal/plan/filter
 
 ## Module: internal/diff
 
@@ -708,7 +708,7 @@ The `internal/metrics` package implements a comprehensive metrics collection sys
 
 ## Module: internal/doctor
 
-The `internal/doctor` package provides a comprehensive system health check tool, enabling users to validate various aspects of their project configuration and runtime environment. It includes a wide range of checks such as verifying binary installations, Go runtime details, preset paths, project configurations, service states, and more. The package exports types like `Check`, `Result`, and `Report`, along with functions for running checks (`Run`), selecting specific checks (`selectChecks`), and rendering results in JSON or text formats (`RenderJSON`, `RenderText`). It ensures that each check adheres to a consistent interface and provides detailed outcomes, making it an essential tool for maintaining the health and stability of production systems.
+The `internal/doctor` package provides a comprehensive system health check tool, enabling users to validate various aspects of their project configuration and runtime environment. It includes a wide range of checks such as verifying binary installations, Go runtime details, component paths, project configurations, service states, and more. The package exports types like `Check`, `Result`, and `Report`, along with functions for running checks (`Run`), selecting specific checks (`selectChecks`), and rendering results in JSON or text formats (`RenderJSON`, `RenderText`). It ensures that each check adheres to a consistent interface and provides detailed outcomes, making it an essential tool for maintaining the health and stability of production systems.
 
 ### Exported API (top 10 of 60 by PageRank)
 
@@ -734,7 +734,7 @@ The `internal/doctor` package provides a comprehensive system health check tool,
 
 ### Depends on
 
-- project: internal/agentd, internal/config, internal/facts, internal/presets
+- project: internal/agentd, internal/config, internal/facts, internal/components
 - external: context, crypto/x509, encoding/json, errors, fmt, io, net, os, os/exec, path/filepath, runtime, strings, syscall, time
 
 ### Used by
@@ -911,7 +911,7 @@ The `internal/actions/tool` package manages the provisioning of developer tools 
 
 ## Module: internal/mcp
 
-The `internal/mcp` package implements tools for MCP discovery and a minimal MCP server over stdio transport using JSON-RPC 2.0. It includes functions like `HandleListActions`, `HandleDescribeAction`, and `HandleListPresets` for listing actions and presets, returning JSON-as-text. The package also defines a function `HandleQueryFile` to process JSON/YAML files and extract values using dotted paths, returning structured JSON envelopes. Additionally, it provides an API for managing and executing configuration plans using the Mooncake tool, including endpoints like `runPlan`, `checkPlan`, and `explain`.
+The `internal/mcp` package implements tools for MCP discovery and a minimal MCP server over stdio transport using JSON-RPC 2.0. It includes functions like `HandleListActions`, `HandleDescribeAction`, and `HandleListComponents` for listing actions and components, returning JSON-as-text. The package also defines a function `HandleQueryFile` to process JSON/YAML files and extract values using dotted paths, returning structured JSON envelopes. Additionally, it provides an API for managing and executing configuration plans using the Mooncake tool, including endpoints like `runPlan`, `checkPlan`, and `explain`.
 
 ### Exported API (top 10 of 20 by PageRank)
 
@@ -937,7 +937,7 @@ The `internal/mcp` package implements tools for MCP discovery and a minimal MCP 
 
 ### Depends on
 
-- project: internal/actions, internal/apply, internal/events, internal/executor, internal/explain, internal/facts, internal/logger, internal/metrics, internal/pathquery, internal/plan, internal/presets, internal/queryio, internal/schemagen, internal/snapshot
+- project: internal/actions, internal/apply, internal/events, internal/executor, internal/explain, internal/facts, internal/logger, internal/metrics, internal/pathquery, internal/plan, internal/components, internal/queryio, internal/schemagen, internal/snapshot
 - external: bufio, bytes, context, encoding/json, fmt, io, sort, strings, time
 
 ### Used by
@@ -1285,7 +1285,7 @@ The `cmd/kernel` package provides a suite of CLI commands for managing and inspe
 
 ## Module: internal/docgen
 
-The `internal/docgen` package automates the generation of comprehensive documentation for actions and presets in a system. It provides a `Generator` struct with methods like `GenerateSection`, `generateAll`, and `generatePresetExamples`, which produce various sections such as platform support matrices, capabilities summaries, schema details, and preset examples. The package includes helper functions for formatting and processing metadata, reading YAML files, and writing documentation to output writers. It supports multiple formats, including Markdown and YAML, and utilizes reflection to extract and format Go struct metadata into readable documentation.
+The `internal/docgen` package automates the generation of comprehensive documentation for actions and components in a system. It provides a `Generator` struct with methods like `GenerateSection`, `generateAll`, and `generateComponentExamples`, which produce various sections such as platform support matrices, capabilities summaries, schema details, and component examples. The package includes helper functions for formatting and processing metadata, reading YAML files, and writing documentation to output writers. It supports multiple formats, including Markdown and YAML, and utilizes reflection to extract and format Go struct metadata into readable documentation.
 
 ### Exported API (8)
 
@@ -1682,7 +1682,7 @@ The `internal/modules` package provides a comprehensive suite for managing and r
 
 ### Used by
 
-- cmd/mod, internal/actions/preset
+- cmd/mod, internal/actions/component
 
 ## Module: internal/actions/os_group
 
@@ -2253,27 +2253,27 @@ This package manages Windows Hyper-V Firewall rules through the `windows.hyperv_
 
 - internal/register
 
-## Module: internal/presets
+## Module: internal/components
 
-The `internal/presets` package manages preset definitions and their expansion in a software application. It includes functions like `ExpandPreset`, `LoadPreset`, and `ValidateParameters` to handle the loading, expanding, and validating of presets. The package ensures that presets are correctly structured and parameters adhere to specified types and constraints, providing essential functionality for dynamic configuration management within the system.
+The `internal/components` package manages component definitions and their expansion in a software application. It includes functions like `ExpandComponent`, `LoadComponent`, and `ValidateProps` to handle the loading, expanding, and validating of components. The package ensures that components are correctly structured and parameters adhere to specified types and constraints, providing essential functionality for dynamic configuration management within the system.
 
 ### Exported API (7)
 
-- `function` LoadPreset — internal/presets/loader.go:53
-- `function` ValidateParameters — internal/presets/validator.go:20
-- `function` LoadPresetFromPath — internal/presets/loader.go:157
-- `function` ExpandPresetFromPath — internal/presets/expander.go:29
-- `function` DiscoverAllPresets — internal/presets/loader.go:196
-- `function` ExpandPreset — internal/presets/expander.go:13
-- `struct` PresetInfo — internal/presets/loader.go:186
+- `function` LoadComponent — internal/components/loader.go:53
+- `function` ValidateProps — internal/components/validator.go:20
+- `function` LoadComponentFromPath — internal/components/loader.go:157
+- `function` ExpandComponentFromPath — internal/components/expander.go:29
+- `function` DiscoverAllComponents — internal/components/loader.go:196
+- `function` ExpandComponent — internal/components/expander.go:13
+- `struct` ComponentInfo — internal/components/loader.go:186
 
 ### Key entry points (top 5 by PageRank)
 
-- `LoadPreset` — internal/presets/loader.go:53 — in-degree 2
-- `ValidateParameters` — internal/presets/validator.go:20 — in-degree 2
-- `LoadPresetFromPath` — internal/presets/loader.go:157 — in-degree 2
-- `ExpandPresetFromPath` — internal/presets/expander.go:29 — in-degree 2
-- `DiscoverAllPresets` — internal/presets/loader.go:196 — in-degree 1
+- `LoadComponent` — internal/components/loader.go:53 — in-degree 2
+- `ValidateProps` — internal/components/validator.go:20 — in-degree 2
+- `LoadComponentFromPath` — internal/components/loader.go:157 — in-degree 2
+- `ExpandComponentFromPath` — internal/components/expander.go:29 — in-degree 2
+- `DiscoverAllComponents` — internal/components/loader.go:196 — in-degree 1
 
 ### Depends on
 
@@ -2282,7 +2282,7 @@ The `internal/presets` package manages preset definitions and their expansion in
 
 ### Used by
 
-- internal/actions/preset, internal/doctor, internal/mcp, internal/plan
+- internal/actions/component, internal/doctor, internal/mcp, internal/plan
 
 ## Module: internal/actions/shell
 
@@ -3573,26 +3573,26 @@ The `textpatchpath` package provides functionality for parsing dotted and indexe
 
 - internal/actions/text_patch_json, internal/actions/text_patch_yaml
 
-## Module: internal/actions/preset
+## Module: internal/actions/use
 
-The `internal/actions/preset` package defines the `Handler` type for managing preset actions in a system. It provides methods for metadata retrieval, validation, and execution of presets, which are expanded into multiple steps with parameter injection. The handler manages execution context, handles preset help display, and utilizes a planner to expand and execute steps within a preset.
+The `internal/actions/component` package defines the `Handler` type for managing component actions in a system. It provides methods for metadata retrieval, validation, and execution of components, which are expanded into multiple steps with parameter injection. The handler manages execution context, handles component help display, and utilizes a planner to expand and execute steps within a component.
 
 ### Exported API (4)
 
-- `method` Metadata — internal/actions/preset/handler.go:61
-- `method` Run — internal/actions/preset/handler.go:108
-- `method` Validate — internal/actions/preset/handler.go:93
-- `struct` Handler — internal/actions/preset/handler.go:21
+- `method` Metadata — internal/actions/component/handler.go:61
+- `method` Run — internal/actions/component/handler.go:108
+- `method` Validate — internal/actions/component/handler.go:93
+- `struct` Handler — internal/actions/component/handler.go:21
 
 ### Key entry points (top 3 by PageRank)
 
-- `Metadata` — internal/actions/preset/handler.go:61 — in-degree 1
-- `Run` — internal/actions/preset/handler.go:108 — in-degree 2
-- `Validate` — internal/actions/preset/handler.go:93 — in-degree 1
+- `Metadata` — internal/actions/component/handler.go:61 — in-degree 1
+- `Run` — internal/actions/component/handler.go:108 — in-degree 2
+- `Validate` — internal/actions/component/handler.go:93 — in-degree 1
 
 ### Depends on
 
-- project: internal/actions, internal/config, internal/events, internal/executor, internal/modules, internal/plan, internal/presets
+- project: internal/actions, internal/config, internal/events, internal/executor, internal/modules, internal/plan, internal/components
 - external: context, fmt, os, path/filepath
 
 ### Used by
@@ -4518,7 +4518,7 @@ The `internal/register` package initializes action handlers in a Go application 
 
 ### Depends on
 
-- project: internal/actions/artifact_capture, internal/actions/artifact_validate, internal/actions/assert, internal/actions/command, internal/actions/container_image, internal/actions/container_run, internal/actions/copy, internal/actions/download, internal/actions/file, internal/actions/file_delete_range, internal/actions/file_insert, internal/actions/file_patch_apply, internal/actions/file_replace, internal/actions/git_checkout, internal/actions/git_clone, internal/actions/git_config, internal/actions/http_request, internal/actions/include_vars, internal/actions/observe_cpu, internal/actions/observe_disk, internal/actions/observe_gpu, internal/actions/observe_http, internal/actions/observe_logs, internal/actions/observe_memory, internal/actions/observe_port, internal/actions/observe_process, internal/actions/observe_service, internal/actions/os_cron, internal/actions/os_firewall, internal/actions/os_group, internal/actions/os_mount, internal/actions/os_ssh_key, internal/actions/os_sysctl, internal/actions/os_systemd, internal/actions/os_user, internal/actions/package, internal/actions/pkg_hold, internal/actions/pkg_list, internal/actions/pkg_repo, internal/actions/pkg_upgrade, internal/actions/preset, internal/actions/print, internal/actions/read_json, internal/actions/read_yaml, internal/actions/repo_apply_patchset, internal/actions/repo_search, internal/actions/repo_tree, internal/actions/service, internal/actions/shell, internal/actions/template, internal/actions/text_line, internal/actions/text_patch_ini, internal/actions/text_patch_json, internal/actions/text_patch_yaml, internal/actions/tool, internal/actions/unarchive, internal/actions/vars, internal/actions/wait_command, internal/actions/wait_file, internal/actions/wait_http, internal/actions/wait_port, internal/actions/windows_firewall_rule, internal/actions/windows_hyperv_firewall_rule, internal/actions/windows_scheduled_task
+- project: internal/actions/artifact_capture, internal/actions/artifact_validate, internal/actions/assert, internal/actions/command, internal/actions/container_image, internal/actions/container_run, internal/actions/copy, internal/actions/download, internal/actions/file, internal/actions/file_delete_range, internal/actions/file_insert, internal/actions/file_patch_apply, internal/actions/file_replace, internal/actions/git_checkout, internal/actions/git_clone, internal/actions/git_config, internal/actions/http_request, internal/actions/include_vars, internal/actions/observe_cpu, internal/actions/observe_disk, internal/actions/observe_gpu, internal/actions/observe_http, internal/actions/observe_logs, internal/actions/observe_memory, internal/actions/observe_port, internal/actions/observe_process, internal/actions/observe_service, internal/actions/os_cron, internal/actions/os_firewall, internal/actions/os_group, internal/actions/os_mount, internal/actions/os_ssh_key, internal/actions/os_sysctl, internal/actions/os_systemd, internal/actions/os_user, internal/actions/package, internal/actions/pkg_hold, internal/actions/pkg_list, internal/actions/pkg_repo, internal/actions/pkg_upgrade, internal/actions/component, internal/actions/print, internal/actions/read_json, internal/actions/read_yaml, internal/actions/repo_apply_patchset, internal/actions/repo_search, internal/actions/repo_tree, internal/actions/service, internal/actions/shell, internal/actions/template, internal/actions/text_line, internal/actions/text_patch_ini, internal/actions/text_patch_json, internal/actions/text_patch_yaml, internal/actions/tool, internal/actions/unarchive, internal/actions/vars, internal/actions/wait_command, internal/actions/wait_file, internal/actions/wait_http, internal/actions/wait_port, internal/actions/windows_firewall_rule, internal/actions/windows_hyperv_firewall_rule, internal/actions/windows_scheduled_task
 
 ### Used by
 

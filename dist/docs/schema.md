@@ -5,25 +5,27 @@
 The following schemas are generated from Go struct definitions.
 All field names and types are guaranteed to match the implementation.
 
-### PresetDefinition
+### ComponentDefinition
 
-Defines a reusable preset with parameters and steps.
+Defines a reusable component with parameters and steps.
 
 **Fields**:
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `name` | string | Yes | Unique preset identifier |
-| `description` | string | Yes | Human-readable description of what the preset does |
+| `name` | string | Yes | Unique component identifier |
+| `description` | string | Yes | Human-readable description of what the component does |
 | `version` | string | Yes | Semantic version (e.g., 1.0.0) |
+| `props` | map[string]ComponentProp | Yes |  |
 | `steps` | []Step | No | Array of steps to execute |
 
 **Example YAML**:
 
 ```yaml
-name: my-preset
-description: Description of what this preset does
+name: my-component
+description: Description of what this component does
 version: 1.0.0
+props: 
 steps:
   - name: Example step
     shell: echo "hello"
@@ -31,9 +33,9 @@ steps:
 
 ---
 
-### PresetParameter
+### ComponentProp
 
-Defines a parameter that can be passed to a preset.
+Defines a parameter that can be passed to a component.
 
 **Fields**:
 

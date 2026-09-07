@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Mooncake Preset Test Runner
-# Usage: ./test-presets.sh --os ubuntu [--preset <name>] [--artifacts <dir>]
+# Mooncake Component Test Runner
+# Usage: ./test-components.sh --os ubuntu [--component <name>] [--artifacts <dir>]
 
 set -euo pipefail
 
@@ -10,8 +10,8 @@ source "${SCRIPT_DIR}/lib/common.sh"
 # Defaults
 OS_NAME="ubuntu"
 ARTIFACTS_DIR="/artifacts"
-SPECIFIC_PRESET=""
-PRESETS_DIR="/mooncake/presets"
+SPECIFIC_COMPONENT=""
+COMPONENTS_DIR="/mooncake/components"
 
 # Parse arguments
 while [[ $# -gt 0 ]]; do
@@ -20,8 +20,8 @@ while [[ $# -gt 0 ]]; do
             OS_NAME="$2"
             shift 2
             ;;
-        --preset)
-            SPECIFIC_PRESET="$2"
+        --component)
+            SPECIFIC_COMPONENT="$2"
             shift 2
             ;;
         --artifacts)
@@ -30,19 +30,19 @@ while [[ $# -gt 0 ]]; do
             ;;
         --help)
             cat <<EOF
-Mooncake Preset Test Runner
+Mooncake Component Test Runner
 
 Usage: $0 [OPTIONS]
 
 Options:
   --os <name>          OS to test (ubuntu, alpine, fedora) [default: ubuntu]
-  --preset <name>      Test specific preset only
+  --component <name>      Test specific component only
   --artifacts <dir>    Artifacts directory [default: /artifacts]
   --help               Show this help
 
 Examples:
   $0 --os ubuntu
-  $0 --os alpine --preset docker
+  $0 --os alpine --component docker
   $0 --os fedora --artifacts /tmp/results
 EOF
             exit 0
@@ -62,7 +62,7 @@ mkdir -p "${ARTIFACTS_DIR}"
 RESULTS_JSON="${ARTIFACTS_DIR}/results.json"
 SUMMARY_MD="${ARTIFACTS_DIR}/summary.md"
 
-log_info "Mooncake Preset Test Runner"
+log_info "Mooncake Component Test Runner"
 log_info "OS: ${OS_NAME}"
 log_info "Artifacts: ${ARTIFACTS_DIR}"
 echo ""
@@ -88,20 +88,20 @@ case "${OS_NAME}" in
 esac
 echo ""
 
-# Discover presets
-if [[ -n "${SPECIFIC_PRESET}" ]]; then
-    log_info "Testing single preset: ${SPECIFIC_PRESET}"
-    presets=("${SPECIFIC_PRESET}")
+# Discover components
+if [[ -n "${SPECIFIC_COMPONENT}" ]]; then
+    log_info "Testing single component: ${SPECIFIC_COMPONENT}"
+    components=("${SPECIFIC_COMPONENT}")
 else
-    log_info "Discovering all presets..."
-    mapfile -t presets < <(discover_presets "${PRESETS_DIR}")
-    log_info "Found ${#presets[@]} presets"
+    log_info "Discovering all components..."
+    mapfile -t components < <(discover_components "${COMPONENTS_DIR}")
+    log_info "Found ${#components[@]} components"
 fi
 echo ""
 
 # Run tests
 start_time=$(date +%s)
-total=${#presets[@]}
+total=${#components[@]}
 passed=0
 failed=0
 
@@ -119,13 +119,13 @@ trap cleanup_json EXIT
 echo "[" > "${RESULTS_JSON}"
 first=true
 
-for preset in "${presets[@]}"; do
+for component in "${components[@]}"; do
     if [[ "${first}" == "false" ]]; then
         echo "," >> "${RESULTS_JSON}"
     fi
     first=false
 
-    result=$(run_preset_test "${preset}" "${ARTIFACTS_DIR}") || true
+    result=$(run_component_test "${component}" "${ARTIFACTS_DIR}") || true
     echo "${result}" >> "${RESULTS_JSON}"
 
     exit_code=$(echo "${result}" | grep -o '"exit_code":[0-9]*' | cut -d':' -f2 || echo "1")
@@ -153,10 +153,10 @@ cat "${SUMMARY_MD}"
 # Exit status
 if [[ ${failed} -gt 0 ]]; then
     echo ""
-    log_error "FAILED: ${failed}/${total} presets failed"
+    log_error "FAILED: ${failed}/${total} components failed"
     exit 1
 else
     echo ""
-    log_success "SUCCESS: All ${total} presets passed"
+    log_success "SUCCESS: All ${total} components passed"
     exit 0
 fi

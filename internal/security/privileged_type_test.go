@@ -75,7 +75,7 @@ func TestPrivileged_AsUserRoot_NonRoot_PasswordSudo(t *testing.T) {
 
 // TestPrivileged_AsUserRoot_AlreadyRoot_NoSudo — euid 0 with
 // AsUser:root short-circuits the sudo wrap. Mooncake-already-root
-// presets need this to work in containers that don't ship sudo.
+// components need this to work in containers that don't ship sudo.
 func TestPrivileged_AsUserRoot_AlreadyRoot_NoSudo(t *testing.T) {
 	withAlreadyIs(t, func(target string) bool { return target == "root" || target == "0" })
 	p := &Privileged{

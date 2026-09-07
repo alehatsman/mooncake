@@ -65,7 +65,7 @@ mooncake init --template dotfiles
 
 ## See also
 
-- Browse `./presets/` — 330+ ready-made components (zsh, neovim,
+- Browse `./components/` — 330+ ready-made components (zsh, neovim,
   docker, …) you include in a playbook with `use:`
 - `mooncake actions list` — full typed-action surface
 - `mooncake mod add github.com/mooncake-modules/<name>@<v>` —

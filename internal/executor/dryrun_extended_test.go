@@ -148,24 +148,24 @@ func TestDryRunLogger_LogAssertCheck_Types(t *testing.T) {
 	}
 }
 
-// TestDryRunLogger_LogPresetOperation tests preset operation logging
-func TestDryRunLogger_LogPresetOperation(t *testing.T) {
+// TestDryRunLogger_LogComponentOperation tests component operation logging
+func TestDryRunLogger_LogComponentOperation(t *testing.T) {
 	testLogger := logger.NewTestLogger()
 	dryRunLogger := NewDryRunLogger(testLogger)
 
-	dryRunLogger.LogPresetOperation("ollama", 1)
+	dryRunLogger.LogComponentOperation("ollama", 1)
 
-	t.Log("LogPresetOperation executed successfully")
+	t.Log("LogComponentOperation executed successfully")
 }
 
-// TestDryRunLogger_LogPresetOperation_NoParams tests preset with no parameters
-func TestDryRunLogger_LogPresetOperation_NoParams(t *testing.T) {
+// TestDryRunLogger_LogComponentOperation_NoParams tests component with no parameters
+func TestDryRunLogger_LogComponentOperation_NoParams(t *testing.T) {
 	testLogger := logger.NewTestLogger()
 	dryRunLogger := NewDryRunLogger(testLogger)
 
-	dryRunLogger.LogPresetOperation("simple-preset", 0)
+	dryRunLogger.LogComponentOperation("simple-component", 0)
 
-	t.Log("LogPresetOperation with no parameters executed successfully")
+	t.Log("LogComponentOperation with no parameters executed successfully")
 }
 
 // TestDryRunLogger_LogPrintMessage tests print message logging

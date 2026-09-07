@@ -1,4 +1,4 @@
-package preset
+package use
 
 import (
 	"os"
@@ -7,11 +7,11 @@ import (
 
 	"github.com/alehatsman/mooncake/internal/actions"
 	"github.com/alehatsman/mooncake/internal/actions/testutil"
+	"github.com/alehatsman/mooncake/internal/components"
 	"github.com/alehatsman/mooncake/internal/config"
 	"github.com/alehatsman/mooncake/internal/events"
 	"github.com/alehatsman/mooncake/internal/executor"
 	"github.com/alehatsman/mooncake/internal/expression"
-	"github.com/alehatsman/mooncake/internal/presets"
 	"github.com/alehatsman/mooncake/internal/template"
 )
 
@@ -24,41 +24,41 @@ func mustNewRenderer() template.Renderer {
 	return r
 }
 
-// setupTestPresets creates temporary preset files for testing
-func setupTestPresets(t *testing.T) (cleanup func()) {
+// setupTestComponents creates temporary component files for testing
+func setupTestComponents(t *testing.T) (cleanup func()) {
 	t.Helper()
 
-	// Create presets in ./presets directory (first search path)
-	presetsDir := "./presets"
+	// Create components in ./components directory (first search path)
+	componentsDir := "./components"
 
-	// Check if presets directory exists, create if not
+	// Check if components directory exists, create if not
 	needsCleanup := false
-	if _, err := os.Stat(presetsDir); os.IsNotExist(err) {
-		if err := os.MkdirAll(presetsDir, 0755); err != nil {
-			t.Fatalf("Failed to create presets directory: %v", err)
+	if _, err := os.Stat(componentsDir); os.IsNotExist(err) {
+		if err := os.MkdirAll(componentsDir, 0755); err != nil {
+			t.Fatalf("Failed to create components directory: %v", err)
 		}
 		needsCleanup = true
 	}
 
-	// Create a simple preset with no parameters
-	simplePreset := `name: simple-test
-description: Simple test preset
+	// Create a simple component with no parameters
+	simpleComponent := `name: simple-test
+description: Simple test component
 version: 1.0.0
 steps:
   - name: Print message
     log:
-      msg: "Hello from preset"
+      msg: "Hello from component"
 `
-	simpleFile := filepath.Join(presetsDir, "simple-test.yml")
-	if err := os.WriteFile(simpleFile, []byte(simplePreset), 0644); err != nil {
-		t.Fatalf("Failed to create simple preset: %v", err)
+	simpleFile := filepath.Join(componentsDir, "simple-test.yml")
+	if err := os.WriteFile(simpleFile, []byte(simpleComponent), 0644); err != nil {
+		t.Fatalf("Failed to create simple component: %v", err)
 	}
 
-	// Create a preset with parameters
-	paramPreset := `name: param-test
-description: Test preset with parameters
+	// Create a component with parameters
+	propComponent := `name: param-test
+description: Test component with parameters
 version: 1.0.0
-parameters:
+props:
   message:
     type: string
     required: true
@@ -76,16 +76,16 @@ steps:
     log:
       msg: "Count: {{ parameters.count }}"
 `
-	paramFile := filepath.Join(presetsDir, "param-test.yml")
-	if err := os.WriteFile(paramFile, []byte(paramPreset), 0644); err != nil {
-		t.Fatalf("Failed to create param preset: %v", err)
+	paramFile := filepath.Join(componentsDir, "param-test.yml")
+	if err := os.WriteFile(paramFile, []byte(propComponent), 0644); err != nil {
+		t.Fatalf("Failed to create param component: %v", err)
 	}
 
-	// Create a preset with enum parameter
-	enumPreset := `name: enum-test
-description: Test preset with enum parameter
+	// Create a component with enum parameter
+	enumComponent := `name: enum-test
+description: Test component with enum parameter
 version: 1.0.0
-parameters:
+props:
   state:
     type: string
     required: true
@@ -96,14 +96,14 @@ steps:
     log:
       msg: "State: {{ parameters.state }}"
 `
-	enumFile := filepath.Join(presetsDir, "enum-test.yml")
-	if err := os.WriteFile(enumFile, []byte(enumPreset), 0644); err != nil {
-		t.Fatalf("Failed to create enum preset: %v", err)
+	enumFile := filepath.Join(componentsDir, "enum-test.yml")
+	if err := os.WriteFile(enumFile, []byte(enumComponent), 0644); err != nil {
+		t.Fatalf("Failed to create enum component: %v", err)
 	}
 
-	// Create a preset with multiple steps
-	multiStepPreset := `name: multi-step-test
-description: Test preset with multiple steps
+	// Create a component with multiple steps
+	multiStepComponent := `name: multi-step-test
+description: Test component with multiple steps
 version: 1.0.0
 steps:
   - name: Step 1
@@ -116,9 +116,9 @@ steps:
     log:
       msg: "Step 3"
 `
-	multiStepFile := filepath.Join(presetsDir, "multi-step-test.yml")
-	if err := os.WriteFile(multiStepFile, []byte(multiStepPreset), 0644); err != nil {
-		t.Fatalf("Failed to create multi-step preset: %v", err)
+	multiStepFile := filepath.Join(componentsDir, "multi-step-test.yml")
+	if err := os.WriteFile(multiStepFile, []byte(multiStepComponent), 0644); err != nil {
+		t.Fatalf("Failed to create multi-step component: %v", err)
 	}
 
 	// Return cleanup function
@@ -128,7 +128,7 @@ steps:
 		os.Remove(enumFile)
 		os.Remove(multiStepFile)
 		if needsCleanup {
-			os.RemoveAll(presetsDir)
+			os.RemoveAll(componentsDir)
 		}
 	}
 }
@@ -158,7 +158,7 @@ func TestHandler_Metadata(t *testing.T) {
 	meta := h.Metadata()
 
 	if meta.Name != "use" {
-		t.Errorf("Name = %v, want 'preset'", meta.Name)
+		t.Errorf("Name = %v, want 'component'", meta.Name)
 	}
 	if meta.Description == "" {
 		t.Error("Description is empty")
@@ -180,16 +180,16 @@ func TestHandler_Validate(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name: "valid preset action with name only",
+			name: "valid component action with name only",
 			step: &config.Step{
-				Use: "test-preset",
+				Use: "test-component",
 			},
 			wantErr: false,
 		},
 		{
-			name: "valid preset action with parameters",
+			name: "valid component action with parameters",
 			step: &config.Step{
-				Use: "test-preset",
+				Use: "test-component",
 				Props: map[string]interface{}{
 					"param1": "value1",
 				},
@@ -197,14 +197,14 @@ func TestHandler_Validate(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "unset preset action",
+			name: "unset component action",
 			step: &config.Step{
 				Use: "",
 			},
 			wantErr: true,
 		},
 		{
-			name: "empty preset name",
+			name: "empty component name",
 			step: &config.Step{
 				Use: "",
 			},
@@ -243,36 +243,36 @@ func TestHandler_Execute_InvalidContextType(t *testing.T) {
 	}
 }
 
-func TestHandler_Execute_NonexistentPreset(t *testing.T) {
-	cleanup := setupTestPresets(t)
+func TestHandler_Execute_NonexistentComponent(t *testing.T) {
+	cleanup := setupTestComponents(t)
 	defer cleanup()
 
 	h := &Handler{}
 	ec := mockExecutionContext(nil)
 
 	step := &config.Step{
-		Name: "Test nonexistent preset",
+		Name: "Test nonexistent component",
 		Use:  "does-not-exist",
 	}
 
 	_, err := h.Run(ec, step)
 	if err == nil {
-		t.Fatal("Execute() should error for nonexistent preset")
+		t.Fatal("Execute() should error for nonexistent component")
 	}
 
 	if !contains(err.Error(), "does-not-exist") {
-		t.Errorf("Error message should mention preset name, got: %v", err)
+		t.Errorf("Error message should mention component name, got: %v", err)
 	}
 }
 
-// TestPresetExpansion tests that presets can be expanded without executing them
-func TestPresetExpansion(t *testing.T) {
-	cleanup := setupTestPresets(t)
+// TestComponentExpansion tests that components can be expanded without executing them
+func TestComponentExpansion(t *testing.T) {
+	cleanup := setupTestComponents(t)
 	defer cleanup()
 
 	tests := []struct {
 		name           string
-		presetName     string
+		componentName  string
 		props          map[string]interface{}
 		wantSteps      int
 		wantErr        bool
@@ -280,14 +280,14 @@ func TestPresetExpansion(t *testing.T) {
 		expectedValue  interface{}
 	}{
 		{
-			name:       "simple preset expansion",
-			presetName: "simple-test",
-			wantSteps:  1,
-			wantErr:    false,
+			name:          "simple component expansion",
+			componentName: "simple-test",
+			wantSteps:     1,
+			wantErr:       false,
 		},
 		{
-			name:       "preset with parameters",
-			presetName: "param-test",
+			name:          "component with parameters",
+			componentName: "param-test",
 			props: map[string]interface{}{
 				"message": "Test message",
 				"count":   "5",
@@ -298,8 +298,8 @@ func TestPresetExpansion(t *testing.T) {
 			expectedValue:  "Test message",
 		},
 		{
-			name:       "preset with default parameter",
-			presetName: "param-test",
+			name:          "component with default parameter",
+			componentName: "param-test",
 			props: map[string]interface{}{
 				"message": "Test message",
 				// count should use default "1"
@@ -310,8 +310,8 @@ func TestPresetExpansion(t *testing.T) {
 			expectedValue:  "1",
 		},
 		{
-			name:       "preset with enum parameter - valid",
-			presetName: "enum-test",
+			name:          "component with enum parameter - valid",
+			componentName: "enum-test",
 			props: map[string]interface{}{
 				"state": "present",
 			},
@@ -319,8 +319,8 @@ func TestPresetExpansion(t *testing.T) {
 			wantErr:   false,
 		},
 		{
-			name:       "preset with enum parameter - invalid",
-			presetName: "enum-test",
+			name:          "component with enum parameter - invalid",
+			componentName: "enum-test",
 			props: map[string]interface{}{
 				"state": "invalid",
 			},
@@ -328,8 +328,8 @@ func TestPresetExpansion(t *testing.T) {
 			wantErr:   true,
 		},
 		{
-			name:       "missing required parameter",
-			presetName: "param-test",
+			name:          "missing required parameter",
+			componentName: "param-test",
 			props: map[string]interface{}{
 				// Missing "message" which is required
 				"count": "3",
@@ -338,18 +338,18 @@ func TestPresetExpansion(t *testing.T) {
 			wantErr:   true,
 		},
 		{
-			name:       "multi-step preset",
-			presetName: "multi-step-test",
-			wantSteps:  3,
-			wantErr:    false,
+			name:          "multi-step component",
+			componentName: "multi-step-test",
+			wantSteps:     3,
+			wantErr:       false,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			steps, params, _, err := presets.ExpandPreset(tt.presetName, tt.props)
+			steps, params, _, err := components.ExpandComponent(tt.componentName, tt.props)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("ExpandPreset() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("ExpandComponent() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 
@@ -358,18 +358,18 @@ func TestPresetExpansion(t *testing.T) {
 			}
 
 			if len(steps) != tt.wantSteps {
-				t.Errorf("ExpandPreset() returned %d steps, want %d", len(steps), tt.wantSteps)
+				t.Errorf("ExpandComponent() returned %d steps, want %d", len(steps), tt.wantSteps)
 			}
 
 			if tt.checkParameter != "" {
-				if paramsMap, ok := params["parameters"].(map[string]interface{}); ok {
+				if paramsMap, ok := params["props"].(map[string]interface{}); ok {
 					if val, exists := paramsMap[tt.checkParameter]; !exists {
 						t.Errorf("Parameter %s not found in expanded parameters", tt.checkParameter)
 					} else if val != tt.expectedValue {
 						t.Errorf("Parameter %s = %v, want %v", tt.checkParameter, val, tt.expectedValue)
 					}
 				} else {
-					t.Error("Parameters namespace not found or invalid type")
+					t.Error("props namespace not found or invalid type")
 				}
 			}
 		})
@@ -407,7 +407,7 @@ func TestSavedContext_Restore(t *testing.T) {
 	// Capture state
 	saved := captureContext(ec)
 
-	// Modify context (simulate preset execution)
+	// Modify context (simulate component execution)
 	ec.Scope.User["original"] = "modified"
 	ec.Scope.User["new_var"] = "new_value"
 	parametersNamespace := map[string]interface{}{

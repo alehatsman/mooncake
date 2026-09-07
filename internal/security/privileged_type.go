@@ -27,7 +27,7 @@ import (
 //
 // The "already that user" short-circuit matches config.Step.ShouldBecome's
 // invariant: minimal containers (ubuntu:24.04, alpine:3.21) that don't
-// ship sudo can still run as_user:root presets when mooncake is invoked
+// ship sudo can still run as_user:root components when mooncake is invoked
 // as root.
 //
 // Errors flow from the underlying BecomeRunner sentinels

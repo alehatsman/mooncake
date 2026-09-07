@@ -22,7 +22,7 @@ on top:
 
 1. **The kernel** — declarative actions, idempotency, planning, facts. (today)
 2. **The runtime** — host daemon, fleet orchestration, audit, policy.
-3. **The economy** — preset marketplace, agent SDK, signed plans, integrations.
+3. **The economy** — component marketplace, agent SDK, signed plans, integrations.
 
 ---
 
@@ -76,7 +76,7 @@ What exists in `internal/`:
 | **`transaction:` blocks with LIFO auto-revert** (spec-30) | `executor/transaction.go` | Production — `examples/transactions/rollback-demo.yml` |
 | **Typed secret refs** (`!secret env:KEY`) + 3 providers (env/file/stdin) | `security/secrets*.go` | Production — resolved values auto-added to Redactor denylist |
 | **Reactive triggers** (`on_change:`) | `executor/`, `plan/` | Production — `examples/triggers/on-change-config-reload.yml` |
-| Preset system (330+ built-in) | `presets/` | Production |
+| Component system (330+ built-in) | `components/` | Production |
 | Plan compilation, include resolution, structural Diff in JSON output | `plan/` | Production |
 | Executor with idempotency, Permissions preflight, secret resolution | `executor/` | Production |
 | System facts (cached) | `facts/` | Production |
@@ -116,7 +116,7 @@ funds the next.
 
 The friendliest entry point. Already most of the way there.
 
-- `mooncake init` scaffolds a dotfiles repo with sensible presets.
+- `mooncake init` scaffolds a dotfiles repo with sensible components.
 - One-command bootstrap of a new laptop (`curl … | mooncake apply`).
 - Drift detection: "your dev box no longer matches your committed config."
 - A small TUI showing what's installed, what's missing, what's drifted.
@@ -144,7 +144,7 @@ runs against.
 The monetizable wedge. Same engine, scaled out.
 
 - Inventory of all hosts (facts, package versions, drift).
-- Fleet plans: roll a preset across N hosts with canary / wave strategy.
+- Fleet plans: roll a component across N hosts with canary / wave strategy.
 - Audit log: signed, append-only, exportable (SOC2 / ISO friendly).
 - RBAC: who can run what action on what host.
 - Approval gates: "any action touching `/etc/security/*` requires a human".
@@ -179,7 +179,7 @@ developer adds L5's SDK. An enterprise consumes all five.
 - `mooncake agentd` — the host daemon
 - `mooncake hub` — the control plane (also `station` / `mission-control`)
 - `mooncake guard` — the agent sandbox runtime
-- `mooncake registry` — the preset marketplace
+- `mooncake registry` — the component marketplace
 
 ---
 
@@ -225,14 +225,14 @@ Group these by where they sit in the layered architecture.
 - **Inventory view** — every host, its facts, its current "compliance" with
   declared state.
 - **Drift heatmap** — visual: green = matches plan, red = drift.
-- **Fleet runs** — apply a preset to a tag selector (`role=db AND env=prod`).
+- **Fleet runs** — apply a component to a tag selector (`role=db AND env=prod`).
 - **Rollout strategies** — canary, wave, ring deployments. Halt-on-failure.
 - **Approval workflows** — Slack/email DM for risky plans, two-person rule.
 - **Audit explorer** — query "every change touching nginx config in the last
   90 days, by who, with diff."
 - **Drift alerts** — page someone when a host diverges from declared state.
 - **Change windows** — only allow non-emergency runs in approved windows.
-- **Compliance packs** — preset bundles tied to CIS / PCI / SOC2 controls.
+- **Compliance packs** — component bundles tied to CIS / PCI / SOC2 controls.
 - **Postgres-backed multi-tenant** — for MSPs serving many small clients.
 
 ### 6.4 Agent SDK (L5)
@@ -241,7 +241,7 @@ This is the most novel layer; deserves its own section. See §7.
 
 ### 6.5 Ecosystem (L5)
 
-- **Preset marketplace** — `mooncake install postgres@2.1.0`. Signed, versioned,
+- **Component marketplace** — `mooncake install postgres@2.1.0`. Signed, versioned,
   optionally paid.
 - **GitHub Action / GitLab CI step** — drop-in CI integration.
 - **IDE extensions** — VSCode / Cursor / Zed plugin: "preview this AI change
@@ -341,8 +341,8 @@ work.
 - `mooncake init dotfiles` — scaffolded repo + first run.
 - `mooncake doctor` — interactive: "your nvim config is 14 days stale vs git;
   pull?".
-- `mooncake share <preset>` — push a preset to the marketplace.
-- **"Try this dotfile"** — preview a public preset in a Lima VM in 30s before
+- `mooncake share <component>` — push a component to the marketplace.
+- **"Try this dotfile"** — preview a public component in a Lima VM in 30s before
   applying.
 - **Multi-machine sync** — same config across laptop / desktop / VPS, with
   per-host overrides.
@@ -415,7 +415,7 @@ These are real forks. Worth deciding intentionally rather than drifting.
 - ✅ `!secret` typed refs + 3 providers (env/file/stdin) with redaction
 - ✅ MCP server with `get_facts`/`run_plan`/`check_plan`/`get_snapshot`/`get_metrics`/`fact_query`
 - ⏳ Mature MCP server — surfacing Diff/Permissions/transactions to agent tools is still draft
-- ⏳ Tiny preset marketplace (signed, GitHub-hosted) — Stream 5; not started
+- ⏳ Tiny component marketplace (signed, GitHub-hosted) — Stream 5; not started
 - ⏳ Land 2–3 lighthouse agent-developer users; write case studies — **the next strategic move**
 
 ### Phase B — Daemon + lightweight hub (6–12mo) — **partially done; personal-fleet shipped**
@@ -429,7 +429,7 @@ These are real forks. Worth deciding intentionally rather than drifting.
 - RBAC, SSO, compliance packs.
 - Cloud SaaS hub.
 - IDE extensions, GitHub Actions, Backstage plugin.
-- Marketplace with paid presets / revenue share for authors.
+- Marketplace with paid components / revenue share for authors.
 - Position publicly: "the standard runtime for AI system configuration."
 
 ---
@@ -478,7 +478,7 @@ peer-to-peer, no hub, validated against a real WSL + Windows testbed.
 detection UX, multi-machine sync, TUI dashboard. Gets solo devs adopting
 Mooncake, who then bring it to work via streams 2 and 3.
 
-**Stream 5 — Ecosystem**: WASM plugins, preset marketplace, GitHub Actions
+**Stream 5 — Ecosystem**: WASM plugins, component marketplace, GitHub Actions
 integration, IDE extensions. Converts Mooncake from a tool into a standard.
 
 For current spec assignments, status, and work order see
@@ -505,7 +505,7 @@ These are the unknowns I'd want to pull on next:
    Bidirectional? Ignore entirely?
 7. **What's the monetization wedge if everything stays free?** Hosted hub?
    Marketplace cut? Support contracts? Enterprise compliance pack?
-8. **Should presets be more like packages (semver, deps, registry) or more
+8. **Should components be more like packages (semver, deps, registry) or more
    like recipes (copy-paste, fork-friendly)?** Probably both, but which is the
    default?
 9. **What's the right name for the "agent sandbox runtime"?** It deserves a

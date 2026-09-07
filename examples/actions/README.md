@@ -62,7 +62,7 @@ mooncake run --config file.yml --tags basics
 
 | File | Action | Description | Examples |
 |------|--------|-------------|----------|
-| **[preset.yml](preset.yml)** | `preset` | Use reusable workflows | 20+ examples |
+| **[component.yml](component.yml)** | `component` | Use reusable workflows | 20+ examples |
 
 ## Running Examples
 
@@ -324,20 +324,20 @@ Load and execute tasks from external files:
   when: os == "linux"
 ```
 
-### preset.yml - Presets
+### component.yml - Components
 Use reusable, parameterized workflows:
-- Basic preset invocation
-- Ollama preset (install/configure LLMs)
+- Basic component invocation
+- Ollama component (install/configure LLMs)
 - Parameters and variables
 - Conditional execution
 - Registration
 - Integration patterns
-- Custom preset creation
+- Custom component creation
 
 **Example:**
 ```yaml
 - name: Setup Ollama with models
-  preset: ollama
+  component: ollama
   with:
     state: present
     service: true
@@ -437,7 +437,7 @@ examples/actions/
 ├── service.yml               # Service management examples
 ├── assert.yml                # Assertion examples
 ├── include.yml               # Include task examples
-├── preset.yml                # Preset usage examples
+├── component.yml                # Component usage examples
 ├── vars.yml                  # Variable definition examples
 ├── templates/                # Template files for examples
 │   ├── simple-config.yml.j2

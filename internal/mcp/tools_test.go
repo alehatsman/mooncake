@@ -260,8 +260,8 @@ func mustJSON(t *testing.T, v interface{}) []byte {
 // The MCP surface exposes 19 tools; four of them earned nothing. Two
 // classes, both removed in #177:
 //
-//   - list_presets advertised "built-in, registry-cloned, and local"
-//     presets after the in-tree library was retired and the CLI verb
+//   - list_components advertised "built-in, registry-cloned, and local"
+//     components after the in-tree library was retired and the CLI verb
 //     deleted (2b7eee8e). It described a surface that no longer exists.
 //   - read_file / grep_files / glob_files duplicate what every agent
 //     harness already ships natively, spending tool-description context
@@ -271,10 +271,10 @@ func mustJSON(t *testing.T, v interface{}) []byte {
 // Keep them gone.
 func TestToolDefinitions_NoRedundantOrDeadTools(t *testing.T) {
 	removed := map[string]string{
-		"list_presets": "presets were retired; use mod cache list",
-		"read_file":    "every agent harness ships this natively",
-		"grep_files":   "every agent harness ships this natively",
-		"glob_files":   "every agent harness ships this natively",
+		"list_components": "components were retired; use mod cache list",
+		"read_file":       "every agent harness ships this natively",
+		"grep_files":      "every agent harness ships this natively",
+		"glob_files":      "every agent harness ships this natively",
 	}
 	for _, def := range AllTools() {
 		if why, dead := removed[def.Name]; dead {

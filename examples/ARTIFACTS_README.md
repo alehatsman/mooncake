@@ -400,4 +400,4 @@ allowed_paths: ["src/**/*.js"]
 
 - [Action Reference](../docs/guide/config/actions.md#artifact_capture)
 - [LLM Agent Guide](../docs/guide/llm-agents.md)
-- [Preset System](../docs/guide/presets.md)
+- [Component System](../docs/guide/components.md)

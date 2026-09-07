@@ -54,6 +54,12 @@ mutation is built.
   typed secret reference resolved at apply time, never inlined as plaintext.
 - WHEN `modules:` binds an alias, a step's `use: <alias>` SHALL resolve against
   it, with module-level default props overridden by per-call `props`.
+- WHERE a component declares its inputs, the key SHALL be `props:`. The retired
+  `parameters:` key SHALL be rejected at parse time with an error naming
+  `props:` — not ignored, which would surface much later as a confusing
+  "unknown prop" at the point of use.
+- WHEN a component's steps are rendered, its validated inputs SHALL be exposed
+  under the `props` namespace only. The `parameters` namespace alias is retired.
 - WHEN validation runs, it SHALL emit `Diagnostic`s (severity, message, YAML
   path, source position, context) covering YAML syntax, JSON-schema structure,
   template syntax, the one-action invariant, and compound-shape rules.
@@ -84,4 +90,6 @@ mutation is built.
 - [x] `try`/`catch`/`finally` compound shape and validation rules.
 - [x] `!secret <provider>:<key>` typed secret refs.
 - [x] `modules:` alias bindings with default props (`use:`/`props:`).
+- [x] `parameters:` rejected at parse time; `props` is the only input key and
+  the only template namespace.
 - [x] Diagnostic-based validation (YAML, JSON-schema, template, structural).

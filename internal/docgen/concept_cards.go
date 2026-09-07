@@ -27,7 +27,7 @@ var DefaultConceptDirs = []string{
 	"internal/facts",
 	"internal/modules",
 	"internal/plan",
-	"internal/presets",
+	"internal/components",
 	"internal/schemagen",
 	"internal/security",
 }

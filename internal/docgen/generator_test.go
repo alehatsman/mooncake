@@ -224,12 +224,12 @@ func TestGenerateSchemaDoc(t *testing.T) {
 		t.Error("missing schema documentation header")
 	}
 
-	if !strings.Contains(output, "### PresetDefinition") {
-		t.Error("missing PresetDefinition section")
+	if !strings.Contains(output, "### ComponentDefinition") {
+		t.Error("missing ComponentDefinition section")
 	}
 
-	if !strings.Contains(output, "### PresetParameter") {
-		t.Error("missing PresetParameter section")
+	if !strings.Contains(output, "### ComponentProp") {
+		t.Error("missing ComponentProp section")
 	}
 
 	// Check for fields table

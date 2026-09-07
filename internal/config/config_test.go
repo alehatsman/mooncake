@@ -749,7 +749,7 @@ func TestStep_DetermineActionType(t *testing.T) {
 			want: "assert",
 		},
 		{
-			name: "use (preset) action",
+			name: "use (component) action",
 			step: Step{Use: "ollama"},
 			want: "use",
 		},
@@ -860,7 +860,7 @@ func TestStep_DetermineActionType_AllFields(t *testing.T) {
 // TestStep_ShouldBecome_NoEscalationWhenAlreadyTargetUser is a regression
 // test for manual-test #1 (2026-05-15): when the current process already
 // has the effective uid of the AsUser target, ShouldBecome must report
-// false so callers skip the sudo wrapper. Without this, presets using
+// false so callers skip the sudo wrapper. Without this, components using
 // as_user: root fail in minimal containers (ubuntu:24.04, alpine:3.21)
 // that don't ship the sudo binary.
 func TestStep_ShouldBecome_NoEscalationWhenAlreadyTargetUser(t *testing.T) {

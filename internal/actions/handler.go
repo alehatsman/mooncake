@@ -46,7 +46,7 @@ const (
 	// CategoryFile represents actions that manipulate files (file, template, copy, download)
 	CategoryFile ActionCategory = "file"
 
-	// CategorySystem represents system-level actions (service, assert, preset)
+	// CategorySystem represents system-level actions (service, assert, component)
 	CategorySystem ActionCategory = "system"
 
 	// CategoryData represents data manipulation actions (vars, include_vars)

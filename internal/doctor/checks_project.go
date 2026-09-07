@@ -103,7 +103,7 @@ func (checkProjectValidate) Run(ctx Context) Result {
 	return r
 }
 
-// checkProjectSummary prints step / include / preset counts. Info-only —
+// checkProjectSummary prints step / include / component counts. Info-only —
 // always StatusInfo even when zero steps (that's a deliberate user state).
 type checkProjectSummary struct{}
 
@@ -130,7 +130,7 @@ func (checkProjectSummary) Run(ctx Context) Result {
 }
 
 // summariseSteps counts top-level steps and how many invoke an `import:`
-// (file inclusion) or `use:` (preset invocation). Iteration is shallow —
+// (file inclusion) or `use:` (component invocation). Iteration is shallow —
 // nested imports are followed by the planner, not by doctor.
 func summariseSteps(steps []config.Step) (n, imports, uses int) {
 	for _, s := range steps {

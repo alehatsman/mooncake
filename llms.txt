@@ -43,7 +43,7 @@ mooncake plan --config config.yml --format json
 
 **Step** — A single unit of work. Each step has a name and exactly one action. Steps support conditionals (`when`), loops (`with_items`, `with_dict`, `with_filetree`), tags, sudo, retry, and change/failure conditions.
 
-**Preset** — A reusable, parameterized workflow (e.g., `preset: golang`, `preset: node`). Presets are expanded into steps at plan time. 330+ built-in presets ship with mooncake.
+**Component** — A reusable, parameterized workflow invoked with `use:` and configured with `props:`. Components are expanded into steps at plan time. They come from a local file (`use: ./db.yml`) or from a Git-native module (`use: <alias>`); none ship in the binary.
 
 **Facts** — Auto-detected system information injected as template variables: `{{os}}`, `{{arch}}`, `{{cpu_cores}}`, `{{memory_total_mb}}`, `{{distribution}}`, `{{package_manager}}`, `{{home_dir}}`, `{{user}}`, `{{hostname}}`, and more.
 
@@ -67,7 +67,7 @@ All actions are mutually exclusive within a step (use exactly one per step).
 | `print` | output | Print a message to stdout |
 | `vars` | data | Set variables in the execution context |
 | `include_vars` | data | Load variables from an external YAML file |
-| `preset` | system | Expand a named preset into steps |
+| `use` | system | Expand a component into steps |
 | `service` | system | Manage services (systemd on Linux, launchd on macOS, Windows services) |
 | `assert` | system | Verify system state — command exit codes, file existence/content, HTTP responses |
 | `package` | system | Install/remove OS packages (apt, brew, dnf, pacman, etc.) |
@@ -166,5 +166,5 @@ Templates use `{{variable}}` syntax (Jinja2-compatible). Built-in facts:
 - `LLM_GUIDE.md` — Architecture reference for AI assistants (canonical nav map)
 - `docs-next/` — Full documentation source
 - `examples/` — Working playbook examples for all features
-- `presets/` — 330+ built-in presets (install tools, configure services, etc.)
+- `internal/modules/` — Git-native module fetch, cache, and lockfile verification
 - `internal/config/schema.json` — JSON Schema source of truth

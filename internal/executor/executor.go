@@ -2,7 +2,7 @@
 //
 // The executor is responsible for:
 //   - Loading and validating configuration plans
-//   - Expanding steps (loops, includes, presets)
+//   - Expanding steps (loops, includes, components)
 //   - Evaluating conditions (when, unless, creates)
 //   - Dispatching actions to handlers
 //   - Managing execution context and variables

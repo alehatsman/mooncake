@@ -213,8 +213,8 @@ func AllTools() []ToolDef {
 		// they close the "agents can't introspect the action surface
 		// without out-of-band knowledge" gap surfaced in proposal-01.
 		//
-		// list_presets used to sit here too, advertising "built-in"
-		// presets that no longer exist, alongside read_file/grep_files/
+		// list_components used to sit here too, advertising "built-in"
+		// components that no longer exist, alongside read_file/grep_files/
 		// glob_files — generic file tools every agent harness already
 		// ships natively. All four were context tax; removed in #177.
 		{

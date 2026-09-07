@@ -10,7 +10,7 @@ Package executor provides the execution engine for mooncake configuration steps.
 
 Package executor implements the core execution engine for mooncake configuration plans.
 
-The executor is responsible for: \- Loading and validating configuration plans \- Expanding steps \(loops, includes, presets\) \- Evaluating conditions \(when, unless, creates\) \- Dispatching actions to handlers \- Managing execution context and variables \- Tracking results and statistics \- Emitting events for observability \- Handling dry\-run mode \- Supporting privilege escalation \(sudo/become\)
+The executor is responsible for: \- Loading and validating configuration plans \- Expanding steps \(loops, includes, components\) \- Evaluating conditions \(when, unless, creates\) \- Dispatching actions to handlers \- Managing execution context and variables \- Tracking results and statistics \- Emitting events for observability \- Handling dry\-run mode \- Supporting privilege escalation \(sudo/become\)
 
 \# Architecture
 
@@ -105,6 +105,7 @@ log.Infof("Summary: %d changed, %d unchanged, %d failed",
   - [func NewDryRunLogger(log logger.Logger) *DryRunLogger](<#func-newdryrunlogger>)
   - [func (d *DryRunLogger) LogArchiveExtraction(src, dest, format string, stripComponents int)](<#func-dryrunlogger-logarchiveextraction>)
   - [func (d *DryRunLogger) LogAssertCheck(assertType, expected string)](<#func-dryrunlogger-logassertcheck>)
+  - [func (d *DryRunLogger) LogComponentOperation(name string, paramsCount int)](<#func-dryrunlogger-logcomponentoperation>)
   - [func (d *DryRunLogger) LogDirectoryCreate(path string, mode os.FileMode)](<#func-dryrunlogger-logdirectorycreate>)
   - [func (d *DryRunLogger) LogDirectoryRemove(path string)](<#func-dryrunlogger-logdirectoryremove>)
   - [func (d *DryRunLogger) LogFileCopy(src, dest string, mode os.FileMode, size int64)](<#func-dryrunlogger-logfilecopy>)
@@ -119,7 +120,6 @@ log.Infof("Summary: %d changed, %d unchanged, %d failed",
   - [func (d *DryRunLogger) LogHardlinkNoChange(src, dest string)](<#func-dryrunlogger-loghardlinknochange>)
   - [func (d *DryRunLogger) LogPermissionsChange(path, mode, owner, group string, recurse bool)](<#func-dryrunlogger-logpermissionschange>)
   - [func (d *DryRunLogger) LogPermissionsNoChange(path string)](<#func-dryrunlogger-logpermissionsnochange>)
-  - [func (d *DryRunLogger) LogPresetOperation(name string, paramsCount int)](<#func-dryrunlogger-logpresetoperation>)
   - [func (d *DryRunLogger) LogPrintMessage(message string)](<#func-dryrunlogger-logprintmessage>)
   - [func (d *DryRunLogger) LogRegister(step config.Step)](<#func-dryrunlogger-logregister>)
   - [func (d *DryRunLogger) LogServiceOperation(serviceName string, serviceAction *config.ServiceAction, withSudo bool)](<#func-dryrunlogger-logserviceoperation>)
@@ -474,6 +474,14 @@ func (d *DryRunLogger) LogAssertCheck(assertType, expected string)
 
 LogAssertCheck logs a dry\-run message for assertion verification.
 
+### func \(\*DryRunLogger\) [LogComponentOperation](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/dryrun.go#L233>)
+
+```go
+func (d *DryRunLogger) LogComponentOperation(name string, paramsCount int)
+```
+
+LogComponentOperation logs a component expansion operation in dry\-run mode.
+
 ### func \(\*DryRunLogger\) [LogDirectoryCreate](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/dryrun.go#L69>)
 
 ```go
@@ -585,14 +593,6 @@ func (d *DryRunLogger) LogPermissionsNoChange(path string)
 ```
 
 LogPermissionsNoChange logs a dry\-run message when permissions are already correct.
-
-### func \(\*DryRunLogger\) [LogPresetOperation](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/dryrun.go#L233>)
-
-```go
-func (d *DryRunLogger) LogPresetOperation(name string, paramsCount int)
-```
-
-LogPresetOperation logs a preset expansion operation in dry\-run mode.
 
 ### func \(\*DryRunLogger\) [LogPrintMessage](<https://github.com/alehatsman/mooncake/blob/main/internal/executor/dryrun.go#L242>)
 

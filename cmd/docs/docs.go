@@ -36,12 +36,12 @@ Single-section emitters (--output is a single markdown file):
   - capabilities:       Action capabilities table (dry-run, become, etc.)
   - action-summary:     Detailed action summaries grouped by category
   - action-properties:  Properties tables from schema.json (auto-generated)
-  - preset-examples:    Examples from actual preset files (validates syntax)
+  - component-examples:    Examples from actual component files (validates syntax)
   - schema:             YAML schema from Go struct definitions
   - all:                Concatenated platform-matrix + capabilities + action-summary + schema
 
 Multi-file emitter (--output is a DIRECTORY):
-  - all-into-dir:       Per-action cards + schema + properties + matrices + preset
+  - all-into-dir:       Per-action cards + schema + properties + matrices + component
                         examples, written into the output dir as a structured tree
                         ready for MkDocs (mkdocs reads dist/docs/) and llms.txt
                         agent consumption.
@@ -50,7 +50,7 @@ Examples:
   mooncake docs generate --section platform-matrix
   mooncake docs generate --section all-into-dir --output dist/docs
   mooncake docs generate --section action-properties --output dist/docs/properties.md
-  mooncake docs generate --section preset-examples --presets-dir ./presets`,
+  mooncake docs generate --section component-examples --components-dir ./components`,
 		Subcommands: []*cli.Command{
 			{
 				Name:  "generate",
@@ -60,7 +60,7 @@ Examples:
 						Name:    "section",
 						Aliases: []string{"s"},
 						Value:   "all",
-						Usage:   "Section to generate (platform-matrix, capabilities, action-summary, action-properties, preset-examples, schema, all, all-into-dir)",
+						Usage:   "Section to generate (platform-matrix, capabilities, action-summary, action-properties, component-examples, schema, all, all-into-dir)",
 					},
 					&cli.StringFlag{
 						Name:    "output",
@@ -68,9 +68,9 @@ Examples:
 						Usage:   "Output file (single-section) or directory (all-into-dir); default: stdout",
 					},
 					&cli.StringFlag{
-						Name:  "presets-dir",
-						Value: "presets",
-						Usage: "Directory containing preset files (for preset-examples and all-into-dir sections)",
+						Name:  "components-dir",
+						Value: "components",
+						Usage: "Directory containing component files (for component-examples and all-into-dir sections)",
 					},
 					&cli.BoolFlag{
 						Name:  "dry-run",
@@ -87,7 +87,7 @@ Examples:
 func generateDocsAction(c *cli.Context) error {
 	section := c.String("section")
 	output := c.String("output")
-	presetsDir := c.String("presets-dir")
+	componentsDir := c.String("components-dir")
 	dryRun := c.Bool("dry-run")
 
 	// Get version from app context
@@ -110,10 +110,10 @@ func generateDocsAction(c *cli.Context) error {
 			return nil
 		}
 		written, err := generator.GenerateDist(docgen.DistOptions{
-			OutDir:     output,
-			PresetsDir: presetsDir,
-			CLIRoot:    c.App,
-			EnableAPI:  true,
+			OutDir:        output,
+			ComponentsDir: componentsDir,
+			CLIRoot:       c.App,
+			EnableAPI:     true,
 		})
 		if err != nil {
 			return fmt.Errorf("failed to generate dist tree: %w", err)
@@ -123,11 +123,11 @@ func generateDocsAction(c *cli.Context) error {
 	}
 
 	if output == "" || dryRun {
-		return generator.GenerateSection(section, os.Stdout, presetsDir)
+		return generator.GenerateSection(section, os.Stdout, componentsDir)
 	}
 
 	var buf bytes.Buffer
-	if err := generator.GenerateSection(section, &buf, presetsDir); err != nil {
+	if err := generator.GenerateSection(section, &buf, componentsDir); err != nil {
 		return fmt.Errorf("failed to generate documentation: %w", err)
 	}
 

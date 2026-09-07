@@ -1,4 +1,4 @@
-package preset
+package use
 
 import (
 	"os"
@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/alehatsman/mooncake/internal/components"
 	"github.com/alehatsman/mooncake/internal/config"
-	"github.com/alehatsman/mooncake/internal/presets"
 )
 
 // TestLocalComponent_FromPath covers the spec-67 local-component dispatch
@@ -39,9 +39,9 @@ steps:
 		t.Fatalf("Kind = %v, want LocalPath", config.ComponentRefKindOf(name))
 	}
 	absPath := filepath.Join(dir, name)
-	steps, ns, baseDir, err := presets.ExpandPresetFromPath(name, props, absPath)
+	steps, ns, baseDir, err := components.ExpandComponentFromPath(name, props, absPath)
 	if err != nil {
-		t.Fatalf("ExpandPresetFromPath: %v", err)
+		t.Fatalf("ExpandComponentFromPath: %v", err)
 	}
 	if len(steps) != 1 {
 		t.Errorf("expected 1 step, got %d", len(steps))
@@ -58,7 +58,7 @@ steps:
 // TestLocalComponent_MissingFile verifies the spec's error message for a
 // missing local component file.
 func TestLocalComponent_MissingFile(t *testing.T) {
-	_, _, _, err := presets.ExpandPresetFromPath("./components/missing.yml", nil, "/tmp/nonexistent/missing.yml")
+	_, _, _, err := components.ExpandComponentFromPath("./components/missing.yml", nil, "/tmp/nonexistent/missing.yml")
 	if err == nil {
 		t.Fatal("expected error for missing component")
 	}
@@ -81,7 +81,7 @@ steps:
 	if err := os.WriteFile(componentPath, []byte(content), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	_, _, _, err := presets.ExpandPresetFromPath("./req.yml", nil, componentPath)
+	_, _, _, err := components.ExpandComponentFromPath("./req.yml", nil, componentPath)
 	if err == nil {
 		t.Fatal("expected error for missing required prop")
 	}

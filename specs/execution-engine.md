@@ -24,7 +24,7 @@ and undoable.
 
 ## Behavior
 - WHEN a config is loaded, the planner SHALL compile it into a flat `Plan`:
-  expanding `import`/preset includes, unrolling `for_each` loops, binding
+  expanding `import`/component includes, unrolling `for_each` loops, binding
   variables and facts, resolving `!secret` refs, and tagging compound children
   (transaction/try) with their structural role.
 - WHEN planning, the engine SHALL run each handler in `ModePlan` and emit a
@@ -78,7 +78,7 @@ and undoable.
   quotas — unbuilt roadmap (VISION stream 2).
 
 ## Checklist
-- [x] Planner flattens config: includes/presets, loop unrolling, var/fact
+- [x] Planner flattens config: includes/components, loop unrolling, var/fact
   binding, secret resolution, compound-role tagging.
 - [x] Mode-aware effects `Performer` (ModePlan predicts, ModeApply mutates).
 - [x] `--dry-run` performs no mutation; guards/probes still evaluated.

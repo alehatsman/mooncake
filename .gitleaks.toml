@@ -3,14 +3,14 @@
 
 title = "Mooncake Gitleaks Config"
 
-# Exclude preset documentation and examples
+# Exclude component documentation and examples
 [allowlist]
   description = "Allowlist for documentation and examples"
 
-  # Exclude all README files in presets (they contain example commands with dummy credentials)
+  # Exclude all README files in components (they contain example commands with dummy credentials)
   paths = [
-    '''presets/.*/README\.md''',
-    '''presets/.*/templates/.*''',
+    '''components/.*/README\.md''',
+    '''components/.*/templates/.*''',
     '''examples/.*''',
     '''docs/.*''',
   ]

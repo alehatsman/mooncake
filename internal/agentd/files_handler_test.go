@@ -83,7 +83,7 @@ func TestResolveSyncPath_AcceptsValidRelPaths(t *testing.T) {
 	root := t.TempDir()
 	cases := []string{
 		"foo.txt",
-		"presets/bar.yml",
+		"components/bar.yml",
 		"a/b/c/d/e.txt",
 		"./normalized/by/clean.txt",
 		"file.with.dots.txt",

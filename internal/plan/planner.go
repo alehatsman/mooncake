@@ -11,12 +11,12 @@ import (
 	"time"
 
 	"github.com/alehatsman/mooncake/internal/actions"
+	"github.com/alehatsman/mooncake/internal/components"
 	"github.com/alehatsman/mooncake/internal/config"
 	"github.com/alehatsman/mooncake/internal/expression"
 	"github.com/alehatsman/mooncake/internal/facts"
 	"github.com/alehatsman/mooncake/internal/filetree"
 	"github.com/alehatsman/mooncake/internal/pathutil"
-	"github.com/alehatsman/mooncake/internal/presets"
 	"github.com/alehatsman/mooncake/internal/secrets/resolver"
 	"github.com/alehatsman/mooncake/internal/security"
 	"github.com/alehatsman/mooncake/internal/template"
@@ -220,7 +220,7 @@ func NewPlanner() (*Planner, error) {
 }
 
 // ExpandStepsWithContext expands a list of steps with the given context.
-// This is useful for expanding preset steps which may contain includes, loops, etc.
+// This is useful for expanding component steps which may contain includes, loops, etc.
 // Returns the expanded steps ready for execution.
 func (p *Planner) ExpandStepsWithContext(steps []config.Step, variables map[string]interface{}, currentDir string) ([]config.Step, error) {
 	// Create expansion context. FromComponent=true so output paths (plan:"outpath",
@@ -228,7 +228,7 @@ func (p *Planner) ExpandStepsWithContext(steps []config.Step, variables map[stri
 	ctx := &ExpansionContext{
 		Variables:     variables,
 		CurrentDir:    currentDir,
-		Tags:          nil, // No tag filtering for preset expansion
+		Tags:          nil, // No tag filtering for component expansion
 		FromComponent: true,
 	}
 
@@ -787,7 +787,7 @@ func (p *Planner) tryExpandUse(step config.Step, ctx *ExpansionContext, plan *Pl
 	}
 	p.inputFiles = append(p.inputFiles, absPath)
 
-	def, err := presets.LoadPresetFromPath(absPath)
+	def, err := components.LoadComponentFromPath(absPath)
 	if err != nil {
 		return false, fmt.Errorf("step %q: load component %q: %w", step.Name, absPath, err)
 	}
@@ -795,19 +795,19 @@ func (p *Planner) tryExpandUse(step config.Step, ctx *ExpansionContext, plan *Pl
 	// Full validation now that props are concrete: required, type, enum,
 	// and unknown-prop checks all fire here so authoring errors surface
 	// at plan time instead of apply time.
-	validated, err := presets.ValidateParameters(def, callerProps)
+	validated, err := components.ValidateProps(def, callerProps)
 	if err != nil {
 		return false, fmt.Errorf("step %q: %w", step.Name, err)
 	}
 
-	// ValidateParameters returns (caller's value OR default) for every
+	// ValidateProps returns (caller's value OR default) for every
 	// declared param. Use that as the namespace so downstream templates
 	// see defaults filled in.
 	paramsNamespace := validated
 
 	// Inject props/parameters into the shared variables map for the
 	// duration of expansion; restore on exit so siblings in the parent
-	// file don't see them. Mirrors how the preset handler scopes them at
+	// file don't see them. Mirrors how the component handler scopes them at
 	// apply time (captureContext / restore).
 	savedProps, hadProps := ctx.Variables["props"]
 	savedParams, hadParams := ctx.Variables["parameters"]
@@ -1196,7 +1196,7 @@ func (p *Planner) renderActionTemplates(step *config.Step, ctx *ExpansionContext
 
 	// spec-67: `use:` is a string action; `props:` is its sibling map (not an
 	// action field). Render both at plan time so downstream consumers — the
-	// preset handler's prop validation, vars.load expansions inside the
+	// component handler's prop validation, vars.load expansions inside the
 	// component, etc. — see resolved values instead of raw {{ }} expressions.
 	if step.Use != "" {
 		rendered, err := render(step.Use)
@@ -1219,7 +1219,7 @@ func (p *Planner) renderActionTemplates(step *config.Step, ctx *ExpansionContext
 		// #52/#57: module-level default props are NOT merged here. An alias
 		// use: defers to apply time, where the component is loaded and its
 		// declared params are known — defaults are merged there, filtered to
-		// the schema (preset.resolveAndExpand). Merging unconditionally at
+		// the schema (component.resolveAndExpand). Merging unconditionally at
 		// plan time would inject a default into exports that don't declare it
 		// and fail validation.
 		return nil

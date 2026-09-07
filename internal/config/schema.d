@@ -1708,7 +1708,7 @@ export interface Step {
    */
   tool?: ToolAction;
   /**
-   * Execute a preset by expanding it into steps
+   * Execute a component by expanding it into steps
    */
   use?: UseAction;
   /**
