@@ -34,8 +34,10 @@ import (
 	_ "github.com/alehatsman/mooncake/internal/actions/git_config"
 
 	// Observe
+	_ "github.com/alehatsman/mooncake/internal/actions/observe_command"
 	_ "github.com/alehatsman/mooncake/internal/actions/observe_cpu"
 	_ "github.com/alehatsman/mooncake/internal/actions/observe_disk"
+	_ "github.com/alehatsman/mooncake/internal/actions/observe_file"
 	_ "github.com/alehatsman/mooncake/internal/actions/observe_gpu"
 	_ "github.com/alehatsman/mooncake/internal/actions/observe_http"
 	_ "github.com/alehatsman/mooncake/internal/actions/observe_logs"
@@ -92,10 +94,6 @@ import (
 	_ "github.com/alehatsman/mooncake/internal/actions/http_request"
 
 	// Wait / polling
-	_ "github.com/alehatsman/mooncake/internal/actions/wait_command"
-	_ "github.com/alehatsman/mooncake/internal/actions/wait_file"
-	_ "github.com/alehatsman/mooncake/internal/actions/wait_http"
-	_ "github.com/alehatsman/mooncake/internal/actions/wait_port"
 
 	// Windows-only
 	_ "github.com/alehatsman/mooncake/internal/actions/windows_firewall_rule"

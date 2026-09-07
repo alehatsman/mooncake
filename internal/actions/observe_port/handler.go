@@ -72,7 +72,7 @@ func (h *Handler) Validate(step *config.Step) error {
 			return fmt.Errorf("%s: invalid timeout %q: %w", actionName, o.Timeout, err)
 		}
 	}
-	return nil
+	return actions.ValidateWait(actionName, o.Wait)
 }
 
 func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, error) {
@@ -116,22 +116,36 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		return result, nil
 	}
 
-	obs := PortObservation{
-		Protocol:  protocol,
-		Host:      host,
-		Port:      o.Port,
-		LocalAddr: addr,
+	// One attempt, shaped as a closure so the `wait:` modifier can poll it.
+	probeOnce := func() actions.ObserveResult {
+		obs := PortObservation{
+			Protocol:  protocol,
+			Host:      host,
+			Port:      o.Port,
+			LocalAddr: addr,
+		}
+		obs.Open = probe(protocol, addr, timeout)
+		return actions.ObserveResult{
+			Found: obs.Open, // "found" means a listener is bound
+			Value: obs,
+			AsOf:  time.Now(),
+		}
 	}
-	obs.Open = probe(protocol, addr, timeout)
 
-	envelope := actions.ObserveResult{
-		Found: obs.Open, // "found" means listener is bound
-		Value: obs,
-		AsOf:  time.Now(),
+	envelope := probeOnce()
+	if o.Wait != nil {
+		var err error
+		// ObserveWait returns the last observation either way, so a timed-out
+		// wait still publishes real data for a downstream `as:` capture.
+		envelope, err = actions.ObserveWait(ctx, actionName, addr, o.Wait, probeOnce)
+		if err != nil {
+			result.PublishObservation(envelope, addr)
+			return result, err
+		}
 	}
 	result.PublishObservation(envelope, addr)
 
-	ctx.Logger().Debugf("%s %s = open:%v", actionName, addr, obs.Open)
+	ctx.Logger().Debugf("%s %s = open:%v", actionName, addr, envelope.Found)
 	return result, nil
 }
 
@@ -173,13 +187,17 @@ func resolveHost(ctx actions.Context, host string) (string, error) {
 
 // --- Spec-22 ABI sub-interfaces (no-mutation specialization) -----------------
 
-// Cost: every observe.* handler reports Risk=1, Reversible=true,
+// Cost: every observe.* handler reports Risk=1, Reversible=false,
 // Resources=0, Bytes=0. Pure read.
+//
+// Reversible mirrors the Reverser type assertion, and observe handlers
+// deliberately do not implement Reverser: a read has nothing to undo, which
+// is not the same as being undoable.
 func (h *Handler) Cost(_ actions.Context, _ *config.Step) (actions.CostEstimate, error) {
 	return actions.CostEstimate{
 		Resources:  0,
 		Bytes:      0,
-		Reversible: true,
+		Reversible: false,
 		Risk:       1,
 	}, nil
 }
@@ -218,10 +236,4 @@ func (h *Handler) Diff(_ actions.Context, step *config.Step) (actions.Diff, erro
 		},
 		Operation: actions.OpNoop,
 	}, nil
-}
-
-// Reverse: pure observation has no inverse. Return (nil, nil) per the
-// Reverser contract for "no reverse needed."
-func (h *Handler) Reverse(_ actions.Context, _ *config.Step, _ actions.Result) (*config.Step, error) {
-	return nil, nil
 }

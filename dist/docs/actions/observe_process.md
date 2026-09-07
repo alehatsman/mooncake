@@ -9,7 +9,7 @@ capabilities:
   check: false
   diff: true
   cost: true
-  reverse: true
+  reverse: false
   permissions: true
   capture_in_plan: true
 ---

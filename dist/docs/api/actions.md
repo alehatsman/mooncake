@@ -133,6 +133,8 @@ func (h *Handler) Metadata() actions.ActionMetadata {
 - [func PredicateFor(reg *Registry) config.IsCustomAction](<#func-predicatefor>)
 - [func Register(handler Handler)](<#func-register>)
 - [func RegisterBuiltins(dst *Registry) error](<#func-registerbuiltins>)
+- [func ValidateWait(actionName string, w *config.WaitSpec) error](<#func-validatewait>)
+- [func WaitCondition(until string) (bool, error)](<#func-waitcondition>)
 - [type Action](<#type-action>)
 - [type ActionCategory](<#type-actioncategory>)
 - [type ActionDefinition](<#type-actiondefinition>)
@@ -177,6 +179,7 @@ func (h *Handler) Metadata() actions.ActionMetadata {
   - [func (m Mode) String() string](<#func-mode-string>)
 - [type MountDiff](<#type-mountdiff>)
 - [type ObserveResult](<#type-observeresult>)
+  - [func ObserveWait(ctx Context, actionName, target string, w *config.WaitSpec, probe func() ObserveResult) (ObserveResult, error)](<#func-observewait>)
   - [func PlanDeferred(emptyValue any) ObserveResult](<#func-plandeferred>)
 - [type Operation](<#type-operation>)
 - [type PackageDiff](<#type-packagediff>)
@@ -226,9 +229,28 @@ func (h *Handler) Metadata() actions.ActionMetadata {
 - [type TransactionDiff](<#type-transactiondiff>)
 - [type TryDiff](<#type-trydiff>)
 - [type UserDiff](<#type-userdiff>)
+- [type WaitTimeoutError](<#type-waittimeouterror>)
+  - [func (e *WaitTimeoutError) Error() string](<#func-waittimeouterror-error>)
 
 
 ## Constants
+
+Defaults and bounds for the observe \`wait:\` modifier.
+
+```go
+const (
+    // DefaultWaitFor is the total budget when `for:` is unset. Matches what
+    // the retired wait.* actions used, so migrated steps behave the same.
+    DefaultWaitFor = 60 * time.Second
+
+    // DefaultWaitInterval is the gap between attempts when `interval:` is unset.
+    DefaultWaitInterval = time.Second
+
+    // MinWaitInterval floors the poll gap. A typo like `interval: 1ms` would
+    // otherwise turn a wait into a busy loop hammering a remote endpoint.
+    MinWaitInterval = 100 * time.Millisecond
+)
+```
 
 ObserveTargetHost is the conventional Target value for system\-wide observations \(cpu, memory, gpu\) that have no specific file or URL to point at — they observe the host itself.
 
@@ -336,7 +358,7 @@ ObserveValueToMap converts an observe handler's typed Value struct into a map\[s
 
 On marshal failure \(e.g. value contains an unmarshallable type\) returns the original value unchanged. Defensive — observe handlers control their own Value types, so this path should never fire in practice.
 
-## func [PathNeedsSudo](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/handler_abi.go#L272>)
+## func [PathNeedsSudo](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/handler_abi.go#L283>)
 
 ```go
 func PathNeedsSudo(p string) bool
@@ -393,6 +415,22 @@ _ = reg.Register(myCustomHandler)
 ```
 
 A built\-in whose name is already present in dst is skipped \(so a consumer may pre\-register an override before calling this\). Returns the first non\-skip registration error, if any.
+
+## func [ValidateWait](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/observe_wait.go#L71>)
+
+```go
+func ValidateWait(actionName string, w *config.WaitSpec) error
+```
+
+ValidateWait checks a \`wait:\` block without running it. Called from each handler's Validate so a bad condition or duration fails at plan time rather than sixty seconds into an apply.
+
+## func [WaitCondition](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/observe_wait.go#L49>)
+
+```go
+func WaitCondition(until string) (bool, error)
+```
+
+WaitCondition resolves an \`until:\` value to the Found state being waited for. An empty value means the default, \`found\`.
 
 ## type [Action](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/performer.go#L7>)
 
@@ -754,7 +792,7 @@ type Context interface {
 }
 ```
 
-## type [CostEstimate](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/handler_abi.go#L128-L150>)
+## type [CostEstimate](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/handler_abi.go#L128-L161>)
 
 CostEstimate is a coarse, pre\-execution signal of a step's blast radius. Consumed by run\-recap \(averaged risk \+ summed resources\), JSON plan output \(per\-step\), and future policy layers. Not a hard gate — informational unless something downstream chooses to enforce.
 
@@ -769,9 +807,20 @@ type CostEstimate struct {
     // mutated by this step. -1 = unknown / not applicable.
     Bytes int64 `json:"bytes"`
 
-    // Reversible reports whether the handler implements Reverser
-    // (and would therefore return a non-nil Step from Reverse).
-    // Mirrors what `(h, ok := h.(Reverser)); ok` would report.
+    // Reversible reports whether reversing this step would do something
+    // useful — the signal plan output and transaction tooling want.
+    //
+    // It is NOT the Reverser type assertion, and the two deliberately
+    // disagree in both directions:
+    //
+    //   - git.clone and pkg.upgrade implement Reverser in order to REFUSE
+    //     with an explanatory error, so callers get "this handler declines"
+    //     rather than "this handler is unknown to the ABI". Both report
+    //     Reversible=false.
+    //   - observe.* handlers do not implement Reverser at all — a read has
+    //     nothing to undo — and also report Reversible=false.
+    //
+    // ActionMetadata.ImplementsReverse carries the raw type assertion.
     Reversible bool `json:"reversible"`
 
     // Risk is a 1..10 informational band:
@@ -784,7 +833,7 @@ type CostEstimate struct {
 }
 ```
 
-## type [Coster](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/handler_abi.go#L216-L218>)
+## type [Coster](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/handler_abi.go#L227-L229>)
 
 Coster is the optional interface for pre\-execution blast\-radius signal. Handlers that don't implement it get a neutral default of Risk=5 with Reversible inferred from whether Reverser is implemented.
 
@@ -890,7 +939,7 @@ const (
 )
 ```
 
-## type [Differ](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/handler_abi.go#L190-L192>)
+## type [Differ](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/handler_abi.go#L201-L203>)
 
 Differ is the optional interface handlers implement to produce a structured per\-step Diff. Called in plan mode by the planner; consumed by JSON plan output, the agent SDK, and any UI past \`mooncake plan\`.
 
@@ -1249,6 +1298,18 @@ type ObserveResult struct {
 }
 ```
 
+### func [ObserveWait](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/observe_wait.go#L145-L146>)
+
+```go
+func ObserveWait(ctx Context, actionName, target string, w *config.WaitSpec, probe func() ObserveResult) (ObserveResult, error)
+```
+
+ObserveWait polls probe until the wait condition holds or the budget elapses.
+
+It always returns the LAST observation, satisfied or not, so an \`as:\` capture downstream of a timed\-out wait still sees real data rather than a zero value. The error is non\-nil exactly when the condition never held; the caller decides whether that fails the step \(it does — see the spec\).
+
+The context is checked between attempts, so SIGINT during a five\-minute wait aborts promptly instead of running to the budget.
+
 ### func [PlanDeferred](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/observe.go#L87>)
 
 ```go
@@ -1378,7 +1439,7 @@ type PerformerOpts struct {
 }
 ```
 
-## type [PermissionSet](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/handler_abi.go#L159-L179>)
+## type [PermissionSet](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/handler_abi.go#L170-L190>)
 
 PermissionSet declares the privileges and external dependencies a step needs to run. Consumed by executor preflight \(fail\-fast if a required binary is missing or Sudo is required and we're not elevated\), plan output \(surface \`requires:\` lines per step\), and the future policy DSL.
 
@@ -1406,7 +1467,7 @@ type PermissionSet struct {
 }
 ```
 
-## type [Permitter](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/handler_abi.go#L223-L225>)
+## type [Permitter](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/handler_abi.go#L234-L236>)
 
 Permitter is the optional interface for declaring required privileges. Cheap to implement \(often a static return\) and high\-leverage: surfaces permission requirements at plan time instead of as runtime failures.
 
@@ -1738,7 +1799,7 @@ type Retryable interface {
 }
 ```
 
-## type [Reverser](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/handler_abi.go#L209-L211>)
+## type [Reverser](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/handler_abi.go#L220-L222>)
 
 Reverser is the optional interface handlers implement to declare how their effect is undone. Spec\-30 \(\`transaction:\` blocks\) is the primary consumer: on transaction failure the executor walks completed steps in reverse order and applies the Step each Reverser returns.
 
@@ -2076,6 +2137,27 @@ type UserDiff struct {
     // System mirrors the system-account flag.
     System bool `json:"system,omitempty"`
 }
+```
+
+## type [WaitTimeoutError](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/observe_wait.go#L114-L121>)
+
+WaitTimeoutError is returned when a \`wait:\` budget elapses without the condition holding. Typed so callers can distinguish "the thing never showed up" from "the probe itself broke".
+
+```go
+type WaitTimeoutError struct {
+    Action    string
+    Target    string
+    Until     string
+    Budget    time.Duration
+    Attempts  int
+    LastError string
+}
+```
+
+### func \(\*WaitTimeoutError\) [Error](<https://github.com/alehatsman/mooncake/blob/main/internal/actions/observe_wait.go#L123>)
+
+```go
+func (e *WaitTimeoutError) Error() string
 ```
 
 

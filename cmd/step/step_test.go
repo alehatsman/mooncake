@@ -171,10 +171,10 @@ func strictDecodeStep(raw string) error {
 // MT-83: `mooncake step` must reject unknown fields the way `apply`
 // does (via MT-44's strict reader pass). The headline repro used
 // `expected_exit:` (the correct key is `expect_exit:`) — pre-fix
-// it was silently dropped and the wait.command handler ran with
+// it was silently dropped and the observe.command handler ran with
 // default expectations, producing a confusing timeout.
 func TestStepStrictDecode_RejectsUnknownNestedField(t *testing.T) {
-	raw := `wait.command: { cmd: 'exit 42', expected_exit: 42 }`
+	raw := `observe.command: { cmd: 'exit 42', expected_exit: 42 }`
 	err := strictDecodeStep(raw)
 	if err == nil {
 		t.Fatal("expected error for unknown field expected_exit, got nil")
@@ -203,7 +203,7 @@ not_a_real_field: true`
 // Without this, a typo in the "fixed" code (e.g. wrong yaml tag in
 // the WaitCommand struct) would only surface as a runtime regression.
 func TestStepStrictDecode_AcceptsKnownField(t *testing.T) {
-	raw := `wait.command: { cmd: 'true', expect_exit: 0 }`
+	raw := `observe.command: { cmd: 'true', expect_exit: 0 }`
 	if err := strictDecodeStep(raw); err != nil {
 		t.Errorf("expected clean decode for canonical field expect_exit, got: %v", err)
 	}
@@ -236,7 +236,7 @@ func TestStepStrictDecode_AcceptsJSONInput(t *testing.T) {
 }
 
 func TestStepStrictDecode_RejectsUnknownFieldFromJSON(t *testing.T) {
-	raw := `{"wait.command":{"cmd":"exit 42","expected_exit":42}}`
+	raw := `{"observe.command":{"cmd":"exit 42","expected_exit":42}}`
 	err := strictDecodeStep(raw)
 	if err == nil {
 		t.Fatal("expected error for unknown field expected_exit in JSON input, got nil")

@@ -4,6 +4,7 @@ import (
 	"net"
 	"strconv"
 	"testing"
+	"time"
 
 	"github.com/alehatsman/mooncake/internal/actions"
 	"github.com/alehatsman/mooncake/internal/config"
@@ -189,8 +190,8 @@ func TestCost_ReadOnly(t *testing.T) {
 	if cost.Risk != 1 {
 		t.Errorf("Risk = %d, want 1 (read-only)", cost.Risk)
 	}
-	if !cost.Reversible {
-		t.Errorf("Reversible should be true for observations")
+	if cost.Reversible {
+		t.Errorf("Reversible should be false for observations — a read has nothing to undo")
 	}
 }
 
@@ -205,14 +206,14 @@ func TestPermissions_Network(t *testing.T) {
 	}
 }
 
-func TestReverse_Noop(t *testing.T) {
-	h := &Handler{}
-	step, err := h.Reverse(nil, &config.Step{}, nil)
-	if err != nil {
-		t.Fatalf("Reverse: %v", err)
-	}
-	if step != nil {
-		t.Errorf("expected nil Step (no reverse needed); got %v", step)
+// observe.port must NOT satisfy actions.Reverser. A no-op `return nil, nil`
+// still satisfies the interface, and the registry derives ImplementsReverse
+// from that assertion — which made `actions list` report REVERSE=yes for a
+// pure read. A read has nothing to undo; that is not the same as undoable.
+func TestHandlerIsNotAReverser(t *testing.T) {
+	var h any = &Handler{}
+	if _, ok := h.(actions.Reverser); ok {
+		t.Error("observe.port implements actions.Reverser; it must not")
 	}
 }
 
@@ -228,5 +229,73 @@ func TestDiff_Noop(t *testing.T) {
 	}
 	if d.Resource.Identifier != "tcp:localhost:80" {
 		t.Errorf("Identifier = %q, want tcp:localhost:80", d.Resource.Identifier)
+	}
+}
+
+// The `wait:` modifier replaces the retired wait.port action. Proving it here
+// against a real listener is what makes that retirement safe.
+func TestRun_WaitUntilPortOpens(t *testing.T) {
+	ctx := newCtx(t, false)
+
+	// Find a free port, then start listening on it after a delay so the first
+	// probe genuinely fails.
+	probe, release := listenAndPort(t)
+	release()
+
+	go func() {
+		time.Sleep(40 * time.Millisecond)
+		ln, err := net.Listen("tcp", "127.0.0.1:"+strconv.Itoa(probe))
+		if err != nil {
+			return
+		}
+		time.Sleep(2 * time.Second)
+		_ = ln.Close()
+	}()
+
+	h := &Handler{}
+	step := &config.Step{ObservePort: &config.ObservePort{
+		Host: "127.0.0.1", Port: probe,
+		Wait: &config.WaitSpec{For: "5s", Interval: "5ms"},
+	}}
+	if err := h.Validate(step); err != nil {
+		t.Fatalf("Validate: %v", err)
+	}
+	res, err := h.Run(ctx, step)
+	if err != nil {
+		t.Fatalf("wait should have succeeded once the listener came up: %v", err)
+	}
+	r := res.(*executor.Result)
+	if f, _ := r.Data["found"].(bool); !f {
+		t.Error("port opened but was not Found")
+	}
+}
+
+func TestRun_WaitTimeoutFailsTheStep(t *testing.T) {
+	ctx := newCtx(t, false)
+	closed, release := listenAndPort(t)
+	release() // nothing is listening now, and nothing will be
+
+	h := &Handler{}
+	step := &config.Step{ObservePort: &config.ObservePort{
+		Host: "127.0.0.1", Port: closed,
+		Wait: &config.WaitSpec{For: "20ms", Interval: "5ms"},
+	}}
+	res, err := h.Run(ctx, step)
+	if err == nil {
+		t.Fatal("a wait that never satisfies must fail the step")
+	}
+	// The last observation is still published so `as:` capture sees real data.
+	if res == nil {
+		t.Fatal("a timed-out wait should still return its last observation")
+	}
+}
+
+func TestValidate_RejectsBadWait(t *testing.T) {
+	h := &Handler{}
+	step := &config.Step{ObservePort: &config.ObservePort{
+		Port: 5432, Wait: &config.WaitSpec{Until: "shortly"},
+	}}
+	if err := h.Validate(step); err == nil {
+		t.Error("an unknown wait condition must fail at plan time, not mid-apply")
 	}
 }

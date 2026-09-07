@@ -9,7 +9,7 @@ capabilities:
   check: false
   diff: true
   cost: true
-  reverse: true
+  reverse: false
   permissions: true
   capture_in_plan: true
 ---
@@ -29,6 +29,7 @@ Single-shot HTTP GET; returns typed status, latency, headers, body sample
 | `skip_tls_verify` | boolean | No | - |
 | `timeout` | string | No | - |
 | `url` | string | **Yes** | - |
+| `wait` | object | No | - |
 
 ## Platform Support
 

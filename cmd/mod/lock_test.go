@@ -307,3 +307,46 @@ func captureStdout(t *testing.T, fn func()) string {
 	_ = r.Close()
 	return out
 }
+
+// The idempotency test above can pass by luck when both tidies land inside the
+// same wall-clock second. This pins the actual cause: a re-tidy that finds an
+// unchanged hash must keep the existing locked_at rather than stamping a fresh
+// one, or committing the lockfile means a spurious diff on every no-op run.
+func TestModTidy_PreservesLockedAtWhenHashUnchanged(t *testing.T) {
+	bare := makeFixtureRepo(t, "v1.0.0", "name: install\nsteps:\n  - log: one\n")
+	modEnv(t, bare)
+	playbook := writePlaybook(t, map[string]string{
+		"testmod": "github.com/owner/testmod@v1.0.0",
+	})
+	lockPath := lockPathFor(playbook)
+
+	if err := runMod(t, "tidy", "--playbook", playbook); err != nil {
+		t.Fatalf("mod tidy: %v", err)
+	}
+	first, err := modules.LoadLock(lockPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	before, ok := first.LookupLock("github.com/owner/testmod@v1.0.0")
+	if !ok || before.LockedAt == "" {
+		t.Fatalf("first tidy did not record a locked_at: %+v", before)
+	}
+
+	// Move the clock forward so a naive re-stamp would be visible.
+	prevNow := modules.NowRFC3339
+	modules.NowRFC3339 = func() string { return "2099-01-01T00:00:00Z" }
+	t.Cleanup(func() { modules.NowRFC3339 = prevNow })
+
+	if err := runMod(t, "tidy", "--playbook", playbook); err != nil {
+		t.Fatalf("second mod tidy: %v", err)
+	}
+	second, err := modules.LoadLock(lockPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	after, _ := second.LookupLock("github.com/owner/testmod@v1.0.0")
+	if after.LockedAt != before.LockedAt {
+		t.Errorf("locked_at was re-stamped on an unchanged hash: %q -> %q",
+			before.LockedAt, after.LockedAt)
+	}
+}

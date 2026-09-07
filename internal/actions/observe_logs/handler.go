@@ -234,7 +234,7 @@ func matchLines(rxs []*regexp.Regexp, patterns []string, lines []string, samples
 // --- Spec-22 ABI no-mutation specialization ---------------------------------
 
 func (h *Handler) Cost(_ actions.Context, _ *config.Step) (actions.CostEstimate, error) {
-	return actions.CostEstimate{Resources: 0, Bytes: 0, Reversible: true, Risk: 1}, nil
+	return actions.CostEstimate{Resources: 0, Bytes: 0, Reversible: false, Risk: 1}, nil
 }
 
 func (h *Handler) Permissions(step *config.Step) actions.PermissionSet {
@@ -268,8 +268,4 @@ func (h *Handler) Diff(_ actions.Context, step *config.Step) (actions.Diff, erro
 		},
 		Operation: actions.OpNoop,
 	}, nil
-}
-
-func (h *Handler) Reverse(_ actions.Context, _ *config.Step, _ actions.Result) (*config.Step, error) {
-	return nil, nil
 }

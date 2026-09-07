@@ -1,0 +1,108 @@
+# observe.* with `wait:` — polling primitives for service synchronization.
+#
+# There used to be a separate wait.* family: wait.port, wait.http, wait.file,
+# wait.command. Each was a poll loop wrapped around a probe that observe.*
+# already implemented, with its own duration parsing and its own defaults.
+# So polling became a modifier instead of a family.
+#
+#   observe.X            read once, branch on the result
+#   observe.X + wait:    poll until the condition holds, or fail
+#
+# Usage:
+#   mooncake apply --config examples/observe-wait-example.yml
+
+####################
+# 1. observe.file
+####################
+
+- name: Wait for ready marker file
+  observe.file:
+    path: /tmp/ready.txt
+    wait: { for: 2m, interval: 1s }
+  tags: [file]
+
+- name: Wait for build artifact
+  observe.file:
+    path: ./dist/mooncake
+    wait: { for: 10m, interval: 5s }
+  tags: [file, build]
+
+- name: Wait for a log line to appear
+  observe.file:
+    path: /var/log/myapp.log
+    contains: "server ready"
+    wait: { for: 1m }
+  tags: [file]
+
+# Without `wait:` the same action is a single read. Nothing blocks, and the
+# next step decides what to do.
+- name: Check for the marker without blocking
+  observe.file:
+    path: /tmp/ready.txt
+  as: marker
+  tags: [file]
+
+- name: Report what we saw
+  log:
+    msg: "marker present: {{ marker.found }} ({{ marker.value.size }} bytes)"
+  tags: [file]
+
+####################
+# 2. observe.port
+####################
+
+- name: Wait for the database port
+  observe.port:
+    host: localhost
+    port: 5432
+    wait: { for: 60s, interval: 2s, until: open }
+  tags: [port, database]
+
+- name: Wait for Redis
+  observe.port:
+    host: redis
+    port: 6379
+    wait: { for: 30s }
+  tags: [port, redis]
+
+# `until: closed` is the mirror image — useful for confirming a service has
+# actually released its port before restarting it.
+- name: Wait for the old process to release the port
+  observe.port:
+    port: 8080
+    wait: { for: 30s, until: closed }
+  tags: [port, restart]
+
+####################
+# 3. observe.http
+####################
+
+- name: Wait for the health endpoint to go green
+  observe.http:
+    url: http://localhost:8080/healthz
+    expect_status: 200
+    wait: { for: 90s, interval: 2s, until: ready }
+  tags: [http]
+
+####################
+# 4. observe.command
+####################
+
+# A non-zero exit is DATA, not a failure — the step only fails if a `wait:`
+# times out. That is what makes this usable as a health check.
+- name: Wait for migrations to finish
+  observe.command:
+    cmd: "psql -c 'select 1 from schema_migrations limit 1'"
+    wait: { for: 5m, interval: 5s }
+  tags: [command, database]
+
+- name: Read a command's exit code without failing the run
+  observe.command:
+    cmd: "systemctl is-active nginx"
+  as: nginx_state
+  tags: [command]
+
+- name: Branch on it
+  log:
+    msg: "nginx active: {{ nginx_state.found }} (exit {{ nginx_state.value.exit_code }})"
+  tags: [command]

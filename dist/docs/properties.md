@@ -365,6 +365,23 @@ Display messages and structured data to the user
 
 ---
 
+## Observe.command
+
+Run a command and observe its exit code (non-zero is data, not failure)
+
+| Property | Type | Required | Description |
+|----------|------|----------|-------------|
+| `cmd` | string | **Yes** | - |
+| `expect_exit` | integer | No | - |
+| `timeout` | string | No | - |
+| `wait` | object | No | - |
+
+**Metadata:**
+- Category: `command`
+
+
+---
+
 ## Observe.cpu
 
 Single-shot read of CPU utilization + load averages
@@ -381,6 +398,22 @@ Single-shot read of filesystem space / inode usage for a path
 | Property | Type | Required | Description |
 |----------|------|----------|-------------|
 | `path` | string | No | - |
+
+**Metadata:**
+- Category: `system`
+
+
+---
+
+## Observe.file
+
+Read whether a path exists (and optionally contains a substring)
+
+| Property | Type | Required | Description |
+|----------|------|----------|-------------|
+| `contains` | string | No | - |
+| `path` | string | **Yes** | - |
+| `wait` | object | No | - |
 
 **Metadata:**
 - Category: `system`
@@ -415,6 +448,7 @@ Single-shot HTTP GET; returns typed status, latency, headers, body sample
 | `skip_tls_verify` | boolean | No | - |
 | `timeout` | string | No | - |
 | `url` | string | **Yes** | - |
+| `wait` | object | No | - |
 
 **Metadata:**
 - Category: `network`
@@ -462,6 +496,7 @@ Single-shot read of TCP/UDP port state (open? listener? pid?)
 | `port` | integer | **Yes** | - |
 | `protocol` | string | No | - |
 | `timeout` | string | No | - |
+| `wait` | object | No | - |
 
 **Metadata:**
 - Category: `network`
@@ -1002,8 +1037,10 @@ Execute shell commands
 | `import` | string | No | Path to YAML file with steps to import |
 | `log` | any | No | Display messages and structured data to the user |
 | `name` | string | No | Name of the step (universal) |
+| `observe.command` | any | No | Run a command and observe its exit code (non-zero is data, not failure) |
 | `observe.cpu` | any | No | Single-shot read of CPU utilization + load averages |
 | `observe.disk` | any | No | Single-shot read of filesystem space / inode usage for a path |
+| `observe.file` | any | No | Read whether a path exists (and optionally contains a substring) |
 | `observe.gpu` | any | No | Single-shot read of GPU utilization + memory (NVIDIA/Apple) |
 | `observe.http` | any | No | Single-shot HTTP GET; returns typed status, latency, headers, body sample |
 | `observe.logs` | any | No | Single-shot read of a log source; returns per-pattern match counts + sample lines |
@@ -1060,10 +1097,6 @@ Execute shell commands
 | `use` | any | No | Execute a component by expanding it into steps |
 | `vars` | any | No | Set variables for use in subsequent steps |
 | `vars.load` | any | No | Load variables from YAML files |
-| `wait.command` | any | No | Wait for a shell command to exit with the expected code |
-| `wait.file` | any | No | Wait for a file or directory to exist (optionally containing a substring) |
-| `wait.http` | any | No | Wait for an HTTP endpoint to return an accepted status |
-| `wait.port` | any | No | Wait for a TCP port to accept connections |
 | `when` | string | No | Conditional expression for step execution (universal) |
 | `windows.firewall_rule` | any | No | Manage Windows Firewall inbound/outbound rules |
 | `windows.hyperv_firewall_rule` | any | No | Manage Windows Hyper-V Firewall rules (WSL2 mirrored networking) |
@@ -1281,82 +1314,6 @@ Install a developer tool at a pinned version with lockfile-backed reproducibilit
 Define or update variables
 
 *No properties defined in schema.*
-
-
----
-
-## Wait.command
-
-Wait for a shell command to exit with the expected code
-
-| Property | Type | Required | Description |
-|----------|------|----------|-------------|
-| `cmd` | string | **Yes** | - |
-| `expect_exit` | integer | No | - |
-| `interval` | string | No | - |
-| `poll_interval` | string | No | - |
-| `timeout` | string | No | - |
-
-**Metadata:**
-- Category: `command`
-
-
----
-
-## Wait.file
-
-Wait for a file or directory to exist (optionally containing a substring)
-
-| Property | Type | Required | Description |
-|----------|------|----------|-------------|
-| `contains` | string | No | - |
-| `interval` | string | No | - |
-| `path` | string | **Yes** | - |
-| `poll_interval` | string | No | - |
-| `timeout` | string | No | - |
-
-**Metadata:**
-- Category: `system`
-
-
----
-
-## Wait.http
-
-Wait for an HTTP endpoint to return an accepted status
-
-| Property | Type | Required | Description |
-|----------|------|----------|-------------|
-| `body` | string | No | - |
-| `body_contains` | string | No | - |
-| `headers` | object | No | - |
-| `interval` | string | No | - |
-| `method` | string | No | - |
-| `poll_interval` | string | No | - |
-| `status` | array | No | - |
-| `timeout` | string | No | - |
-| `url` | string | **Yes** | - |
-
-**Metadata:**
-- Category: `network`
-
-
----
-
-## Wait.port
-
-Wait for a TCP port to accept connections
-
-| Property | Type | Required | Description |
-|----------|------|----------|-------------|
-| `host` | string | No | - |
-| `interval` | string | No | - |
-| `poll_interval` | string | No | - |
-| `port` | integer | **Yes** | - |
-| `timeout` | string | No | - |
-
-**Metadata:**
-- Category: `network`
 
 
 ---

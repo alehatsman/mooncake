@@ -118,7 +118,7 @@ Know if operations actually changed something:
 The proposal-06 result-envelope work made `result.failed` **truthful** for a
 class of actions that previously reported `failed: false` even when the
 underlying operation errored. Affected handlers returned a result with
-`Failed=false` alongside a non-nil error — `wait.*`, `os.mount`,
+`Failed=false` alongside a non-nil error — a timed-out `wait:`, `os.mount`,
 `os.firewall`, and the spec-69 error-distinction cluster. The executor now
 syncs that error into the envelope, so `result.failed` is `true` in those
 cases.
@@ -127,7 +127,7 @@ This is observable from YAML if a playbook depended on the old (buggy)
 silent-success behavior:
 
 ```yaml
-- wait.http: { url: http://localhost:9999/never, timeout: 1s }
+- observe.http: { url: http://localhost:9999/never, wait: { for: 1s } }
   register: r
 - shell: echo "wait failed"
   when: r.failed
@@ -144,7 +144,7 @@ two options:
   an operator override always wins over the handler verdict:
 
   ```yaml
-  - wait.http: { url: http://localhost:9999/never, timeout: 1s }
+  - observe.http: { url: http://localhost:9999/never, wait: { for: 1s } }
     register: r
     failed_when: false   # r.failed is now forced false regardless
   ```

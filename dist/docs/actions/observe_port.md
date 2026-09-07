@@ -9,7 +9,7 @@ capabilities:
   check: false
   diff: true
   cost: true
-  reverse: true
+  reverse: false
   permissions: true
   capture_in_plan: true
 ---
@@ -26,6 +26,7 @@ Single-shot read of TCP/UDP port state (open? listener? pid?)
 | `port` | integer | **Yes** | - |
 | `protocol` | string | No | - |
 | `timeout` | string | No | - |
+| `wait` | object | No | - |
 
 ## Platform Support
 

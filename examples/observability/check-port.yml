@@ -3,9 +3,9 @@
 # Single-shot read of a TCP port's state. The result is captured via
 # spec-37 `as:` so the next step can branch on the typed payload.
 #
-# Compare to wait.port: wait.port BLOCKS until the port opens (or
+# Compare to `observe.port` with a `wait:` block, which BLOCKS until the port opens (or
 # timeout). observe.port returns the current state once. Use observe.*
-# when you want to read and branch; use wait.* when you want to gate
+# when you want to read and branch; add `wait:` when you want to gate
 # the next step on a state change.
 #
 # Run:

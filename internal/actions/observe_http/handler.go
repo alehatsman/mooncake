@@ -4,7 +4,6 @@
 package observe_http
 
 import (
-	"context"
 	"crypto/tls"
 	"fmt"
 	"io"
@@ -68,7 +67,7 @@ func (h *Handler) Validate(step *config.Step) error {
 			return fmt.Errorf("%s: invalid timeout %q: %w", actionName, o.Timeout, err)
 		}
 	}
-	return nil
+	return actions.ValidateWait(actionName, o.Wait)
 }
 
 func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, error) {
@@ -137,56 +136,71 @@ func (h *Handler) Run(ctx actions.Context, step *config.Step) (actions.Result, e
 		return nil, &executor.RenderError{Field: actionName + ".url", Cause: err}
 	}
 
-	obs := HTTPObservation{URL: rendered, Method: method}
-	start := time.Now()
-	// F012: ctx-aware request via httputil so the canonical UA flows
-	// and any future caller ctx (e.g. agentd.Worker via F016) can
-	// abort the probe. observe.http has no caller ctx today —
-	// Background is bounded by the client.Timeout above.
-	req, err := httputil.NewRequest(context.Background(), method, rendered, nil)
-	if err != nil {
+	// One attempt, shaped as a closure so the `wait:` modifier can poll it.
+	// Every failure mode is an observation, not a step error: a DNS failure or
+	// a refused connection means Found=false with Error set, which is exactly
+	// what a `wait: { until: found }` needs to keep polling through.
+	probeOnce := func() actions.ObserveResult {
+		obs := HTTPObservation{URL: rendered, Method: method}
+		start := time.Now()
+		// F012: ctx-aware request via httputil so the canonical UA flows and
+		// the run's context aborts an in-flight probe — which is what makes
+		// SIGINT during a `wait:` land promptly rather than at the budget.
+		req, err := httputil.NewRequest(ctx.Ctx(), method, rendered, nil)
+		if err != nil {
+			obs.LatencyMs = time.Since(start).Milliseconds()
+			return actions.ObserveResult{Value: obs, AsOf: time.Now(), Error: err.Error()}
+		}
+		resp, err := client.Do(req)
 		obs.LatencyMs = time.Since(start).Milliseconds()
-		result.PublishObservation(actions.ObserveResult{Value: obs, AsOf: time.Now(), Error: err.Error()}, rendered)
-		return result, nil
-	}
-	resp, err := client.Do(req)
-	obs.LatencyMs = time.Since(start).Milliseconds()
-	if err != nil {
-		result.PublishObservation(actions.ObserveResult{Value: obs, AsOf: time.Now(), Error: err.Error()}, rendered)
-		return result, nil
-	}
-	defer resp.Body.Close() //nolint:errcheck
+		if err != nil {
+			return actions.ObserveResult{Value: obs, AsOf: time.Now(), Error: err.Error()}
+		}
+		defer resp.Body.Close() //nolint:errcheck
 
-	obs.Reachable = true
-	obs.StatusCode = resp.StatusCode
+		obs.Reachable = true
+		obs.StatusCode = resp.StatusCode
 
-	if len(o.CaptureHeaders) > 0 {
-		obs.Headers = make(map[string]string, len(o.CaptureHeaders))
-		for _, name := range o.CaptureHeaders {
-			if v := resp.Header.Get(name); v != "" {
-				obs.Headers[name] = v
+		if len(o.CaptureHeaders) > 0 {
+			obs.Headers = make(map[string]string, len(o.CaptureHeaders))
+			for _, name := range o.CaptureHeaders {
+				if v := resp.Header.Get(name); v != "" {
+					obs.Headers[name] = v
+				}
 			}
 		}
+
+		// Read up to bodySampleBytes; discard the rest.
+		body, _ := io.ReadAll(io.LimitReader(resp.Body, bodySampleBytes))
+		obs.BodySample = string(body)
+
+		// Spec-59 G6: ExpectStatus=N sets Found=false when StatusCode != N.
+		found := true
+		if o.ExpectStatus != 0 && obs.StatusCode != o.ExpectStatus {
+			found = false
+		}
+		return actions.ObserveResult{Found: found, Value: obs, AsOf: time.Now()}
 	}
 
-	// Read up to bodySampleBytes; discard the rest.
-	body, _ := io.ReadAll(io.LimitReader(resp.Body, bodySampleBytes))
-	obs.BodySample = string(body)
-
-	// Spec-59 G6: ExpectStatus=N sets Found=false when StatusCode != N.
-	found := true
-	if o.ExpectStatus != 0 && obs.StatusCode != o.ExpectStatus {
-		found = false
+	envelope := probeOnce()
+	if o.Wait != nil {
+		var waitErr error
+		// ObserveWait returns the last observation either way, so a timed-out
+		// wait still publishes real data for a downstream `as:` capture.
+		envelope, waitErr = actions.ObserveWait(ctx, actionName, rendered, o.Wait, probeOnce)
+		if waitErr != nil {
+			result.PublishObservation(envelope, rendered)
+			return result, waitErr
+		}
 	}
-
-	result.PublishObservation(actions.ObserveResult{Found: found, Value: obs, AsOf: time.Now()}, rendered)
+	result.PublishObservation(envelope, rendered)
 	return result, nil
 }
 
 // --- Spec-22 ABI no-mutation specialization ---------------------------------
 
 func (h *Handler) Cost(_ actions.Context, _ *config.Step) (actions.CostEstimate, error) {
-	return actions.CostEstimate{Resources: 0, Bytes: 0, Reversible: true, Risk: 1}, nil
+	return actions.CostEstimate{Resources: 0, Bytes: 0, Reversible: false, Risk: 1}, nil
 }
 
 func (h *Handler) Permissions(_ *config.Step) actions.PermissionSet {
@@ -213,8 +227,4 @@ func (h *Handler) Diff(_ actions.Context, step *config.Step) (actions.Diff, erro
 		},
 		Operation: actions.OpNoop,
 	}, nil
-}
-
-func (h *Handler) Reverse(_ actions.Context, _ *config.Step, _ actions.Result) (*config.Step, error) {
-	return nil, nil
 }

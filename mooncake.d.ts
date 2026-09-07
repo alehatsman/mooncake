@@ -461,6 +461,21 @@ export interface LogAction {
 }
 
 /**
+ * Run a command and observe its exit code (non-zero is data, not failure)
+ * @category command
+ */
+export interface ObserveCommandAction {
+  cmd: string;
+  expect_exit?: number;
+  timeout?: string;
+  wait?: {
+    for: string;
+    interval: string;
+    until: string;
+  };
+}
+
+/**
  * Single-shot read of CPU utilization + load averages
  * @category system
  */
@@ -473,6 +488,20 @@ export interface ObserveCpuAction {
  */
 export interface ObserveDiskAction {
   path?: string;
+}
+
+/**
+ * Read whether a path exists (and optionally contains a substring)
+ * @category system
+ */
+export interface ObserveFileAction {
+  contains?: string;
+  path: string;
+  wait?: {
+    for: string;
+    interval: string;
+    until: string;
+  };
 }
 
 /**
@@ -495,6 +524,11 @@ export interface ObserveHttpAction {
   skip_tls_verify?: boolean;
   timeout?: string;
   url: string;
+  wait?: {
+    for: string;
+    interval: string;
+    until: string;
+  };
 }
 
 /**
@@ -528,6 +562,11 @@ export interface ObservePortAction {
   port: number;
   protocol?: string;
   timeout?: string;
+  wait?: {
+    for: string;
+    interval: string;
+    until: string;
+  };
 }
 
 /**
@@ -1245,58 +1284,6 @@ export interface VarsLoadAction {
 }
 
 /**
- * Wait for a shell command to exit with the expected code
- * @category command
- */
-export interface WaitCommandAction {
-  cmd: string;
-  expect_exit?: number;
-  interval?: string;
-  poll_interval?: string;
-  timeout?: string;
-}
-
-/**
- * Wait for a file or directory to exist (optionally containing a substring)
- * @category system
- */
-export interface WaitFileAction {
-  contains?: string;
-  interval?: string;
-  path: string;
-  poll_interval?: string;
-  timeout?: string;
-}
-
-/**
- * Wait for an HTTP endpoint to return an accepted status
- * @category network
- */
-export interface WaitHttpAction {
-  body?: string;
-  body_contains?: string;
-  headers?: Record<string, any>;
-  interval?: string;
-  method?: string;
-  poll_interval?: string;
-  status?: number[];
-  timeout?: string;
-  url: string;
-}
-
-/**
- * Wait for a TCP port to accept connections
- * @category network
- */
-export interface WaitPortAction {
-  host?: string;
-  interval?: string;
-  poll_interval?: string;
-  port: number;
-  timeout?: string;
-}
-
-/**
  * Manage Windows Firewall inbound/outbound rules
  * 
  * @platforms windows
@@ -1544,6 +1531,11 @@ export interface Step {
    */
   log?: LogAction;
   /**
+   * Run a command and observe its exit code (non-zero is data, not
+   * failure)
+   */
+  "observe.command"?: ObserveCommandAction;
+  /**
    * Single-shot read of CPU utilization + load averages
    */
   "observe.cpu"?: ObserveCpuAction;
@@ -1551,6 +1543,10 @@ export interface Step {
    * Single-shot read of filesystem space / inode usage for a path
    */
   "observe.disk"?: ObserveDiskAction;
+  /**
+   * Read whether a path exists (and optionally contains a substring)
+   */
+  "observe.file"?: ObserveFileAction;
   /**
    * Single-shot read of GPU utilization + memory (NVIDIA/Apple)
    */
@@ -1719,23 +1715,6 @@ export interface Step {
    * Load variables from YAML files
    */
   "vars.load"?: VarsLoadAction;
-  /**
-   * Wait for a shell command to exit with the expected code
-   */
-  "wait.command"?: WaitCommandAction;
-  /**
-   * Wait for a file or directory to exist (optionally containing a
-   * substring)
-   */
-  "wait.file"?: WaitFileAction;
-  /**
-   * Wait for an HTTP endpoint to return an accepted status
-   */
-  "wait.http"?: WaitHttpAction;
-  /**
-   * Wait for a TCP port to accept connections
-   */
-  "wait.port"?: WaitPortAction;
   /**
    * Manage Windows Firewall inbound/outbound rules
    */
